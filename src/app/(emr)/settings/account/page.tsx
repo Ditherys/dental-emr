@@ -4,12 +4,15 @@ import { ShieldCheck } from "lucide-react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@/components/ui/separator";
+import { requireVerifiedIdentity } from "@/lib/auth/identity";
 
 export const metadata: Metadata = {
   title: "Account and security",
 };
 
-export default function AccountPage() {
+export default async function AccountPage() {
+  await requireVerifiedIdentity();
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader

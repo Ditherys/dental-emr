@@ -4,12 +4,15 @@ import { ClipboardList } from "lucide-react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@/components/ui/separator";
+import { requireVerifiedIdentity } from "@/lib/auth/identity";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  await requireVerifiedIdentity();
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader

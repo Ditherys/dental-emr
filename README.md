@@ -8,8 +8,14 @@ Install the locked dependency tree and start the development server:
 
 ```powershell
 npm ci
+Copy-Item .env.example .env.local
 npm run dev
 ```
+
+Set `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local` to the public values for
+the designated non-production Supabase project. Never put a Supabase secret key
+in a `NEXT_PUBLIC_*` variable. Local environment files remain ignored by Git.
 
 Open [http://localhost:3000](http://localhost:3000).
 

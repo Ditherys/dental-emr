@@ -4,12 +4,15 @@ import { Building2 } from "lucide-react";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { Separator } from "@/components/ui/separator";
+import { requireVerifiedIdentity } from "@/lib/auth/identity";
 
 export const metadata: Metadata = {
   title: "Branches",
 };
 
-export default function BranchesPage() {
+export default async function BranchesPage() {
+  await requireVerifiedIdentity();
+
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader

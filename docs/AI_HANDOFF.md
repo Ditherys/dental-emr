@@ -4,62 +4,67 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-06 — Supabase Type Generation
+**Task / slice:** P1-07 — Supabase Auth for Next.js SSR
 
-**Implementing agent:** OpenAI Codex, explicitly assigned implementation for P1-06
+**Implementing agent:** OpenAI Codex, explicitly assigned temporary primary implementation for P1-07
 
-**Status:** Implemented against the designated non-production development project; ready for independent review
+**Status:** Implemented and self-reviewed; ready for independent review
 
 ## What Changed
 
-- Added `npm run db:types` to generate the public-schema TypeScript surface from the repository-pinned Supabase CLI.
-- Added `npm run db:types:check` to fail when the committed generated file differs from the designated database schema.
-- Added a cross-platform Node generator so Windows development and Linux CI do not depend on shell-specific output redirection.
-- Generated `src/types/database.generated.ts` for source control from the linked development project after the P1-05 migrations were applied.
-- Added an explicit generated-file notice; database changes must be made through migrations and regenerated rather than hand-edited.
-- Documented local linked-project generation and an explicit `SUPABASE_PROJECT_ID`/secret-store CI path.
-- Kept P1-06 free of Auth SSR integration, application-specific database interfaces, RLS policies, seed fixtures, and later-domain work.
+- Added typed Supabase browser and server clients using `@supabase/ssr`, the public project URL, and the publishable key.
+- Added the Next.js 16 request proxy pattern for session refresh, request-cookie propagation, response-cookie propagation, and refresh-response cache headers.
+- Added a server-only verified-identity helper based on `auth.getClaims()`; every current EMR page performs this server-side check and redirects anonymous requests to `/login`.
+- Added an invitation-only workforce login screen and server action using email/password authentication with generic credential errors and no public signup action.
+- Added local-session sign-out to the application user menu.
+- Added `/auth/confirm` OTP verification with an allowlist of supported email OTP types, token-free error redirects, and internal-only redirect validation.
+- Added a committed `.env.example` and documented non-production public Auth configuration. No secret/service key variable or privileged client was added.
+- Kept P1-07 free of invitation creation/acceptance, membership activation, MFA enrollment/challenge, RLS changes, migrations, and later-domain work.
 
 ## Files Added or Updated
 
-- `src/types/database.generated.ts`
-- `scripts/generate-database-types.mjs`
-- `package.json`
-- `supabase/README.md`
+- `.env.example`, `.gitignore`, `README.md`
+- `src/lib/supabase/{config,client,server,proxy}.ts`
+- `src/proxy.ts`
+- `src/lib/auth/identity.ts`
+- `src/lib/auth/safe-redirect.ts`
+- `src/lib/auth/safe-redirect.test.ts`
+- `src/app/(auth)/login/{page,login-form,actions}.tsx` / `.ts`
+- `src/app/auth/confirm/route.ts`
+- current EMR pages and `src/components/layout/user-menu.tsx`
 - `docs/AI_HANDOFF.md`
 
-The uncommitted P1-05 migration files in the same working tree are pre-existing inputs to this checkpoint and were not modified by P1-06.
+## Security / Session Design
 
-## Generation and Drift-Check Design
-
-- Local generation defaults to `supabase gen types typescript --linked --schema public` through the pinned CLI entry point.
-- CI can set `SUPABASE_PROJECT_ID` to use `--project-id` instead of relying on ignored local link state. `SUPABASE_ACCESS_TOKEN` must come from the CI secret store.
-- Only the exposed application `public` schema is generated; internal `private`, Auth-owned, and extension schemas are not added to the application type surface.
-- The drift check normalizes CRLF/LF differences before comparing content, so it detects schema/type drift without failing solely on checkout line endings.
-- No workflow file was added because CI scaffolding belongs to P1-16; the package script is ready to be wired into that checkpoint.
+- The proxy refreshes and propagates tokens but does not grant application access. Protected pages independently verify signed claims server-side.
+- No code uses `auth.getSession()` as identity proof.
+- Current pages contain no tenant or patient data, so P1-07 performs identity verification only. Active membership, branch, permission, suspension, and AAL2 enforcement remain P1-10/P1-09 work and must precede sensitive data access.
+- The confirmation handler rejects `signup` OTPs, does not expose detailed Auth errors, removes token parameters before redirecting, and prevents absolute, protocol-relative, backslash-normalized, and malformed destinations.
+- Sign-out uses explicit `local` scope so the current browser session ends without silently revoking every other device session.
 
 ## Verification Performed
 
-- `npx supabase projects list` — confirmed the linked project is the healthy `dental-emr-dev` project in Singapore; the separate `SmileLab` project remains unlinked.
-- `npx supabase migration list --linked` — confirmed all six P1-05 migration versions align locally and remotely.
-- `npm run db:types` — passed against the linked non-production development project.
-- `npm run db:types:check` — passed; committed output matches a fresh remote generation.
-- `npm run db:types:check` with an explicit `SUPABASE_PROJECT_ID` — passed, covering the CI targeting path.
-- `npm run lint` — passed.
+- `npm run lint` — passed with no warnings.
 - `npx tsc --noEmit` — passed under strict TypeScript settings.
-- `npm run build` — passed.
-- `git diff --check` — passed; Git only emitted existing checkout line-ending notices.
+- `npx vitest run src/lib/auth/safe-redirect.test.ts` — passed, 7 tests.
+- `npm run build` — passed; Next.js reports `/login`, `/auth/confirm`, and all EMR routes as dynamic, with the request proxy present.
+- `npm run db:types:check` — passed; P1-07 did not change the database schema.
+- Local runtime smoke check — `/login` returned 200; anonymous `/dashboard` returned 307 to `/login`; malformed `/auth/confirm` returned 307 to the token-free login error route.
+- Secret/scope scan — no service-role/secret key, public signup action, migration, or later-domain implementation introduced.
+- `git diff --check` — passed; only existing Windows checkout line-ending notices were emitted.
 
 ## Reviewer Focus
 
-- Confirm the generated file contains all and only the P1-05 `public` tables and their relationships.
-- Confirm generation uses the repository-pinned CLI and cannot silently target a hard-coded project.
-- Confirm `--check` compares fresh generated output without rewriting the committed file.
-- Confirm CI credentials remain external and the documented project target is explicitly non-production.
-- Confirm no hand-written duplicate database interfaces or post-P1-06 application work was introduced.
+- Confirm `setAll` updates both request and response cookies and preserves the cache headers supplied by `@supabase/ssr`.
+- Confirm the proxy only refreshes sessions and that each current EMR entry page uses verified claims independently.
+- Confirm login errors do not enumerate accounts and anonymous users cannot create workforce accounts through the UI.
+- Confirm confirmation redirects cannot leave the application origin or retain `token_hash`/OTP details.
+- Confirm no P1-08 invitation onboarding or P1-09 MFA behavior was started.
 
-## Environment Note
+## Residual Boundaries
 
+- No authenticated end-to-end login was created or run because workforce bootstrap/invitation is P1-08. Runtime coverage for this checkpoint is the anonymous/protected boundary plus unit/static/build verification.
+- Membership suspension and current authorization state are intentionally not enforced by this identity-only slice; P1-10 must add current membership/permission checks before protected pages expose tenant data.
 - Next.js continues to warn that it ignores an unrelated `C:\Users\D_Reyes\package-lock.json` outside this Git repository. The repository lockfile is used; no machine-specific workaround was committed.
 
 ## Handoff Rules

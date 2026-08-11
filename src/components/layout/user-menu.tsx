@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { signOut } from "@/app/(auth)/login/actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +32,7 @@ export function UserMenu() {
             Authenticated user
           </span>
           <span className="mt-0.5 block font-normal text-muted-foreground">
-            Identity connects in a later checkpoint
+            Session verified by Supabase Auth
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -42,9 +43,13 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
-          <LogOut aria-hidden="true" />
-          Sign out unavailable
+        <DropdownMenuItem asChild>
+          <form action={signOut}>
+            <button type="submit" className="flex w-full items-center gap-2">
+              <LogOut aria-hidden="true" />
+              Sign out
+            </button>
+          </form>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
