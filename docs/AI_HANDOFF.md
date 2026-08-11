@@ -4,71 +4,65 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-00 — Create the repository and import the approved documentation  
-**Implementing agent:** OpenAI Codex, temporarily assigned as primary implementation agent  
+**Task / slice:** P1-01 — Scaffold the Next.js application
+
+**Implementing agent:** OpenAI Codex, temporarily assigned as primary implementation agent
+
 **Status:** Implemented; ready for independent review
 
 ## What Changed
 
-- Initialized the repository on the `main` branch for the first documentation checkpoint.
-- Established the root agent instructions and stable authoritative-document paths required by P1-00.
-- Preserved the corrected authoritative package supplied by the project owner, including the Phase 1 plan and accepted ADRs.
-- Removed one redundant blank line at the end of the master plan; no architecture content was changed.
-- Confirmed the ADR registry: Phase 1 reserves ADR-001–004; ADR-005 and ADR-016 are accepted; ADR-006–015 are intentionally unassigned; new ADRs normally begin at ADR-017.
-- Added no application scaffold, dependencies, Supabase configuration, migrations, database objects, UI, or infrastructure configuration.
+- Added the standard npm-based Next.js App Router scaffold under `src/` with TypeScript strict mode, Tailwind CSS, ESLint, and the `@/*` import alias.
+- Installed current stable scaffold versions: Next.js 16.3.0, React/React DOM 19.2.8, TypeScript 5.9.3, Tailwind CSS 4.3.3, and ESLint 9.39.5.
+- Configured Geist Sans through `next/font` and replaced create-next-app sample content with a minimal foundation page.
+- Added the generated npm lockfile and standard Next.js, PostCSS, TypeScript, ESLint, and ignore configuration.
+- Preserved the repository-specific agent rules and appended the create-next-app managed Next.js 16 guidance block.
 
-## Why
+## Scope / Architecture Notes
 
-P1-00 creates a reproducible, Git-backed source-of-truth workspace before application or database implementation begins.
+- Used official `create-next-app` 16.3.0 behavior and verified the current official minimum of Node.js 20.9; the implementation machine used Node.js 24.14.1 and npm 11.11.0.
+- React Compiler remains disabled because it is opt-in and is not required by P1-01.
+- No Supabase setup, migrations, database objects, authentication, route groups, product features, application state libraries, feature libraries, or fake dashboard UI were added.
+- No credentials, secrets, real patient data, remote services, or production access were used.
 
-## Important Files in This Checkpoint
+## Important Files
 
+- `package.json`
+- `package-lock.json`
+- `tsconfig.json`
+- `eslint.config.mjs`
+- `postcss.config.mjs`
+- `next.config.ts`
+- `src/app/layout.tsx`
+- `src/app/page.tsx`
+- `src/app/globals.css`
+- `.gitignore`
+- `README.md`
 - `AGENTS.md`
-- `CLAUDE.md`
-- `docs/MASTER_PRODUCT_PLAN.md`
-- `docs/TECHNICAL_ARCHITECTURE.md`
-- `docs/DATABASE_DESIGN.md`
-- `docs/FRONTEND_ARCHITECTURE.md`
-- `docs/SECURITY_ARCHITECTURE.md`
-- `docs/plans/001-foundation.md`
-- `docs/decisions/ADR-005-r2-media-pipeline.md`
-- `docs/decisions/ADR-016-supabase-cloud-first-development.md`
-- `docs/AI_HANDOFF.md`
-
-## Architecture / Security Notes
-
-- Supabase development is cloud-first and uses separate non-production projects; no local Supabase/Docker runtime is approved.
-- Git-managed migrations remain authoritative when database work begins in later checkpoints.
-- Cloudflare R2 remains canonical object storage; Workers/Images may create bounded derivatives, while clinical originals remain unchanged.
-- No real patient data, credentials, secrets, remote database access, or production access was used.
 
 ## Verification Performed
 
-- Re-read `AGENTS.md` and the P1-00/source-of-truth sections of `docs/plans/001-foundation.md` from disk.
-- Verified every required P1-00 source-of-truth path exists.
-- Enumerated every `ADR-NNN` reference across the Markdown workspace and confirmed the corrected numbering policy is consistent.
-- Verified there are no exact duplicate Markdown documents or stale/backup/version-suffixed authority filenames.
-- Searched authoritative Markdown for stale local-Supabase/Docker assumptions, conflicting storage-provider guidance, and credential-like assignments.
-- Confirmed all local-Supabase references are prohibitions or explanatory context, and R2/Workers/Images/Cloudinary guidance is consistent.
-- Reviewed the repository tree and Git status before the checkpoint commit.
+- `npm run dev -- --hostname 127.0.0.1 --port 3101` — passed; Turbopack became ready, `GET /` returned HTTP 200, and the rendered response contained `Dental EMR`.
+- `npm run lint` — passed with no findings.
+- `npx tsc --noEmit` — passed under strict TypeScript settings.
+- `npm run build` — passed; Next.js compiled successfully, completed its TypeScript phase, and statically generated `/` and `/_not-found`.
+- `npm audit --audit-level=high` — found 0 vulnerabilities.
+- Reviewed direct dependencies and confirmed they are limited to the standard P1-01 scaffold.
+- Scanned the source and diff for out-of-scope feature terms and credential-like assignments; none were found.
+
+## Environment Note
+
+- Next.js warned that it ignored an unrelated `C:\Users\D_Reyes\package-lock.json` outside this Git repository. The project lockfile at the repository root was used; no project configuration was added for this machine-specific ancestor file.
 
 ## Tests Not Applicable / Not Run
 
-- No lint, typecheck, unit, database, pgTAP, or E2E tests were run because P1-00 contains documentation and repository metadata only.
-- No Supabase, R2, Cloudflare, Vercel, or other remote service command was run.
-
-## Known Limitations / Next Boundary
-
-- ADR-001 through ADR-004 are reserved but are intentionally not created by P1-00; the phase plan requires them before or while their corresponding foundational decisions are implemented.
-- P1-01 application scaffolding has not started and requires explicit human approval.
-- The checkpoint commit SHA is intentionally obtained after commit and is not inserted through a second handoff-only commit.
+- No unit/component, Playwright, database, pgTAP, RLS, Supabase, R2, Cloudflare, or deployment checks were run because those foundations are outside P1-01.
 
 ## Reviewer Focus
 
-- Confirm the initial commit contains documentation and agent rules only.
-- Verify source-of-truth precedence and ADR numbering remain unambiguous.
-- Verify there are no duplicate authoritative plans or hidden application/infrastructure artifacts.
-- Confirm Supabase Cloud and R2 architecture statements remain internally consistent.
+- Confirm the scaffold follows current supported Next.js 16 conventions and retains strict TypeScript/App Router boundaries.
+- Confirm direct dependencies are limited to create-next-app output and no P1-02 packages were installed early.
+- Confirm the minimal page is only a scaffold-rendering proof and contains no product feature or generic dashboard architecture.
 
 ## Handoff Rules
 
@@ -76,4 +70,3 @@ P1-00 creates a reproducible, Git-backed source-of-truth workspace before applic
 - Do not include real patient data, PHI, passwords, tokens, API keys, OAuth secrets, or production credentials.
 - Do not claim tests were run if they were not.
 - This summary does not replace reviewing the actual Git diff.
-- The reviewing agent should inspect the relevant commit and authoritative project documents independently.
