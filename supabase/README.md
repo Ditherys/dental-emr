@@ -100,8 +100,31 @@ the non-production project reference and provide `SUPABASE_ACCESS_TOKEN` through
 its secret store; neither value belongs in source control. The check exits with a
 failure when regeneration would change the committed file.
 
+## Workforce TOTP MFA
+
+P1-09 records authenticator-app enrollment and verification as enabled in
+`config.toml` and uses only the supported Supabase Auth MFA APIs. Before
+exercising the UI, verify the linked target is the designated non-production
+project, then confirm TOTP enrollment and verification are enabled in the hosted
+project's Auth MFA settings or through a narrowly scoped Management API update.
+
+Do not run a broad `supabase config push` solely to change MFA unless the complete
+hosted Auth configuration diff has been reviewed. The generated file also contains
+unrelated local defaults that could replace hosted redirect, email, password, or
+invitation settings.
+
+TOTP enrollment and verification must remain enabled in staging and production.
+Do not enable phone/SMS MFA as the preferred workforce factor. The application
+does not implement a custom TOTP algorithm or custom recovery-code store.
+
+The hosted negative and lifecycle test strategy is documented in
+`docs/testing/MFA_TESTING.md`. It requires synthetic identities and ephemeral test
+factors in a dedicated cloud TEST project; it does not authorize real workforce
+accounts, production factors, or secrets in Git and test output.
+
 ## Checkpoint boundary
 
-P1-08 adds invitation-only workforce onboarding. MFA, the general application
-authorization layer, RLS policies, fixtures, and the broader database test
-foundation remain in their later checkpoints.
+P1-09 adds the Supabase TOTP enrollment/challenge foundation and a reusable AAL2
+server gate. The general P1-10 application authorization layer, P1-11 RLS
+policies, fixtures, and the broader database test foundation remain later
+checkpoints.

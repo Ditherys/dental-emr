@@ -24,3 +24,13 @@ export function getSafeRedirectPath(value: string | null) {
     return defaultRedirectPath;
   }
 }
+
+export function getSafeMfaRedirectPath(value: string | null) {
+  const safePath = getSafeRedirectPath(value);
+
+  if (safePath === "/mfa/challenge" || safePath.startsWith("/mfa/challenge?")) {
+    return defaultRedirectPath;
+  }
+
+  return safePath;
+}

@@ -2,9 +2,12 @@ import type { ReactNode } from "react";
 
 import { EmrShell } from "@/components/layout/emr-shell";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { requireMfaChallengeIfEnrolled } from "@/lib/auth/mfa";
 import { Toaster } from "sonner";
 
-export default function EmrLayout({ children }: { children: ReactNode }) {
+export default async function EmrLayout({ children }: { children: ReactNode }) {
+  await requireMfaChallengeIfEnrolled();
+
   return (
     <QueryProvider>
       <EmrShell>{children}</EmrShell>
