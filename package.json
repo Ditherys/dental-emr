@@ -9,7 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:types": "node scripts/generate-database-types.mjs",
+    "db:types:check": "node scripts/generate-database-types.mjs --check"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",

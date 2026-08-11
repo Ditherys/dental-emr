@@ -4,63 +4,63 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-04 — Initialize Supabase Cloud Development
+**Task / slice:** P1-06 — Supabase Type Generation
 
-**Implementing agent:** OpenAI Codex, explicitly assigned implementation for P1-04 only
+**Implementing agent:** OpenAI Codex, explicitly assigned implementation for P1-06
 
-**Status:** Implemented; ready for independent review
+**Status:** Implemented against the designated non-production development project; ready for independent review
 
 ## What Changed
 
-- Ran the repository-pinned Supabase CLI 2.113.0 `init` command.
-- Added the generated `supabase/config.toml` and its CLI-state `.gitignore`.
-- Added an explicit cloud-first warning to the generated config: ADR-016 still prohibits `supabase start` and persistent local application data.
-- Added `supabase/README.md` with the non-production project, interactive authentication, safe linking, dry-run, migration-history, and destructive-reset guardrails.
-- Added the required `supabase/migrations/`, `supabase/tests/`, and intentionally empty `supabase/seed.sql` artifacts.
-- Kept P1-04 free of application schema, migrations, fixtures, RLS, Auth integration, and later-domain work.
+- Added `npm run db:types` to generate the public-schema TypeScript surface from the repository-pinned Supabase CLI.
+- Added `npm run db:types:check` to fail when the committed generated file differs from the designated database schema.
+- Added a cross-platform Node generator so Windows development and Linux CI do not depend on shell-specific output redirection.
+- Generated `src/types/database.generated.ts` for source control from the linked development project after the P1-05 migrations were applied.
+- Added an explicit generated-file notice; database changes must be made through migrations and regenerated rather than hand-edited.
+- Documented local linked-project generation and an explicit `SUPABASE_PROJECT_ID`/secret-store CI path.
+- Kept P1-06 free of Auth SSR integration, application-specific database interfaces, RLS policies, seed fixtures, and later-domain work.
 
-## Cloud Link Status
+## Files Added or Updated
 
-- The local Supabase CLI authentication is valid.
-- Created a separate `dental-emr-dev` project under the `Dental EMR` Supabase organization in `ap-southeast-1` (Singapore) using the default project size without high availability.
-- The project reports `ACTIVE_HEALTHY` and this repository reports it as the linked project.
-- The database password was generated with a cryptographic random-number generator and existed only inside the creation/linking process; it was not printed, committed, or placed in documentation.
-- The pre-existing `SmileLab` project in `ap-south-1` remains active and unlinked; Codex did not modify it.
-- No schema migration, seed, or other database mutation was applied.
-
-## Important Files
-
-- `supabase/config.toml`
-- `supabase/.gitignore`
+- `src/types/database.generated.ts`
+- `scripts/generate-database-types.mjs`
+- `package.json`
 - `supabase/README.md`
-- `supabase/seed.sql`
-- `supabase/migrations/.gitkeep`
-- `supabase/tests/README.md`
+- `docs/AI_HANDOFF.md`
+
+The uncommitted P1-05 migration files in the same working tree are pre-existing inputs to this checkpoint and were not modified by P1-06.
+
+## Generation and Drift-Check Design
+
+- Local generation defaults to `supabase gen types typescript --linked --schema public` through the pinned CLI entry point.
+- CI can set `SUPABASE_PROJECT_ID` to use `--project-id` instead of relying on ignored local link state. `SUPABASE_ACCESS_TOKEN` must come from the CI secret store.
+- Only the exposed application `public` schema is generated; internal `private`, Auth-owned, and extension schemas are not added to the application type surface.
+- The drift check normalizes CRLF/LF differences before comparing content, so it detects schema/type drift without failing solely on checkout line endings.
+- No workflow file was added because CI scaffolding belongs to P1-16; the package script is ready to be wired into that checkpoint.
 
 ## Verification Performed
 
-- `npx supabase --version` — passed; 2.113.0.
-- `npx supabase init` — passed.
-- `npx supabase projects list` — passed; `dental-emr-dev` is healthy, in `ap-southeast-1`, and linked.
-- `npx supabase migration list --linked` — passed; no migrations exist yet.
-- `npx supabase db push --dry-run` — passed; remote database is up to date and no migrations, seeds, or roles would be applied.
-- Verified the generated link-state files remain under ignored `supabase/.temp/`.
+- `npx supabase projects list` — confirmed the linked project is the healthy `dental-emr-dev` project in Singapore; the separate `SmileLab` project remains unlinked.
+- `npx supabase migration list --linked` — confirmed all six P1-05 migration versions align locally and remotely.
+- `npm run db:types` — passed against the linked non-production development project.
+- `npm run db:types:check` — passed; committed output matches a fresh remote generation.
+- `npm run db:types:check` with an explicit `SUPABASE_PROJECT_ID` — passed, covering the CI targeting path.
 - `npm run lint` — passed.
 - `npx tsc --noEmit` — passed under strict TypeScript settings.
-- `npm run build` — passed; all existing routes compiled and prerendered.
-- `git diff --check` — passed.
-- Linked-project verification was read-only/dry-run only; no migration or seed was pushed.
+- `npm run build` — passed.
+- `git diff --check` — passed; Git only emitted existing checkout line-ending notices.
+
+## Reviewer Focus
+
+- Confirm the generated file contains all and only the P1-05 `public` tables and their relationships.
+- Confirm generation uses the repository-pinned CLI and cannot silently target a hard-coded project.
+- Confirm `--check` compares fresh generated output without rewriting the committed file.
+- Confirm CI credentials remain external and the documented project target is explicitly non-production.
+- Confirm no hand-written duplicate database interfaces or post-P1-06 application work was introduced.
 
 ## Environment Note
 
 - Next.js continues to warn that it ignores an unrelated `C:\Users\D_Reyes\package-lock.json` outside this Git repository. The repository lockfile is used; no machine-specific workaround was committed.
-
-## Reviewer Focus
-
-- Confirm the generated config contains no secret values and its local-service defaults are not being treated as approval for a local Supabase runtime.
-- Confirm the committed workflow requires target verification and dry-run review before any remote schema mutation.
-- Confirm P1-04 contains no application schema and has not drifted into P1-05 or later work.
-- Independently confirm `dental-emr-dev` is the intended disposable, non-production, synthetic-data-only project and that it remains in `ap-southeast-1`.
 
 ## Handoff Rules
 

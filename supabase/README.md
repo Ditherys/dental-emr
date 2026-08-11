@@ -38,6 +38,32 @@ npx supabase db push
 
 Never run `npx supabase db reset --linked` without first verifying the exact target is disposable and non-production and obtaining explicit human approval. It destroys remote data.
 
+## Generated TypeScript types
+
+After reviewed migrations have been applied to the linked development project,
+regenerate the committed public-schema types:
+
+```powershell
+npm run db:types
+```
+
+The generator writes `src/types/database.generated.ts`. Do not edit that file by
+hand. Change the schema through a migration, apply the migration to the designated
+development project, and regenerate instead.
+
+Use the drift check locally or in CI:
+
+```powershell
+npm run db:types:check
+```
+
+Local runs use the verified linked project. CI can set `SUPABASE_PROJECT_ID` to
+the non-production project reference and provide `SUPABASE_ACCESS_TOKEN` through
+its secret store; neither value belongs in source control. The check exits with a
+failure when regeneration would change the committed file.
+
 ## Checkpoint boundary
 
-P1-04 initializes the workflow only. Foundation application schemas, RLS policies, authorization helpers, fixtures, and database tests begin in later checkpoints.
+P1-06 only generates types for the applied foundation schema. Auth integration,
+RLS policies, authorization helpers, fixtures, and database tests remain in their
+later checkpoints.
