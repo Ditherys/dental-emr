@@ -4,88 +4,63 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-03 — Design system and application shell
+**Task / slice:** P1-04 — Initialize Supabase Cloud Development
 
-**Implementing agent:** OpenAI Codex, temporarily assigned as primary implementation agent
+**Implementing agent:** OpenAI Codex, explicitly assigned implementation for P1-04 only
 
 **Status:** Implemented; ready for independent review
 
 ## What Changed
 
-- Initialized current shadcn/ui for the existing Next.js application with Radix primitives, CSS variables, Lucide icons, and the `radix-nova` source style.
-- Added only the components used by this checkpoint: Button, Dropdown Menu, Sheet, Separator, and Skeleton.
-- Defined the approved navy, neutral, blush, gold, and semantic design tokens; applied Geist through a CSS variable; established 6–8 px ordinary radii, flat operational surfaces, visible focus, reduced-motion handling, and coarse-pointer touch targets.
-- Created the `(public)`, `(auth)`, and `(emr)` route-group boundaries and moved `/` into the public group.
-- Added a responsive private shell with a desktop sidebar at wide widths, sheet navigation below 1280 px, organization and branch-context placeholders, a user menu, and compact content spacing.
-- Added real foundation routes for `/dashboard`, `/settings/branches`, and `/settings/account`; they intentionally display honest empty states instead of fake clinical records, metrics, or charts.
-- Added reusable `PageLoading`, `PageError`, `EmptyState`, `PermissionDenied`, and `InlineFieldError` primitives.
-- Scoped a TanStack Query provider and Sonner toaster to the private EMR layout.
-- Added `PRODUCT.md` and `.impeccable/live/config.json` as required context/configuration for the directly relevant Impeccable UI skill. `PRODUCT.md` explicitly defers to the authoritative documents listed in `AGENTS.md`.
+- Ran the repository-pinned Supabase CLI 2.113.0 `init` command.
+- Added the generated `supabase/config.toml` and its CLI-state `.gitignore`.
+- Added an explicit cloud-first warning to the generated config: ADR-016 still prohibits `supabase start` and persistent local application data.
+- Added `supabase/README.md` with the non-production project, interactive authentication, safe linking, dry-run, migration-history, and destructive-reset guardrails.
+- Added the required `supabase/migrations/`, `supabase/tests/`, and intentionally empty `supabase/seed.sql` artifacts.
+- Kept P1-04 free of application schema, migrations, fixtures, RLS, Auth integration, and later-domain work.
 
-## Scope / Architecture Notes
+## Cloud Link Status
 
-- No Supabase project setup, authentication, session enforcement, database schema, RLS, migrations, server actions, or remote operations were added.
-- The EMR routes currently render static non-sensitive foundation content without an auth guard because Supabase SSR authentication begins at P1-07. They must be protected before tenant or clinical data is introduced.
-- The public page links to the static shell only to make this checkpoint reviewable; it exposes no patient, tenant, or credential data.
-- Navigation is deliberately limited to Dashboard, Branches, and Account & security. No later clinical or operational modules were added.
-- No dark-mode implementation, fake dashboard data, KPI row, decorative chart, tile gallery, broad client layout boundary, or future-domain dependency was introduced.
-- Interactive client boundaries are limited to navigation state, the mobile sheet, the user dropdown, the query provider, and Sonner.
-- shadcn 4.16.2 is a direct dependency because its current Tailwind v4 initialization imports `shadcn/tailwind.css`; the lockfile contains the corresponding current CLI/runtime dependency tree.
+- The local Supabase CLI authentication is valid.
+- Created a separate `dental-emr-dev` project under the `Dental EMR` Supabase organization in `ap-southeast-1` (Singapore) using the default project size without high availability.
+- The project reports `ACTIVE_HEALTHY` and this repository reports it as the linked project.
+- The database password was generated with a cryptographic random-number generator and existed only inside the creation/linking process; it was not printed, committed, or placed in documentation.
+- The pre-existing `SmileLab` project in `ap-south-1` remains active and unlinked; Codex did not modify it.
+- No schema migration, seed, or other database mutation was applied.
 
 ## Important Files
 
-- `components.json`
-- `src/app/globals.css`
-- `src/app/layout.tsx`
-- `src/app/(public)/page.tsx`
-- `src/app/(auth)/layout.tsx`
-- `src/app/(emr)/layout.tsx`
-- `src/app/(emr)/dashboard/page.tsx`
-- `src/components/layout/emr-shell.tsx`
-- `src/components/layout/mobile-navigation.tsx`
-- `src/components/feedback/`
-- `src/components/providers/query-provider.tsx`
-- `src/components/ui/`
-- `PRODUCT.md`
+- `supabase/config.toml`
+- `supabase/.gitignore`
+- `supabase/README.md`
+- `supabase/seed.sql`
+- `supabase/migrations/.gitkeep`
+- `supabase/tests/README.md`
 
 ## Verification Performed
 
-- `npm ci` — passed; 777 packages audited with 0 vulnerabilities.
-- `npm run lint` — passed with no findings.
+- `npx supabase --version` — passed; 2.113.0.
+- `npx supabase init` — passed.
+- `npx supabase projects list` — passed; `dental-emr-dev` is healthy, in `ap-southeast-1`, and linked.
+- `npx supabase migration list --linked` — passed; no migrations exist yet.
+- `npx supabase db push --dry-run` — passed; remote database is up to date and no migrations, seeds, or roles would be applied.
+- Verified the generated link-state files remain under ignored `supabase/.temp/`.
+- `npm run lint` — passed.
 - `npx tsc --noEmit` — passed under strict TypeScript settings.
-- `npm run build` — passed; Next.js 16.3.0 compiled, type-checked, and generated `/`, `/dashboard`, `/settings/account`, and `/settings/branches` plus the framework not-found route.
-- `npm audit --audit-level=high` — found 0 vulnerabilities.
-- `npx shadcn info` — passed; confirmed Next.js 16.3.0, Tailwind v4, Radix base, Lucide, RSC, aliases, and exactly five installed components.
-- Started the local dev server and verified all four implemented routes returned HTTP 200 with their expected rendered content markers.
-- Ran the Impeccable design detector across `src/app` and `src/components` — returned no findings.
-- Calculated WCAG contrast for the core text/background token pairs. All tested pairs passed 4.5:1; the lowest was slate text on warm surface at 5.08:1.
-- Verified direct shadcn-added dependencies for current versions, React compatibility where applicable, and MIT/Apache-2.0 licenses.
-- Scanned source and manifests for credential-like values, real/sensitive patient content, deferred feature imports, and Git/local dependency sources — none found.
+- `npm run build` — passed; all existing routes compiled and prerendered.
 - `git diff --check` — passed.
-
-## Visual QA Limitation
-
-- The in-app browser integration was unavailable in this session: browser discovery returned no available browser. True screenshot and interaction inspection at 360–390, 430, 768, 1024, and 1280–1440 px could not be performed.
-- Responsive behavior was instead reviewed through implemented breakpoints, flex shrink/overflow rules, 44 px coarse-pointer targets, safe-area padding, rendered-route checks, and source-level design detection. Independent browser viewport and keyboard/touch interaction QA remains required.
+- Linked-project verification was read-only/dry-run only; no migration or seed was pushed.
 
 ## Environment Note
 
 - Next.js continues to warn that it ignores an unrelated `C:\Users\D_Reyes\package-lock.json` outside this Git repository. The repository lockfile is used; no machine-specific workaround was committed.
-- Clean install continues to report deprecated transitive `tsconfck` 3.1.6 through `vite-tsconfig-paths`; npm reports no vulnerability. This was already recorded at P1-02.
-
-## Tests Not Applicable / Not Run
-
-- No Vitest/component or Playwright suites were added or run because P1-17 owns test configuration and initial automated suites.
-- No Playwright browser binaries were installed.
-- No database, pgTAP, RLS, Supabase Cloud, R2, Cloudflare, or deployment checks were run because those systems are outside P1-03.
 
 ## Reviewer Focus
 
-- Perform the missing browser inspection at representative phone, tablet, compact-laptop, and desktop widths; exercise the mobile sheet, user dropdown, keyboard focus, and route navigation.
-- Confirm the static pre-auth EMR routes contain no sensitive content and that P1-07 will enforce authentication before any tenant data is rendered.
-- Confirm the shell stays compact and flat, contains no fake dashboard composition, and keeps client boundaries appropriately narrow.
-- Review the shadcn-generated dependency increase and source-owned component customizations against current official shadcn 4 behavior.
-- Confirm the feedback primitives remain generic and accessible without exposing raw authorization/database errors.
+- Confirm the generated config contains no secret values and its local-service defaults are not being treated as approval for a local Supabase runtime.
+- Confirm the committed workflow requires target verification and dry-run review before any remote schema mutation.
+- Confirm P1-04 contains no application schema and has not drifted into P1-05 or later work.
+- Independently confirm `dental-emr-dev` is the intended disposable, non-production, synthetic-data-only project and that it remains in `ap-southeast-1`.
 
 ## Handoff Rules
 

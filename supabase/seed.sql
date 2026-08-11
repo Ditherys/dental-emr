@@ -1,0 +1,2 @@
+-- P1-04 intentionally has no fixtures.
+-- Future seed data must be synthetic and must never contain real patient information.
