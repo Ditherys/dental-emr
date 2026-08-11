@@ -57,6 +57,44 @@ Use the drift check locally or in CI:
 npm run db:types:check
 ```
 
+## Workforce invitation email template
+
+P1-08 uses the Supabase admin invitation API from a server-only client. Configure
+the hosted project's **Invite user** email template so the token hash is verified
+by the application SSR callback:
+
+```html
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite">Accept invitation</a>
+```
+
+Add each environment's `APP_URL` origin and `/auth/confirm` path to the hosted
+Auth redirect allow list. `APP_URL` and `SUPABASE_SECRET_KEY` are server-only;
+the secret key must never use a `NEXT_PUBLIC_` prefix.
+
+## Controlled first-owner bootstrap
+
+The first tenant owner is the only invitation that does not have an existing
+authorized inviter. Run this procedure only against a verified non-production
+project with a newly created active organization that has no workforce members.
+The database takes an organization-scoped transaction lock and rejects a second
+bootstrap.
+
+Set the required values in the current PowerShell process without writing secrets
+to Git, then run:
+
+```powershell
+$env:BOOTSTRAP_ORGANIZATION_ID='<synthetic-organization-uuid>'
+$env:BOOTSTRAP_OWNER_EMAIL='<synthetic-owner-email>'
+$env:BOOTSTRAP_CONFIRMATION='I_UNDERSTAND_THIS_CREATES_FIRST_OWNER'
+npm run auth:bootstrap-owner
+```
+
+The script also requires `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and
+`APP_URL` in the process environment. It never prints their values or the owner
+email. Staging uses the same controlled procedure. Production tenant provisioning
+remains a later, explicit workflow and must not reuse an unrestricted developer
+credential.
+
 Local runs use the verified linked project. CI can set `SUPABASE_PROJECT_ID` to
 the non-production project reference and provide `SUPABASE_ACCESS_TOKEN` through
 its secret store; neither value belongs in source control. The check exits with a
@@ -64,6 +102,6 @@ failure when regeneration would change the committed file.
 
 ## Checkpoint boundary
 
-P1-06 only generates types for the applied foundation schema. Auth integration,
-RLS policies, authorization helpers, fixtures, and database tests remain in their
-later checkpoints.
+P1-08 adds invitation-only workforce onboarding. MFA, the general application
+authorization layer, RLS policies, fixtures, and the broader database test
+foundation remain in their later checkpoints.

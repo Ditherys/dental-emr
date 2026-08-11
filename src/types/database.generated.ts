@@ -486,7 +486,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_workforce_invitation: {
+        Args: {
+          p_auth_user_id: string
+          p_first_name: string
+          p_last_name: string
+        }
+        Returns: string
+      }
+      fail_workforce_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
+      finalize_workforce_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_auth_user_id: string
+          p_invitation_id: string
+        }
+        Returns: string
+      }
+      get_workforce_invitation_summary: {
+        Args: { p_auth_user_id: string }
+        Returns: Json
+      }
+      list_workforce_invitation_options: {
+        Args: { p_actor_user_id: string }
+        Returns: Json
+      }
+      prepare_first_owner_invitation: {
+        Args: {
+          p_email: string
+          p_invitation_id: string
+          p_organization_id: string
+        }
+        Returns: string
+      }
+      prepare_workforce_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_branch_id?: string
+          p_email: string
+          p_invitation_id: string
+          p_organization_id: string
+          p_role_id: string
+        }
+        Returns: string
+      }
+      revoke_workforce_invitation: {
+        Args: { p_actor_user_id: string; p_invitation_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

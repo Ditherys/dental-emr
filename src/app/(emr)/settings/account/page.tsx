@@ -17,13 +17,13 @@ export default async function AccountPage() {
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader
         title="Account and security"
-        description="Session, identity, and security settings will appear here as the authentication foundation is implemented."
+        description="Manage your individual identity and security settings. Session and multi-factor controls will appear here as the remaining security foundation is implemented."
       />
       <Separator className="my-6" />
       <EmptyState
         icon={ShieldCheck}
-        title="Account controls are not connected"
-        description="Authentication, invitation, and MFA workflows remain in their approved later Phase 1 checkpoints."
+        title="Additional account controls are not connected"
+        description="Workforce invitations are available to authorized administrators. Multi-factor enrollment and session controls remain in their approved Phase 1 checkpoints."
       />
     </div>
   );
