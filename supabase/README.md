@@ -152,4 +152,6 @@ the existing AAL2-gated, transactional `create_branch` RPC through an authorized
 server action; it requires no additional schema migration. P1-14 derives the
 branch selector from that existing user-context/RLS-backed authorization state
 and stores only a validated browser preference; it also requires no schema
-migration. P1-15 and every later domain remain out of scope here.
+migration. P1-15 adds application/browser security headers and private response
+cache rules only; it also requires no schema migration. P1-16 and every later
+domain remain out of scope here.
