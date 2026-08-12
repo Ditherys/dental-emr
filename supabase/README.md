@@ -147,5 +147,7 @@ accounts, production factors, or secrets in Git and test output.
 ## Checkpoint boundary
 
 The committed database foundation now includes P1-10 application authorization,
-P1-11 RLS policies, and the P1-12 synthetic seed/security fixtures. P1-13 branch
-management UI and every later domain remain out of scope here.
+P1-11 RLS policies, and the P1-12 synthetic seed/security fixtures. P1-13 uses
+the existing AAL2-gated, transactional `create_branch` RPC through an authorized
+server action; it requires no additional schema migration. P1-14 branch context
+selection and every later domain remain out of scope here.
