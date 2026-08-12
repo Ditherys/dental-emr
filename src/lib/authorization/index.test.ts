@@ -25,6 +25,7 @@ import {
   AuthorizationError,
   requireActiveOrganizationMembership,
   requireBranchAccess,
+  requireOrganizationAuthorizationState,
   requireOrganizationAccess,
   requirePermission,
   requireUser,
@@ -90,6 +91,20 @@ describe("server authorization orchestration", () => {
       identity,
       organization: { id: "org-a" },
       branch: { id: "branch-a1" },
+    });
+    expect(loadOrganizationAuthorizationState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identity,
+        membershipId: "member-a",
+        organization: expect.objectContaining({ id: "org-a" }),
+      }),
+    );
+  });
+
+  it("returns live authorization state for the server-rendered workflow shell", async () => {
+    await expect(requireOrganizationAuthorizationState()).resolves.toEqual({
+      identity,
+      ...authorizationState,
     });
     expect(loadOrganizationAuthorizationState).toHaveBeenCalledWith(
       expect.objectContaining({

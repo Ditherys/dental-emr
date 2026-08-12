@@ -38,6 +38,15 @@ export async function requireOrganizationAccess(organizationId: string) {
   return requireActiveOrganizationMembership(organizationId);
 }
 
+export async function requireOrganizationAuthorizationState(
+  organizationId?: string,
+) {
+  const context = await requireActiveOrganizationMembership(organizationId);
+  const state = await loadOrganizationAuthorizationState(context);
+
+  return { identity: context.identity, ...state };
+}
+
 type BranchAccessRequest = {
   branchId: string;
   organizationId?: string;

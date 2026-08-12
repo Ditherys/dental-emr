@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertPermission,
   AuthorizationError,
+  createBranchContextModel,
   findAuthorizedBranch,
   selectActiveOrganizationMembership,
   type ActiveOrganizationMembership,
@@ -126,6 +127,48 @@ describe("branch access", () => {
       () => findAuthorizedBranch(state, "branch-a2"),
       "BRANCH_ACCESS_DENIED",
     );
+  });
+});
+
+describe("branch context model", () => {
+  it("offers every active branch plus All Branches to organization-wide users", () => {
+    const state = createState({
+      activeBranches: [
+        { id: "branch-a2", name: "Second", slug: "second" },
+        { id: "branch-a1", name: "Main", slug: "main" },
+      ],
+      roleScopes: [null],
+    });
+
+    expect(createBranchContextModel(state)).toEqual({
+      organization: { id: "org-a", name: "Synthetic Dental A" },
+      branches: [
+        { id: "branch-a1", name: "Main" },
+        { id: "branch-a2", name: "Second" },
+      ],
+      allowAllBranches: true,
+    });
+  });
+
+  it("offers only explicitly authorized active branches to branch-scoped users", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-a2", "inactive-branch"],
+      roleScopes: ["branch-a2"],
+    });
+
+    expect(createBranchContextModel(state)).toMatchObject({
+      branches: [{ id: "branch-a2", name: "Branch A2" }],
+      allowAllBranches: false,
+    });
+  });
+
+  it("does not treat a forged or inactive explicit branch ID as selectable", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-b1"],
+      roleScopes: ["branch-b1"],
+    });
+
+    expect(createBranchContextModel(state).branches).toEqual([]);
   });
 });
 

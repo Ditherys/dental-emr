@@ -4,82 +4,48 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-13 — Basic Owner/Admin Branch Management
+**Task / slice:** P1-14 — Branch Selector
 
 **Implementing agent:** OpenAI Codex, explicitly assigned as temporary primary implementation agent
 
-**Status:** Implemented, verified, and self-reviewed; ready for independent review. P1-14 was not started.
+**Status:** Implemented, verified, and self-reviewed; ready for independent review. P1-15 was not started.
 
 ## What Changed
 
-- Replaced the Settings → Branches placeholder with a permission-gated branch
-  directory and add-branch workflow for the user's single active organization.
-- The directory reads through the authenticated Supabase client and existing
-  RLS, showing branch name, code/slug, city/province, contact, status, and public
-  website visibility. Desktop uses a compact table; phone uses a stacked
-  definition-list composition rather than a squeezed table.
-- Added a React Hook Form + shared Zod form for the foundation-only fields:
-  name, code, generated/editable slug, optional phone/email, address, timezone,
-  and website visibility. It deliberately excludes schedules, resources,
-  inventory, booking setup, and every later domain.
-- Added an AAL2-gated server action that accepts no organization field. It
-  obtains `branch.manage` authorization first and supplies the tenant ID only
-  from the verified active membership context.
-- Added a server-only branch data module that invokes the existing
-  user-context `public.create_branch` RPC. The RPC remains the atomic database
-  boundary for permission revalidation, insertion, and the minimal
-  `branch.created` audit event; no service-role client is used.
-- Added action tests for AAL2 ordering, malformed input, RBAC-before-mutation,
-  and a forged `organizationId` form value being ignored in favor of the
-  authorized tenant. Added schema/slug tests and minimal Vitest TypeScript-path
-  resolution configuration.
-- Updated `supabase/README.md` to record that P1-13 reuses the existing reviewed
-  RPC and does not require a schema migration.
+- Replaced the branch placeholder in the private shell with an authorization-derived branch selector and connected the existing organization labels to the verified active organization name.
+- Added a server authorization orchestration helper that obtains the live organization authorization state through the authenticated Supabase client and existing RLS. The layout maps that state to a minimal client DTO containing only the active branches the user may select.
+- Organization-wide role scope receives `All Branches` plus every visible active branch. Branch-scoped users receive only active branches backed by explicit branch access, matching the existing `findAuthorizedBranch` rule. Inactive, cross-tenant, forged, or stale IDs are not selectable.
+- `All Branches` is a UI/workflow value only. No branch row, database write, service-role call, server action, or audit event was added.
+- Added an organization-scoped local-storage preference with authorization-option validation on every read and write. Storage failure falls back to in-memory shell state. The selected value is explicitly non-authoritative; every future server query/action must continue to call the existing authorization layer.
+- Kept selection state in the shared App Router layout so client-side navigation, resize, and orientation changes do not reset it or remount unsaved page state. The header selector remains keyboard/touch accessible and width-bounded on phones, with a portal-rendered menu that avoids shell clipping.
+- Added policy, server orchestration, persistence, stale-value rejection, unsaved-state preservation, and accessible menu tests.
+- Updated `supabase/README.md` to record that P1-14 is application-only and requires no migration.
 
 ## Remote Database State
 
-- Re-verified the linked target as `dental-emr-dev` in Singapore; migration
-  history is aligned through `20260812051100`.
-- No migration, seed, persistent row, Dashboard-only schema change, reset, or
-  other destructive operation was performed for P1-13. The pgTAP suite ran in
-  its rollback transaction.
-- No real staff/patient data, usable credentials, secrets, or production access
-  was used.
+- Re-verified the linked target as `dental-emr-dev` in Singapore; migration history is aligned through `20260812051100`.
+- No migration, seed, persistent row, Dashboard-only schema change, reset, or other destructive operation was performed for P1-14. The pgTAP suite ran inside its rollback transaction.
+- No real staff/patient data, usable credentials, secrets, or production access was used.
 
 ## Verification Performed
 
-- Foundation RLS/authorization pgTAP regression — passed `1..121` with no
-  failure diagnostic. This covers Org A branch creation, Org B isolation,
-  branch-scoped non-inheritance, AAL2 enforcement, exact audit scoping, and
-  atomic rollback when audit insertion fails.
-- `supabase db lint --linked --schema public,private --level warning --fail-on error`
-  — passed; no schema errors.
+- Foundation RLS/authorization pgTAP regression — passed `1..121` with no failure diagnostic.
+- `supabase db lint --linked --schema public,private --level warning --fail-on error` — passed; no schema errors.
 - `npm run db:types:check` — passed; no generated type drift.
 - `npm audit` — passed; 0 vulnerabilities.
 - `npm run lint` — passed with no warnings.
 - `npx tsc --noEmit` — passed.
-- `npx vitest run` — passed 56 tests across 7 files.
-- `npm run build` — passed. The pre-existing warning about the ignored
-  parent-directory lockfile remains.
+- `npx vitest run` — passed 67 tests across 8 files.
+- `npm run build` — passed. The pre-existing warning about the ignored parent-directory lockfile remains.
+- Impeccable detector on the changed shell components — passed with no findings.
 - `git diff --check` — passed.
 
 ## Self-Review / Scope Boundaries
 
-- Confirmed neither the browser form nor the server action accepts an
-  authoritative organization ID. The database RPC independently rechecks the
-  authenticated user's live organization-wide `branch.manage` permission.
-- Confirmed branch creation does not add branch memberships or copy staff
-  access. Organization-wide owner/admin roles can see the new branch; existing
-  exact-branch users do not gain access automatically.
-- Confirmed branch listing remains user-context/RLS-scoped and the mutation
-  remains AAL2-gated and atomically audited. No direct authenticated table-write
-  path, RLS bypass, service secret, or client-side-only authorization was added.
-- Confirmed duplicate code/slug errors are handled without exposing database
-  details, and unknown failures do not claim that either the branch or audit
-  event was saved.
-- Live screenshot/interaction QA could not run because no in-app or extension
-  browser was available. Responsive structure, accessible labels/error
-  associations, touch targets, lint, type checking, and the production render
-  build were checked. Authenticated browser E2E remains a later controlled-test
-  concern because the synthetic seed identities intentionally cannot log in.
-- P1-14 branch context selection and all later domains remain untouched.
+- Confirmed branch options originate from verified membership plus RLS-backed live authorization state, not client-supplied organization or branch IDs. The client receives no roles, permissions, identity details, service secret, or RLS bypass capability.
+- Confirmed the same organization-wide versus explicit-branch rule powers both existing server branch authorization and selector visibility. A stale/cross-tenant local-storage value fails closed to `All Branches` for organization-wide scope or the first authorized branch for branch-scoped scope.
+- Confirmed the preference never enters a server query or mutation as authority. No browser-only authorization, role escalation, audit-worthy high-impact mutation, or tenant schema change was introduced.
+- Confirmed `All Branches` is not represented as a database record and cannot be confused with a UUID branch ID.
+- Confirmed the control is first-class at phone/tablet/desktop widths, uses no hover-only interaction, has coarse-pointer sizing through the shared control tokens, truncates long labels without losing the accessible name, and renders its menu through the existing Radix portal.
+- Authenticated live screenshot/interaction QA could not run because the synthetic database identities intentionally cannot log in and no controlled E2E login identity exists yet. Component interaction tests, responsive source review, lint, typecheck, the UI detector, and the production render build passed.
+- P1-15 security headers/browser baseline and all later domains remain untouched.

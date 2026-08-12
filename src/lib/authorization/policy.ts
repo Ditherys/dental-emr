@@ -35,6 +35,18 @@ export type OrganizationAuthorizationState = ActiveOrganizationMembership & {
   }>;
 };
 
+export type BranchContextModel = {
+  organization: {
+    id: string;
+    name: string;
+  };
+  branches: Array<{
+    id: string;
+    name: string;
+  }>;
+  allowAllBranches: boolean;
+};
+
 export type AuthorizationErrorCode =
   | "NO_ACTIVE_MEMBERSHIP"
   | "ORGANIZATION_SELECTION_REQUIRED"
@@ -89,6 +101,31 @@ export function findAuthorizedBranch(
   }
 
   return branch;
+}
+
+export function createBranchContextModel(
+  state: OrganizationAuthorizationState,
+): BranchContextModel {
+  const allowAllBranches = state.roleScopes.includes(null);
+  const explicitBranchIds = new Set(state.explicitBranchIds);
+  const branches = state.activeBranches
+    .filter(
+      (branch) => allowAllBranches || explicitBranchIds.has(branch.id),
+    )
+    .map(({ id, name }) => ({ id, name }))
+    .sort(
+      (left, right) =>
+        left.name.localeCompare(right.name) || left.id.localeCompare(right.id),
+    );
+
+  return {
+    organization: {
+      id: state.organization.id,
+      name: state.organization.businessName,
+    },
+    branches,
+    allowAllBranches,
+  };
 }
 
 export function assertPermission(

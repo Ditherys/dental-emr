@@ -149,5 +149,7 @@ accounts, production factors, or secrets in Git and test output.
 The committed database foundation now includes P1-10 application authorization,
 P1-11 RLS policies, and the P1-12 synthetic seed/security fixtures. P1-13 uses
 the existing AAL2-gated, transactional `create_branch` RPC through an authorized
-server action; it requires no additional schema migration. P1-14 branch context
-selection and every later domain remain out of scope here.
+server action; it requires no additional schema migration. P1-14 derives the
+branch selector from that existing user-context/RLS-backed authorization state
+and stores only a validated browser preference; it also requires no schema
+migration. P1-15 and every later domain remain out of scope here.
