@@ -18,7 +18,14 @@ Run each suite directly through the linked project's Management API:
 ```powershell
 npx supabase db query --linked --file supabase/tests/foundation_rls.test.sql
 npx supabase db query --linked --file supabase/tests/workforce_invitations.test.sql
+npx supabase db query --linked --file supabase/tests/seed_security_fixtures.test.sql
 ```
+
+The P1-12 seed fixture suite expects `supabase/seed.sql` to have been loaded
+first. The seed is idempotent, but loading it is an explicit remote write and
+must occur only after the linked project has been verified as disposable and
+non-production. Its Auth rows cannot log in; E2E login users require a separate
+controlled test setup.
 
 For a planned pgTAP suite, success ends with its plan (for example `1..121`) and
 no `Looks like you failed` diagnostic. The CLI's `test db --linked` command may

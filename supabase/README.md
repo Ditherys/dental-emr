@@ -38,6 +38,28 @@ npx supabase db push
 
 Never run `npx supabase db reset --linked` without first verifying the exact target is disposable and non-production and obtaining explicit human approval. It destroys remote data.
 
+## Synthetic foundation seed
+
+`seed.sql` contains the deterministic P1-12 two-tenant security graph. Every
+name, address, and email is synthetic; the nine `auth.users` rows are non-login
+database placeholders with no password, confirmed email, identity, session, or
+MFA factor. Create real E2E login identities later only through a controlled
+test setup against a designated non-production project.
+
+To load or refresh these idempotent fixtures without resetting the database,
+first verify the linked target, then execute the seed explicitly:
+
+```powershell
+npx supabase projects list
+npx supabase migration list --linked
+npx supabase db query --linked --file supabase/seed.sql
+npx supabase db query --linked --file supabase/tests/seed_security_fixtures.test.sql
+```
+
+Do not load this seed into staging or production. A full reconstruction test via
+`db reset --linked` remains destructive and requires the separate approval and
+target checks described above.
+
 ## Generated TypeScript types
 
 After reviewed migrations have been applied to the linked development project,
@@ -124,7 +146,6 @@ accounts, production factors, or secrets in Git and test output.
 
 ## Checkpoint boundary
 
-P1-09 adds the Supabase TOTP enrollment/challenge foundation and a reusable AAL2
-server gate. The general P1-10 application authorization layer, P1-11 RLS
-policies, fixtures, and the broader database test foundation remain later
-checkpoints.
+The committed database foundation now includes P1-10 application authorization,
+P1-11 RLS policies, and the P1-12 synthetic seed/security fixtures. P1-13 branch
+management UI and every later domain remain out of scope here.
