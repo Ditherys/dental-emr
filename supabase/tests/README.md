@@ -20,7 +20,7 @@ npx supabase db query --linked --file supabase/tests/foundation_rls.test.sql
 npx supabase db query --linked --file supabase/tests/workforce_invitations.test.sql
 ```
 
-For a planned pgTAP suite, success ends with its plan (for example `1..60`) and
+For a planned pgTAP suite, success ends with its plan (for example `1..121`) and
 no `Looks like you failed` diagnostic. The CLI's `test db --linked` command may
 still require a local Docker-based test runner in some environments; do not use
 that path to bypass ADR-016.

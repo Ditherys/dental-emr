@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(23);
+select extensions.plan(36);
 
 insert into auth.users (
   id,
@@ -439,6 +439,267 @@ select extensions.is(
   ),
   'removed',
   'expiration removes the inactive invited membership'
+);
+
+-- P1-11 invitation delegation hardening. The service-only boundary must use
+-- the original inviter's live organization-wide authority, not service-role
+-- privilege or role metadata captured when the invitation was prepared.
+insert into auth.users (
+  id,
+  instance_id,
+  aud,
+  role,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+select
+  user_id,
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated',
+  'authenticated',
+  email,
+  '',
+  statement_timestamp(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{}'::jsonb,
+  statement_timestamp(),
+  statement_timestamp()
+from (values
+  ('10000000-0000-0000-0000-000000000008'::uuid, 'owner-denied@example.test'),
+  ('10000000-0000-0000-0000-000000000009'::uuid, 'superset-denied@example.test'),
+  ('10000000-0000-0000-0000-000000000010'::uuid, 'sensitive-denied@example.test'),
+  ('10000000-0000-0000-0000-000000000011'::uuid, 'owner-success@example.test'),
+  ('10000000-0000-0000-0000-000000000012'::uuid, 'stale-authority@example.test')
+) as synthetic_users(user_id, email);
+
+insert into public.roles (
+  id,
+  organization_id,
+  code,
+  name,
+  is_system
+)
+values
+  ('52000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'P111_INVITE_MANAGER', 'P111 Invite Manager', false),
+  ('52000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'P111_PERMISSION_SUPERSET', 'P111 Permission Superset', false),
+  ('52000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'P111_SENSITIVE_INVITE', 'P111 Sensitive Invite', false);
+
+insert into public.role_permissions (role_id, permission_id)
+select role_permission.role_id, permission.id
+from (values
+  ('52000000-0000-0000-0000-000000000001'::uuid, 'role.manage'),
+  ('52000000-0000-0000-0000-000000000002'::uuid, 'organization.manage'),
+  ('52000000-0000-0000-0000-000000000003'::uuid, 'role.manage')
+) as role_permission(role_id, permission_code)
+join public.permissions as permission
+  on permission.code = role_permission.permission_code;
+
+insert into public.member_roles (
+  organization_id,
+  organization_member_id,
+  role_id,
+  assigned_by
+)
+values (
+  '20000000-0000-0000-0000-000000000001',
+  '40000000-0000-0000-0000-000000000002',
+  '52000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000001'
+);
+
+select extensions.throws_ok(
+  $$
+    select public.prepare_workforce_invitation(
+      '50000000-0000-0000-0000-000000000009',
+      '10000000-0000-0000-0000-000000000002',
+      '20000000-0000-0000-0000-000000000001',
+      'owner-denied@example.test',
+      (select id from public.roles where organization_id is null and code = 'OWNER'),
+      null
+    )
+  $$,
+  'P0001',
+  'sensitive role delegation requires security.manage',
+  'user.invite plus role.manage cannot prepare an OWNER invitation without security.manage'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from private.workforce_invitations
+    where id = '50000000-0000-0000-0000-000000000009'
+  ),
+  0,
+  'denied OWNER preparation creates no invitation record'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.organization_members as organization_member
+    left join public.member_roles as member_role
+      on member_role.organization_member_id = organization_member.id
+    where organization_member.user_id = '10000000-0000-0000-0000-000000000008'
+       or member_role.assigned_by = '10000000-0000-0000-0000-000000000008'
+  ),
+  0,
+  'denied OWNER invitation creates no membership or role authorization rows'
+);
+
+select extensions.throws_ok(
+  $$
+    select public.prepare_workforce_invitation(
+      '50000000-0000-0000-0000-000000000010',
+      '10000000-0000-0000-0000-000000000002',
+      '20000000-0000-0000-0000-000000000001',
+      'superset-denied@example.test',
+      '52000000-0000-0000-0000-000000000002',
+      null
+    )
+  $$,
+  'P0001',
+  'role contains permissions the actor may not delegate',
+  'inviter cannot delegate a custom role containing an ordinary permission they lack'
+);
+
+select extensions.throws_ok(
+  $$
+    select public.prepare_workforce_invitation(
+      '50000000-0000-0000-0000-000000000011',
+      '10000000-0000-0000-0000-000000000002',
+      '20000000-0000-0000-0000-000000000001',
+      'sensitive-denied@example.test',
+      '52000000-0000-0000-0000-000000000003',
+      null
+    )
+  $$,
+  'P0001',
+  'sensitive role delegation requires security.manage',
+  'inviter cannot delegate a sensitive custom role without security.manage'
+);
+
+select extensions.ok(
+  not (
+    public.list_workforce_invitation_options(
+      '10000000-0000-0000-0000-000000000002'
+    )::text like '%P111_PERMISSION_SUPERSET%'
+    or public.list_workforce_invitation_options(
+      '10000000-0000-0000-0000-000000000002'
+    )::text like '%P111_SENSITIVE_INVITE%'
+    or public.list_workforce_invitation_options(
+      '10000000-0000-0000-0000-000000000002'
+    )::text like '%"code": "OWNER"%'
+  ),
+  'service-only invitation options omit roles the actor may not delegate'
+);
+
+select extensions.lives_ok(
+  $$
+    select public.prepare_workforce_invitation(
+      '50000000-0000-0000-0000-000000000012',
+      '10000000-0000-0000-0000-000000000001',
+      '20000000-0000-0000-0000-000000000001',
+      'owner-success@example.test',
+      (select id from public.roles where organization_id is null and code = 'OWNER'),
+      null
+    )
+  $$,
+  'an inviter holding the full OWNER permission set and security.manage can prepare the invitation'
+);
+
+select extensions.ok(
+  public.finalize_workforce_invitation(
+    '50000000-0000-0000-0000-000000000012',
+    '10000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000011'
+  ) is not null,
+  'authorized OWNER invitation finalizes successfully'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.organization_members as organization_member
+    join public.member_roles as member_role
+      on member_role.organization_id = organization_member.organization_id
+     and member_role.organization_member_id = organization_member.id
+    join public.roles as role
+      on role.id = member_role.role_id
+    where organization_member.organization_id = '20000000-0000-0000-0000-000000000001'
+      and organization_member.user_id = '10000000-0000-0000-0000-000000000011'
+      and organization_member.membership_status = 'invited'
+      and role.code = 'OWNER'
+      and member_role.branch_id is null
+      and member_role.assigned_by = '10000000-0000-0000-0000-000000000001'
+  ),
+  1,
+  'successful OWNER finalization creates exactly the intended organization-wide assignment'
+);
+
+select extensions.lives_ok(
+  $$
+    select public.prepare_workforce_invitation(
+      '50000000-0000-0000-0000-000000000013',
+      '10000000-0000-0000-0000-000000000001',
+      '20000000-0000-0000-0000-000000000001',
+      'stale-authority@example.test',
+      (select id from public.roles where organization_id is null and code = 'OWNER'),
+      null
+    )
+  $$,
+  'privileged invitation can be prepared while the inviter is authorized'
+);
+
+delete from public.member_roles
+where organization_id = '20000000-0000-0000-0000-000000000001'
+  and organization_member_id = '40000000-0000-0000-0000-000000000001'
+  and role_id = (
+    select id
+    from public.roles
+    where organization_id is null
+      and code = 'OWNER'
+  )
+  and branch_id is null;
+
+select extensions.throws_ok(
+  $$
+    select public.finalize_workforce_invitation(
+      '50000000-0000-0000-0000-000000000013',
+      '10000000-0000-0000-0000-000000000001',
+      '10000000-0000-0000-0000-000000000012'
+    )
+  $$,
+  'P0001',
+  'actor is not authorized to invite workforce users',
+  'finalization rechecks the recorded inviter after delegation authority is removed'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.organization_members
+    where organization_id = '20000000-0000-0000-0000-000000000001'
+      and user_id = '10000000-0000-0000-0000-000000000012'
+  ),
+  0,
+  'failed stale-authority finalization creates no organization membership'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.member_roles as member_role
+    join public.organization_members as organization_member
+      on organization_member.id = member_role.organization_member_id
+    where organization_member.user_id = '10000000-0000-0000-0000-000000000012'
+  ),
+  0,
+  'failed stale-authority finalization creates no role authorization row'
 );
 
 select * from extensions.finish();

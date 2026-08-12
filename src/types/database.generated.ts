@@ -494,6 +494,27 @@ export type Database = {
         }
         Returns: string
       }
+      create_branch: {
+        Args: {
+          branch_address_line1: string
+          branch_address_line2?: string
+          branch_city: string
+          branch_code: string
+          branch_country_code?: string
+          branch_email?: string
+          branch_latitude?: number
+          branch_longitude?: number
+          branch_name: string
+          branch_phone?: string
+          branch_postal_code?: string
+          branch_province: string
+          branch_slug: string
+          branch_timezone?: string
+          branch_website_visible?: boolean
+          target_organization_id: string
+        }
+        Returns: string
+      }
       fail_workforce_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -536,6 +557,38 @@ export type Database = {
       revoke_workforce_invitation: {
         Args: { p_actor_user_id: string; p_invitation_id: string }
         Returns: boolean
+      }
+      set_branch_membership: {
+        Args: {
+          target_access_status: string
+          target_branch_id: string
+          target_organization_member_id: string
+        }
+        Returns: string
+      }
+      set_member_role: {
+        Args: {
+          grant_role: boolean
+          target_branch_id: string
+          target_organization_member_id: string
+          target_role_id: string
+        }
+        Returns: string
+      }
+      set_role_permission: {
+        Args: {
+          grant_permission: boolean
+          target_permission_code: string
+          target_role_id: string
+        }
+        Returns: string
+      }
+      update_organization_member_status: {
+        Args: {
+          target_membership_status: string
+          target_organization_member_id: string
+        }
+        Returns: string
       }
     }
     Enums: {

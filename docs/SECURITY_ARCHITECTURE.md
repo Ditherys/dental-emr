@@ -1073,6 +1073,7 @@ Automated pgTAP/integration tests should include:
 - Tenant A cannot INSERT row with Tenant B `organization_id`.
 - Tenant A cannot UPDATE row into Tenant B.
 - Tenant A cannot DELETE Tenant B.
+
 - branch-limited receptionist cannot mutate another branch where not allowed.
 - regular dentist has intended organization-wide clinical read.
 - visiting specialist sees assigned patient but not unassigned patient.
@@ -1080,6 +1081,61 @@ Automated pgTAP/integration tests should include:
 - user without clinical role cannot query clinical table directly.
 - `anon` sees no patient table.
 - publishable Supabase key alone returns no clinical data.
+
+## 11.6 Foundation administrative mutation boundary
+
+High-impact foundation administration must not be exposed as ordinary
+authenticated table writes. Direct authenticated writes are revoked for
+`organizations`, `branches`, `organization_members`, `roles`,
+`role_permissions`, `branch_memberships`, and `member_roles`. Supported
+foundation operations use narrowly scoped user-context PostgreSQL functions
+that:
+
+- derive the actor only from `auth.uid()`;
+- require an `aal2` JWT;
+- validate active tenant membership and the operation-specific permission;
+- serialize authorization mutations per organization where concurrent changes
+  could invalidate a delegation decision;
+- reject self-role mutation/assignment and cross-tenant targets;
+- prevent a role manager from granting a permission the actor does not already
+  hold organization-wide;
+- require `security.manage` in addition to `role.manage` when delegating
+  `role.manage` or `security.manage`, or when changing a member who already has
+  either sensitive permission through an organization-wide role assignment;
+- treat both grants and revocations against such a sensitive member as
+  security administration, even when the individual role being added or
+  removed is otherwise ordinary;
+- write exactly one sanitized success audit event in the same transaction as
+  the mutation.
+
+Authenticated direct writes to these administrative tables remain revoked even
+when the caller otherwise has the related RBAC permission. RLS remains enabled
+for reads and as defense in depth; it is not used as a substitute for the
+transactional audit boundary. Service-role access is not granted to the
+user-context functions. Existing narrowly scoped service-only workforce
+invitation provisioning remains a separate trusted workflow. Its untrusted
+Server Action entry point must verify a current AAL2 session before any
+service-role invitation operation begins. Service-role execution does not
+bypass delegation authorization: the workflow uses the recorded original
+inviter, validates tenant and role scope, requires the inviter to hold every
+permission in the invited role, and additionally requires `security.manage`
+when that role contains `role.manage` or `security.manage`. Before final
+provisioning creates membership, branch-membership, or role-assignment rows,
+the function acquires the organization authorization lock and rechecks the
+inviter's current authority and the role's live permission set in the same
+transaction.
+
+Administrative operations without an operation-specific transactional function
+remain fail-closed until that boundary and its audit tests are implemented.
+
+Custom-role permission delegation is a subset operation. A caller cannot change
+any role currently assigned to themselves, cannot combine roles by assigning a
+new role to themselves, and cannot grant a role or permission containing
+authority they do not already possess. These invariants must be checked again
+inside the database transaction, not inferred from UI state. Workforce
+invitations follow the same permission-subset rule for built-in and custom
+roles, including `OWNER`; sensitive permissions are derived from the role's
+permission definitions rather than trusted role-name metadata.
 
 ---
 

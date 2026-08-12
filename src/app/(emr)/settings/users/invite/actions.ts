@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/workforce-invitations";
 import {
   AuthorizationError,
+  requireAal2,
   requirePermission,
 } from "@/lib/authorization";
 
@@ -33,6 +34,8 @@ export async function inviteWorkforceUser(
   _previousState: InviteWorkforceState,
   formData: FormData,
 ): Promise<InviteWorkforceState> {
+  await requireAal2("/settings/users/invite");
+
   const result = inviteSchema.safeParse({
     organizationId: formData.get("organizationId"),
     email: formData.get("email"),
