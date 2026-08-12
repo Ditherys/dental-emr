@@ -29,6 +29,7 @@ const suites = [
   "schema.test.sql",
   "foundation_rls.test.sql",
   "workforce_invitations.test.sql",
+  "audit_foundation.test.sql",
   "seed_security_fixtures.test.sql",
 ].map((filename) => join(repositoryRoot, "supabase", "tests", filename));
 

@@ -161,5 +161,7 @@ schema migration. P1-17 adds the guarded remote Cloud TEST pgTAP runner and
 application testing foundation without introducing a local runtime or a schema
 migration. P1-18 reuses that strict target guard for serialized CI migration,
 seed, lint, advisor, type, pgTAP, and E2E checks; see
-`docs/deployment/CI_FOUNDATION.md`. P1-19 and every later domain remain out of
-scope here.
+`docs/deployment/CI_FOUNDATION.md`. P1-19 hardens the existing audit table,
+adds the controlled verified-TOTP enrollment projection, and adds its dedicated
+pgTAP suite; see `docs/security/AUDIT_FOUNDATION.md`. P1-20 and every later
+domain remain out of scope here.

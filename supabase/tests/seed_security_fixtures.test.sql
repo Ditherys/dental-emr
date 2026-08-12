@@ -267,10 +267,15 @@ select extensions.ok(
   'anonymous access remains fail-closed at the grant layer with the seed loaded'
 );
 
+with test_failures as (
+  select finish
+  from extensions.finish()
+  where finish !~ '^1\.\.[0-9]+$'
+)
 select case
   when count(*) = 0 then 'P1_TEST_PASS'
-  else 'P1_TEST_FAIL'
+  else string_agg(finish, E'\n')
 end as p1_test_result
-from extensions.finish();
+from test_failures;
 
 rollback;

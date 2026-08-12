@@ -554,6 +554,7 @@ export type Database = {
         }
         Returns: string
       }
+      record_mfa_enrollment: { Args: { p_factor_id: string }; Returns: number }
       revoke_workforce_invitation: {
         Args: { p_actor_user_id: string; p_invitation_id: string }
         Returns: boolean

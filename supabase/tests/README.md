@@ -3,7 +3,9 @@
 Version-controlled pgTAP and authorization tests live here beside the migrations
 they verify. The suites cover schema invariants, RLS/tenant and branch isolation,
 role escalation, administrative audit integrity, invitation delegation, and the
-synthetic seed. Each suite runs inside a transaction that rolls back.
+synthetic seed. The dedicated audit suite also proves metadata allowlisting,
+append-only history, controlled MFA projection, tenant scoping, and idempotency.
+Each suite runs inside a transaction that rolls back.
 
 Remote tests must target an explicitly designated, disposable Supabase Cloud TEST
 project. Confirm the linked project before running them:

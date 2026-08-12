@@ -4,41 +4,47 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-18 — CI Pipeline
+**Task / slice:** P1-19 — Audit Foundation
 
 **Implementing agent:** OpenAI Codex, explicitly assigned as temporary primary implementation agent
 
-**Status:** Implemented, locally verified, and self-reviewed; ready for independent review. P1-19 was not started.
+**Status:** Implemented, verified, and security self-reviewed; ready for independent review. P1-20 was not started.
 
 ## What Changed
 
-- Added a pull-request/main GitHub Actions pipeline for locked installs, ESLint, strict TypeScript, Vitest, Next.js production build, Secretlint, dependency audit, and a serialized protected Cloud TEST database/E2E gate.
-- Added pre-link and post-link TEST target validation. Allowlisted wrappers guard migration dry-run/apply, idempotent synthetic seed loading, schema lint, security advisors, pgTAP execution, and TEST-schema type drift checks. No reset/destructive command is available.
-- Scoped protected credentials to only the steps that require them. Fork and Dependabot PRs cannot enter the secret-bearing Cloud TEST job; dependency updates require Cloud TEST verification from a trusted branch before acceptance.
-- Added SHA-pinned dependency review and CodeQL workflows plus bounded weekly Dependabot checks for npm and GitHub Actions. Added exact-version, MIT-licensed Secretlint 13.0.4 with the recommended ruleset for local and CI secret scanning.
-- Added `verify`, security, guarded Cloud TEST, and database CI package scripts, unit coverage for the database-command allowlist, and the CI/environment/branch-protection runbook.
+- Added `20260813010000_harden_audit_foundation.sql`: bounded audit field formats, generated opaque correlation IDs for new events, actor consistency, and a 1 KiB metadata allowlist limited to UUID/permission/role/scope values already used by foundation writers.
+- Added `record_mfa_enrollment(uuid)`, an idempotent authenticated projection that derives `auth.uid()`, requires AAL2, proves the factor is the caller's verified TOTP factor, derives active organizations server-side, and inserts one minimal organization event per active tenant. It accepts no tenant, branch, actor, result, metadata, token, code, setup key, or secret input.
+- Updated the MFA enrollment UI to project the event only after Supabase verification succeeds, clear the setup key/code state before projection, and offer a bounded idempotent retry when the cross-service audit write cannot be confirmed.
+- Added five application tests for the server action and a 15-case pgTAP audit suite covering privileges/search path, metadata rejection, AAL2, factor ownership, active-tenant derivation, idempotency, direct forgery, and tamper denial. Added the suite to the guarded runner and corrected two pre-existing `no_plan()` sentinels that counted a successful `1..N` plan line as failure.
+- Regenerated public database types and documented the audit boundary in `docs/security/AUDIT_FOUNDATION.md` and the Supabase workflow README.
+
+## Security / Tenancy Design
+
+- Normal users still have no audit INSERT/UPDATE/DELETE privilege. Existing `audit.read` RLS remains the tenant/branch read boundary; organization-level MFA events are not visible through a branch-only permission.
+- Audit metadata has no free-form key. Unknown keys, oversized payloads, malformed safe values, URL-shaped request/correlation values, and inconsistent USER actor rows fail database constraints.
+- `record_mfa_enrollment` is `SECURITY DEFINER` with an empty search path, exact authenticated-only EXECUTE grant, live factor ownership/status/type checks in `auth.mfa_factors`, AAL2 enforcement, and active organization joins. A unique partial index makes retries race-safe.
+- Supabase Auth remains the MFA system of record. The Auth verification and application projection cannot share one transaction, so the UI does not report completion until projection succeeds and preserves only the opaque factor ID for retry—not enrollment secrets or codes.
 
 ## Database / Remote State
 
-- No migration, schema/RLS/authorization change, seed modification, persistent row, Supabase Dashboard change, destructive operation, production access, local Supabase runtime, or Docker workflow was created or executed for P1-18.
-- Migration files remain authoritative. CI can mutate only an explicitly confirmed, linked, disposable Cloud TEST project after the protected environment gate; the TEST project must differ from the configured DEV and any configured production project.
-- The hosted migration/pgTAP/lint/advisor/type/E2E pipeline was not executed because this checkout has no Git remote or configured protected GitHub `cloud-test` environment. It was not bypassed with the linked DEV project or placeholder credentials.
-- No real staff/patient data, usable credentials, project references, access tokens, database passwords, TOTP secrets, or production access were printed, committed, or used.
+- Verified the linked target through CLI project membership, application URL equality, and an explicit development/test name check without printing its project reference. The target was the designated non-production `dental-emr-dev` project.
+- Migration history matched Git through `20260812051100`; the target-verified dry run listed only `20260813010000_harden_audit_foundation.sql`, then that committed migration was applied successfully. No reset, reseed, destructive command, Dashboard-only change, production access, local Supabase runtime, or Docker database was used.
+- Type generation was performed from the applied migration. Database tests used only synthetic, non-login identities and null-secret synthetic factor rows inside transactions that rolled back.
+- No real staff/patient data, PHI, usable credential, project reference, access/refresh token, database password, MFA setup key/code, presigned URL, or production secret was printed, committed, logged, or placed in audit metadata.
 
 ## Verification Performed
 
-- `npm ci` — passed from the committed lockfile; 0 vulnerabilities.
-- `npm run verify` with non-secret DEV-format placeholder metadata — passed: lint, typecheck, 98 unit tests across 14 files, production build, Secretlint, and `npm audit --audit-level=high` (0 vulnerabilities).
-- `npm run ci:test-target` with synthetic placeholder TEST metadata — passed without network access; the intentional `APP_ENVIRONMENT=development` check refused before linking.
-- Intentional `db:push:dry` and `db:types:check:test` checks with a development environment — both refused before remote access.
-- `npm run test:e2e:list` with the documented synthetic placeholder contract — passed; discovered 7 tests (6 desktop and 1 iPad-selected shell flow) without launching a browser or contacting the placeholder target.
-- `actionlint` 1.7.12 (download checksum verified) and independent YAML parsing — passed for all workflows and Dependabot configuration.
-- `git diff --check` — passed.
+- `npm run verify` with the verified non-production DEV environment pairing — passed: ESLint, strict TypeScript, 103 Vitest tests across 15 files, Next.js 16.3 production build, Secretlint, and `npm audit --audit-level=high` (0 vulnerabilities).
+- All five hosted transactional database suites passed against the verified non-production DEV project: schema, foundation RLS, workforce invitations, P1-19 audit foundation, and seed security fixtures.
+- `supabase db lint --linked --schema public,private --level error --fail-on error` — passed with no schema errors.
+- Security advisors completed without errors. Expected warnings remain for the intentionally authenticated, authorization-checking `SECURITY DEFINER` RPCs (including the new MFA projection) and for hosted leaked-password protection being disabled; the latter remains an environment/production gate.
+- `npm run db:types:check` — passed after regeneration.
+- `npm run test:e2e:list` with the documented non-secret synthetic placeholder contract — passed; 7 tests discovered without a browser launch or placeholder network contact.
+- `git diff --check` and sensitive-sink review — passed.
 
 ## Self-Review / Scope Boundaries
 
-- Confirmed actions are pinned to reviewed commit SHAs and workflow permissions are read-only except CodeQL's required `security-events: write`; dependency review cannot comment or write repository state.
-- Confirmed untrusted dependency installation receives no protected credentials, Cloud TEST commands are serialized, link is preceded by target validation, every later database operation repeats the linked-target guard, and no reset/reseed shortcut can target DEV/production.
-- Confirmed the credential-free application gate still runs for fork and Dependabot PRs. Because GitHub withholds Actions secrets for those events, their Cloud TEST validation must run from a reviewed trusted branch before acceptance rather than using `pull_request_target` or exposing credentials.
-- GitHub administrators still need to configure the protected `cloud-test` environment, synthetic login/TOTP fixtures, required checks, secret scanning, and push protection as documented. Hosted results remain a required operational acceptance step after that setup.
-- No application feature, dependency replacement, patient/clinical/later domain, audit-foundation implementation, or P1-19 work was added.
+- Confirmed actor and tenant context cannot be supplied by the browser, another user's factor cannot be projected, suspended/no-membership organizations receive no event, retries cannot duplicate a factor event, and direct audit forgery/history mutation remains denied.
+- Confirmed current branch, invitation, membership, and role administrative writers still produce their existing atomic sanitized events; all prior database suites pass under the new constraints.
+- No audit viewer, generalized client audit endpoint, factor-removal workflow, retention/archive automation, security alerting, dependency change, patient/clinical domain, or P1-20 authorization UX was added.
+- A live browser enrollment was not run because this workspace has no authorized synthetic login/TOTP fixture for the DEV target. The database ownership/AAL/tenant projection is covered transactionally; the existing protected Cloud TEST E2E job remains the hosted lifecycle check.

@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { isValidTotpCode } from "@/lib/auth/mfa-policy";
 import { createClient } from "@/lib/supabase/client";
 
+import { recordMfaEnrollmentAction } from "./actions";
+
 type Factor = {
   id: string;
   friendlyName: string;
@@ -48,6 +50,28 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const [removingFactorId, setRemovingFactorId] = useState<string>();
+  const [auditRetryFactorId, setAuditRetryFactorId] = useState<string>();
+
+  async function recordEnrollment(factorId: string) {
+    let result;
+
+    try {
+      result = await recordMfaEnrollmentAction(factorId);
+    } catch {
+      setAuditRetryFactorId(factorId);
+      setMessage("The MFA security record could not be confirmed. Retry from this page.");
+      return false;
+    }
+
+    if (!result.success) {
+      setAuditRetryFactorId(factorId);
+      setMessage(result.message);
+      return false;
+    }
+
+    setAuditRetryFactorId(undefined);
+    return true;
+  }
 
   async function startEnrollment() {
     const trimmedName = friendlyName.trim();
@@ -148,8 +172,9 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
 
     try {
       const supabase = createClient();
+      const verifiedFactorId = enrollment.factorId;
       const { error } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: enrollment.factorId,
+        factorId: verifiedFactorId,
         code,
       });
 
@@ -160,10 +185,36 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
 
       setEnrollment(undefined);
       setCode("");
+
+      if (!(await recordEnrollment(verifiedFactorId))) {
+        router.refresh();
+        return;
+      }
+
       router.replace(nextPath);
       router.refresh();
     } catch {
       setMessage("Authenticator verification is temporarily unavailable. Try again.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function retryAuditRecord() {
+    if (!auditRetryFactorId) {
+      return;
+    }
+
+    setMessage(undefined);
+    setPending(true);
+
+    try {
+      if (await recordEnrollment(auditRetryFactorId)) {
+        router.replace(nextPath);
+        router.refresh();
+      }
+    } catch {
+      setMessage("The MFA security record could not be confirmed. Retry from this page.");
     } finally {
       setPending(false);
     }
@@ -423,7 +474,21 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
         )}
 
         {message && (
-          <InlineFieldError id="enrollment-error">{message}</InlineFieldError>
+          <div className="mt-4">
+            <InlineFieldError id="enrollment-error">{message}</InlineFieldError>
+            {auditRetryFactorId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                disabled={pending}
+                onClick={retryAuditRecord}
+              >
+                {pending ? "Recording…" : "Retry security record"}
+              </Button>
+            )}
+          </div>
         )}
       </section>
 
