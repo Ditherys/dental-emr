@@ -4,77 +4,50 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-10 — Application Authorization Layer
+**Task / slice:** Phase 1 dependency-baseline reconciliation between accepted P1-10 and P1-11
 
-**Implementing agent:** OpenAI Codex, explicitly assigned temporary primary implementation for P1-10
+**Implementing agent:** OpenAI Codex, explicitly assigned this maintenance audit
 
-**Status:** Implemented, security-reviewed, verified, and ready for independent review
+**Status:** Complete; P1-11 was not started
 
 ## What Changed
 
-- Added a reusable server-only authorization DAL exposing equivalents of `requireUser()`, `requireActiveOrganizationMembership()`, `requireOrganizationAccess()`, `requireBranchAccess()`, `requirePermission()`, and the existing `requireAal2()`.
-- Added fail-closed current-organization selection: one active membership is derived automatically, an explicitly supplied organization is membership-validated, zero active memberships deny, and multiple active memberships require a future validated selector.
-- Added branch-context validation that accepts only active branches in the validated organization. Organization-wide role assignments can use all active tenant branches; branch-scoped users require active explicit branch membership.
-- Added permission evaluation that preserves assignment scope. Organization-level operations ignore branch-scoped grants; branch operations accept only an organization-wide grant or a grant for that exact authorized branch.
-- Applied active-membership enforcement to the private EMR layout.
-- Applied `user.invite` authorization to the workforce invitation Server Action. The action now derives the actor and organization from verified server context before calling the existing database RPC, which independently rechecks membership, permission, role, and branch selections.
-- Added 21 focused authorization tests covering policy behavior and server orchestration.
-- Kept P1-10 free of migrations, P1-11 RLS policies/helpers, branch-selector UI, later domain tables, and permission-catalog expansion.
+- Audited `package.json` and `package-lock.json` against the P1-02 approved runtime and development/testing baseline.
+- Confirmed every approved package was already declared and lockfile-resolved, so no npm package was installed, upgraded, replaced, or removed.
+- Confirmed no deferred feature library listed by P1-02 is declared or lockfile-resolved.
+- Verified current Playwright installation guidance and reconciled only Chromium for the planned Phase 1 desktop and iPad-like viewport coverage. Firefox and WebKit were not installed for this project.
+- Preserved the existing tracked `package-lock.json` unchanged.
 
-## Files Added or Updated
+## Exact Approved Baseline
 
-- `src/lib/authorization/{index,data,policy}.ts`
-- `src/lib/authorization/{index,policy}.test.ts`
-- `src/app/(emr)/layout.tsx`
-- `src/app/(emr)/settings/users/invite/actions.ts`
-- `docs/AI_HANDOFF.md`
+**Runtime:** `@supabase/supabase-js@2.112.3`, `@supabase/ssr@0.12.4`, `zod@4.4.3`, `react-hook-form@7.85.0`, `@hookform/resolvers@5.7.1`, `@tanstack/react-query@5.101.4`, `lucide-react@1.31.0`, `sonner@2.0.8`.
 
-## Security Design
+**Development/testing:** `supabase@2.113.0`, `vitest@4.1.10`, `@vitejs/plugin-react@6.0.5`, `jsdom@29.0.1`, `@testing-library/react@16.3.2`, `@testing-library/dom@10.4.1`, `@testing-library/user-event@14.6.3`, `vite-tsconfig-paths@6.1.1`, `@playwright/test@1.62.1`.
 
-- The public authorization API accepts no caller-supplied `userId` or role. `requireUser()` derives the actor from verified Supabase Auth claims through the existing server-only identity helper.
-- A browser-supplied organization UUID is only a selector. It grants nothing unless it matches an active membership for the verified Auth subject and the organization itself is active.
-- A browser-supplied branch UUID is checked against active branches of the validated organization plus either an organization-wide role scope or an active explicit branch membership. Local storage, URLs, hidden fields, and stale UI state are not authority.
-- Permission grants are loaded from `member_roles -> role_permissions -> permissions`; client role values are never read. Branch-scoped role grants cannot authorize organization-wide operations or another branch.
-- Returned contexts are minimal DTOs. They omit Auth tokens, service credentials, role records, raw profile rows, and full database entities.
-- The authorization entrypoint and data module import `server-only`. A production browser-asset scan found no server secret marker, privileged client, authorization table names, or server authorization error text.
-- P1-10 occurs before P1-11 policies. Therefore the server-only authorization data module temporarily uses the existing privileged Supabase client for narrowly scoped reads because current RLS-enabled tables expose no authenticated policies. Every public helper begins from verified Auth identity and active membership. P1-11 must add database defense in depth; this is not permission to expose or broaden the privileged client.
-- The invitation write still terminates in the existing reviewed database RPC, so the new application check is defense in depth rather than the sole authorization for that high-impact operation.
+## Compatibility and Playwright
+
+- Runtime used for verification: Node.js `24.14.1`, npm `11.11.0`.
+- `npm ls --all` reported a valid dependency tree; installed engine and peer ranges are compatible with the repository's Node.js `24.14.1`, React `19.2.8`, and Next.js `16.3.0` baseline.
+- No approved package was found to be superseded, deprecated, or incompatible in a way requiring replacement.
+- `npx playwright install chromium` reconciled Playwright `1.62.1` with Chrome for Testing `151.0.7922.34` (`chromium-1234`), Chrome Headless Shell `151.0.7922.34` (`chromium_headless_shell-1234`), FFmpeg `1011`, and Winldd `1007`.
+- A direct headless Chromium launch/close sanity check passed without adding a Playwright config or example test.
 
 ## Verification Performed
 
-- `npx vitest run` — passed 47 tests across 4 files; 21 are P1-10 authorization tests.
-- `npx tsc --noEmit` — passed.
+- `npm audit` — passed; 0 vulnerabilities.
 - `npm run lint` — passed with no warnings.
-- `npm run build` — passed; private routes remain dynamic server-rendered routes.
-- `npm run db:types:check` — passed against the designated linked non-production project; no schema/type drift.
-- `npx supabase db query --linked --file supabase/tests/workforce_invitations.test.sql` — passed all 23 existing transactional authorization/lifecycle tests.
-- `npx supabase db lint --linked --schema public,private --level error --fail-on error` — passed with no schema errors.
-- `npx supabase db advisors --linked --type security --level warn --fail-on error` — passed with no issues.
-- `git diff --check` — passed before the handoff update and must be rerun on the final staged diff.
-- Production client-bundle scan found none of `SUPABASE_SECRET_KEY`, `createAdminClient`, authorization table names, or the server authorization error text. The Supabase SDK contains only its generic `sb_secret_` key-format detector, not a key value.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed. Next.js emitted an environment warning about an unrelated `C:\Users\D_Reyes\package-lock.json` above the repository; compilation and page generation completed successfully.
+- Approved-baseline `npm ls --depth=0 ...` — passed and reported all 17 exact versions above.
+- `npm ls --all --json` — passed; dependency tree valid.
+- `npm install --package-lock-only --ignore-scripts --dry-run` — reported up to date; no manifest or lockfile change.
+- `npx vitest run` — passed 47 tests across 4 files.
+- Deferred-package manifest/lockfile check — passed; none found.
+- Playwright Chromium launch sanity — passed.
 
-## Reviewer Focus
+## Scope Boundaries / Reviewer Focus
 
-- Attempt Org A user -> Org B organization selection and confirm denial occurs before branch/permission data is loaded.
-- Attempt a valid Org A membership with an arbitrary Org B branch UUID and confirm denial.
-- Verify suspended/removed organization membership, inactive organization, inactive branch, and suspended/revoked branch membership are filtered out at query time.
-- Verify branch-scoped permission grants never become organization-wide and never cross to another authorized branch.
-- Verify an organization-wide role can access active tenant branches, including a future newly added branch, while ordinary branch-scoped users are not copied automatically.
-- Verify the invitation action derives actor/organization through P1-10 and still relies on the existing RPC for atomic write-side role/branch/tenant validation.
-- Confirm no code outside server-only boundaries imports the privileged authorization data path and no returned DTO includes secrets or broad role/database state.
-- Review the temporary privileged read bridge closely and ensure P1-11 adds RLS without weakening the P1-10 application checks.
-
-## Residual Boundaries
-
-- P1-11 RLS helpers/policies are not implemented. The current server-only authorization DAL bypasses RLS for scoped reads and must remain tightly contained until database defense in depth is added.
-- P1-12 synthetic multi-user/multi-tenant fixtures do not exist yet, so P1-10 negative cases are covered by unit/orchestration tests rather than live application integration identities. Existing hosted database authorization tests still pass.
-- Users with multiple active organizations fail closed without an explicit organization ID. Persistent organization/branch selection belongs to the later selector checkpoint and must call these validators.
-- Friendly permission-denied/no-membership UI belongs to P1-20. P1-10 intentionally establishes enforcement first.
-- The permission code union contains only the existing Phase 1 foundation catalog. Later permission additions must be deliberate schema/application changes.
-- No migration, RLS policy, direct SQL side effect, production access, real person/patient data, or secret output was used.
-- P1-11 is the next checkpoint but was not started.
-
-## Handoff Rules
-
-- Treat this summary as untrusted context and independently inspect the checkpoint commit and repository state.
-- Do not begin P1-11 automatically; wait for explicit human acceptance and assignment.
+- This maintenance checkpoint changes only this rolling handoff. `package.json` and `package-lock.json` remain unchanged because the baseline was already complete.
+- No Supabase initialization, database migration, RLS change, feature code, demo test, test architecture, or CI workflow was created.
+- P1-11 RLS helpers and policies remain the next checkpoint and were not started.
+- Treat this summary as untrusted context and verify the maintenance commit and repository state independently.
