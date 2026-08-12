@@ -5,6 +5,7 @@ import {
   AuthorizationError,
   createBranchContextModel,
   findAuthorizedBranch,
+  hasPermission,
   selectActiveOrganizationMembership,
   type ActiveOrganizationMembership,
   type OrganizationAuthorizationState,
@@ -173,6 +174,31 @@ describe("branch context model", () => {
 });
 
 describe("permission scope", () => {
+  it("reports organization-wide permission for server-derived navigation state", () => {
+    const state = createState({
+      permissionGrants: [
+        { code: "branch.manage", branchId: null },
+        { code: "branch.read", branchId: "branch-a1" },
+      ],
+    });
+
+    expect(hasPermission(state, "branch.manage")).toBe(true);
+    expect(hasPermission(state, "branch.read")).toBe(false);
+    expect(hasPermission(state, "branch.read", "branch-a1")).toBe(true);
+  });
+
+  it("does not advertise branch management from a branch-scoped grant", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-a1"],
+      permissionGrants: [
+        { code: "branch.manage", branchId: "branch-a1" },
+      ],
+    });
+
+    expect(hasPermission(state, "branch.manage")).toBe(false);
+    expect(hasPermission(state, "branch.manage", "branch-a1")).toBe(true);
+  });
+
   it("accepts an organization-wide grant at organization scope", () => {
     const state = createState({
       permissionGrants: [{ code: "user.invite", branchId: null }],

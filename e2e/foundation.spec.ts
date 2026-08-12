@@ -152,10 +152,15 @@ test("a branch-scoped user cannot forge another branch", async ({ page }) => {
     }),
   ).toBeVisible();
   await expect(page.getByText(environment.branchA2Name)).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Branches" }),
+  ).toHaveCount(0);
 
   await page.goto("/settings/branches");
   await expect(
-    page.getByRole("heading", { name: "Permission denied" }),
+    page.getByRole("heading", {
+      name: "You don't have access to this area.",
+    }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Add branch" })).toHaveCount(0);
 });
@@ -169,7 +174,15 @@ test("a suspended user cannot reach tenant shell content", async ({ page }) => {
   await page.waitForLoadState("networkidle");
 
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "Your workspace access is no longer active.",
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(
+    "contact an organization administrator",
+  );
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toHaveCount(0);
   await expect(page.getByText(environment.organizationAName)).toHaveCount(0);
   await expect(

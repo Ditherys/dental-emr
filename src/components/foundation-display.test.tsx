@@ -17,7 +17,14 @@ describe("foundation permission and branch displays", () => {
       />,
     );
 
-    const region = screen.getByRole("region", { name: "Permission denied" });
+    const region = screen.getByRole("region", {
+      name: "You don't have access to this area.",
+    });
+    expect(
+      within(region).getByRole("heading", {
+        name: "You don't have access to this area.",
+      }),
+    ).toBeInTheDocument();
     expect(region).toHaveTextContent(
       "Organization-wide branch management permission is required.",
     );

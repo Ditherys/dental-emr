@@ -8,12 +8,15 @@ import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Separator } from "@/components/ui/separator";
 import type { BranchContextModel } from "@/lib/authorization/policy";
+import type { NavigationHref } from "@/components/layout/navigation-items";
 
 export function EmrShell({
   branchContext,
+  visibleNavigationHrefs,
   children,
 }: {
   branchContext: BranchContextModel;
+  visibleNavigationHrefs: readonly NavigationHref[];
   children: ReactNode;
 }) {
   return (
@@ -34,7 +37,7 @@ export function EmrShell({
           </div>
           <Separator />
           <div className="flex-1 p-3">
-            <DesktopNavigation />
+            <DesktopNavigation visibleHrefs={visibleNavigationHrefs} />
           </div>
           <div className="border-t px-4 py-3 text-xs leading-5 text-muted-foreground">
             Foundation workspace
@@ -44,7 +47,7 @@ export function EmrShell({
         <div className="min-w-0">
           <header className="sticky top-0 z-40 border-b bg-background/95 supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-sm">
             <div className="flex min-h-16 items-center gap-2 px-3 sm:px-4 lg:px-6">
-              <MobileNavigation />
+              <MobileNavigation visibleHrefs={visibleNavigationHrefs} />
               <div className="hidden min-w-0 sm:block xl:hidden">
                 <p className="truncate text-xs text-muted-foreground">
                   Current organization

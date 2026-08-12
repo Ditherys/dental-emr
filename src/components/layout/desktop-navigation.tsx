@@ -3,15 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { navigationItems } from "@/components/layout/navigation-items";
+import {
+  visibleNavigationItems,
+  type NavigationHref,
+} from "@/components/layout/navigation-items";
 import { cn } from "@/lib/utils";
 
-export function DesktopNavigation() {
+export function DesktopNavigation({
+  visibleHrefs,
+}: {
+  visibleHrefs: readonly NavigationHref[];
+}) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Primary navigation" className="space-y-1">
-      {navigationItems.map((item) => {
+      {visibleNavigationItems(visibleHrefs).map((item) => {
         const isActive =
           pathname === item.href ||
           (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));

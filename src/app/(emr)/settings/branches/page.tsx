@@ -39,7 +39,7 @@ export default async function BranchesPage() {
             description="Review and add operating locations for the current organization."
           />
           <Separator className="my-6" />
-          <PermissionDenied description="Organization-wide branch management permission is required to view or add branch settings." />
+          <PermissionDenied description="Your current access does not include branch settings. Contact an organization administrator if you believe this is a mistake." />
         </div>
       );
     }

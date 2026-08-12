@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createBranch, revalidatePath, requireAal2, requirePermission } =
+const {
+  AuthorizationError,
+  createBranch,
+  revalidatePath,
+  requireAal2,
+  requirePermission,
+} =
   vi.hoisted(() => ({
+    AuthorizationError: class AuthorizationError extends Error {},
     createBranch: vi.fn(),
     revalidatePath: vi.fn(),
     requireAal2: vi.fn(),
@@ -23,7 +30,7 @@ vi.mock("@/lib/branches", () => ({
 }));
 
 vi.mock("@/lib/authorization", () => ({
-  AuthorizationError: class AuthorizationError extends Error {},
+  AuthorizationError,
   requireAal2,
   requirePermission,
 }));
@@ -139,5 +146,21 @@ describe("createBranchAction", () => {
     expect(requirePermission.mock.invocationCallOrder[0]).toBeLessThan(
       createBranch.mock.invocationCallOrder[0],
     );
+  });
+
+  it("denies a manually crafted branch request after a fresh server permission check", async () => {
+    requireAal2.mockResolvedValueOnce({ userId: "branch-user-a" });
+    requirePermission.mockRejectedValueOnce(new AuthorizationError());
+
+    await expect(createBranchAction({}, validBranchForm())).resolves.toEqual({
+      message:
+        "Your current organization access does not allow branch creation.",
+    });
+
+    expect(requirePermission).toHaveBeenCalledWith({
+      permission: "branch.manage",
+    });
+    expect(createBranch).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

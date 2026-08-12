@@ -137,13 +137,19 @@ export function assertPermission(
     findAuthorizedBranch(state, branchId);
   }
 
-  const hasPermission = state.permissionGrants.some(
+  if (!hasPermission(state, permission, branchId)) {
+    throw new AuthorizationError("PERMISSION_DENIED");
+  }
+}
+
+export function hasPermission(
+  state: OrganizationAuthorizationState,
+  permission: PermissionCode,
+  branchId?: string,
+) {
+  return state.permissionGrants.some(
     (grant) =>
       grant.code === permission &&
       (grant.branchId === null || grant.branchId === branchId),
   );
-
-  if (!hasPermission) {
-    throw new AuthorizationError("PERMISSION_DENIED");
-  }
 }

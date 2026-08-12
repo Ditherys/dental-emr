@@ -4,47 +4,42 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-19 — Audit Foundation
+**Task / slice:** P1-20 — Authorization UX
 
 **Implementing agent:** OpenAI Codex, explicitly assigned as temporary primary implementation agent
 
-**Status:** Implemented, verified, and security self-reviewed; ready for independent review. P1-20 was not started.
+**Status:** Implemented, verified, and security self-reviewed; ready for independent review. No later phase or checkpoint was started.
 
 ## What Changed
 
-- Added `20260813010000_harden_audit_foundation.sql`: bounded audit field formats, generated opaque correlation IDs for new events, actor consistency, and a 1 KiB metadata allowlist limited to UUID/permission/role/scope values already used by foundation writers.
-- Added `record_mfa_enrollment(uuid)`, an idempotent authenticated projection that derives `auth.uid()`, requires AAL2, proves the factor is the caller's verified TOTP factor, derives active organizations server-side, and inserts one minimal organization event per active tenant. It accepts no tenant, branch, actor, result, metadata, token, code, setup key, or secret input.
-- Updated the MFA enrollment UI to project the event only after Supabase verification succeeds, clear the setup key/code state before projection, and offer a bounded idempotent retry when the cross-service audit write cannot be confirmed.
-- Added five application tests for the server action and a 15-case pgTAP audit suite covering privileges/search path, metadata rejection, AAL2, factor ownership, active-tenant derivation, idempotency, direct forgery, and tamper denial. Added the suite to the guarded runner and corrected two pre-existing `no_plan()` sentinels that counted a successful `1..N` plan line as failure.
-- Regenerated public database types and documented the audit boundary in `docs/security/AUDIT_FOUNDATION.md` and the Supabase workflow README.
+- Added a reusable read-only `hasPermission` policy check and marked the Branches navigation destination as requiring organization-wide `branch.manage`. The server derives the visible navigation hrefs from current database-backed authorization state before the desktop/mobile shell receives them; a branch-scoped grant is not promoted to organization scope.
+- Preserved defense in depth: direct navigation to `/settings/branches` renders the non-disclosing `You don't have access to this area.` state, while `createBranchAction` still performs AAL2 and a fresh server `branch.manage` check before the existing authorization-checking database RPC.
+- Added a dedicated, responsive access-revoked screen for a verified Auth session with no active organization membership. It omits the tenant shell, organization/branch details, and protected child UI, and offers an explicit local sign-out path. Membership is checked before asking an offboarded user for an MFA challenge.
+- Added unit/component coverage for permission scope, navigation filtering, generic denial content, revoked-access rendering, suspended-membership layout behavior, and crafted action denial. Strengthened the guarded Playwright expectations for hidden Branches navigation, direct-route denial, and the suspended-user state.
 
 ## Security / Tenancy Design
 
-- Normal users still have no audit INSERT/UPDATE/DELETE privilege. Existing `audit.read` RLS remains the tenant/branch read boundary; organization-level MFA events are not visible through a branch-only permission.
-- Audit metadata has no free-form key. Unknown keys, oversized payloads, malformed safe values, URL-shaped request/correlation values, and inconsistent USER actor rows fail database constraints.
-- `record_mfa_enrollment` is `SECURITY DEFINER` with an empty search path, exact authenticated-only EXECUTE grant, live factor ownership/status/type checks in `auth.mfa_factors`, AAL2 enforcement, and active organization joins. A unique partial index makes retries race-safe.
-- Supabase Auth remains the MFA system of record. The Auth verification and application projection cannot share one transaction, so the UI does not report completion until projection succeeds and preserves only the opaque factor ID for retry—not enrollment secrets or codes.
+- Navigation filtering is UX only. Browser-visible href state grants no authority; the protected page/action authorization helpers and RLS/RPC controls remain the enforcement boundaries.
+- Active membership and permission grants are loaded through the authenticated Supabase client under RLS. Auth metadata, local storage, query strings, and browser-supplied organization/branch identifiers are not used to grant access.
+- Only `NO_ACTIVE_MEMBERSHIP` maps to the revoked state. Other authorization selection errors and infrastructure failures still fail closed rather than being mislabeled or swallowed.
+- Denied/revoked copy exposes no organization name, branch name, resource UUID, patient/clinical content, or internal authorization detail.
 
 ## Database / Remote State
 
-- Verified the linked target through CLI project membership, application URL equality, and an explicit development/test name check without printing its project reference. The target was the designated non-production `dental-emr-dev` project.
-- Migration history matched Git through `20260812051100`; the target-verified dry run listed only `20260813010000_harden_audit_foundation.sql`, then that committed migration was applied successfully. No reset, reseed, destructive command, Dashboard-only change, production access, local Supabase runtime, or Docker database was used.
-- Type generation was performed from the applied migration. Database tests used only synthetic, non-login identities and null-secret synthetic factor rows inside transactions that rolled back.
-- No real staff/patient data, PHI, usable credential, project reference, access/refresh token, database password, MFA setup key/code, presigned URL, or production secret was printed, committed, logged, or placed in audit metadata.
+- P1-20 required no migration, schema, seed, database-type, dependency, or remote Supabase change.
+- No direct SQL, MCP write, reset, reseed, local Supabase runtime, Docker database, production access, or credential output occurred.
 
 ## Verification Performed
 
-- `npm run verify` with the verified non-production DEV environment pairing — passed: ESLint, strict TypeScript, 103 Vitest tests across 15 files, Next.js 16.3 production build, Secretlint, and `npm audit --audit-level=high` (0 vulnerabilities).
-- All five hosted transactional database suites passed against the verified non-production DEV project: schema, foundation RLS, workforce invitations, P1-19 audit foundation, and seed security fixtures.
-- `supabase db lint --linked --schema public,private --level error --fail-on error` — passed with no schema errors.
-- Security advisors completed without errors. Expected warnings remain for the intentionally authenticated, authorization-checking `SECURITY DEFINER` RPCs (including the new MFA projection) and for hosted leaked-password protection being disabled; the latter remains an environment/production gate.
-- `npm run db:types:check` — passed after regeneration.
-- `npm run test:e2e:list` with the documented non-secret synthetic placeholder contract — passed; 7 tests discovered without a browser launch or placeholder network contact.
-- `git diff --check` and sensitive-sink review — passed.
+- `npm run verify` with the safely reconstructed local/development environment pairing — passed: ESLint, strict TypeScript, 113 Vitest tests across 18 files, Next.js 16.3 production build, Secretlint, and `npm audit --audit-level=high` (0 vulnerabilities).
+- `npm run test:e2e:list` with the documented non-secret placeholder contract — passed; 7 guarded tests discovered without a browser launch or placeholder network contact.
+- `git diff --check` and a manual scope/security/sensitive-sink review — passed.
+- The hosted Cloud TEST Playwright suite was not executed because this workspace did not provide an explicitly verified synthetic TEST credential set for a browser run. No database suite was rerun because the slice contains no database or migration change.
 
 ## Self-Review / Scope Boundaries
 
-- Confirmed actor and tenant context cannot be supplied by the browser, another user's factor cannot be projected, suspended/no-membership organizations receive no event, retries cannot duplicate a factor event, and direct audit forgery/history mutation remains denied.
-- Confirmed current branch, invitation, membership, and role administrative writers still produce their existing atomic sanitized events; all prior database suites pass under the new constraints.
-- No audit viewer, generalized client audit endpoint, factor-removal workflow, retention/archive automation, security alerting, dependency change, patient/clinical domain, or P1-20 authorization UX was added.
-- A live browser enrollment was not run because this workspace has no authorized synthetic login/TOTP fixture for the DEV target. The database ownership/AAL/tenant projection is covered transactionally; the existing protected Cloud TEST E2E job remains the hosted lifecycle check.
+- Confirmed users without organization-wide `branch.manage` receive neither desktop nor mobile Branches navigation, cannot see an Add Branch control on direct access, and cannot mutate through a crafted server-action request.
+- Confirmed a valid session with zero active memberships cannot retain the organization shell or protected route presentation on a fresh server render; active membership status takes precedence over MFA/shell UI state.
+- Confirmed existing permission semantics are unchanged: organization-wide grants remain valid at branch scope, exact branch grants remain branch-bound, and authorization errors still default deny.
+- The revoked-state design follows the existing restrained product system: semantic alert/heading, readable line length, touch-safe standard button, mobile-safe spacing, no decorative card grid, and no color-only meaning.
+- No later domain, audit viewer, session-revocation backend, role-management UI, dependency, migration, patient/clinical feature, or post-Phase-1 work was added.

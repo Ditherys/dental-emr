@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { AppBrand } from "@/components/layout/app-brand";
-import { navigationItems } from "@/components/layout/navigation-items";
+import {
+  visibleNavigationItems,
+  type NavigationHref,
+} from "@/components/layout/navigation-items";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,7 +21,11 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-export function MobileNavigation() {
+export function MobileNavigation({
+  visibleHrefs,
+}: {
+  visibleHrefs: readonly NavigationHref[];
+}) {
   const pathname = usePathname();
 
   return (
@@ -45,7 +52,7 @@ export function MobileNavigation() {
           <AppBrand href="/dashboard" />
         </SheetHeader>
         <nav aria-label="Primary navigation" className="space-y-1 p-3">
-          {navigationItems.map((item) => {
+          {visibleNavigationItems(visibleHrefs).map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/dashboard" &&

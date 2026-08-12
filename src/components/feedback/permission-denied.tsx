@@ -7,7 +7,7 @@ type PermissionDeniedProps = {
 };
 
 export function PermissionDenied({
-  description = "Your current organization, branch, or role does not allow access to this area.",
+  description = "Your current organization, branch, or role does not include access to this area.",
   action,
 }: PermissionDeniedProps) {
   return (
@@ -22,7 +22,7 @@ export function PermissionDenied({
         />
         <div>
           <h2 id="permission-denied-title" className="text-base font-semibold">
-            Permission denied
+            You don&apos;t have access to this area.
           </h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             {description}
