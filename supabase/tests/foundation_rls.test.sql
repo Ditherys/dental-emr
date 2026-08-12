@@ -1777,6 +1777,10 @@ select extensions.is(
 
 reset role;
 
-select * from extensions.finish();
+select case
+  when count(*) = 0 then 'P1_TEST_PASS'
+  else 'P1_TEST_FAIL'
+end as p1_test_result
+from extensions.finish();
 
 rollback;

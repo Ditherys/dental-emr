@@ -23,4 +23,20 @@ Preview, staging, and production configuration is defined in
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Testing
+
+Run the local, non-database checks with:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run test:unit
+```
+
+Database and authenticated browser tests require a dedicated synthetic
+Supabase Cloud TEST project. Their strict target guards, fixture contract, and
+commands are documented in [`supabase/tests/README.md`](supabase/tests/README.md)
+and [`e2e/README.md`](e2e/README.md). Neither workflow starts Docker or a local
+Supabase runtime.
+
 The current implementation scope is controlled by [`docs/plans/001-foundation.md`](docs/plans/001-foundation.md).

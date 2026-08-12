@@ -157,4 +157,6 @@ and stores only a validated browser preference; it also requires no schema
 migration. P1-15 adds application/browser security headers and private response
 cache rules only. P1-16 adds build/runtime environment-pairing guards and a
 Vercel scoping runbook. Both are application/configuration-only and require no
-schema migration. P1-17 and every later domain remain out of scope here.
+schema migration. P1-17 adds the guarded remote Cloud TEST pgTAP runner and
+application testing foundation without introducing a local runtime or a schema
+migration. P1-18 and every later domain remain out of scope here.

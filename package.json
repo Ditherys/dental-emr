@@ -10,6 +10,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:list": "playwright test --list",
+    "test:db": "node scripts/run-remote-database-tests.mjs",
     "auth:bootstrap-owner": "node scripts/bootstrap-first-owner.mjs",
     "db:types": "node scripts/generate-database-types.mjs",
     "db:types:check": "node scripts/generate-database-types.mjs --check"
