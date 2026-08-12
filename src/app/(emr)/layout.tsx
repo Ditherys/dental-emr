@@ -3,10 +3,12 @@ import type { ReactNode } from "react";
 import { EmrShell } from "@/components/layout/emr-shell";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { requireMfaChallengeIfEnrolled } from "@/lib/auth/mfa";
+import { requireActiveOrganizationMembership } from "@/lib/authorization";
 import { Toaster } from "sonner";
 
 export default async function EmrLayout({ children }: { children: ReactNode }) {
   await requireMfaChallengeIfEnrolled();
+  await requireActiveOrganizationMembership();
 
   return (
     <QueryProvider>

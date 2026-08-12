@@ -2,11 +2,14 @@
 
 import { z } from "zod";
 
-import { requireVerifiedIdentity } from "@/lib/auth/identity";
 import {
   createWorkforceInvitation,
   WorkforceInvitationError,
 } from "@/lib/auth/workforce-invitations";
+import {
+  AuthorizationError,
+  requirePermission,
+} from "@/lib/authorization";
 
 const inviteSchema = z.object({
   organizationId: z.uuid("Choose an organization."),
@@ -41,20 +44,24 @@ export async function inviteWorkforceUser(
     return { fieldErrors: result.error.flatten().fieldErrors };
   }
 
-  const identity = await requireVerifiedIdentity();
-
   try {
-    await createWorkforceInvitation({
-      actorUserId: identity.userId,
+    const authorization = await requirePermission({
       organizationId: result.data.organizationId,
+      permission: "user.invite",
+    });
+
+    await createWorkforceInvitation({
+      actorUserId: authorization.identity.userId,
+      organizationId: authorization.organization.id,
       email: result.data.email,
       roleId: result.data.roleId,
       branchId: result.data.branchId || null,
     });
   } catch (error) {
     if (
-      error instanceof WorkforceInvitationError &&
-      error.code === "NOT_AUTHORIZED"
+      (error instanceof WorkforceInvitationError &&
+        error.code === "NOT_AUTHORIZED") ||
+      error instanceof AuthorizationError
     ) {
       return {
         message:
