@@ -3,6 +3,40 @@ import { readFileSync } from "node:fs";
 export const DATABASE_TEST_CONFIRMATION =
   "I_UNDERSTAND_THIS_IS_A_DISPOSABLE_CLOUD_TEST_PROJECT";
 
+const CI_DATABASE_COMMANDS = Object.freeze({
+  "db-push-dry": ["db", "push", "--linked", "--dry-run"],
+  "db-push": ["db", "push", "--linked", "--yes"],
+  "db-seed": [
+    "db",
+    "query",
+    "--linked",
+    "--file",
+    "supabase/seed.sql",
+  ],
+  "db-lint": [
+    "db",
+    "lint",
+    "--linked",
+    "--schema",
+    "public",
+    "--level",
+    "warning",
+    "--fail-on",
+    "error",
+  ],
+  "db-advisors": [
+    "db",
+    "advisors",
+    "--linked",
+    "--type",
+    "security",
+    "--level",
+    "warn",
+    "--fail-on",
+    "error",
+  ],
+});
+
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
 
 function required(environment, name) {
@@ -13,6 +47,15 @@ function required(environment, name) {
   }
 
   return value;
+}
+
+export function resolveCiDatabaseCommand(commandName) {
+  if (!Object.hasOwn(CI_DATABASE_COMMANDS, commandName)) {
+    throw new Error("Select one of the allowlisted CI database commands.");
+  }
+
+  const command = CI_DATABASE_COMMANDS[commandName];
+  return [...command];
 }
 
 export function validateRemoteDatabaseTestEnvironment(

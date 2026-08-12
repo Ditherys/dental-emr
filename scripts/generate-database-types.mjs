@@ -8,6 +8,11 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  readLinkedProjectId,
+  validateRemoteDatabaseTestEnvironment,
+} from "./remote-database-test-guard.mjs";
+
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const generatedTypesPath = join(
   repositoryRoot,
@@ -23,11 +28,41 @@ const supabaseCliPath = join(
   "supabase.js",
 );
 const checkOnly = process.argv.includes("--check");
+const requireTestTarget = process.argv.includes("--require-test-target");
 const projectId = process.env.SUPABASE_PROJECT_ID?.trim();
+const linkedProjectFile = join(
+  repositoryRoot,
+  "supabase",
+  ".temp",
+  "project-ref",
+);
 
 if (!existsSync(supabaseCliPath)) {
   console.error("Supabase CLI is not installed. Run `npm ci` first.");
   process.exit(1);
+}
+
+if (requireTestTarget) {
+  if (!existsSync(linkedProjectFile)) {
+    console.error(
+      "No linked project was found. Link the explicitly designated Cloud TEST project first.",
+    );
+    process.exit(1);
+  }
+
+  try {
+    validateRemoteDatabaseTestEnvironment(
+      process.env,
+      readLinkedProjectId(linkedProjectFile),
+    );
+  } catch (error) {
+    console.error(
+      `Database type check refused to continue: ${
+        error instanceof Error ? error.message : "Unknown failure."
+      }`,
+    );
+    process.exit(1);
+  }
 }
 
 const projectArguments = projectId

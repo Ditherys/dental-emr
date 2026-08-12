@@ -1,0 +1,108 @@
+# CI Foundation
+
+P1-18 adds reproducibility and security gates without changing the Phase 1
+application schema. GitHub Actions run application verification, dependency
+review, CodeQL, and a protected Cloud TEST workflow. Migration files in Git
+remain authoritative.
+
+## Pull-request gates
+
+`CI / Application verification` runs from the locked dependency tree with no
+protected credentials: ESLint, strict TypeScript, Vitest, a production Next.js
+build using non-secret placeholder project metadata, Secretlint, and a
+high-severity dependency audit.
+
+`Dependency review / Review dependency changes` rejects newly introduced known
+high- or critical-severity dependencies when GitHub dependency review is
+available. `CodeQL / Analyze JavaScript and TypeScript` runs the extended
+JavaScript/TypeScript security queries. Dependabot opens bounded weekly npm and
+GitHub Actions updates; updates must be reviewed and tested, not auto-merged.
+
+Secretlint is also available locally:
+
+```powershell
+npm run security:secrets
+npm run security:audit
+npm run verify
+```
+
+Repository administrators must enable GitHub secret scanning and push
+protection when the repository/account plan supports them. The CI scan is a
+complement, not a substitute. A real detected secret must be rotated or revoked;
+deleting it from the latest file is not remediation by itself.
+
+## Protected Cloud TEST environment
+
+Create a GitHub environment named `cloud-test`. Require approval, restrict
+deployment branches to trusted branches, and configure only a dedicated
+disposable Supabase Cloud TEST project containing synthetic data. The Cloud TEST
+job does not run for fork or Dependabot pull requests because Actions secrets
+are unavailable and untrusted code must not receive them. Dependency-update PRs
+still run the credential-free application and dependency-review gates; run the
+Cloud TEST gate from a trusted branch before accepting an update. Review
+workflow changes before approving any run that can access the environment.
+
+Configure these environment variables:
+
+```text
+SUPABASE_TEST_PROJECT_ID
+SUPABASE_TEST_URL
+SUPABASE_DEV_PROJECT_ID
+SUPABASE_PRODUCTION_PROJECT_ID (once production exists)
+E2E_ORG_A_ID, E2E_ORG_A_NAME
+E2E_ORG_B_ID, E2E_ORG_B_NAME
+E2E_BRANCH_A1_ID, E2E_BRANCH_A1_NAME
+E2E_BRANCH_A2_ID, E2E_BRANCH_A2_NAME
+E2E_BRANCH_B1_ID
+```
+
+Configure these environment secrets:
+
+```text
+SUPABASE_TEST_ACCESS_TOKEN
+SUPABASE_TEST_DB_PASSWORD
+SUPABASE_TEST_PUBLISHABLE_KEY
+E2E_OWNER_EMAIL, E2E_OWNER_PASSWORD, E2E_OWNER_TOTP_SECRET
+E2E_BRANCH_USER_EMAIL, E2E_BRANCH_USER_PASSWORD
+E2E_SUSPENDED_EMAIL, E2E_SUSPENDED_PASSWORD
+```
+
+Use narrowly scoped synthetic test credentials. Do not configure a production
+project reference, credential, patient record, or real workforce identity as a
+TEST value.
+
+The serialized Cloud TEST job links the declared project, then every database
+operation invokes the same target guard as the pgTAP runner. The guard requires
+`APP_ENVIRONMENT=test`, exact project/URL agreement before linking, exact
+linked/project/URL agreement afterward, explicit disposable confirmation, and
+separation from declared DEV/production project references.
+It then dry-runs and applies pending migrations, loads the idempotent synthetic
+seed, runs rollback-bounded pgTAP suites, checks generated database types, runs
+linked schema lint/security advisors, and exercises desktop/iPad Playwright
+flows. It never starts a local Supabase/Docker stack and never resets the remote
+database.
+
+Protected credentials are step-scoped: package installation and target metadata
+validation receive none; database credentials are exposed only to the relevant
+Supabase command; synthetic login secrets are exposed only to Playwright.
+
+The committed `supabase/seed.sql` provides the database security graph, but the
+Cloud TEST environment must separately provision the documented synthetic login
+identities and verified owner TOTP factor. See
+[`../../e2e/README.md`](../../e2e/README.md) for that fixture contract.
+
+## Branch protection
+
+After the first successful runs, require these checks on `main`:
+
+```text
+CI / Application verification
+CI / Cloud TEST database and E2E
+Dependency review / Review dependency changes
+CodeQL / Analyze JavaScript and TypeScript
+```
+
+Require pull requests and the second review mandated for high-risk changes.
+Do not make the Cloud TEST check optional merely because credentials or
+synthetic identities have not been configured; finish the protected environment
+setup instead.

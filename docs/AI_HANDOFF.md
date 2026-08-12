@@ -4,49 +4,41 @@
 
 ## Current Checkpoint
 
-**Task / slice:** P1-17 — Testing Foundation
+**Task / slice:** P1-18 — CI Pipeline
 
 **Implementing agent:** OpenAI Codex, explicitly assigned as temporary primary implementation agent
 
-**Status:** Implemented, locally verified, and self-reviewed; ready for independent review. P1-18 was not started.
+**Status:** Implemented, locally verified, and self-reviewed; ready for independent review. P1-19 was not started.
 
 ## What Changed
 
-- Added consistent `typecheck`, unit, database, and Playwright package scripts plus shared Vitest/jest-dom setup.
-- Added component behavior tests for the permission-denied state and authorized/empty branch displays. The existing branch selector, branch Zod schema, authorization helper, environment, MFA, redirect, server-action, and browser-policy tests remain part of the unit suite.
-- Added `supabase/tests/schema.test.sql` for expected foundation tables, key tenant-safe foreign keys, tenant-scoped uniqueness constraints, and RLS enablement.
-- Updated every pgTAP suite to return an explicit `P1_TEST_PASS`/`P1_TEST_FAIL` completion sentinel after `extensions.finish()` so the remote process cannot accept a SQL-success/pgTAP-failure result.
-- Added a remote database runner that uses the pinned Supabase CLI Management API query path and refuses to run unless `APP_ENVIRONMENT=test`, the active/link/test project references match, the exact Cloud TEST URL matches, optional DEV/production references differ, and an explicit disposable-target confirmation is present. It also validates that every suite is transaction/rollback bounded.
-- Added unit coverage for the database target guard, rollback contract, and pgTAP result parser.
-- Added Playwright configuration and seven discovered foundation cases: unauthenticated rejection; login plus MFA; Org A shell/authorized branches; Branch A3 creation/selection; attempted Org B administrative context; branch-context forgery and branch-management denial; suspended-user blocking; and sign-out. The authenticated shell/branch-control flow is also selected for an iPad profile.
-- Added a strict synthetic Cloud TEST fixture/environment contract and an RFC-vector-tested TOTP helper. No credentials or TOTP secrets are committed.
-- Updated the root, Supabase, database-test, and E2E documentation. Playwright artifacts are ignored.
+- Added a pull-request/main GitHub Actions pipeline for locked installs, ESLint, strict TypeScript, Vitest, Next.js production build, Secretlint, dependency audit, and a serialized protected Cloud TEST database/E2E gate.
+- Added pre-link and post-link TEST target validation. Allowlisted wrappers guard migration dry-run/apply, idempotent synthetic seed loading, schema lint, security advisors, pgTAP execution, and TEST-schema type drift checks. No reset/destructive command is available.
+- Scoped protected credentials to only the steps that require them. Fork and Dependabot PRs cannot enter the secret-bearing Cloud TEST job; dependency updates require Cloud TEST verification from a trusted branch before acceptance.
+- Added SHA-pinned dependency review and CodeQL workflows plus bounded weekly Dependabot checks for npm and GitHub Actions. Added exact-version, MIT-licensed Secretlint 13.0.4 with the recommended ruleset for local and CI secret scanning.
+- Added `verify`, security, guarded Cloud TEST, and database CI package scripts, unit coverage for the database-command allowlist, and the CI/environment/branch-protection runbook.
 
 ## Database / Remote State
 
-- No migration, schema change, seed load, persistent row, Supabase Dashboard change, destructive database operation, production access, local Supabase runtime, or Docker workflow was created for P1-17.
-- Migration files remain authoritative. `test:db` does not apply migrations or load the seed implicitly; those remain separate explicit operations for the disposable Cloud TEST project.
-- The full pgTAP suites were not run because the currently linked environment is not the separately designated Cloud TEST target required by P1-17. The runner was verified to refuse both missing TEST metadata and a linked-project mismatch before issuing a query.
-- Three read-only/transaction-rollback Management API probes were used against the pre-existing linked non-production DEV project to confirm the CLI JSON shape for a safe scalar query and passing/failing pgTAP output. They created no persistent data. `db:types:check` also performed its existing read-only linked-project comparison.
-- No real staff/patient data, usable credentials, project references, access tokens, passwords, TOTP secrets, or production access were printed, committed, or used.
+- No migration, schema/RLS/authorization change, seed modification, persistent row, Supabase Dashboard change, destructive operation, production access, local Supabase runtime, or Docker workflow was created or executed for P1-18.
+- Migration files remain authoritative. CI can mutate only an explicitly confirmed, linked, disposable Cloud TEST project after the protected environment gate; the TEST project must differ from the configured DEV and any configured production project.
+- The hosted migration/pgTAP/lint/advisor/type/E2E pipeline was not executed because this checkout has no Git remote or configured protected GitHub `cloud-test` environment. It was not bypassed with the linked DEV project or placeholder credentials.
+- No real staff/patient data, usable credentials, project references, access tokens, database passwords, TOTP secrets, or production access were printed, committed, or used.
 
 ## Verification Performed
 
-- `npm run lint` — passed with no warnings.
-- `npm run typecheck` — passed.
-- `npm run test:unit` — passed 96 tests across 13 files.
-- `npm run test:e2e:list` with synthetic placeholder metadata — passed; discovered 7 tests (6 desktop and 1 iPad-selected shell flow) without launching a browser or contacting the placeholder target.
-- Intentional E2E negative check with `APP_ENVIRONMENT=development` — refused before test execution.
-- Intentional database-runner negative checks — missing TEST metadata and a mismatched linked project were both refused before remote SQL execution.
-- `npm run build` — passed using transient DEV identity metadata derived without printing values. Public `/` remained static and private/auth routes remained dynamic. The pre-existing ignored parent-directory lockfile warning remains.
-- `npm audit` — passed; 0 vulnerabilities.
-- `npm run db:types:check` — passed; no generated type drift.
+- `npm ci` — passed from the committed lockfile; 0 vulnerabilities.
+- `npm run verify` with non-secret DEV-format placeholder metadata — passed: lint, typecheck, 98 unit tests across 14 files, production build, Secretlint, and `npm audit --audit-level=high` (0 vulnerabilities).
+- `npm run ci:test-target` with synthetic placeholder TEST metadata — passed without network access; the intentional `APP_ENVIRONMENT=development` check refused before linking.
+- Intentional `db:push:dry` and `db:types:check:test` checks with a development environment — both refused before remote access.
+- `npm run test:e2e:list` with the documented synthetic placeholder contract — passed; discovered 7 tests (6 desktop and 1 iPad-selected shell flow) without launching a browser or contacting the placeholder target.
+- `actionlint` 1.7.12 (download checksum verified) and independent YAML parsing — passed for all workflows and Dependabot configuration.
 - `git diff --check` — passed.
 
 ## Self-Review / Scope Boundaries
 
-- Confirmed the runner cannot silently target the linked DEV project, a declared production project, a local Supabase origin, or an ambiguously labeled project. It invokes no Docker/local-runtime command.
-- Confirmed pgTAP suites retain transaction rollback and now expose a machine-verifiable failure result; schema coverage complements rather than replaces the existing negative RLS suites.
-- Confirmed browser tests use only secret-store environment values, create only a uniquely named Branch A3 in the disposable TEST environment, reject forged browser branch state, and never treat branch preference as authority.
-- Full hosted pgTAP and authenticated Playwright runs remain required once an explicitly designated Cloud TEST project and synthetic login/TOTP fixtures are supplied. They were not bypassed with DEV, local Supabase, mocked authorization, or committed secrets.
-- No application authorization/RLS behavior, migration, production configuration, CI workflow, dependency version, clinical/later domain, or P1-18 work was changed.
+- Confirmed actions are pinned to reviewed commit SHAs and workflow permissions are read-only except CodeQL's required `security-events: write`; dependency review cannot comment or write repository state.
+- Confirmed untrusted dependency installation receives no protected credentials, Cloud TEST commands are serialized, link is preceded by target validation, every later database operation repeats the linked-target guard, and no reset/reseed shortcut can target DEV/production.
+- Confirmed the credential-free application gate still runs for fork and Dependabot PRs. Because GitHub withholds Actions secrets for those events, their Cloud TEST validation must run from a reviewed trusted branch before acceptance rather than using `pull_request_target` or exposing credentials.
+- GitHub administrators still need to configure the protected `cloud-test` environment, synthetic login/TOTP fixtures, required checks, secret scanning, and push protection as documented. Hosted results remain a required operational acceptance step after that setup.
+- No application feature, dependency replacement, patient/clinical/later domain, audit-foundation implementation, or P1-19 work was added.

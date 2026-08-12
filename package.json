@@ -17,9 +17,19 @@
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list",
     "test:db": "node scripts/run-remote-database-tests.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run security:secrets && npm run security:audit",
+    "security:audit": "npm audit --audit-level=high",
+    "security:secrets": "secretlint \"**/*\"",
     "auth:bootstrap-owner": "node scripts/bootstrap-first-owner.mjs",
+    "ci:test-target": "node scripts/validate-cloud-test-environment.mjs",
+    "db:push:dry": "node scripts/run-guarded-supabase-command.mjs db-push-dry",
+    "db:push:test": "node scripts/run-guarded-supabase-command.mjs db-push",
+    "db:seed:test": "node scripts/run-guarded-supabase-command.mjs db-seed",
+    "db:lint:test": "node scripts/run-guarded-supabase-command.mjs db-lint",
+    "db:advisors:test": "node scripts/run-guarded-supabase-command.mjs db-advisors",
     "db:types": "node scripts/generate-database-types.mjs",
-    "db:types:check": "node scripts/generate-database-types.mjs --check"
+    "db:types:check": "node scripts/generate-database-types.mjs --check",
+    "db:types:check:test": "node scripts/generate-database-types.mjs --check --require-test-target"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -41,6 +51,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.4",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
@@ -54,6 +65,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "jsdom": "^29.0.1",
+    "secretlint": "13.0.4",
     "supabase": "2.113.0",
     "tailwindcss": "^4",
     "typescript": "^5",

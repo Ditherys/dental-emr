@@ -159,4 +159,7 @@ cache rules only. P1-16 adds build/runtime environment-pairing guards and a
 Vercel scoping runbook. Both are application/configuration-only and require no
 schema migration. P1-17 adds the guarded remote Cloud TEST pgTAP runner and
 application testing foundation without introducing a local runtime or a schema
-migration. P1-18 and every later domain remain out of scope here.
+migration. P1-18 reuses that strict target guard for serialized CI migration,
+seed, lint, advisor, type, pgTAP, and E2E checks; see
+`docs/deployment/CI_FOUNDATION.md`. P1-19 and every later domain remain out of
+scope here.

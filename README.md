@@ -28,10 +28,12 @@ Open [http://localhost:3000](http://localhost:3000).
 Run the local, non-database checks with:
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run test:unit
+npm run verify
 ```
+
+The CI workflow, protected Cloud TEST environment, dependency/static analysis,
+secret scanning, and required branch-protection checks are documented in
+[`docs/deployment/CI_FOUNDATION.md`](docs/deployment/CI_FOUNDATION.md).
 
 Database and authenticated browser tests require a dedicated synthetic
 Supabase Cloud TEST project. Their strict target guards, fixture contract, and
