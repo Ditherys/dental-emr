@@ -111,9 +111,11 @@ $env:BOOTSTRAP_CONFIRMATION='I_UNDERSTAND_THIS_CREATES_FIRST_OWNER'
 npm run auth:bootstrap-owner
 ```
 
-The script also requires `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and
-`APP_URL` in the process environment. It never prints their values or the owner
-email. Staging uses the same controlled procedure. Production tenant provisioning
+The script also requires `APP_ENVIRONMENT`, `SUPABASE_PROJECT_ID`,
+`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `APP_URL` in the process
+environment. The project ID must match the URL, and the Phase 1 script refuses a
+production environment. It never prints credential values or the owner email.
+Staging uses the same controlled procedure. Production tenant provisioning
 remains a later, explicit workflow and must not reuse an unrestricted developer
 credential.
 
@@ -153,5 +155,6 @@ server action; it requires no additional schema migration. P1-14 derives the
 branch selector from that existing user-context/RLS-backed authorization state
 and stores only a validated browser preference; it also requires no schema
 migration. P1-15 adds application/browser security headers and private response
-cache rules only; it also requires no schema migration. P1-16 and every later
-domain remain out of scope here.
+cache rules only. P1-16 adds build/runtime environment-pairing guards and a
+Vercel scoping runbook. Both are application/configuration-only and require no
+schema migration. P1-17 and every later domain remain out of scope here.

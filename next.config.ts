@@ -1,25 +1,27 @@
 import type { NextConfig } from "next";
 
+import { validateEnvironmentSeparation } from "./src/lib/environment/environment-separation";
 import {
   createBrowserHeaderRules,
   isHttpsDeploymentUrl,
 } from "./src/lib/security/browser-policy";
 
+const environmentConfig = validateEnvironmentSeparation(process.env);
+
 const nextConfig: NextConfig = {
   async headers() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const appUrl = process.env.APP_URL;
 
-    if (!supabaseUrl || !appUrl) {
+    if (!appUrl) {
       throw new Error(
-        "NEXT_PUBLIC_SUPABASE_URL and APP_URL are required to create the browser security policy.",
+        "APP_URL is required to create the browser security policy.",
       );
     }
 
     return createBrowserHeaderRules({
       isHttpsDeployment: isHttpsDeploymentUrl(appUrl),
       isProduction: process.env.NODE_ENV === "production",
-      supabaseUrl,
+      supabaseUrl: environmentConfig.supabaseUrl,
     }).map(({ source, headers }) => ({
       source,
       headers: [...headers],

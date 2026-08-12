@@ -12,10 +12,14 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in `.env.local` to the public values for
-the designated non-production Supabase project. Never put a Supabase secret key
-in a `NEXT_PUBLIC_*` variable. Local environment files remain ignored by Git.
+Set `APP_ENVIRONMENT=development`, `SUPABASE_PROJECT_ID`,
+`NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+`.env.local` for the designated Supabase Cloud DEV project. The project ID must
+match the URL. Never put a Supabase secret key in a `NEXT_PUBLIC_*` variable.
+Local environment files remain ignored by Git.
+
+Preview, staging, and production configuration is defined in
+[`docs/deployment/ENVIRONMENT_SEPARATION.md`](docs/deployment/ENVIRONMENT_SEPARATION.md).
 
 Open [http://localhost:3000](http://localhost:3000).
 

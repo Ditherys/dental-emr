@@ -4,7 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const bootstrapSchema = z.object({
+  APP_ENVIRONMENT: z.enum(["development", "test", "production"]),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  SUPABASE_PROJECT_ID: z.string().regex(/^[a-z0-9]+$/),
   SUPABASE_SECRET_KEY: z.string().min(1),
   APP_URL: z.url(),
   BOOTSTRAP_ORGANIZATION_ID: z.uuid(),
@@ -26,12 +28,38 @@ if (!parsed.success) {
 }
 
 const {
+  APP_ENVIRONMENT: appEnvironment,
   NEXT_PUBLIC_SUPABASE_URL: url,
+  SUPABASE_PROJECT_ID: projectId,
   SUPABASE_SECRET_KEY: secretKey,
   APP_URL: appUrl,
   BOOTSTRAP_ORGANIZATION_ID: organizationId,
   BOOTSTRAP_OWNER_EMAIL: ownerEmail,
 } = parsed.data;
+const parsedSupabaseUrl = new URL(url);
+const expectedSupabaseOrigin = `https://${projectId}.supabase.co`;
+
+if (
+  parsedSupabaseUrl.origin !== expectedSupabaseOrigin ||
+  parsedSupabaseUrl.username ||
+  parsedSupabaseUrl.password ||
+  parsedSupabaseUrl.pathname !== "/" ||
+  parsedSupabaseUrl.search ||
+  parsedSupabaseUrl.hash
+) {
+  console.error(
+    "First-owner bootstrap refused: NEXT_PUBLIC_SUPABASE_URL does not match SUPABASE_PROJECT_ID.",
+  );
+  process.exit(1);
+}
+
+if (appEnvironment === "production") {
+  console.error(
+    "First-owner bootstrap refused: production provisioning is outside the Phase 1 workflow.",
+  );
+  process.exit(1);
+}
+
 const admin = createClient(url, secretKey, {
   auth: {
     autoRefreshToken: false,
