@@ -7,14 +7,12 @@ import type {
   ActiveOrganizationMembership,
   OrganizationAuthorizationState,
 } from "./policy";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
-// P1-10 intentionally precedes the P1-11 user-context RLS policies. Until
-// those policies exist, this server-only DAL uses the privileged client only
-// for membership-derived, tenant-scoped reads. Callers cannot provide a user
-// ID through the public authorization API; it always comes from verified Auth
-// claims. Keep this module out of client imports and replace/defend the read
-// path with P1-11 RLS rather than broadening service-role use.
+// These reads use the request's authenticated Supabase client so P1-11 RLS is
+// an independent backstop to the application checks. The user ID still comes
+// from verified Auth claims, and an identity/session mismatch fails closed at
+// the database policy layer.
 
 const membershipRowSchema = z.object({
   id: z.uuid(),
@@ -53,8 +51,8 @@ function contextLoadError() {
 
 export const loadActiveOrganizationMemberships = cache(
   async (userId: string): Promise<ActiveOrganizationMembership[]> => {
-    const admin = createAdminClient();
-    const { data: membershipData, error: membershipError } = await admin
+    const supabase = await createClient();
+    const { data: membershipData, error: membershipError } = await supabase
       .from("organization_members")
       .select("id, organization_id")
       .eq("user_id", userId)
@@ -73,7 +71,7 @@ export const loadActiveOrganizationMemberships = cache(
     const organizationIds = [
       ...new Set(memberships.map(({ organization_id }) => organization_id)),
     ];
-    const { data: organizationData, error: organizationError } = await admin
+    const { data: organizationData, error: organizationError } = await supabase
       .from("organizations")
       .select("id, business_name, slug")
       .in("id", organizationIds)
@@ -113,24 +111,25 @@ export const loadOrganizationAuthorizationState = cache(
   async (
     membership: ActiveOrganizationMembership,
   ): Promise<OrganizationAuthorizationState> => {
-    const admin = createAdminClient();
-    const { data: branchData, error: branchError } = await admin
+    const supabase = await createClient();
+    const { data: branchData, error: branchError } = await supabase
       .from("branches")
       .select("id, name, slug")
       .eq("organization_id", membership.organization.id)
       .eq("status", "active");
     const { data: branchMembershipData, error: branchMembershipError } =
-      await admin
+      await supabase
         .from("branch_memberships")
         .select("branch_id")
         .eq("organization_id", membership.organization.id)
         .eq("organization_member_id", membership.membershipId)
         .eq("access_status", "active");
-    const { data: roleAssignmentData, error: roleAssignmentError } = await admin
-      .from("member_roles")
-      .select("role_id, branch_id")
-      .eq("organization_id", membership.organization.id)
-      .eq("organization_member_id", membership.membershipId);
+    const { data: roleAssignmentData, error: roleAssignmentError } =
+      await supabase
+        .from("member_roles")
+        .select("role_id, branch_id")
+        .eq("organization_id", membership.organization.id)
+        .eq("organization_member_id", membership.membershipId);
 
     if (branchError || branchMembershipError || roleAssignmentError) {
       throw contextLoadError();
@@ -151,7 +150,7 @@ export const loadOrganizationAuthorizationState = cache(
 
     if (roleIds.length > 0) {
       const { data: rolePermissionData, error: rolePermissionError } =
-        await admin
+        await supabase
           .from("role_permissions")
           .select("role_id, permissions!inner(code)")
           .in("role_id", roleIds);
