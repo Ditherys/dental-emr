@@ -18,6 +18,8 @@ SUPABASE_PROJECT_ID=<test-project-ref>
 SUPABASE_TEST_PROJECT_ID=<same-test-project-ref>
 NEXT_PUBLIC_SUPABASE_URL=https://<test-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<test-publishable-key>
+SUPABASE_SECRET_KEY=<test-secret-key>
+SUPABASE_DEV_PROJECT_ID=<dev-project-ref>
 APP_URL=http://127.0.0.1:3000
 E2E_TARGET_CONFIRMATION=I_UNDERSTAND_THIS_IS_SYNTHETIC_CLOUD_TEST_DATA
 E2E_RUN_ID=<unique-4-to-12-character-id>
@@ -46,6 +48,28 @@ The owner fixture must have a verified TOTP factor and organization-wide
 `branch.manage`; the suspended identity must have no active organization
 membership. `E2E_RUN_ID` makes the Branch A3 creation unique in a disposable
 test run.
+
+## Mid-session withdrawal flows (R5)
+
+`session-boundaries.spec.ts` covers authorization withdrawn *while a browser
+session stays open*: branch access revoked mid-session, a membership suspended
+mid-session, a mutation submitted between filling a form and losing authority, an
+unchallenged MFA session attacking the step-up-gated surface, and invitation
+issuance denied to a branch-scoped user.
+
+Phase 1 has no user-management UI, so the withdrawal cannot be driven from a
+second browser. `support/admin.ts` performs it directly against the TEST project
+using `SUPABASE_SECRET_KEY`, which stays in the Node process and is never passed
+to a browser context, written to a fixture, or logged. Those writes deliberately
+bypass the AAL2-gated administrative RPCs — those are revoked from `service_role`
+and only callable in a user context. The *authorization path* for the same
+withdrawals is proven at the database boundary by
+`supabase/tests/session_authorization_boundaries.test.sql`; these flows prove the
+other half, that an already-open session stops being trusted.
+
+Each flow restores its fixture in a `finally` block and the file restores every
+fixture again in `afterAll`, so a mid-test failure cannot leave the shared TEST
+project degraded.
 
 Use `E2E_BASE_URL` only to target an already-running TEST deployment. Otherwise
 Playwright starts the local Next.js process, which must still be configured to

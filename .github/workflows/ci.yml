@@ -195,6 +195,9 @@ jobs:
       - name: Run selected Playwright flows
         env:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_TEST_PUBLISHABLE_KEY }}
+          # Server-only. Used by the Next.js process for invitation actions and
+          # by the R5 mid-session withdrawal harness. Never reaches the browser.
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_TEST_SECRET_KEY }}
           E2E_ORG_A_ID: ${{ vars.E2E_ORG_A_ID }}
           E2E_ORG_A_NAME: ${{ vars.E2E_ORG_A_NAME }}
           E2E_ORG_B_ID: ${{ vars.E2E_ORG_B_ID }}

@@ -4,9 +4,9 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R5-A — pgTAP coverage for session-lifetime authorization boundaries: authorization withdrawn while a session is already open, plus the invitation revocation lifecycle and stale/absent AAL claims
+**Task / slice:** R5-B — Playwright coverage of the browser half of the same boundaries: authorization withdrawn while a browser session stays open
 
-**Previous checkpoint:** R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Previous checkpoints:** R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
@@ -18,7 +18,16 @@ The existing suites prove a *fresh* session with the wrong authorization is refu
 
 R5-A covers the database half. R5-B (next) covers the browser/session half in Playwright.
 
-## What Changed (R5-A)
+## What Changed (R5-B)
+
+- New `e2e/session-boundaries.spec.ts` — five flows: branch access revoked mid-session (branch context collapses to "No branch access" on the next request), membership suspended mid-session (tenant content gone, direct navigation does not route around the revoked shell), a mutation **submitted after authorization was withdrawn between filling the form and clicking submit**, an unchallenged-MFA (AAL1) session attacking the step-up-gated surface, and invitation issuance denied to a branch-scoped user.
+- New `e2e/support/admin.ts` — the withdrawal harness. Phase 1 has no user-management UI, so the withdrawal cannot be driven from a second browser; it is performed server-side with `SUPABASE_SECRET_KEY`, which stays in the Node process and never reaches a browser context, a fixture, or a log. The module refuses a publishable/anon key and re-runs every Cloud TEST target check before constructing a client.
+- `.github/workflows/ci.yml` — `SUPABASE_TEST_SECRET_KEY` added to the Playwright step (needed by both the Next.js process and the harness).
+- `e2e/README.md` — documents the flows, the harness's deliberate limitation, and the new required variables.
+
+**What the harness does not claim.** Its writes bypass the AAL2-gated administrative RPCs, because `set_branch_membership` / `update_organization_member_status` are revoked from `service_role` and are callable only in a user context. The *authorization path* for those withdrawals is proven at the database boundary by R5-A. R5-B proves the complementary half: the already-open session stops being trusted. Neither half stands alone, and the split is deliberate rather than a shortcut.
+
+## What Changed (R5-A, `37ef684`)
 
 - New `supabase/tests/session_authorization_boundaries.test.sql` — 40 assertions in five sections. Every actor switch restores the victim's original simulated JWT claims, so a passing assertion means the boundary is re-evaluated per statement rather than trusted from the session.
   - **A** branch access revoked mid-session through the audited AAL2 RPC → `has_branch_access`, `has_branch_permission`, and branch read visibility all collapse immediately in the still-open session; direct branch DML is refused at the privilege layer.
@@ -70,7 +79,8 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 - `npm run verify` ✓ (with the CI placeholder build env) — migration lint (8 files, 231 statements, 93 GRANT/REVOKE, 30 approved privileges, 0 violations, 0 extensions), ESLint 0 problems, `tsc --noEmit`, **199/199 unit tests across 21 files** (188 → 197 at R6-C1 → 199 at R5-A), production build, secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
 - Static review of the new SQL ✓ — balanced dollar quotes, balanced parentheses, 40 assertions, transaction-bounded (asserted by a unit test, not by eye).
 - Staged-diff review ✓ at both checkpoints — no secret, no application-behaviour change, no schema-object change beyond removing the extension.
-- **Not verified against a database:** the R6-C1 provisioning SQL and the entire R5-A suite have never executed. Both run first at R6-C/R6-E. Expect first-run corrections, exactly as with the R6-D SQL.
+- `npx secretlint "e2e/**/*"` ✓ — 0 findings across the new harness and spec.
+- **Not verified against a database or a browser:** the R6-C1 provisioning SQL, the entire R5-A suite, and the entire R5-B spec have never executed. All run first at R6-C/R6-E against TEST-01. Expect first-run corrections, exactly as with the R6-D SQL.
 
 ## Known Limitations / Open Items
 
@@ -83,17 +93,19 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 
 ## Human Actions Still Required
 
-1. Create disposable Cloud TEST project **TEST-01** (Dashboard) and set the session variables per `docs/deployment/CLOUD_TEST_PROVISIONING.md`. Blocks R6-C/E.
-2. Create/attach a GitHub remote and configure the `cloud-test` protected environment. Blocks R8 CI evidence.
-3. Both are consolidated in the checklist the agent reports at the stop point.
+1. Create disposable Cloud TEST project **TEST-01** (Dashboard) and set the session variables per `docs/deployment/CLOUD_TEST_PROVISIONING.md`. Blocks R6-C, R6-E, and every R5 execution.
+2. Provision the E2E synthetic login identities on TEST-01 (owner with verified TOTP, branch-scoped user, suspended user) per `e2e/README.md`. Blocks R5-B execution.
+3. Create/attach a GitHub remote and configure the `cloud-test` protected environment, including the new `SUPABASE_TEST_SECRET_KEY` secret. Blocks R8 CI evidence.
+4. All consolidated in the checklist the agent reports at the stop point.
 
 ## Next Checkpoint
 
-R5-B — Playwright coverage of the browser/session half: mid-session branch revocation, mid-session suspension, and stale AAL2 in a live session, using a server-side admin harness against the disposable TEST project. Authored locally; execution stays blocked on human action 1.
+R9 — responsive and accessibility verification, which is the largest remaining slice that does not depend on a hosted project for its authored work. Then R4 hosted-Auth verification tooling and the R8 CI preparation, then the consolidated human-action stop.
 
 ## Commits Requiring Later Codex Review
 
 - `c2a6c91` R6-A secure baseline (HIGH — migration architecture)
 - `35092e7` R6-B grant-last enforcement (HIGH — security tooling)
 - `e790ffe` R6-C1 baseline + guard change (HIGH)
-- this commit, R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
+- `37ef684` R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
+- this commit, R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
