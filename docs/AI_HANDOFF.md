@@ -4,172 +4,64 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R6-C and R6-E executed against the real disposable Cloud TEST project — the first database evidence in this remediation
+**Task / slice:** Phase 1 remediation — R6-C1, R5-A/B, R9-A, R4, R8 preparation, then the first real execution against hosted projects (R6-C, R6-E, hosted Auth)
 
-**Previous checkpoints:** R8 prep + acceptance review (`d6cf076`), R3 docs (`65545c7`); R4 (`1c92e8a`) hosted-Auth verifier; R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Implementing agent:** Claude Code (Codex still unavailable — **no independent review has occurred**)
 
-**Implementing agent:** Claude Code (Codex still unavailable)
+**Status:** Database layer and hosted Auth are **verified green**. The browser suite is partially green. DEV migration history is still unreconciled and the migration freeze is still **ACTIVE**.
 
-**Status:** TEST-01 reconstruction and verification COMPLETE. Six pgTAP suites, type-drift, schema lint, and security advisors all green against a project built from the baseline alone. One real test defect found and fixed by executing previously-unrun SQL; one real security gap found by the advisors. R6-A/R6-B equivalence and boundary claims remain unproven; independent Codex review of every R6 and R5 checkpoint is REQUIRED and still pending.
+## Environment state a new session must know
 
-## Context
+- **Git remote exists:** `Ditherys/dental-emr` (private). The `gh` CLI has two accounts; the active one must be `Ditherys` or pushes 404 — `gh auth switch --user Ditherys`.
+- **TEST-01 (`dental-emr-test-01`) exists and is LINKED.** Region `ap-southeast-1`, Postgres `17.6.1.155` — identical to DEV, which matters for equivalence. It holds the eight baseline migrations, pgTAP, the synthetic seed, and three provisioned login identities including a verified owner TOTP factor. **Do not delete it**: the DEV comparison and the remaining browser runs still need it.
+- **Credentials live OUTSIDE the repo** at `C:\Users\D_Reyes\.dental-emr\test.env` (bash-format `export` lines — source it, never commit it). Holds TEST keys, three synthetic passwords, the owner TOTP secret, and a personal access token. Separately, `.env.local` inside the repo points at **DEV** for `npm run dev`.
+- **The migration freeze is ACTIVE.** Guarded commands against TEST need the scoped `MIGRATION_FREEZE_ACK` / `MIGRATION_FREEZE_ACK_COMMAND` pair. Nothing may run against DEV.
 
-Every checkpoint since `35092e7` is work that can be *authored and locally verified* without a hosted project, deliberately sequenced so that when TEST-01 exists the whole remaining verification set can run in one pass rather than in five separate approval rounds.
+## What is now proven
 
-What that leaves unproven is stated plainly throughout: authored SQL, authored E2E, and an authored hosted-Auth policy have never executed. None of it counts as evidence until it runs.
+- **R6-C:** the eight-file baseline builds the complete Phase 1 schema on an empty project — no manual step, no superseded migration.
+- **R6-E (partial):** 6/6 pgTAP suites pass, generated types show no drift, schema lint clean, advisors 0 errors. Critically, the four suites written against the *superseded* thirteen-migration chain pass unmodified against the baseline — behavioural evidence the consolidation preserved semantics. It is not yet a catalog-level equivalence proof.
+- **Hosted Auth (R4 / H-7):** TEST-01 and DEV both report 14 passed, 0 violations, 0 unverified, 1 advisory. All 15 policy key names resolved against the live Management API.
+- **CI:** `Application verification` is green on `main`.
 
-## What Changed (R6-C / R6-E execution)
+## Defects found by executing things for the first time
 
-**First remote database contact of this remediation.** Target verified as `dental-emr-test-01` on every command; `dental-emr-dev` reported `linked: false` throughout.
+Five application defects, none visible to any static check, unit test, or database suite. All fixed with regression coverage — see `docs/evidence/R6C-R6E-test01.md` and `docs/evidence/CI-first-runs.md`.
 
-- **The missed step was pgTAP provisioning.** The operator had applied the eight baseline migrations but not `npm run db:provision:test`, so pgTAP was absent and every database suite would have failed at its first `extensions.no_plan()`. The catalog-read sentinel surfaced it cleanly instead of as a confusing downstream error.
-- **6/6 pgTAP suites PASS**, including the never-executed R5-A suite. `db:types:check:test` reports no drift; `db:lint:test` clean; advisors 0 ERROR / 7 WARN.
-- **The four pre-existing suites were written against the superseded thirteen-migration chain and pass unmodified against the baseline.** That is real behavioural evidence the consolidation preserved semantics — though not yet a catalog-level equivalence proof.
-- **R5-A failed on first execution and was fixed.** It probed `private.*` RLS helpers while acting as `authenticated`; that schema is correctly revoked, and PostgreSQL does not require the querying role to hold EXECUTE for functions inside a policy expression. The defect was the test's, not the system's. Fixed by dropping the role for helper probes while leaving the victim's JWT claims untouched, so `auth.uid()` still resolves to the victim. Had it shipped unrun it would have looked like coverage and delivered none.
-- **The advisors found a real gap in this project's own R4 policy:** leaked-password protection is disabled and `password_hibp_enabled` was not among the 14 rules. The rule was added — then corrected, because Supabase gates the feature on Pro plan and above and the Free-tier TEST project cannot enable it at all. Rules now carry an optional `requiredIn`: required in staging/production, reported as `ADVISORY` elsewhere. Requiring it everywhere would have made the check permanently red on the only project it runs against, and a check that can never pass teaches people to ignore it. Recorded as a **Phase 1 production gate** (M-5): production must be provisioned on a supporting plan.
-- The six `SECURITY DEFINER` advisor warnings are accepted and documented: they are the entire authenticated write surface, definer-rights precisely so AAL2, anti-self-escalation, delegation checks, the advisory lock, and audit emission cannot be skipped.
-- New `scripts/provision-e2e-identities.mjs` (`npm run e2e:provision`) — creates the three synthetic login identities, wires them to the seeded graph, and enrolls **and verifies** an owner TOTP factor (no admin API exists for that; a factor only reaches `verified` by answering a challenge). Refuses a TOTP-secret output path inside the repository.
-- New `docs/evidence/R6C-R6E-test01.md`.
+1. `z.uuid()` rejected valid PostgreSQL UUIDs, returning 500 for every member of the seeded organization. Fixed with `databaseUuid` (`z.guid()`).
+2. The Next 16 dev server 403'd its own `/_next` chunks over `127.0.0.1`, so nothing hydrated and no interactive E2E flow could ever have passed. Fixed with `allowedDevOrigins`.
+3. A pre-hydration click submitted the MFA forms natively as GET, putting a one-time TOTP code into the URL, history, `Referer`, and access logs. Fixed with `method="post"` plus a `useHydrated()` gate.
+4. The seed left GoTrue token columns NULL, breaking Supabase's Admin API for the entire project. Fixed in the seed with a repairing `on conflict`, asserted in pgTAP.
+5. `tsc --noEmit` passed locally off a stale `.next/` and failed in CI. Fixed by typing the root layout explicitly.
 
-## What Changed (browser suite first run)
+## Open items, in dependency order
 
-Provisioned the synthetic E2E identities and ran Playwright against TEST-01 for the first time. Four **application** defects, none visible to any static check, unit test, or database suite:
+| Item | State |
+|---|---|
+| **H-1 / H-2** catalog-level TEST-vs-DEV equivalence, then R6-D on a fresh TEST-02, then R6-F reconciliation and freeze removal | **the critical path.** Needs a read-only connection to DEV, i.e. a deliberate re-link while the freeze is active. Plan it and get approval before contacting DEV. |
+| Playwright harness sequencing | 14-15/18 desktop. The suspension flow suspends the **shared owner** that every other test signs in with, so its failures cascade. Give it a dedicated identity. |
+| Responsive matrix on the other four form factors | never run; only `desktop-chromium` has been exercised |
+| **H-5** branch update/archive | unimplemented; needs migration 9, deliberately deferred until after R6-F |
+| **H-6** manual responsive/accessibility pass | `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` is still blank, which is an acceptance blocker |
+| **M-5** leaked-password protection | Pro-gated; a production gate, unsatisfiable on the current plan |
+| **M-6** CodeQL + Dependency review | need GitHub Advanced Security on a private repo; left honestly red, no `continue-on-error` |
+| Cloud TEST CI job | fails on unconfigured `cloud-test` environment variables, and would fail at the freeze regardless |
+| **H-8** independent Codex review | still required for every commit listed below |
 
-1. **`z.uuid()` rejected valid PostgreSQL UUIDs** — every request by a member of the seeded organization returned 500. Zod 4 enforces UUID *versions*; PostgreSQL does not. Fixed with `src/lib/validation/database-uuid.ts` (`z.guid()`) everywhere an identifier crosses the database boundary, plus a regression test.
-2. **The dev server 403'd its own client chunks** — Next 16 treats `127.0.0.1` and `localhost` as different origins, and both Playwright and CI drive `127.0.0.1:3000`. Nothing hydrated, so no interactive flow could ever have passed. Fixed with `allowedDevOrigins`.
-3. **A one-time TOTP code could reach the URL** — three `onSubmit` forms had no `method`, so a pre-hydration click submitted natively as a GET, putting the code in the address bar, history, `Referer`, and access logs. Fixed with `method="post"` plus a `useHydrated()` gate. Not dev-only: any slow connection hits the same window.
-4. **The seed broke Supabase's Admin API project-wide** — NULL GoTrue token columns make `listUsers` fail for the *entire* project. Fixed in the seed with a repairing `on conflict`, plus a pgTAP assertion.
+## Human actions still required
 
-Desktop Playwright: **14–15/18 passing**, from 1. Remaining failures are test-harness sequencing (the suspension flow suspends the shared owner identity — an authoring shortcut that should become a dedicated fixture). Independently bounded: a direct check confirmed AAL1 is redirected to the challenge from all four EMR routes.
-
-Also corrected several never-run assertions in the pre-existing `foundation.spec.ts`, and a flaw in my own target-size check that measured a checkbox without its label.
-
-## What Changed (R8 prep + R10)
-
-- New `docs/deployment/GITHUB_BOOTSTRAP.md` — the minimum human-only GitHub actions: private repository and remote, secret scanning and push protection, the protected `cloud-test` environment, and branch protection with the exact required-check names. States plainly that a workflow file is not CI evidence.
-- New `docs/PHASE1_ACCEPTANCE_REVIEW.md` — **decision: Phase 1 is NOT accepted.** Zero Critical, eight High, four Medium, four Low. Seven of the eight High findings are "evidence has never been produced" rather than "a defect was found", and every one of those is gated on a human action rather than on further implementation.
-- `docs/deployment/CI_FOUNDATION.md` — adds `SUPABASE_TEST_SECRET_KEY`, the new provisioning and hosted-Auth steps, and an explicit instruction never to add `MIGRATION_FREEZE_ACK` to CI.
-- All four workflow/config files verified to parse, with job and step names matching the required-check names.
-
-**The one substantive scope finding (H-5):** branch update and archive are unimplemented, while the plan's audit framework names `branch.updated` and `branch.archived` — two declared audit actions no code path can emit. Deferred until after R6-F on purpose: implementing it needs migration 9, and adding one now would put a freshly built TEST project out of step with DEV and invalidate the equivalence R6-E exists to prove.
-
-## What Changed (R4, `1c92e8a`)
-
-- New `scripts/hosted-auth-policy.mjs` — the approved posture as data: 14 rules, each with its expectation and the reason it exists (invitation-only signup, anonymous identities off, no email auto-confirm, TOTP enroll/verify on, phone MFA off, password floor and character classes, reauthentication to change a password, refresh-token rotation with a short reuse window, bounded `jwt_exp`, and a wildcard-free redirect allow list restricted to approved origins per environment).
-- New `scripts/verify-hosted-auth-config.mjs` — issues exactly **one HTTP GET** against the Management API. There is no write path, deliberately: `supabase config push` would apply a generated file carrying unrelated local defaults capable of replacing hosted redirect, email, password, and invitation settings nobody intended to change.
-- New `scripts/hosted-auth-policy.test.mjs` — 26 tests, including one weakening case per rule and six redirect-allow-list attacks (wildcard entry, bare wildcard, unapproved origin, approved-beside-unapproved, unparseable entry, empty list).
-- New `docs/security/HOSTED_AUTH_BASELINE.md`; `package.json` `security:auth`; CI runs it in the cloud-test job.
-
-**Fail-closed.** A setting the API does not report is reported as `UNVERIFIED` and exits non-zero. Supabase renames and adds configuration keys; a checker that skipped absent keys would report a posture it never inspected. This also means any key name that turns out to be wrong surfaces loudly on first run instead of passing falsely — which matters, because no hosted project has been read yet.
-
-**Never printed:** the access token, and the raw configuration payload (it can contain SMTP credentials and provider secrets). Only the specific policy keys and their scalar values are rendered.
-
-## What Changed (R9-A, `3f2c658`)
-
-- `playwright.config.ts` — five new projects: `phone-360`, `phone-430`, `ipad-portrait`, `ipad-landscape`, `desktop-responsive`, each running only `@responsive`-tagged flows. Re-running the authorization suite on five viewports would cost time without covering anything the desktop run already covers.
-- New `e2e/responsive-accessibility.spec.ts` — seven flows: axe WCAG 2.1 A/AA scans of sign-in, dashboard, branch settings, account & security, and the opened mobile navigation; horizontal-overflow assertions; WCAG 2.2 minimum target size (24 px); focus-indicator visibility; keyboard-only sign-in tab order; keyboard operation of the collapsed navigation (open, Escape, focus restored to trigger) and the branch selector; and an orientation change that must preserve entered form values.
-- New dev dependency `@axe-core/playwright` 4.13.0 (MPL-2.0, dev-only, not distributed in the application bundle).
-- New `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` — the manual pass: phone, iPad both orientations, desktop, and cross-cutting rows, with an explicit statement that a blank checklist is an acceptance blocker rather than a pass.
-- `package.json` — `test:e2e:responsive`.
-
-**Deliberate scope choice.** The target-size assertion enforces the WCAG 2.2 *minimum* rather than the project's preferred larger coarse-pointer target. Failing the build on the preference would push contributors toward a mechanical fix; the judgement belongs in manual row P6. That tradeoff is recorded in the checklist, not hidden.
-
-## What Changed (R5-B, `afb5518`)
-
-- New `e2e/session-boundaries.spec.ts` — five flows: branch access revoked mid-session (branch context collapses to "No branch access" on the next request), membership suspended mid-session (tenant content gone, direct navigation does not route around the revoked shell), a mutation **submitted after authorization was withdrawn between filling the form and clicking submit**, an unchallenged-MFA (AAL1) session attacking the step-up-gated surface, and invitation issuance denied to a branch-scoped user.
-- New `e2e/support/admin.ts` — the withdrawal harness. Phase 1 has no user-management UI, so the withdrawal cannot be driven from a second browser; it is performed server-side with `SUPABASE_SECRET_KEY`, which stays in the Node process and never reaches a browser context, a fixture, or a log. The module refuses a publishable/anon key and re-runs every Cloud TEST target check before constructing a client.
-- `.github/workflows/ci.yml` — `SUPABASE_TEST_SECRET_KEY` added to the Playwright step (needed by both the Next.js process and the harness).
-- `e2e/README.md` — documents the flows, the harness's deliberate limitation, and the new required variables.
-
-**What the harness does not claim.** Its writes bypass the AAL2-gated administrative RPCs, because `set_branch_membership` / `update_organization_member_status` are revoked from `service_role` and are callable only in a user context. The *authorization path* for those withdrawals is proven at the database boundary by R5-A. R5-B proves the complementary half: the already-open session stops being trusted. Neither half stands alone, and the split is deliberate rather than a shortcut.
-
-## What Changed (R5-A, `37ef684`)
-
-- New `supabase/tests/session_authorization_boundaries.test.sql` — 40 assertions in five sections. Every actor switch restores the victim's original simulated JWT claims, so a passing assertion means the boundary is re-evaluated per statement rather than trusted from the session.
-  - **A** branch access revoked mid-session through the audited AAL2 RPC → `has_branch_access`, `has_branch_permission`, and branch read visibility all collapse immediately in the still-open session; direct branch DML is refused at the privilege layer.
-  - **B** an organization-wide role revoked mid-session → the same open session's `create_branch` mutation is refused and writes nothing (control proves it succeeded moments earlier).
-  - **C** membership suspended mid-session → mutation refused; organizations, branches, and audit history all read zero rows in the open session.
-  - **D** invitation revocation lifecycle: unauthorized revoke, **cross-tenant** revoke by an Org B administrator who does hold `user.invite` in their own organization, authorized revoke, membership removal, exactly one audit event, acceptance of a revoked invitation refused, double revocation refused, unknown invitation reports no effect rather than failing open.
-  - **E** stale/downgraded/absent AAL: an earlier AAL2 success does not carry forward, AAL1 refused on `set_branch_membership`, a JWT with no `aal` key and a null `aal` both fail closed.
-- `scripts/remote-database-test-guard.mjs` — the suite list becomes the exported `DATABASE_TEST_SUITES`; `run-remote-database-tests.mjs` consumes it.
-- New unit tests assert the registered list **equals** `supabase/tests/` exactly (an authored-but-unregistered suite reads as coverage while proving nothing) and that every suite is transaction-bounded.
-- `supabase/tests/README.md` updated, including the mandatory `SUPABASE_DEV_PROJECT_ID` and the pgTAP provisioning prerequisite.
-
-## What Changed (R6-C1, `e790ffe`)
-
-ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical baseline is production-shaped, and database test tooling is an explicitly guarded non-production provisioning step.
-
-**Baseline**
-- `supabase/migrations/20260813020000_baseline_extensions_and_private_helpers.sql` → renamed `…_baseline_private_helpers.sql`; `create extension … pgtap` removed. The eight-file baseline now creates no extension at all.
-- New `supabase/provisioning/nonproduction/001_database_test_tooling.sql` — installs pgTAP; deliberately outside `supabase/migrations/` so `db push` cannot reach it; asserts a `P1_PROVISION_PASS` sentinel read from the live catalog.
-
-**Guards**
-- `scripts/remote-database-test-guard.mjs` — new `db-provision-test-tooling` allowlist entry (`db query --linked --output-format json --file …`), registered as **migration-applying** so the scoped R6 freeze acknowledgement is required; new `resolveCommandResultSentinel`; `parseSupabaseQueryResult` generalized to an expectation object; **`SUPABASE_DEV_PROJECT_ID` is now required** rather than only honoured when present.
-- `scripts/run-guarded-supabase-command.mjs` — captures stdout for sentinel-checked commands and asserts the sentinel after a zero exit.
-- `scripts/approved-final-grants.mjs` — `APPROVED_EXTENSIONS` is now **empty**, which makes any `CREATE EXTENSION` in a migration an `unapproved-extension` violation.
-- `package.json` — `db:provision:test`.
-
-**Docs / CI**
-- New `docs/decisions/ADR-018-nonproduction-database-test-tooling.md`.
-- New `docs/deployment/CLOUD_TEST_PROVISIONING.md` — the one-slot (TEST-01 → TEST-02) runbook, variable **names** only, freeze-scoped acknowledgement per step.
-- `ADR-017` — pgTAP section marked RESOLVED, baseline table row updated, R6-C1 added to the outstanding-work table.
-- `supabase/README.md`, `supabase/MIGRATION_FREEZE.md` updated.
-- `.github/workflows/ci.yml` — provisioning step before the pgTAP suites; explicit comment that the cloud-test job is expected to fail while the freeze is active and that `MIGRATION_FREEZE_ACK` must **not** be added to CI.
-
-## Security / Tenancy Design
-
-- **Production never installs test infrastructure.** Schema reconstruction is eight reviewed files. The rule is mechanical (empty allowlist), not reviewer-dependent.
-- **The provisioning step is not privileged relief.** It routes through the same guarded runner: `APP_ENVIRONMENT=test`, `SUPABASE_PROJECT_ID` = `SUPABASE_TEST_PROJECT_ID` = linked project, TEST ≠ DEV, TEST ≠ production, `DATABASE_TEST_CONFIRMATION`, plus the scoped freeze acknowledgement.
-- **A vacuous check was closed.** An absent `SUPABASE_DEV_PROJECT_ID` previously made "TEST must differ from DEV" pass trivially. Forgetting one export removed DEV's strongest protection. It is now mandatory.
-- **DEV is untouched.** DEV keeps the pgTAP it already has; removing it would be a schema change to a non-disposable project during a freeze.
-
-## Database / Remote State
-
-- **No remote database was contacted.** No `db push`, `--dry-run`, `migration list`, `migration repair`, `db reset`, remote SQL, MCP call, TEST creation, or DEV modification.
-- **The migration freeze remains ACTIVE.**
-- **DEV history remains intentionally unreconciled** (13 superseded versions recorded, 8 baseline versions not). DEV's schema is correct and unchanged.
-- Local CLI link state under `supabase/.temp/` still points at DEV. The freeze doc's recommended precaution (removing it so any command must be re-linked deliberately) has **not** been applied, because doing so would force the operator to re-link before their next DEV inspection.
-
-## Verification Performed
-
-- `npm run verify` ✓ (with the CI placeholder build env) — migration lint (8 files, 231 statements, 93 GRANT/REVOKE, 30 approved privileges, 0 violations, 0 extensions), ESLint 0 problems, `tsc --noEmit`, **199/199 unit tests across 21 files** (188 → 197 at R6-C1 → 199 at R5-A), production build, secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
-- Static review of the new SQL ✓ — balanced dollar quotes, balanced parentheses, 40 assertions, transaction-bounded (asserted by a unit test, not by eye).
-- Staged-diff review ✓ at both checkpoints — no secret, no application-behaviour change, no schema-object change beyond removing the extension.
-- `npx secretlint "e2e/**/*"` ✓ — 0 findings across the new harness and specs.
-- `npm run verify` ✓ after R4 — **225/225 unit tests across 22 files** (+26 hosted-Auth policy tests).
-- Hosted-Auth guard paths exercised locally ✓ — missing access token refused, TEST-equals-DEV refused, production target refused without the explicit `--read-production` flag. No network call was made in any of those paths.
-- `npx playwright test --list` ✓ with synthetic placeholder metadata — **54 tests across 3 files** resolve across the seven projects, confirming the `@responsive` grep and the form-factor matrix are wired as intended. No browser was launched and no server started.
-- **Not verified against a database or a browser:** the R6-C1 provisioning SQL, the entire R5-A suite, and the entire R5-B spec have never executed. All run first at R6-C/R6-E against TEST-01. Expect first-run corrections, exactly as with the R6-D SQL.
-
-## Known Limitations / Open Items
-
-- **R6-C, R6-D, R6-E, R6-F are all blocked on a human-created disposable Cloud TEST project.** That is the current critical path.
-- **R6-E must treat the `pgtap` extension as an expected non-production difference**, and must not extend that tolerance to any application object.
-- **CI cloud-test cannot pass while the freeze is active**, by design. No remote exists yet either, so no CI evidence can be claimed.
-- **Schema-changing remediation is deliberately deferred until after R6-F** — specifically R2 (branch update/archive RPCs) and any R3 MFA-removal audit RPC. Adding migration 9 now would put TEST and DEV out of step and invalidate the equivalence R6-E is meant to prove.
-- **Phase 1 has no branch-scoped write RPC.** Every mutation is organization-wide-permission gated, so section A asserts the branch authorization *predicates* every future branch-bound mutation will use, plus RLS visibility, plus the refusal of direct branch DML. When Phase 2 adds a branch-scoped write, a mutation-level assertion must be added there. This is recorded as a known residual, not as covered.
-- **No independent review has occurred.** ADR-017 lists twelve questions; ADR-018 adds four.
-
-## Human Actions Still Required
-
-1. Create disposable Cloud TEST project **TEST-01** (Dashboard) and set the session variables per `docs/deployment/CLOUD_TEST_PROVISIONING.md`. Blocks R6-C, R6-E, and every R5 execution.
-2. Provision the E2E synthetic login identities on TEST-01 (owner with verified TOTP, branch-scoped user, suspended user) per `e2e/README.md`. Blocks R5-B execution.
-3. Create/attach a GitHub remote and configure the `cloud-test` protected environment, including the new `SUPABASE_TEST_SECRET_KEY` secret. Blocks R8 CI evidence.
-4. All consolidated in the checklist the agent reports at the stop point.
+1. Configure the GitHub `cloud-test` environment (variables and secrets per `docs/deployment/CI_FOUNDATION.md`) — only useful after R6-F.
+2. Perform the manual responsive/accessibility pass.
+3. Decide on a Supabase plan that supports leaked-password protection before production.
 
 ## Next Checkpoint
 
-**BLOCKED — awaiting human action.** Every remaining Phase 1 item needs either a hosted Supabase project or a Git remote. The full checklist is in `docs/PHASE1_ACCEPTANCE_REVIEW.md` and `docs/deployment/CLOUD_TEST_PROVISIONING.md` / `GITHUB_BOOTSTRAP.md`.
-
-On resume, in order: R6-C (build TEST-01 from the baseline) → R6-E (equivalence, pgTAP, advisors, types, hosted Auth, Playwright, responsive matrix) → dispose TEST-01 → R6-D on TEST-02 → R6-F reconciliation and freeze removal → H-5 branch update/archive → re-run the acceptance review.
+The DEV-versus-TEST catalog comparison — the last piece of R6-E and the gate on R6-D and R6-F. Propose the exact safe, read-only, freeze-respecting procedure and obtain approval **before** contacting DEV.
 
 ## Commits Requiring Later Codex Review
 
-- `c2a6c91` R6-A secure baseline (HIGH — migration architecture)
-- `35092e7` R6-B grant-last enforcement (HIGH — security tooling)
-- `e790ffe` R6-C1 baseline + guard change (HIGH)
-- `37ef684` R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
-- `afb5518` R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
-- `3f2c658` R9-A responsive/accessibility matrix (MEDIUM — test tooling and a dev dependency; no production code path)
-- `1c92e8a` R4 hosted Auth verifier (MEDIUM — read-only, but its key names are unvalidated against a live project)
-- this commit, R8 prep and the acceptance review (LOW — documentation only)
+HIGH unless noted:
+
+`e790ffe` R6-C1 baseline + guard change, `37ef684` R5-A session-boundary suite, `afb5518` R5-B withdrawal harness (introduces secret-key use in the test process), `3f2c658` R9-A matrix (MEDIUM), `1c92e8a` R4 hosted-Auth verifier (MEDIUM), `65545c7` MFA reconciliation docs (LOW), `d6cf076` acceptance review (LOW), `a5f15d1` R6-C/E execution, `6cdbff1` typecheck + CI evidence, `388af72` environment-scoped HIBP rule, `b25d2e3` four application defect fixes, `d58a476` hosted Auth findings, `484cff5` hosted Auth resolution — **a deliberate hosted write; scrutinise the reasoning recorded in `HOSTED_AUTH_BASELINE.md`**.
+
+Earlier and still unreviewed: `c2a6c91` R6-A secure baseline, `35092e7` R6-B grant-last enforcement.
