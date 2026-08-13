@@ -4,7 +4,9 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R6-C1 — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, and write the one-slot disposable Cloud TEST runbook
+**Task / slice:** R5-A — pgTAP coverage for session-lifetime authorization boundaries: authorization withdrawn while a session is already open, plus the invitation revocation lifecycle and stale/absent AAL claims
+
+**Previous checkpoint:** R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
@@ -12,11 +14,25 @@
 
 ## Context
 
-R6-C builds a disposable Cloud TEST project from the baseline alone, and R6-E certifies that baseline as equivalent to DEV. Whatever the baseline contains at that moment is what a future production bootstrap replays — so the open pgTAP decision recorded in ADR-017 had to be resolved *before* R6-C, not at the later production-bootstrap gate.
+The existing suites prove a *fresh* session with the wrong authorization is refused. They did not prove the complementary property — that authorization stops applying the instant it is withdrawn, with no re-login and no new JWT. That is where the Phase 1 exit review's R5 scenarios live, and it is the class of defect that survives a "all negative tests pass" review.
 
-ADR-018 resolves it as option (c): the canonical baseline is production-shaped, and database test tooling is an explicitly guarded non-production provisioning step.
+R5-A covers the database half. R5-B (next) covers the browser/session half in Playwright.
 
-## What Changed
+## What Changed (R5-A)
+
+- New `supabase/tests/session_authorization_boundaries.test.sql` — 40 assertions in five sections. Every actor switch restores the victim's original simulated JWT claims, so a passing assertion means the boundary is re-evaluated per statement rather than trusted from the session.
+  - **A** branch access revoked mid-session through the audited AAL2 RPC → `has_branch_access`, `has_branch_permission`, and branch read visibility all collapse immediately in the still-open session; direct branch DML is refused at the privilege layer.
+  - **B** an organization-wide role revoked mid-session → the same open session's `create_branch` mutation is refused and writes nothing (control proves it succeeded moments earlier).
+  - **C** membership suspended mid-session → mutation refused; organizations, branches, and audit history all read zero rows in the open session.
+  - **D** invitation revocation lifecycle: unauthorized revoke, **cross-tenant** revoke by an Org B administrator who does hold `user.invite` in their own organization, authorized revoke, membership removal, exactly one audit event, acceptance of a revoked invitation refused, double revocation refused, unknown invitation reports no effect rather than failing open.
+  - **E** stale/downgraded/absent AAL: an earlier AAL2 success does not carry forward, AAL1 refused on `set_branch_membership`, a JWT with no `aal` key and a null `aal` both fail closed.
+- `scripts/remote-database-test-guard.mjs` — the suite list becomes the exported `DATABASE_TEST_SUITES`; `run-remote-database-tests.mjs` consumes it.
+- New unit tests assert the registered list **equals** `supabase/tests/` exactly (an authored-but-unregistered suite reads as coverage while proving nothing) and that every suite is transaction-bounded.
+- `supabase/tests/README.md` updated, including the mandatory `SUPABASE_DEV_PROJECT_ID` and the pgTAP provisioning prerequisite.
+
+## What Changed (R6-C1, `e790ffe`)
+
+ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical baseline is production-shaped, and database test tooling is an explicitly guarded non-production provisioning step.
 
 **Baseline**
 - `supabase/migrations/20260813020000_baseline_extensions_and_private_helpers.sql` → renamed `…_baseline_private_helpers.sql`; `create extension … pgtap` removed. The eight-file baseline now creates no extension at all.
@@ -51,10 +67,10 @@ ADR-018 resolves it as option (c): the canonical baseline is production-shaped, 
 
 ## Verification Performed
 
-- `npm run security:migrations` ✓ — 8 files, 231 statements, 93 GRANT/REVOKE, 1 terminal migration, 30 approved privileges, 0 violations, 0 extensions.
-- `npm run verify` ✓ (with the CI placeholder build env) — migration lint, ESLint 0 problems, `tsc --noEmit`, **197/197 unit tests across 21 files** (was 188/21: +9 for the provisioning command, its sentinel, the mandatory DEV reference, the empty extension list, and the re-introduced-pgTAP rejection), production build, secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
-- Staged-diff review ✓ — 15 files, no secret, no application-behaviour change, no schema-object change beyond removing the extension.
-- **Not verified:** the provisioning SQL has never executed. First execution is R6-C.
+- `npm run verify` ✓ (with the CI placeholder build env) — migration lint (8 files, 231 statements, 93 GRANT/REVOKE, 30 approved privileges, 0 violations, 0 extensions), ESLint 0 problems, `tsc --noEmit`, **199/199 unit tests across 21 files** (188 → 197 at R6-C1 → 199 at R5-A), production build, secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
+- Static review of the new SQL ✓ — balanced dollar quotes, balanced parentheses, 40 assertions, transaction-bounded (asserted by a unit test, not by eye).
+- Staged-diff review ✓ at both checkpoints — no secret, no application-behaviour change, no schema-object change beyond removing the extension.
+- **Not verified against a database:** the R6-C1 provisioning SQL and the entire R5-A suite have never executed. Both run first at R6-C/R6-E. Expect first-run corrections, exactly as with the R6-D SQL.
 
 ## Known Limitations / Open Items
 
@@ -62,6 +78,7 @@ ADR-018 resolves it as option (c): the canonical baseline is production-shaped, 
 - **R6-E must treat the `pgtap` extension as an expected non-production difference**, and must not extend that tolerance to any application object.
 - **CI cloud-test cannot pass while the freeze is active**, by design. No remote exists yet either, so no CI evidence can be claimed.
 - **Schema-changing remediation is deliberately deferred until after R6-F** — specifically R2 (branch update/archive RPCs) and any R3 MFA-removal audit RPC. Adding migration 9 now would put TEST and DEV out of step and invalidate the equivalence R6-E is meant to prove.
+- **Phase 1 has no branch-scoped write RPC.** Every mutation is organization-wide-permission gated, so section A asserts the branch authorization *predicates* every future branch-bound mutation will use, plus RLS visibility, plus the refusal of direct branch DML. When Phase 2 adds a branch-scoped write, a mutation-level assertion must be added there. This is recorded as a known residual, not as covered.
 - **No independent review has occurred.** ADR-017 lists twelve questions; ADR-018 adds four.
 
 ## Human Actions Still Required
@@ -72,10 +89,11 @@ ADR-018 resolves it as option (c): the canonical baseline is production-shaped, 
 
 ## Next Checkpoint
 
-R6-C — first remote execution against TEST-01, gated on human action 1.
+R5-B — Playwright coverage of the browser/session half: mid-session branch revocation, mid-session suspension, and stale AAL2 in a live session, using a server-side admin harness against the disposable TEST project. Authored locally; execution stays blocked on human action 1.
 
 ## Commits Requiring Later Codex Review
 
 - `c2a6c91` R6-A secure baseline (HIGH — migration architecture)
 - `35092e7` R6-B grant-last enforcement (HIGH — security tooling)
-- this commit, R6-C1 (HIGH — baseline change + guard change)
+- `e790ffe` R6-C1 baseline + guard change (HIGH)
+- this commit, R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)

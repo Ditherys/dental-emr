@@ -62,6 +62,22 @@ const CI_DATABASE_COMMANDS = Object.freeze({
   ],
 });
 
+/**
+ * The pgTAP suites the remote runner executes, in execution order.
+ *
+ * Exported so a unit test can assert it matches `supabase/tests/` exactly. An
+ * authored suite that is never registered here is worse than a missing test: it
+ * reads as coverage while proving nothing.
+ */
+export const DATABASE_TEST_SUITES = Object.freeze([
+  "schema.test.sql",
+  "foundation_rls.test.sql",
+  "workforce_invitations.test.sql",
+  "audit_foundation.test.sql",
+  "session_authorization_boundaries.test.sql",
+  "seed_security_fixtures.test.sql",
+]);
+
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
 
 function required(environment, name) {

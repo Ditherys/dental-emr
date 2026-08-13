@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  DATABASE_TEST_SUITES,
   parseSupabaseQueryResult,
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
@@ -25,13 +26,9 @@ const supabaseCli = join(
   "dist",
   "supabase.js",
 );
-const suites = [
-  "schema.test.sql",
-  "foundation_rls.test.sql",
-  "workforce_invitations.test.sql",
-  "audit_foundation.test.sql",
-  "seed_security_fixtures.test.sql",
-].map((filename) => join(repositoryRoot, "supabase", "tests", filename));
+const suites = DATABASE_TEST_SUITES.map((filename) =>
+  join(repositoryRoot, "supabase", "tests", filename),
+);
 
 function fail(message) {
   console.error(`Database test runner refused to continue: ${message}`);

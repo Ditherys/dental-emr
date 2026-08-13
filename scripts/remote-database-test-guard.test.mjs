@@ -1,7 +1,12 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
   DATABASE_TEST_CONFIRMATION,
+  DATABASE_TEST_SUITES,
   parseSupabaseQueryResult,
   resolveCommandResultSentinel,
   validateRemoteDatabaseTestEnvironment,
@@ -118,6 +123,35 @@ describe("remote database test suite contract", () => {
         "empty.test.sql",
       ),
     ).toThrow(/one completion row/);
+  });
+});
+
+describe("registered database suites", () => {
+  const testsDirectory = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "supabase",
+    "tests",
+  );
+
+  // An authored-but-unregistered suite reads as coverage while proving nothing.
+  it("runs every suite that exists, and every registered suite exists", () => {
+    const onDisk = readdirSync(testsDirectory)
+      .filter((name) => name.endsWith(".test.sql"))
+      .sort();
+
+    expect([...DATABASE_TEST_SUITES].sort()).toEqual(onDisk);
+  });
+
+  it("requires every suite to be transaction-bounded", () => {
+    for (const suite of DATABASE_TEST_SUITES) {
+      expect(() =>
+        validateTransactionalSuite(
+          readFileSync(join(testsDirectory, suite), "utf8"),
+          suite,
+        ),
+      ).not.toThrow();
+    }
   });
 });
 
