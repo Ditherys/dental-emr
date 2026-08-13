@@ -118,6 +118,27 @@ Dependency review / Review dependency changes
 CodeQL / Analyze JavaScript and TypeScript
 ```
 
+### What can actually be required today
+
+The first real runs (2026-08-14) established which of these the current plan can
+satisfy. Requiring a check that cannot pass trains people to ignore red, so mark
+each one required only when it can go green:
+
+| Check | State | Gate |
+|---|---|---|
+| `CI / Application verification` | **passing** | none — require it now |
+| `CI / Cloud TEST database and E2E` | fails at the first migration-applying step | the R6 migration freeze, by design. Require after R6-F. |
+| `CodeQL / Analyze JavaScript and TypeScript` | fails: *"Code scanning is not enabled for this repository"* | code scanning on a **private** repository requires GitHub Advanced Security. Enable at Settings → Code security, if the plan permits. |
+| `Dependency review / Review dependency changes` | fails: *"Dependency review is not supported on this repository"* | Dependency graph + GitHub Advanced Security, same gate. |
+
+The workflow files are kept rather than deleted, and **`continue-on-error` is
+deliberately not used** — a job that reports success while doing nothing is worse
+than one that is honestly red. Until GHAS is available, the in-repository
+substitutes carry the load: `npm run security:audit` (high-severity dependency
+audit) and `npm run security:secrets` both run in the application job and both
+pass. They are narrower than CodeQL and PR-diff dependency review, and that
+narrowing is an accepted, recorded gap rather than an equivalent.
+
 Require pull requests and the second review mandated for high-risk changes.
 Do not make the Cloud TEST check optional merely because credentials or
 synthetic identities have not been configured; finish the protected environment

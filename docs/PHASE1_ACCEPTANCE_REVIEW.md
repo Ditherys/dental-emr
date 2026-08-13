@@ -59,9 +59,16 @@ because the baseline changed underneath them.
 the baseline. *Blocked on:* TEST-01. Expect first-run corrections; unrun SQL is
 usually not correct SQL.
 
-**H-4 — No CI run has ever occurred.** There is no Git remote. Four workflow
-files exist and parse; that is not evidence. Phase 1 explicitly requires CI
-evidence. *Blocked on:* human GitHub bootstrap (`docs/deployment/GITHUB_BOOTSTRAP.md`).
+**H-4 — CI evidence is partial.** *(Updated 2026-08-14 — the remote now exists
+and CI has run.)* `CI / Application verification` **passes on `main`**. Its first
+run caught a real defect that local verification could not: `tsc --noEmit`
+succeeded locally off a stale `.next/` directory and failed in CI, where
+typecheck runs before the build — see `docs/evidence/CI-first-runs.md`. Fixed and
+re-verified against a simulated clean checkout.
+
+Still open: `CI / Cloud TEST database and E2E` cannot pass while the R6 freeze is
+active (by design), and `CodeQL` and `Dependency review` cannot run at all on a
+private repository without GitHub Advanced Security — see M-6.
 
 **H-5 — Branch update and archive are not implemented.** `docs/plans/001-foundation.md`
 §"Phase 1 audit framework should record at least" names *branch updated/archived*,
@@ -108,6 +115,14 @@ down in `docs/security/AUDIT_FOUNDATION.md` — including the non-negotiable poi
 that a removal assertion must be captured **before** the unenroll, because after
 it the factor row is gone and absence is indistinguishable from "never existed".
 Implementation needs a migration and is deferred until after R6-F.
+
+**M-6 — CodeQL and Dependency review cannot run on the current GitHub plan.**
+Both fail on every run: code scanning and dependency review require GitHub
+Advanced Security on a private repository. `npm run security:audit` and
+`npm run security:secrets` run in CI and pass, but they are narrower — no static
+taint analysis, no PR-diff-scoped dependency gate. Recorded as an accepted gap
+with a plan gate, not as equivalent coverage. `continue-on-error` was deliberately
+not used: a job reporting success while doing nothing is worse than an honest red.
 
 **M-5 — Leaked-password protection is unavailable on the current Supabase plan.**
 The security advisors flagged it as disabled; it is gated on Pro plan and above,
