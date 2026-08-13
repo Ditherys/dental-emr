@@ -101,11 +101,22 @@ authored but unrun, and `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` is blank.
 Automated scanning cannot judge virtual-keyboard behaviour, screen-reader output,
 focus *order*, or one-handed reachability. A blank checklist is a blocker.
 
-**H-7 — The hosted Supabase Auth posture has never been verified.**
-`npm run security:auth` and its 14-rule policy are authored; no hosted project
-has been read. Invitation-only onboarding, disabled public signup, the password
-policy, the redirect allowlist, and TOTP availability are all currently
-*intended* rather than *confirmed*.
+**H-7 — [EXECUTED 2026-08-14; violations found and open]** Both hosted projects
+were read. All 15 policy keys resolved (0 `UNVERIFIED`). TOTP enroll/verify,
+anonymous sign-in, email auto-confirm, phone MFA, refresh-token rotation, reuse
+interval, and `jwt_exp` all pass on both.
+
+**Open on both TEST-01 and DEV:** public signup is *enabled* (`disable_signup:
+false`), the password floor is Supabase's default `6` rather than `12`, no
+character-class requirement is set, and password change does not require
+reauthentication. TEST-01 additionally has an empty redirect allow list, which
+blocks invitation acceptance there.
+
+Open signup directly contradicts the invitation-only posture. It is mitigated —
+an identity created that way has no membership, no role, and reaches nothing,
+which `foundation_rls` and the R5-A suite both prove — but it is a stated
+requirement that is not met, so it stays a High finding until the four Dashboard
+settings are changed. Remediation steps: `docs/security/HOSTED_AUTH_BASELINE.md`.
 
 **H-8 — No independent review of the security-critical remediation.**
 ADR-017 lists twelve verification questions and ADR-018 four more, all

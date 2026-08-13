@@ -160,7 +160,7 @@ export const HOSTED_AUTH_POLICY = Object.freeze([
     type: "list",
     expectation: "only approved origins for this environment, no wildcard",
     reason:
-      "The redirect allow list is what stops an invitation or recovery link from delivering a session to an attacker-controlled origin. A wildcard defeats it entirely.",
+      "The redirect allow list is what stops an invitation or recovery link from delivering a session to an attacker-controlled origin, and a wildcard defeats it entirely. An EMPTY list is not a security hole — Supabase then accepts only SITE_URL — but it is still a failure here, because the application's /auth/confirm callback is not SITE_URL, so invitation acceptance and recovery links will not reach the app at all.",
     satisfied: (value, context) => {
       if (typeof value !== "string" || value.trim() === "") {
         return false;

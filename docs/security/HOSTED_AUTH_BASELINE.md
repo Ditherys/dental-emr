@@ -86,3 +86,50 @@ that reasoning. The policy is the intent; the hosted project is the observation.
 - Email template bodies, SMTP configuration, and rate-limit tuning are not asserted.
 - **Production gate:** the production project must be provisioned on a plan that supports leaked-password protection. That is a procurement decision, not a configuration one, and it cannot be satisfied on a Free-tier project.
 - The checker verifies configuration, not behaviour. The behavioural counterparts are the invitation and MFA flows in `supabase/tests/workforce_invitations.test.sql`, `supabase/tests/session_authorization_boundaries.test.sql`, and `e2e/`.
+
+---
+
+## First real run (2026-08-14)
+
+Both hosted projects were read for the first time. **All 15 policy keys resolved
+against the live Management API — 0 `UNVERIFIED`**, so the key names taken from
+the documented surface were correct and the fail-closed design had nothing to
+catch.
+
+| Setting | TEST-01 | DEV |
+|---|---|---|
+| `disable_signup` | **FAIL** — `false` | **FAIL** — `false` |
+| `password_min_length` | **FAIL** — `6` | **FAIL** — `6` |
+| `password_required_characters` | **FAIL** — empty | **FAIL** — empty |
+| `security_update_password_require_reauthentication` | **FAIL** — `false` | **FAIL** — `false` |
+| `uri_allow_list` | **FAIL** — empty | PASS — `http://localhost:3000/auth/confirm` |
+| `password_hibp_enabled` | ADVISORY — Pro-gated | ADVISORY — Pro-gated |
+| the other nine | PASS | PASS |
+
+**The finding that matters most: open signup is enabled on both projects.**
+`disable_signup: false` means anyone who can reach the project can create an
+identity. The architecture specifies invitation-only workforce onboarding, and
+the application enforces it at every layer *after* identity — an account created
+this way has no membership, no role, and reaches nothing. But it is still a
+contradiction of the stated posture, on the project that holds the working data,
+and it should be closed rather than argued away.
+
+TEST-01's empty `uri_allow_list` is a different kind of problem: not a security
+hole (Supabase then accepts only `SITE_URL`) but a functional one, because
+`/auth/confirm` is not `SITE_URL`, so invitation acceptance cannot complete there.
+
+### Remediation — Dashboard, per project
+
+Authentication → **Sign In / Providers → Email**:
+
+1. **Allow new users to sign up** → off (`disable_signup`)
+2. **Minimum password length** → `12`
+3. **Password requirements** → any non-empty character-class option
+4. **Secure password change** → on (reauthentication before password change)
+
+Authentication → **URL Configuration → Redirect URLs**, TEST-01 only:
+
+5. add `http://127.0.0.1:3000/auth/confirm` (and `http://localhost:3000/auth/confirm` if you drive it that way)
+
+Then re-run `npm run security:auth` for each project and record the result. Do
+not relax the policy file to match the projects; the policy is the intent.

@@ -25,7 +25,10 @@ const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
 
 function fail(message) {
   console.error(`Hosted Auth verification refused to continue: ${message}`);
-  process.exit(1);
+  // Set the code rather than calling process.exit(): an immediate exit while a
+  // fetch handle is still closing trips a libuv assertion on Windows and buries
+  // the real message under a stack trace.
+  process.exitCode = 1;
 }
 
 function required(name) {
@@ -91,6 +94,16 @@ async function readHostedAuthConfiguration(projectId, accessToken) {
 
   if (!response.ok) {
     // The status is safe to surface; the body may not be.
+    if (response.status === 401 && !accessToken.startsWith("sbp_")) {
+      throw new Error(
+        "The Management API rejected the credential (401). SUPABASE_ACCESS_TOKEN " +
+          "must be a personal access token beginning with \"sbp_\", created at " +
+          "https://supabase.com/dashboard/account/tokens. A project API key " +
+          "(sb_secret_… / sb_publishable_…) authenticates against the project's " +
+          "own API, not against api.supabase.com, and cannot read this setting.",
+      );
+    }
+
     throw new Error(
       `The Management API returned ${response.status} for the Auth configuration.`,
     );
@@ -160,7 +173,7 @@ try {
         "which is not the same as being correct. Fix violations in the Supabase " +
         "Dashboard and record the change in docs/security/HOSTED_AUTH_BASELINE.md.",
     );
-    process.exit(1);
+    process.exitCode = 1;
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : "Unknown failure.");
