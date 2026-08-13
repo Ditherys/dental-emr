@@ -101,7 +101,15 @@ authored but unrun, and `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` is blank.
 Automated scanning cannot judge virtual-keyboard behaviour, screen-reader output,
 focus *order*, or one-handed reachability. A blank checklist is a blocker.
 
-**H-7 — [EXECUTED 2026-08-14; violations found and open]** Both hosted projects
+**H-7 — [RESOLVED 2026-08-14]** Both hosted projects now report **14 passed, 0
+violations, 0 unverified, 1 advisory**. Public signup is disabled, the password
+floor is 12 with a character-class requirement, password change requires
+reauthentication, and TEST-01's redirect allow list is configured. The remaining
+advisory is Pro-gated leaked-password protection, carried as production gate M-5.
+Applied by targeted `PATCH` with before/after verification across all 242 config
+keys (no unintended drift) and a sign-in re-check of all three fixtures.
+
+**H-7 (as first found) —** Both hosted projects
 were read. All 15 policy keys resolved (0 `UNVERIFIED`). TOTP enroll/verify,
 anonymous sign-in, email auto-confirm, phone MFA, refresh-token rotation, reuse
 interval, and `jwt_exp` all pass on both.

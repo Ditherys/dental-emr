@@ -118,7 +118,36 @@ TEST-01's empty `uri_allow_list` is a different kind of problem: not a security
 hole (Supabase then accepts only `SITE_URL`) but a functional one, because
 `/auth/confirm` is not `SITE_URL`, so invitation acceptance cannot complete there.
 
-### Remediation — Dashboard, per project
+### Resolved (2026-08-14, same day)
+
+All four violations were closed on **both** projects, and TEST-01's redirect
+allow list was configured, via a single targeted `PATCH` to
+`/v1/projects/{ref}/config/auth` carrying exactly these fields:
+
+```json
+{
+  "disable_signup": true,
+  "password_min_length": 12,
+  "password_required_characters": "abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789",
+  "security_update_password_require_reauthentication": true
+}
+```
+
+The merge behaviour was **verified, not assumed**: the full configuration was read
+before and after on each project, and of the 242 keys returned, only the four
+intended ones changed — `unintended drift: none`. Existing fixture accounts were
+then re-checked and all three still sign in, confirming the raised password floor
+does not lock out accounts created before it.
+
+Both projects now report **14 passed, 0 violations, 0 unverified, 1 advisory**.
+The advisory is Pro-gated leaked-password protection, which remains a production
+gate (M-5).
+
+This was a deliberate operator action taken at the project owner's explicit
+request. It does **not** change the standing rule that the *verification tooling*
+never writes: `npm run security:auth` still issues one GET and has no write path.
+
+### Remediation — Dashboard, per project (for future violations)
 
 Authentication → **Sign In / Providers → Email**:
 
