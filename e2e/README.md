@@ -10,6 +10,21 @@ through a controlled administrator workflow and attach them to the matching
 synthetic memberships. Do not add passwords or TOTP secrets to `seed.sql`, Git,
 shell history, screenshots, or test output.
 
+## Loading credentials in PowerShell
+
+Per `docs/deployment/CLOUD_TEST_PROVISIONING.md`, TEST credentials live outside
+the repository in a bash-format `export NAME=value` file (by convention,
+`$HOME\.dental-emr\test.env`). PowerShell has no native `source` for that
+format. Load it into the current window with:
+
+```powershell
+. .\scripts\load-test-env.ps1
+```
+
+This must be re-run in **every new PowerShell window** — environment variables
+do not carry over between windows. It only reports which variable *names*
+loaded, never their values.
+
 Required process environment:
 
 ```text
