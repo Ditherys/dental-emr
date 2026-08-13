@@ -24,6 +24,33 @@ function decodeBase32(secret: string) {
   return Buffer.from(bytes);
 }
 
+/**
+ * Returns a TOTP code that has not already been consumed by this run.
+ *
+ * Supabase Auth enforces single use per code, so two owner logins inside the
+ * same 30-second window fail the second time — the code is correct but spent.
+ * With a serial suite this happens constantly and looks like a flaky
+ * `waitForURL` timeout rather than what it is.
+ *
+ * Waits for the next window instead of retrying blindly, so a failure here
+ * still means something real.
+ */
+export async function freshTotp(secret: string) {
+  const previous = consumedCodes.get(secret);
+  let code = currentTotp(secret);
+
+  if (previous === code) {
+    const msUntilNextWindow = 30_000 - (Date.now() % 30_000) + 750;
+    await new Promise((resolve) => setTimeout(resolve, msUntilNextWindow));
+    code = currentTotp(secret);
+  }
+
+  consumedCodes.set(secret, code);
+  return code;
+}
+
+const consumedCodes = new Map<string, string>();
+
 export function currentTotp(secret: string, now = Date.now()) {
   const counter = BigInt(Math.floor(now / 30_000));
   const message = Buffer.alloc(8);

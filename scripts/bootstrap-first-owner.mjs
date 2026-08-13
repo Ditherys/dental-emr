@@ -9,7 +9,10 @@ const bootstrapSchema = z.object({
   SUPABASE_PROJECT_ID: z.string().regex(/^[a-z0-9]+$/),
   SUPABASE_SECRET_KEY: z.string().min(1),
   APP_URL: z.url(),
-  BOOTSTRAP_ORGANIZATION_ID: z.uuid(),
+  // z.guid(), not z.uuid(): PostgreSQL's uuid type does not constrain the
+  // version nibble, and the synthetic tenant graph uses ids that Zod's
+  // versioned validator rejects. See src/lib/validation/database-uuid.ts.
+  BOOTSTRAP_ORGANIZATION_ID: z.guid(),
   BOOTSTRAP_OWNER_EMAIL: z.email().max(320),
   BOOTSTRAP_CONFIRMATION: z.literal(
     "I_UNDERSTAND_THIS_CREATES_FIRST_OWNER",

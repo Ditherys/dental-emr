@@ -11,6 +11,7 @@ import {
 } from "@/app/(emr)/settings/branches/actions";
 import { InlineFieldError } from "@/components/feedback";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import {
   branchFormSchema,
   branchSlugFromName,
@@ -52,6 +53,7 @@ export function BranchForm() {
     defaultValues,
   });
   const branchName = useWatch({ control, name: "name" });
+  const hydrated = useHydrated();
 
   useEffect(() => {
     if (!dirtyFields.slug) {
@@ -101,7 +103,12 @@ export function BranchForm() {
         </p>
       </div>
 
-      <form onSubmit={submit} className="mt-6 max-w-3xl space-y-6" noValidate>
+      <form
+        method="post"
+        onSubmit={submit}
+        className="mt-6 max-w-3xl space-y-6"
+        noValidate
+      >
         <fieldset disabled={pending} className="space-y-6 disabled:opacity-70">
           <legend className="sr-only">New branch details</legend>
 
@@ -449,7 +456,7 @@ export function BranchForm() {
         )}
 
         <div className="flex flex-wrap items-center gap-3 border-t pt-5">
-          <Button type="submit" size="lg" disabled={pending}>
+          <Button type="submit" size="lg" disabled={pending || !hydrated}>
             <Plus aria-hidden="true" />
             {pending ? "Adding branch…" : "Add branch"}
           </Button>

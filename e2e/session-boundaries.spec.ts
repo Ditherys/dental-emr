@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { createAdminHarness } from "./support/admin";
-import { currentTotp } from "./support/totp";
+import { signInOwnerWithTotp } from "./support/login";
 
 /**
  * R5 — authorization withdrawn while the browser session stays open.
@@ -28,13 +28,7 @@ async function submitLogin(page: Page, email: string, password: string) {
 }
 
 async function loginOwner(page: Page) {
-  await submitLogin(page, environment.owner.email, environment.owner.password);
-  await page.waitForURL(/\/mfa\/challenge/);
-  await page
-    .getByLabel("Six-digit code")
-    .fill(currentTotp(environment.owner.totpSecret));
-  await page.getByRole("button", { name: "Verify and continue" }).click();
-  await page.waitForURL(/\/dashboard$/);
+  await signInOwnerWithTotp(page, environment.owner);
 }
 
 async function loginBranchUser(page: Page) {
@@ -163,7 +157,7 @@ test("a mutation submitted after mid-session suspension is refused", async ({
   // withdrawn between filling and submitting, which is exactly the window a
   // client-trusting implementation would miss.
   await page.getByLabel("Branch name").fill(branchName);
-  await page.getByLabel("Code").fill(branchCode);
+  await page.getByLabel("Code", { exact: true }).fill(branchCode);
   await page.getByLabel("Slug").fill(branchSlug);
   await page.getByLabel("Address line 1").fill("400 Synthetic Avenue");
   await page.getByLabel("City or municipality").fill("Quezon City");

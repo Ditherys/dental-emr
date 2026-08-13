@@ -3,6 +3,8 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 
+import { databaseUuid } from "@/lib/validation/database-uuid";
+
 import type {
   ActiveOrganizationMembership,
   OrganizationAuthorizationState,
@@ -15,33 +17,33 @@ import { createClient } from "@/lib/supabase/server";
 // the database policy layer.
 
 const membershipRowSchema = z.object({
-  id: z.uuid(),
-  organization_id: z.uuid(),
+  id: databaseUuid,
+  organization_id: databaseUuid,
 });
 
 const organizationRowSchema = z.object({
-  id: z.uuid(),
+  id: databaseUuid,
   business_name: z.string(),
   slug: z.string(),
 });
 
 const branchRowSchema = z.object({
-  id: z.uuid(),
+  id: databaseUuid,
   name: z.string(),
   slug: z.string(),
 });
 
 const branchMembershipRowSchema = z.object({
-  branch_id: z.uuid(),
+  branch_id: databaseUuid,
 });
 
 const roleAssignmentRowSchema = z.object({
-  role_id: z.uuid(),
-  branch_id: z.uuid().nullable(),
+  role_id: databaseUuid,
+  branch_id: databaseUuid.nullable(),
 });
 
 const rolePermissionRowSchema = z.object({
-  role_id: z.uuid(),
+  role_id: databaseUuid,
   permissions: z.object({ code: z.string() }),
 });
 

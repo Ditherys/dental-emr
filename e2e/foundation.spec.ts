@@ -1,7 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { loadE2EEnvironment } from "./support/environment";
-import { currentTotp } from "./support/totp";
+import { signInOwnerWithTotp } from "./support/login";
 
 const environment = loadE2EEnvironment();
 
@@ -13,20 +13,7 @@ async function submitLogin(page: Page, email: string, password: string) {
 }
 
 async function loginOwner(page: Page) {
-  await submitLogin(
-    page,
-    environment.owner.email,
-    environment.owner.password,
-  );
-  await page.waitForURL(/\/mfa\/challenge/);
-  await expect(
-    page.getByRole("heading", { name: "Enter your authenticator code" }),
-  ).toBeVisible();
-  await page
-    .getByLabel("Six-digit code")
-    .fill(currentTotp(environment.owner.totpSecret));
-  await page.getByRole("button", { name: "Verify and continue" }).click();
-  await page.waitForURL(/\/dashboard$/);
+  await signInOwnerWithTotp(page, environment.owner);
 }
 
 async function loginWithoutMfa(page: Page, email: string, password: string) {
@@ -41,7 +28,7 @@ test("unauthenticated users are rejected from the private EMR", async ({
 
   await expect(page).toHaveURL(/\/login$/);
   await expect(
-    page.getByRole("heading", { name: "Sign in to the clinic workspace" }),
+    page.getByRole("heading", { name: "Sign in to Dental EMR" }),
   ).toBeVisible();
 });
 
@@ -65,6 +52,13 @@ test("owner completes MFA and sees the authorized shell @shell", async ({
     page.getByRole("menuitemradio", { name: environment.branchA2Name }),
   ).toBeVisible();
 
+  // Dismiss the branch menu first. Radix marks the rest of the page inert while
+  // a menu is open, so the account control is genuinely unreachable until then.
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("menuitemradio", { name: environment.branchA1Name }),
+  ).toBeHidden();
+
   await page.getByRole("button", { name: "Open account menu" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -78,7 +72,7 @@ test("owner creates Branch A3 and selects it", async ({ page }) => {
   await loginOwner(page);
   await page.goto("/settings/branches");
   await page.getByLabel("Branch name").fill(branchName);
-  await page.getByLabel("Code").fill(branchCode);
+  await page.getByLabel("Code", { exact: true }).fill(branchCode);
   await page.getByLabel("Slug").fill(branchSlug);
   await page.getByLabel("Address line 1").fill("300 Synthetic Avenue");
   await page.getByLabel("City or municipality").fill("Quezon City");
@@ -179,9 +173,12 @@ test("a suspended user cannot reach tenant shell content", async ({ page }) => {
       name: "Your workspace access is no longer active.",
     }),
   ).toBeVisible();
-  await expect(page.getByRole("alert")).toContainText(
-    "contact an organization administrator",
-  );
+  // Next's route announcer also carries role="alert"; target the panel.
+  await expect(
+    page.getByRole("alert", {
+      name: "Your workspace access is no longer active.",
+    }),
+  ).toContainText("contact an organization administrator");
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toHaveCount(0);
   await expect(page.getByText(environment.organizationAName)).toHaveCount(0);

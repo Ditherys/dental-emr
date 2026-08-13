@@ -267,6 +267,29 @@ select extensions.ok(
   'anonymous access remains fail-closed at the grant layer with the seed loaded'
 );
 
+-- Regression guard. Supabase Auth (GoTrue) scans these columns into
+-- non-nullable Go strings. A single NULL makes the Admin API return
+-- "Database error finding users" for the ENTIRE project — it broke user
+-- listing, the invitation admin calls, and E2E identity provisioning, and it
+-- did so silently until something tried to use the Admin API. A pgTAP suite
+-- that only reads through SQL would never have noticed.
+select extensions.is(
+  (
+    select count(*)::integer
+    from auth.users
+    where confirmation_token is null
+       or recovery_token is null
+       or email_change is null
+       or email_change_token_new is null
+       or email_change_token_current is null
+       or phone_change is null
+       or phone_change_token is null
+       or reauthentication_token is null
+  ),
+  0,
+  'no synthetic Auth identity carries a NULL GoTrue token column'
+);
+
 with test_failures as (
   select finish
   from extensions.finish()

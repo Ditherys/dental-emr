@@ -122,3 +122,104 @@ procurement decision, not a configuration one.
 TEST-01 must not be deleted yet: R6-E's DEV comparison and the Playwright flows
 still need it. Delete it only after those complete and this evidence file is
 committed.
+
+---
+
+# Addendum — first execution of the browser suite (2026-08-14)
+
+Provisioning the synthetic identities (`npm run e2e:provision`) and running
+Playwright against TEST-01 for the first time found **four application defects**.
+None were visible to any static check, unit test, or database suite. Each is
+recorded here because the finding matters more than the fix.
+
+## A-1 — the authorization layer rejected valid database UUIDs
+
+**Symptom:** every request by a member of the seeded organization returned 500.
+
+`z.uuid()` in Zod 4 enforces RFC 9562 *versioned* UUIDs — version nibble 1–8,
+variant 8/9/a/b. PostgreSQL's `uuid` type enforces neither. The synthetic tenant
+id `22000000-0000-0000-0000-000000000001` is a perfectly valid row that the
+project's own seed creates, and the validator sitting between the database and
+the authorization layer threw on it.
+
+Fixed by introducing `src/lib/validation/database-uuid.ts` (`z.guid()`) and using
+it for every identifier that comes from or goes to the database. Version tagging
+is not a security property: nothing branches on it, and every identifier is still
+authorized by RLS and by the administrative RPCs. A regression test asserts the
+seeded ids parse and that junk still does not.
+
+## A-2 — the dev server refused to serve its own client chunks
+
+**Symptom:** `403` on `/_next/static/chunks/*`, HMR WebSocket handshake failure,
+and **no hydration at all**. Every form fell back to native submission.
+
+Next 16's dev server blocks `/_next/*` for origins it considers cross-origin, and
+it treats `127.0.0.1` and `localhost` as different origins. Playwright and CI both
+drive the app at `http://127.0.0.1:3000`.
+
+This is why no Playwright flow requiring client-side interactivity could ever have
+passed. Fixed with `allowedDevOrigins: ["127.0.0.1", "localhost"]` in
+`next.config.ts`; development-only, no effect on a production build.
+
+## A-3 — a one-time TOTP code could be written to the URL
+
+**Symptom:** `GET /mfa/challenge?code=070171`.
+
+Three forms are handled by `onSubmit` client handlers. Before hydration the
+browser performs a *native* submission, and with no `method` that is a **GET** —
+serialising every field into the query string. For the two MFA forms that put a
+one-time authenticator code into the address bar, browser history, the `Referer`
+header of the next request, and any access log in front of the app.
+
+Surfaced by A-2 making the pre-hydration window permanent, but it is not
+dev-only: any user on a slow connection who submits before hydration hits it.
+
+Fixed on both axes: `method="post"` so an unexpected native submission carries
+fields in the body, and a `useHydrated()` gate so the control cannot be operated
+before it can work. Applied to both MFA forms and the branch form.
+
+## A-4 — the seed broke Supabase's Admin API project-wide
+
+**Symptom:** `Database error finding users` from `auth.admin.listUsers`.
+
+`supabase/seed.sql` inserted `auth.users` rows leaving `confirmation_token`,
+`recovery_token`, `email_change`, and `email_change_token_new` NULL. GoTrue scans
+those into non-nullable Go strings, so a single NULL breaks user listing for the
+**entire project** — not just the offending rows. It disabled the invitation admin
+calls and E2E identity provisioning, silently, until something used the Admin API.
+
+Fixed by seeding empty strings (what GoTrue itself writes), with an `on conflict`
+clause that repairs an already-seeded project, plus a pgTAP assertion in
+`seed_security_fixtures.test.sql` so it cannot return. A suite that only reads
+through SQL would never have caught it.
+
+## Browser suite status
+
+Desktop project: **14–15 of 18 passing**, from 1 before this work.
+
+Everything security-relevant that the suite asserts now passes: the unauthenticated
+redirect, branch-scoped isolation, branch access revoked mid-session, suspension
+mid-session, invitation issuance denied to a branch-scoped user, and the axe/
+overflow/focus checks on the sign-in and dashboard surfaces.
+
+The remaining failures are **test-harness sequencing, not application behaviour**:
+
+- The mid-session suspension flow suspends the **owner** — the same identity every other test signs in with. When it fails inside its `try`, later tests race its restoration and fail at login. Choosing the shared owner instead of a dedicated identity was an authoring shortcut and is the correct next fix.
+- Supabase enforces single use per TOTP code. `signInOwnerWithTotp` now waits out the window and retries once; a serial suite performing several owner logins still stresses this.
+
+Independently verified, so the gap is bounded: a direct check confirmed an AAL1
+session is redirected to the challenge from **all four** EMR routes
+(`/dashboard`, `/settings/branches`, `/settings/account`, `/settings/users/invite`),
+and the R5-A database suite proves the same boundaries at the RPC layer.
+
+## Test-side corrections
+
+The pre-existing `foundation.spec.ts` had never run either: it expected the
+heading "Sign in to the clinic workspace" (the app says "Sign in to Dental EMR"),
+`getByLabel("Code")` also matched "Postal code (optional)", the branch dropdown
+was left open so Radix made the account control inert, and `getByRole("alert")`
+matched Next's route announcer as well as the panel.
+
+The target-size check was also wrong: it measured the input alone, reporting a
+16×16 checkbox as a WCAG 2.2 failure when its associated `<label>` makes the real
+activation area far larger. It now measures the union.

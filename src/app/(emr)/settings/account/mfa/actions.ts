@@ -1,6 +1,6 @@
 "use server";
 
-import { z } from "zod";
+import { databaseUuid } from "@/lib/validation/database-uuid";
 
 import { getVerifiedMfaContext } from "@/lib/auth/mfa";
 import { hasCurrentAal2 } from "@/lib/auth/mfa-policy";
@@ -11,7 +11,7 @@ export type RecordMfaEnrollmentResult = {
   message?: string;
 };
 
-const factorIdSchema = z.uuid();
+const factorIdSchema = databaseUuid;
 
 export async function recordMfaEnrollmentAction(
   factorId: unknown,

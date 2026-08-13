@@ -31,6 +31,19 @@ What that leaves unproven is stated plainly throughout: authored SQL, authored E
 - New `scripts/provision-e2e-identities.mjs` (`npm run e2e:provision`) — creates the three synthetic login identities, wires them to the seeded graph, and enrolls **and verifies** an owner TOTP factor (no admin API exists for that; a factor only reaches `verified` by answering a challenge). Refuses a TOTP-secret output path inside the repository.
 - New `docs/evidence/R6C-R6E-test01.md`.
 
+## What Changed (browser suite first run)
+
+Provisioned the synthetic E2E identities and ran Playwright against TEST-01 for the first time. Four **application** defects, none visible to any static check, unit test, or database suite:
+
+1. **`z.uuid()` rejected valid PostgreSQL UUIDs** — every request by a member of the seeded organization returned 500. Zod 4 enforces UUID *versions*; PostgreSQL does not. Fixed with `src/lib/validation/database-uuid.ts` (`z.guid()`) everywhere an identifier crosses the database boundary, plus a regression test.
+2. **The dev server 403'd its own client chunks** — Next 16 treats `127.0.0.1` and `localhost` as different origins, and both Playwright and CI drive `127.0.0.1:3000`. Nothing hydrated, so no interactive flow could ever have passed. Fixed with `allowedDevOrigins`.
+3. **A one-time TOTP code could reach the URL** — three `onSubmit` forms had no `method`, so a pre-hydration click submitted natively as a GET, putting the code in the address bar, history, `Referer`, and access logs. Fixed with `method="post"` plus a `useHydrated()` gate. Not dev-only: any slow connection hits the same window.
+4. **The seed broke Supabase's Admin API project-wide** — NULL GoTrue token columns make `listUsers` fail for the *entire* project. Fixed in the seed with a repairing `on conflict`, plus a pgTAP assertion.
+
+Desktop Playwright: **14–15/18 passing**, from 1. Remaining failures are test-harness sequencing (the suspension flow suspends the shared owner identity — an authoring shortcut that should become a dedicated fixture). Independently bounded: a direct check confirmed AAL1 is redirected to the challenge from all four EMR routes.
+
+Also corrected several never-run assertions in the pre-existing `foundation.spec.ts`, and a flaw in my own target-size check that measured a checkbox without its label.
+
 ## What Changed (R8 prep + R10)
 
 - New `docs/deployment/GITHUB_BOOTSTRAP.md` — the minimum human-only GitHub actions: private repository and remote, secret scanning and push protection, the protected `cloud-test` environment, and branch protection with the exact required-check names. States plainly that a workflow file is not CI evidence.

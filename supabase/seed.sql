@@ -18,7 +18,20 @@ insert into auth.users (
   raw_app_meta_data,
   raw_user_meta_data,
   created_at,
-  updated_at
+  updated_at,
+  -- Supabase Auth (GoTrue) scans these columns into non-nullable Go strings.
+  -- A NULL in any of them makes the Admin API fail with "Database error
+  -- finding users" for the WHOLE project, not just for the offending row —
+  -- which breaks user listing, the invitation admin calls, and the E2E
+  -- identity provisioning script. Empty string is what GoTrue itself writes.
+  confirmation_token,
+  recovery_token,
+  email_change,
+  email_change_token_new,
+  email_change_token_current,
+  phone_change,
+  phone_change_token,
+  reauthentication_token
 )
 select
   synthetic_user.id,
@@ -31,7 +44,15 @@ select
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"fixture":"p1-12-synthetic"}'::jsonb,
   '2026-01-01 00:00:00+08'::timestamptz,
-  '2026-01-01 00:00:00+08'::timestamptz
+  '2026-01-01 00:00:00+08'::timestamptz,
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '',
+  ''
 from (values
   ('12000000-0000-0000-0000-000000000001'::uuid, 'org-a-owner@p112.example.test'),
   ('12000000-0000-0000-0000-000000000002'::uuid, 'org-a-admin@p112.example.test'),
@@ -50,7 +71,16 @@ set
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,
-  updated_at = excluded.updated_at;
+  updated_at = excluded.updated_at,
+  -- Repairs a project already seeded before this was fixed.
+  confirmation_token = excluded.confirmation_token,
+  recovery_token = excluded.recovery_token,
+  email_change = excluded.email_change,
+  email_change_token_new = excluded.email_change_token_new,
+  email_change_token_current = excluded.email_change_token_current,
+  phone_change = excluded.phone_change,
+  phone_change_token = excluded.phone_change_token,
+  reauthentication_token = excluded.reauthentication_token;
 
 insert into public.organizations (
   id,

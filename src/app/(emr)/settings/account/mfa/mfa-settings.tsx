@@ -15,6 +15,7 @@ import {
 
 import { InlineFieldError } from "@/components/feedback";
 import { Button } from "@/components/ui/button";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { isValidTotpCode } from "@/lib/auth/mfa-policy";
 import { createClient } from "@/lib/supabase/client";
 
@@ -49,6 +50,7 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
+  const hydrated = useHydrated();
   const [removingFactorId, setRemovingFactorId] = useState<string>();
   const [auditRetryFactorId, setAuditRetryFactorId] = useState<string>();
 
@@ -426,7 +428,12 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
                 <span className="grid size-7 shrink-0 place-items-center rounded-full bg-brand-navy-900 text-xs font-semibold text-white">
                   2
                 </span>
-                <form onSubmit={verifyEnrollment} className="min-w-0 flex-1" noValidate>
+                <form
+                  method="post"
+                  onSubmit={verifyEnrollment}
+                  className="min-w-0 flex-1"
+                  noValidate
+                >
                   <h3 className="text-sm font-semibold">Verify the setup</h3>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     Enter the current six-digit code. The factor is not active until
@@ -454,7 +461,7 @@ export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
                     />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <Button type="submit" disabled={pending}>
+                    <Button type="submit" disabled={pending || !hydrated}>
                       <ShieldCheck aria-hidden="true" />
                       {pending ? "Verifying…" : "Enable MFA"}
                     </Button>

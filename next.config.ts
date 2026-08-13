@@ -9,6 +9,14 @@ import {
 const environmentConfig = validateEnvironmentSeparation(process.env);
 
 const nextConfig: NextConfig = {
+  // Development-only. Next's dev server refuses to serve /_next/* resources to
+  // a page whose origin it considers cross-origin, and it treats 127.0.0.1 and
+  // localhost as different origins. The E2E suite and CI both drive the app at
+  // http://127.0.0.1:3000, so every dev chunk came back 403 and the client
+  // never hydrated — which is why no Playwright flow that needed client-side
+  // interactivity could pass. Nothing here affects a production build.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
+
   async headers() {
     const appUrl = process.env.APP_URL;
 

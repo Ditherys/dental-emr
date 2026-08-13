@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 
 import { loadE2EEnvironment } from "./support/environment";
-import { currentTotp } from "./support/totp";
+import { signInOwnerWithTotp } from "./support/login";
 
 /**
  * R9 — responsive and accessibility verification across the supported form
@@ -26,16 +26,7 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 const MINIMUM_TARGET_PX = 24;
 
 async function loginOwner(page: Page) {
-  await page.goto("/login");
-  await page.getByLabel("Email address").fill(environment.owner.email);
-  await page.getByLabel("Password").fill(environment.owner.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/mfa\/challenge/);
-  await page
-    .getByLabel("Six-digit code")
-    .fill(currentTotp(environment.owner.totpSecret));
-  await page.getByRole("button", { name: "Verify and continue" }).click();
-  await page.waitForURL(/\/dashboard$/);
+  await signInOwnerWithTotp(page, environment.owner);
 }
 
 async function expectNoAxeViolations(page: Page, label: string) {
@@ -63,6 +54,33 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
 
 async function expectUsableTargets(page: Page, label: string) {
   const undersized = await page.evaluate((minimum) => {
+    // WCAG 2.2 target size is the *activation* area, not the painted control.
+    // A checkbox is 16x16 by design, but an associated <label> makes the real
+    // target far larger — measuring the input alone reports a false failure.
+    const measure = (element: Element) => {
+      const box = element.getBoundingClientRect();
+      const id = element.getAttribute("id");
+
+      if (!id) {
+        return box;
+      }
+
+      const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+
+      if (!label) {
+        return box;
+      }
+
+      const labelBox = label.getBoundingClientRect();
+      const left = Math.min(box.left, labelBox.left);
+      const top = Math.min(box.top, labelBox.top);
+
+      return {
+        width: Math.max(box.right, labelBox.right) - left,
+        height: Math.max(box.bottom, labelBox.bottom) - top,
+      };
+    };
+
     const selector =
       'a[href], button:not([disabled]), input:not([type="hidden"]), select, textarea, [role="button"], [role="menuitemradio"], [role="tab"]';
 
@@ -77,7 +95,7 @@ async function expectUsableTargets(page: Page, label: string) {
           return false;
         }
 
-        const box = element.getBoundingClientRect();
+        const box = measure(element);
         // Zero-size elements are not rendered targets (collapsed sheets, etc.).
         if (box.width === 0 && box.height === 0) {
           return false;
@@ -86,7 +104,7 @@ async function expectUsableTargets(page: Page, label: string) {
         return box.width < minimum || box.height < minimum;
       })
       .map((element) => {
-        const box = element.getBoundingClientRect();
+        const box = measure(element);
         return `${element.tagName.toLowerCase()}[${
           element.getAttribute("aria-label") ??
           element.textContent?.trim().slice(0, 32) ??
@@ -136,7 +154,7 @@ test("@responsive the sign-in screen is accessible and does not overflow", async
 }) => {
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: "Sign in to the clinic workspace" }),
+    page.getByRole("heading", { name: "Sign in to Dental EMR" }),
   ).toBeVisible();
 
   await expectNoAxeViolations(page, "login");

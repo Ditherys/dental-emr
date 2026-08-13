@@ -2,11 +2,13 @@ import "server-only";
 
 import { z } from "zod";
 
+import { databaseUuid } from "@/lib/validation/database-uuid";
+
 import type { BranchFormValues } from "./schema";
 import { createClient } from "@/lib/supabase/server";
 
 const branchSummarySchema = z.object({
-  id: z.uuid(),
+  id: databaseUuid,
   name: z.string(),
   code: z.string(),
   slug: z.string(),
@@ -99,5 +101,5 @@ export async function createBranch({
     throw new BranchManagementError("FAILED");
   }
 
-  return z.uuid().parse(data);
+  return databaseUuid.parse(data);
 }

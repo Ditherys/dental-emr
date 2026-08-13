@@ -49,8 +49,22 @@ cannot be accepted with a development database whose history is knowingly
 inconsistent with source control. *Evidence needed:* R6-F reconciliation, gated
 on R6-D and R6-E. *Blocked on:* the same TEST work.
 
-**H-3 — No authorization test has been executed against a database at any
-checkpoint in this remediation.** The R5-A suite (40 assertions), the R6-D
+**H-3 — [RESOLVED at the database layer 2026-08-14]** All six pgTAP suites now
+pass against TEST-01 rebuilt from the baseline alone, including the R5-A
+session-boundary suite. Generated types show no drift, schema lint is clean, and
+the advisors report 0 errors. See `docs/evidence/R6C-R6E-test01.md`.
+
+The browser half is partially evidenced: 14–15 of 18 desktop Playwright flows
+pass, with the remainder failing on test-harness sequencing rather than
+application behaviour (the suspension flow suspends the shared owner identity).
+First execution found **four real application defects** — a UUID validator that
+rejected the project's own valid rows, a dev server that refused to serve its own
+client chunks over 127.0.0.1 so nothing hydrated, a one-time TOTP code reachable
+in a URL on pre-hydration submit, and a seed that broke Supabase's Admin API
+project-wide. All four are fixed with regression coverage.
+
+**H-3 (original wording) — No authorization test has been executed against a
+database at any checkpoint in this remediation.** The R5-A suite (40 assertions), the R6-D
 boundary tooling, and the R6-C1 provisioning step are all authored and unrun.
 The pre-existing suites were last exercised at earlier checkpoints against DEV;
 this review does not treat that as current evidence for the current baseline,

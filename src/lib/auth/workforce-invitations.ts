@@ -2,22 +2,24 @@ import "server-only";
 
 import { z } from "zod";
 
+import { databaseUuid } from "@/lib/validation/database-uuid";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerConfig } from "@/lib/supabase/server-config";
 
 const invitationOptionSchema = z.object({
-  organizationId: z.uuid(),
+  organizationId: databaseUuid,
   organizationName: z.string(),
   roles: z.array(
     z.object({
-      id: z.uuid(),
+      id: databaseUuid,
       code: z.string(),
       name: z.string(),
     }),
   ),
   branches: z.array(
     z.object({
-      id: z.uuid(),
+      id: databaseUuid,
       name: z.string(),
     }),
   ),

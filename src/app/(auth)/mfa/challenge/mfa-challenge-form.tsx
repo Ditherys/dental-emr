@@ -8,6 +8,7 @@ import { InlineFieldError } from "@/components/feedback";
 import { Button } from "@/components/ui/button";
 import { isValidTotpCode } from "@/lib/auth/mfa-policy";
 import { createClient } from "@/lib/supabase/client";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 type ChallengeFactor = {
   id: string;
@@ -31,6 +32,7 @@ export function MfaChallengeForm({
   const [code, setCode] = useState("");
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
+  const hydrated = useHydrated();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,7 +67,12 @@ export function MfaChallengeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-7 space-y-5" noValidate>
+    <form
+      method="post"
+      onSubmit={handleSubmit}
+      className="mt-7 space-y-5"
+      noValidate
+    >
       {factors.length > 1 && (
         <div>
           <label htmlFor="mfa-factor" className="text-sm font-medium">
@@ -113,7 +120,12 @@ export function MfaChallengeForm({
         )}
       </div>
 
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        size="lg"
+        className="w-full"
+        disabled={pending || !hydrated}
+      >
         <ShieldCheck aria-hidden="true" />
         {pending ? "Verifying…" : "Verify and continue"}
       </Button>
