@@ -103,10 +103,11 @@ run.
 **M-2 — MFA factor *removal* is not projected into application audit history.**
 `public.record_mfa_enrollment` covers enrollment only. The plan lists
 `mfa.removed` as *"(later/privileged)"*, so this is a documented deferral rather
-than a missed Phase 1 requirement — but the reconciliation semantics (Supabase
-Auth and the application audit cannot be one atomic transaction) are undocumented,
-and should be written down before Phase 2 relies on the audit trail's
-completeness.
+than a missed Phase 1 requirement. The reconciliation semantics are now written
+down in `docs/security/AUDIT_FOUNDATION.md` — including the non-negotiable point
+that a removal assertion must be captured **before** the unenroll, because after
+it the factor row is gone and absence is indistinguishable from "never existed".
+Implementation needs a migration and is deferred until after R6-F.
 
 **M-3 — Phase 1 has no branch-scoped write path.** Every mutation is
 organization-wide-permission gated, so the R5-A branch-revocation section asserts
