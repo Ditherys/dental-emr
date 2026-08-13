@@ -4,9 +4,9 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R5-B — Playwright coverage of the browser half of the same boundaries: authorization withdrawn while a browser session stays open
+**Task / slice:** R9-A — responsive and accessibility verification: an automated matrix across five form factors plus the manual QA checklist the automated layer cannot replace
 
-**Previous checkpoints:** R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Previous checkpoints:** R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
@@ -18,7 +18,17 @@ The existing suites prove a *fresh* session with the wrong authorization is refu
 
 R5-A covers the database half. R5-B (next) covers the browser/session half in Playwright.
 
-## What Changed (R5-B)
+## What Changed (R9-A)
+
+- `playwright.config.ts` — five new projects: `phone-360`, `phone-430`, `ipad-portrait`, `ipad-landscape`, `desktop-responsive`, each running only `@responsive`-tagged flows. Re-running the authorization suite on five viewports would cost time without covering anything the desktop run already covers.
+- New `e2e/responsive-accessibility.spec.ts` — seven flows: axe WCAG 2.1 A/AA scans of sign-in, dashboard, branch settings, account & security, and the opened mobile navigation; horizontal-overflow assertions; WCAG 2.2 minimum target size (24 px); focus-indicator visibility; keyboard-only sign-in tab order; keyboard operation of the collapsed navigation (open, Escape, focus restored to trigger) and the branch selector; and an orientation change that must preserve entered form values.
+- New dev dependency `@axe-core/playwright` 4.13.0 (MPL-2.0, dev-only, not distributed in the application bundle).
+- New `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` — the manual pass: phone, iPad both orientations, desktop, and cross-cutting rows, with an explicit statement that a blank checklist is an acceptance blocker rather than a pass.
+- `package.json` — `test:e2e:responsive`.
+
+**Deliberate scope choice.** The target-size assertion enforces the WCAG 2.2 *minimum* rather than the project's preferred larger coarse-pointer target. Failing the build on the preference would push contributors toward a mechanical fix; the judgement belongs in manual row P6. That tradeoff is recorded in the checklist, not hidden.
+
+## What Changed (R5-B, `afb5518`)
 
 - New `e2e/session-boundaries.spec.ts` — five flows: branch access revoked mid-session (branch context collapses to "No branch access" on the next request), membership suspended mid-session (tenant content gone, direct navigation does not route around the revoked shell), a mutation **submitted after authorization was withdrawn between filling the form and clicking submit**, an unchallenged-MFA (AAL1) session attacking the step-up-gated surface, and invitation issuance denied to a branch-scoped user.
 - New `e2e/support/admin.ts` — the withdrawal harness. Phase 1 has no user-management UI, so the withdrawal cannot be driven from a second browser; it is performed server-side with `SUPABASE_SECRET_KEY`, which stays in the Node process and never reaches a browser context, a fixture, or a log. The module refuses a publishable/anon key and re-runs every Cloud TEST target check before constructing a client.
@@ -79,7 +89,8 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 - `npm run verify` ✓ (with the CI placeholder build env) — migration lint (8 files, 231 statements, 93 GRANT/REVOKE, 30 approved privileges, 0 violations, 0 extensions), ESLint 0 problems, `tsc --noEmit`, **199/199 unit tests across 21 files** (188 → 197 at R6-C1 → 199 at R5-A), production build, secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
 - Static review of the new SQL ✓ — balanced dollar quotes, balanced parentheses, 40 assertions, transaction-bounded (asserted by a unit test, not by eye).
 - Staged-diff review ✓ at both checkpoints — no secret, no application-behaviour change, no schema-object change beyond removing the extension.
-- `npx secretlint "e2e/**/*"` ✓ — 0 findings across the new harness and spec.
+- `npx secretlint "e2e/**/*"` ✓ — 0 findings across the new harness and specs.
+- `npx playwright test --list` ✓ with synthetic placeholder metadata — **54 tests across 3 files** resolve across the seven projects, confirming the `@responsive` grep and the form-factor matrix are wired as intended. No browser was launched and no server started.
 - **Not verified against a database or a browser:** the R6-C1 provisioning SQL, the entire R5-A suite, and the entire R5-B spec have never executed. All run first at R6-C/R6-E against TEST-01. Expect first-run corrections, exactly as with the R6-D SQL.
 
 ## Known Limitations / Open Items
@@ -100,7 +111,7 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 
 ## Next Checkpoint
 
-R9 — responsive and accessibility verification, which is the largest remaining slice that does not depend on a hosted project for its authored work. Then R4 hosted-Auth verification tooling and the R8 CI preparation, then the consolidated human-action stop.
+R4 — hosted Supabase Auth posture: a reproducible verification script that reads the hosted configuration and asserts the intended posture (invitation-only onboarding, public signup disabled, password policy, redirect allowlist, TOTP enabled), rather than silently overwriting hosted settings. Then the R8 CI preparation, then the consolidated human-action stop.
 
 ## Commits Requiring Later Codex Review
 
@@ -108,4 +119,5 @@ R9 — responsive and accessibility verification, which is the largest remaining
 - `35092e7` R6-B grant-last enforcement (HIGH — security tooling)
 - `e790ffe` R6-C1 baseline + guard change (HIGH)
 - `37ef684` R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
-- this commit, R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
+- `afb5518` R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
+- this commit, R9-A responsive/accessibility matrix (MEDIUM — test tooling and a dev dependency; no production code path)

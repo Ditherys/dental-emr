@@ -16,6 +16,7 @@
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list",
+    "test:e2e:responsive": "playwright test --grep @responsive",
     "test:db": "node scripts/run-remote-database-tests.mjs",
     "verify": "npm run security:migrations && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run security:secrets && npm run security:audit",
     "security:audit": "npm audit --audit-level=high",
@@ -53,8 +54,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@secretlint/secretlint-rule-preset-recommend": "13.0.4",
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.4",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
