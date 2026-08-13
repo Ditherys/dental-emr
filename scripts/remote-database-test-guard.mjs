@@ -3,6 +3,17 @@ import { readFileSync } from "node:fs";
 export const DATABASE_TEST_CONFIRMATION =
   "I_UNDERSTAND_THIS_IS_A_DISPOSABLE_CLOUD_TEST_PROJECT";
 
+// R6 temporary migration freeze. While supabase/MIGRATION_FREEZE.md exists, the
+// Git baseline intentionally disagrees with the linked DEV migration history
+// until R6-F reconciliation. See docs/decisions/ADR-017 and that file.
+export const MIGRATION_FREEZE_ACK = "I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE";
+
+const MIGRATION_APPLYING_COMMANDS = Object.freeze([
+  "db-push-dry",
+  "db-push",
+  "db-seed",
+]);
+
 const CI_DATABASE_COMMANDS = Object.freeze({
   "db-push-dry": ["db", "push", "--linked", "--dry-run"],
   "db-push": ["db", "push", "--linked", "--yes"],
@@ -56,6 +67,29 @@ export function resolveCiDatabaseCommand(commandName) {
 
   const command = CI_DATABASE_COMMANDS[commandName];
   return [...command];
+}
+
+export function assertMigrationFreezeAllows(
+  commandName,
+  freezeIsActive,
+  environment,
+) {
+  if (!freezeIsActive) {
+    return;
+  }
+
+  if (!MIGRATION_APPLYING_COMMANDS.includes(commandName)) {
+    return;
+  }
+
+  if (environment.MIGRATION_FREEZE_ACK?.trim() !== MIGRATION_FREEZE_ACK) {
+    throw new Error(
+      `The R6 migration freeze is active (see supabase/MIGRATION_FREEZE.md). ` +
+        `"${commandName}" is refused until R6-F reconciliation. The approved ` +
+        `Cloud TEST steps must set MIGRATION_FREEZE_ACK; every existing Cloud ` +
+        `TEST target check still applies.`,
+    );
+  }
 }
 
 export function validateRemoteDatabaseTestEnvironment(

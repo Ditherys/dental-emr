@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertMigrationFreezeAllows,
   readLinkedProjectId,
   resolveCiDatabaseCommand,
   validateRemoteDatabaseTestEnvironment,
@@ -24,6 +25,11 @@ const supabaseCli = join(
   "dist",
   "supabase.js",
 );
+const migrationFreezeFile = join(
+  repositoryRoot,
+  "supabase",
+  "MIGRATION_FREEZE.md",
+);
 
 function fail(message) {
   console.error(`Guarded Supabase command refused to continue: ${message}`);
@@ -33,6 +39,12 @@ function fail(message) {
 try {
   const commandName = process.argv[2];
   const command = resolveCiDatabaseCommand(commandName);
+
+  assertMigrationFreezeAllows(
+    commandName,
+    existsSync(migrationFreezeFile),
+    process.env,
+  );
 
   if (!existsSync(linkedProjectFile)) {
     throw new Error(

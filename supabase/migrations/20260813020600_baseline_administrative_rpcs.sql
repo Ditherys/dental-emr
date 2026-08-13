@@ -1,187 +1,16 @@
--- P1-11 security hardening: privileged foundation mutations are user-context,
--- AAL2-gated, transactional RPCs. Authenticated table writes remain denied.
-
-create or replace function private.has_branch_access(
-  target_branch_id uuid
-)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from public.branches as branch
-    join public.organizations as organization
-      on organization.id = branch.organization_id
-    join public.organization_members as organization_member
-      on organization_member.organization_id = branch.organization_id
-     and organization_member.user_id = (select auth.uid())
-     and organization_member.membership_status = 'active'
-    where branch.id = target_branch_id
-      and branch.status = 'active'
-      and organization.status = 'active'
-      and (
-        (select private.has_org_permission(
-          branch.organization_id,
-          'branch.manage'
-        ))
-        or exists (
-          select 1
-          from public.branch_memberships as branch_membership
-          where branch_membership.organization_id = organization_member.organization_id
-            and branch_membership.organization_member_id = organization_member.id
-            and branch_membership.branch_id = branch.id
-            and branch_membership.access_status = 'active'
-        )
-      )
-  );
-$$;
-
-comment on function private.has_branch_access(uuid) is
-  'RLS-only branch access: org-wide branch managers or active exact-branch members.';
-
-create or replace function private.require_aal2()
-returns void
-language plpgsql
-set search_path = ''
-as $$
-begin
-  if (select auth.jwt() ->> 'aal') is distinct from 'aal2' then
-    raise insufficient_privilege using message = 'AAL2 required';
-  end if;
-end;
-$$;
-
-comment on function private.require_aal2() is
-  'Fails closed unless the current Supabase JWT was issued at AAL2.';
-
-revoke all on function private.require_aal2() from public, anon, authenticated;
-
--- Remove every authenticated administrative table-write path. SELECT policies
--- remain as the read boundary, and profile self-service remains non-admin.
-revoke update (
-  legal_name,
-  business_name,
-  slug,
-  country_code,
-  default_timezone,
-  default_currency
-) on public.organizations from authenticated;
-
-revoke insert (
-  organization_id,
-  name,
-  slug,
-  code,
-  status,
-  phone,
-  email,
-  address_line1,
-  address_line2,
-  city,
-  province,
-  postal_code,
-  country_code,
-  timezone,
-  latitude,
-  longitude,
-  website_visible,
-  archived_at
-) on public.branches from authenticated;
-
-revoke update (
-  name,
-  slug,
-  code,
-  status,
-  phone,
-  email,
-  address_line1,
-  address_line2,
-  city,
-  province,
-  postal_code,
-  country_code,
-  timezone,
-  latitude,
-  longitude,
-  website_visible,
-  archived_at
-) on public.branches from authenticated;
-
-revoke insert (
-  organization_id,
-  user_id,
-  membership_status,
-  joined_at,
-  suspended_at
-) on public.organization_members from authenticated;
-
-revoke update (
-  membership_status,
-  joined_at,
-  suspended_at
-) on public.organization_members from authenticated;
-
-revoke insert (organization_id, code, name) on public.roles from authenticated;
-revoke update (code, name) on public.roles from authenticated;
-revoke delete on public.roles from authenticated;
-
-revoke insert (role_id, permission_id)
-on public.role_permissions from authenticated;
-revoke delete on public.role_permissions from authenticated;
-
-revoke insert (
-  organization_id,
-  branch_id,
-  organization_member_id,
-  access_status
-) on public.branch_memberships from authenticated;
-revoke update (access_status, revoked_at)
-on public.branch_memberships from authenticated;
-revoke delete on public.branch_memberships from authenticated;
-
-revoke insert (
-  organization_id,
-  organization_member_id,
-  role_id,
-  branch_id,
-  assigned_by
-) on public.member_roles from authenticated;
-revoke delete on public.member_roles from authenticated;
-
-drop policy if exists organizations_update_manager
-on public.organizations;
-drop policy if exists branches_insert_org_manager
-on public.branches;
-drop policy if exists branches_update_manager
-on public.branches;
-drop policy if exists organization_members_insert_manager
-on public.organization_members;
-drop policy if exists organization_members_update_manager
-on public.organization_members;
-drop policy if exists roles_insert_manager
-on public.roles;
-drop policy if exists roles_update_manager
-on public.roles;
-drop policy if exists roles_delete_manager
-on public.roles;
-drop policy if exists role_permissions_insert_manager
-on public.role_permissions;
-drop policy if exists role_permissions_delete_manager
-on public.role_permissions;
-drop policy if exists branch_memberships_insert_manager
-on public.branch_memberships;
-drop policy if exists branch_memberships_update_manager
-on public.branch_memberships;
-drop policy if exists branch_memberships_delete_manager
-on public.branch_memberships;
-drop policy if exists member_roles_insert_manager
-on public.member_roles;
-drop policy if exists member_roles_delete_manager
-on public.member_roles;
+-- Phase 1 secure baseline — file 7 of 8: the hardened administrative mutation
+-- boundary.
+--
+-- Privileged foundation mutations are user-context, AAL2-gated, transactional
+-- SECURITY DEFINER RPCs. There is deliberately no authenticated table-write path
+-- to organizations, branches, organization_members, roles, role_permissions,
+-- branch_memberships, member_roles, or audit_events anywhere in this baseline.
+--
+-- BASELINE INVARIANT: this file grants nothing. Every function revokes EXECUTE
+-- from PUBLIC, anon, authenticated, and service_role in the statement
+-- immediately following its creation, so a definer-rights administrative
+-- function is never reachable at any boundary before file 8 issues the exact
+-- approved EXECUTE grants.
 
 create or replace function public.create_branch(
   target_organization_id uuid,
@@ -285,6 +114,9 @@ begin
   return created_branch_id;
 end;
 $$;
+
+revoke all on function public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)
+from public, anon, authenticated, service_role;
 
 comment on function public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean) is
   'Creates one branch under current-user branch.manage + AAL2 and audits atomically.';
@@ -434,6 +266,9 @@ begin
 end;
 $$;
 
+revoke all on function public.set_role_permission(uuid, text, boolean)
+from public, anon, authenticated, service_role;
+
 comment on function public.set_role_permission(uuid, text, boolean) is
   'Changes one custom-role grant under AAL2 without self-role or superset delegation escalation.';
 
@@ -504,6 +339,24 @@ begin
      or (role_organization_id is not null
          and role_organization_id <> target_organization_id) then
     raise insufficient_privilege using message = 'role assignment is not authorized';
+  end if;
+
+  if exists (
+    select 1
+    from public.member_roles as current_member_role
+    join public.role_permissions as current_role_permission
+      on current_role_permission.role_id = current_member_role.role_id
+    join public.permissions as current_permission
+      on current_permission.id = current_role_permission.permission_id
+    where current_member_role.organization_id = target_organization_id
+      and current_member_role.organization_member_id = target_organization_member_id
+      and current_member_role.branch_id is null
+      and current_permission.code in ('role.manage', 'security.manage')
+  ) and not (select private.has_org_permission(
+    target_organization_id,
+    'security.manage'
+  )) then
+    raise insufficient_privilege using message = 'sensitive member role changes require security.manage';
   end if;
 
   if target_branch_id is not null and not exists (
@@ -610,8 +463,11 @@ begin
 end;
 $$;
 
+revoke all on function public.set_member_role(uuid, uuid, uuid, boolean)
+from public, anon, authenticated, service_role;
+
 comment on function public.set_member_role(uuid, uuid, uuid, boolean) is
-  'Assigns or revokes one role under AAL2, anti-self-escalation, and permission-superset checks.';
+  'Assigns or revokes one role under AAL2, anti-self-escalation, permission-superset, sensitive-role, and sensitive-target checks.';
 
 create or replace function public.set_branch_membership(
   target_organization_member_id uuid,
@@ -767,6 +623,9 @@ begin
 end;
 $$;
 
+revoke all on function public.set_branch_membership(uuid, uuid, text)
+from public, anon, authenticated, service_role;
+
 comment on function public.set_branch_membership(uuid, uuid, text) is
   'Creates or changes exact-branch access under current-user user.manage + AAL2.';
 
@@ -889,27 +748,87 @@ begin
 end;
 $$;
 
-comment on function public.update_organization_member_status(uuid, text) is
-  'Changes another member status under current-user user.manage + AAL2 and audits atomically.';
-
-revoke all on function public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)
-from public, anon, authenticated, service_role;
-revoke all on function public.set_role_permission(uuid, text, boolean)
-from public, anon, authenticated, service_role;
-revoke all on function public.set_member_role(uuid, uuid, uuid, boolean)
-from public, anon, authenticated, service_role;
-revoke all on function public.set_branch_membership(uuid, uuid, text)
-from public, anon, authenticated, service_role;
 revoke all on function public.update_organization_member_status(uuid, text)
 from public, anon, authenticated, service_role;
 
-grant execute on function public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)
-to authenticated;
-grant execute on function public.set_role_permission(uuid, text, boolean)
-to authenticated;
-grant execute on function public.set_member_role(uuid, uuid, uuid, boolean)
-to authenticated;
-grant execute on function public.set_branch_membership(uuid, uuid, text)
-to authenticated;
-grant execute on function public.update_organization_member_status(uuid, text)
-to authenticated;
+comment on function public.update_organization_member_status(uuid, text) is
+  'Changes another member status under current-user user.manage + AAL2 and audits atomically.';
+
+create or replace function public.record_mfa_enrollment(
+  p_factor_id uuid
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  actor_user_id uuid := (select auth.uid());
+  inserted_event_count integer;
+begin
+  if actor_user_id is null then
+    raise insufficient_privilege using message = 'authenticated user required';
+  end if;
+
+  perform private.require_aal2();
+
+  if not exists (
+    select 1
+    from auth.mfa_factors as factor
+    where factor.id = p_factor_id
+      and factor.user_id = actor_user_id
+      and factor.factor_type = 'totp'
+      and factor.status = 'verified'
+  ) then
+    raise insufficient_privilege using message = 'verified authenticator factor required';
+  end if;
+
+  if not exists (
+    select 1
+    from public.organization_members as organization_member
+    join public.organizations as organization
+      on organization.id = organization_member.organization_id
+    where organization_member.user_id = actor_user_id
+      and organization_member.membership_status = 'active'
+      and organization.status = 'active'
+  ) then
+    raise insufficient_privilege using message = 'active organization membership required';
+  end if;
+
+  insert into public.audit_events (
+    organization_id,
+    actor_user_id,
+    actor_type,
+    category,
+    action,
+    entity_type,
+    entity_id,
+    result
+  )
+  select
+    organization_member.organization_id,
+    actor_user_id,
+    'USER',
+    'SECURITY',
+    'mfa.enrolled',
+    'mfa_factor',
+    p_factor_id,
+    'SUCCESS'
+  from public.organization_members as organization_member
+  join public.organizations as organization
+    on organization.id = organization_member.organization_id
+  where organization_member.user_id = actor_user_id
+    and organization_member.membership_status = 'active'
+    and organization.status = 'active'
+  on conflict do nothing;
+
+  get diagnostics inserted_event_count = row_count;
+  return inserted_event_count;
+end;
+$$;
+
+revoke all on function public.record_mfa_enrollment(uuid)
+from public, anon, authenticated, service_role;
+
+comment on function public.record_mfa_enrollment(uuid) is
+  'Idempotently projects a verified current-user TOTP factor into each active tenant audit log.';

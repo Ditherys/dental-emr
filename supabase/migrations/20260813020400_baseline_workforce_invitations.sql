@@ -1,8 +1,15 @@
--- P1-08: invitation-only workforce onboarding.
+-- Phase 1 secure baseline — file 5 of 8: invitation-only workforce onboarding.
 --
 -- Supabase Auth owns the high-entropy, expiry-bound email invitation token. This
 -- private record owns the tenant, role, branch, and lifecycle binding. Only the
--- server-only service client may call the public RPC boundary below.
+-- server-only service client may call the public RPC boundary, and that EXECUTE
+-- grant is issued in file 8.
+--
+-- BASELINE INVARIANT: this file grants nothing. Every SECURITY DEFINER function
+-- revokes PUBLIC/anon/authenticated EXECUTE immediately after it is created, so
+-- no boundary inside this file exposes a definer-rights function to a
+-- browser-reachable role. service_role privileges are intentionally left exactly
+-- as the accepted Phase 1 schema leaves them; see ADR-017.
 
 create table private.workforce_invitations (
   id uuid primary key,
@@ -42,6 +49,10 @@ create table private.workforce_invitations (
   )
 );
 
+revoke all on table private.workforce_invitations from public;
+revoke all on table private.workforce_invitations from anon;
+revoke all on table private.workforce_invitations from authenticated;
+
 comment on table private.workforce_invitations is
   'Server-only lifecycle and tenant binding for Supabase Auth workforce invites.';
 
@@ -62,10 +73,6 @@ create index workforce_invitations_organization_status_idx
 create trigger workforce_invitations_set_updated_at
 before update on private.workforce_invitations
 for each row execute function private.set_updated_at();
-
-revoke all on table private.workforce_invitations from public;
-revoke all on table private.workforce_invitations from anon;
-revoke all on table private.workforce_invitations from authenticated;
 
 create or replace function private.user_has_permission(
   target_user_id uuid,
@@ -91,16 +98,17 @@ as $$
     where organization_member.organization_id = target_organization_id
       and organization_member.user_id = target_user_id
       and organization_member.membership_status = 'active'
+      and member_role.branch_id is null
       and permission.code = target_permission_code
   );
 $$;
 
-comment on function private.user_has_permission(uuid, uuid, text) is
-  'Current-membership permission check used only by server-controlled foundation RPCs.';
-
 revoke all on function private.user_has_permission(uuid, uuid, text) from public;
 revoke all on function private.user_has_permission(uuid, uuid, text) from anon;
 revoke all on function private.user_has_permission(uuid, uuid, text) from authenticated;
+
+comment on function private.user_has_permission(uuid, uuid, text) is
+  'Current organization-wide membership permission check used only by server-controlled foundation RPCs.';
 
 create or replace function private.validate_workforce_invitation_scope(
   target_organization_id uuid,
@@ -151,15 +159,54 @@ begin
     raise exception 'administrative roles must be organization-wide';
   end if;
 
-  if actor_user_id is not null
-     and (selected_role_code in ('OWNER', 'ADMIN')
-          or selected_role_organization_id is not null)
-     and not private.user_has_permission(
-       actor_user_id,
-       target_organization_id,
-       'role.manage'
-     ) then
-    raise exception 'actor may not assign this role';
+  if actor_user_id is not null then
+    if not private.user_has_permission(
+      actor_user_id,
+      target_organization_id,
+      'user.invite'
+    ) then
+      raise exception 'actor is not authorized to invite workforce users';
+    end if;
+
+    if (selected_role_code in ('OWNER', 'ADMIN')
+        or selected_role_organization_id is not null)
+       and not private.user_has_permission(
+         actor_user_id,
+         target_organization_id,
+         'role.manage'
+       ) then
+      raise exception 'actor may not assign this role';
+    end if;
+
+    if exists (
+      select 1
+      from public.role_permissions as role_permission
+      join public.permissions as permission
+        on permission.id = role_permission.permission_id
+      where role_permission.role_id = target_role_id
+        and permission.code in ('role.manage', 'security.manage')
+    ) and not private.user_has_permission(
+      actor_user_id,
+      target_organization_id,
+      'security.manage'
+    ) then
+      raise exception 'sensitive role delegation requires security.manage';
+    end if;
+
+    if exists (
+      select 1
+      from public.role_permissions as role_permission
+      join public.permissions as permission
+        on permission.id = role_permission.permission_id
+      where role_permission.role_id = target_role_id
+        and not private.user_has_permission(
+          actor_user_id,
+          target_organization_id,
+          permission.code
+        )
+    ) then
+      raise exception 'role contains permissions the actor may not delegate';
+    end if;
   end if;
 end;
 $$;
@@ -167,6 +214,9 @@ $$;
 revoke all on function private.validate_workforce_invitation_scope(uuid, uuid, uuid, uuid) from public;
 revoke all on function private.validate_workforce_invitation_scope(uuid, uuid, uuid, uuid) from anon;
 revoke all on function private.validate_workforce_invitation_scope(uuid, uuid, uuid, uuid) from authenticated;
+
+comment on function private.validate_workforce_invitation_scope(uuid, uuid, uuid, uuid) is
+  'Validates tenant/scope and requires the recorded inviter to hold user.invite, applicable role-management authority, every delegated permission, and security.manage for sensitive roles.';
 
 create or replace function public.list_workforce_invitation_options(
   p_actor_user_id uuid
@@ -205,6 +255,31 @@ as $$
                 'role.manage'
               )
             )
+            and not exists (
+              select 1
+              from public.role_permissions as sensitive_role_permission
+              join public.permissions as sensitive_permission
+                on sensitive_permission.id = sensitive_role_permission.permission_id
+              where sensitive_role_permission.role_id = role.id
+                and sensitive_permission.code in ('role.manage', 'security.manage')
+                and not private.user_has_permission(
+                  p_actor_user_id,
+                  organization_member.organization_id,
+                  'security.manage'
+                )
+            )
+            and not exists (
+              select 1
+              from public.role_permissions as delegated_role_permission
+              join public.permissions as delegated_permission
+                on delegated_permission.id = delegated_role_permission.permission_id
+              where delegated_role_permission.role_id = role.id
+                and not private.user_has_permission(
+                  p_actor_user_id,
+                  organization_member.organization_id,
+                  delegated_permission.code
+                )
+            )
         ),
         'branches', (
           select coalesce(
@@ -237,13 +312,12 @@ as $$
     );
 $$;
 
-comment on function public.list_workforce_invitation_options(uuid) is
-  'Service-only invitation choices derived from the actor current authorization.';
-
 revoke all on function public.list_workforce_invitation_options(uuid) from public;
 revoke all on function public.list_workforce_invitation_options(uuid) from anon;
 revoke all on function public.list_workforce_invitation_options(uuid) from authenticated;
-grant execute on function public.list_workforce_invitation_options(uuid) to service_role;
+
+comment on function public.list_workforce_invitation_options(uuid) is
+  'Service-only invitation choices filtered to roles whose live permission set the actor may delegate.';
 
 create or replace function public.prepare_workforce_invitation(
   p_invitation_id uuid,
@@ -298,13 +372,12 @@ begin
 end;
 $$;
 
-comment on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) is
-  'Reserves a tenant-bound invitation after current actor authorization.';
-
 revoke all on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) from public;
 revoke all on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) from anon;
 revoke all on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) from authenticated;
-grant execute on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) to service_role;
+
+comment on function public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid) is
+  'Reserves a tenant-bound invitation after current actor authorization.';
 
 create or replace function public.prepare_first_owner_invitation(
   p_invitation_id uuid,
@@ -377,13 +450,12 @@ begin
 end;
 $$;
 
-comment on function public.prepare_first_owner_invitation(uuid, uuid, text) is
-  'Service-only, one-time first-owner reservation for controlled environment bootstrap.';
-
 revoke all on function public.prepare_first_owner_invitation(uuid, uuid, text) from public;
 revoke all on function public.prepare_first_owner_invitation(uuid, uuid, text) from anon;
 revoke all on function public.prepare_first_owner_invitation(uuid, uuid, text) from authenticated;
-grant execute on function public.prepare_first_owner_invitation(uuid, uuid, text) to service_role;
+
+comment on function public.prepare_first_owner_invitation(uuid, uuid, text) is
+  'Service-only, one-time first-owner reservation for controlled environment bootstrap.';
 
 create or replace function public.finalize_workforce_invitation(
   p_invitation_id uuid,
@@ -411,11 +483,11 @@ begin
     raise exception 'invitation is not awaiting provisioning';
   end if;
 
-  if invitation.invited_by_user_id is null then
-    perform pg_catalog.pg_advisory_xact_lock(
-      pg_catalog.hashtextextended(invitation.organization_id::text, 0)
-    );
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(invitation.organization_id::text, 0)
+  );
 
+  if invitation.invited_by_user_id is null then
     if p_actor_user_id is not null or exists (
       select 1
       from public.organization_members
@@ -423,13 +495,15 @@ begin
     ) then
       raise exception 'first-owner bootstrap is no longer available';
     end if;
+
+    perform private.validate_workforce_invitation_scope(
+      invitation.organization_id,
+      invitation.role_id,
+      invitation.branch_id,
+      null
+    );
   else
-    if p_actor_user_id is distinct from invitation.invited_by_user_id
-       or not private.user_has_permission(
-         p_actor_user_id,
-         invitation.organization_id,
-         'user.invite'
-       ) then
+    if p_actor_user_id is distinct from invitation.invited_by_user_id then
       raise exception 'actor is not authorized to finalize this invitation';
     end if;
 
@@ -437,7 +511,7 @@ begin
       invitation.organization_id,
       invitation.role_id,
       invitation.branch_id,
-      p_actor_user_id
+      invitation.invited_by_user_id
     );
   end if;
 
@@ -529,13 +603,12 @@ begin
 end;
 $$;
 
-comment on function public.finalize_workforce_invitation(uuid, uuid, uuid) is
-  'Binds the Supabase Auth invite identity and creates inactive tenant authorization rows atomically.';
-
 revoke all on function public.finalize_workforce_invitation(uuid, uuid, uuid) from public;
 revoke all on function public.finalize_workforce_invitation(uuid, uuid, uuid) from anon;
 revoke all on function public.finalize_workforce_invitation(uuid, uuid, uuid) from authenticated;
-grant execute on function public.finalize_workforce_invitation(uuid, uuid, uuid) to service_role;
+
+comment on function public.finalize_workforce_invitation(uuid, uuid, uuid) is
+  'Under the tenant authorization lock, revalidates the recorded inviter and live role permissions before atomically creating inactive authorization rows.';
 
 create or replace function public.fail_workforce_invitation(
   p_invitation_id uuid
@@ -585,7 +658,6 @@ $$;
 revoke all on function public.fail_workforce_invitation(uuid) from public;
 revoke all on function public.fail_workforce_invitation(uuid) from anon;
 revoke all on function public.fail_workforce_invitation(uuid) from authenticated;
-grant execute on function public.fail_workforce_invitation(uuid) to service_role;
 
 create or replace function public.get_workforce_invitation_summary(
   p_auth_user_id uuid
@@ -621,7 +693,6 @@ $$;
 revoke all on function public.get_workforce_invitation_summary(uuid) from public;
 revoke all on function public.get_workforce_invitation_summary(uuid) from anon;
 revoke all on function public.get_workforce_invitation_summary(uuid) from authenticated;
-grant execute on function public.get_workforce_invitation_summary(uuid) to service_role;
 
 create or replace function public.accept_workforce_invitation(
   p_auth_user_id uuid,
@@ -750,13 +821,12 @@ begin
 end;
 $$;
 
-comment on function public.accept_workforce_invitation(uuid, text, text) is
-  'Single-use activation using the verified Auth user binding, never client-supplied tenant or role IDs.';
-
 revoke all on function public.accept_workforce_invitation(uuid, text, text) from public;
 revoke all on function public.accept_workforce_invitation(uuid, text, text) from anon;
 revoke all on function public.accept_workforce_invitation(uuid, text, text) from authenticated;
-grant execute on function public.accept_workforce_invitation(uuid, text, text) to service_role;
+
+comment on function public.accept_workforce_invitation(uuid, text, text) is
+  'Single-use activation using the verified Auth user binding, never client-supplied tenant or role IDs.';
 
 create or replace function public.revoke_workforce_invitation(
   p_actor_user_id uuid,
@@ -832,4 +902,3 @@ $$;
 revoke all on function public.revoke_workforce_invitation(uuid, uuid) from public;
 revoke all on function public.revoke_workforce_invitation(uuid, uuid) from anon;
 revoke all on function public.revoke_workforce_invitation(uuid, uuid) from authenticated;
-grant execute on function public.revoke_workforce_invitation(uuid, uuid) to service_role;

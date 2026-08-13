@@ -4,62 +4,91 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R1 — Missing foundation artifacts (`/api/health`, ADR-001 through ADR-004)
+**Task / slice:** R6-A — author the Phase 1 secure migration baseline (grant-last, fail-closed) in Git only
 
 **Implementing agent:** Claude Code, resumed as primary implementation agent (Codex temporarily unavailable — usage limit reached)
 
-**Status:** Implemented, verified, self-reviewed. **Independent Codex review pending due to temporary Codex usage unavailability.**
+**Status:** Implemented and statically verified. **No remote database was contacted. Independent Codex review is REQUIRED and still pending.**
 
 ## Context
 
-This checkpoint is the first of a bounded remediation sequence (R1–R10) following an independent repository review of Phase 1 exit-review findings performed this session. That review confirmed several High/Medium findings against actual repository evidence, including H1 (no hosted CI/branch-protection evidence — the repository currently has **no Git remote configured**, so `.github/workflows/*.yml` has never executed), H2 (a real intermediate weaker-authorization window in the migration chain between `20260812050800_foundation_rls_policies.sql` and `20260812051000_harden_foundation_admin_mutations.sql`), H3 (missing E2E/security scenarios), M1 (branch update/archive not implemented), M2 (MFA factor removal not audited), and M4 (this checkpoint's scope). R1 addresses only M4. No other finding was touched in this checkpoint.
+R6 remediates confirmed finding H2: the superseded migration chain contained a real intermediate weaker-authorization window. `20260812050800_foundation_rls_policies.sql` granted `authenticated` direct administrative table writes carried only by RLS policies; `20260812051000_harden_foundation_admin_mutations.sql` revoked them and replaced them with AAL2-gated RPCs. Two committed boundaries (after `050800` and after `050900`) therefore exposed AAL1, unaudited, non-superset-checked privilege escalation to an intra-organization actor holding `role.manage`.
+
+The accepted **final** schema was never the vulnerability. The defect was in the migration **path**, and an additive migration cannot fix an ordering defect.
+
+The approved strategy is **Option A2** (grant-last, multi-file secure baseline) plus **Option E1** (static and dynamic enforcement of the invariant). R6-A delivers only the baseline and ADR. R6-B through R6-F are not started.
 
 ## What Changed
 
-- Added `GET /api/health` (`src/app/api/health/route.ts`): returns exactly `{"status":"ok"}`, nothing else. Marked `export const dynamic = "force-dynamic"` so it always executes at request time rather than being served from Next.js's static route cache. Sets `Cache-Control: no-store` directly on the response so intermediaries/browsers cannot serve a stale status. Global browser security headers (CSP, Permissions-Policy, Referrer-Policy, X-Content-Type-Options, X-Frame-Options) are inherited automatically from the existing `next.config.ts` → `createBrowserHeaderRules()` global `/:path*` rule; no route is exempted and nothing new was added to `PRIVATE_NO_STORE_ROUTE_PATTERNS` because the health payload carries no identity/session/organization state.
-- Added `src/app/api/health/route.test.ts`: unit tests asserting the exact response body, the `Cache-Control: no-store` header, and that the serialized body never matches identity/infrastructure/tenant-leak keywords.
-- Added four ADRs in `docs/decisions/`, each documenting a decision already approved and already implemented (no new architecture introduced):
-  - `ADR-001-nextjs-supabase-core-stack.md`
-  - `ADR-002-organization-branch-tenancy.md`
-  - `ADR-003-authorization-defense-in-depth.md`
-  - `ADR-004-single-nextjs-repo.md`
+- **Replaced 13 superseded migration files with 8 baseline files** in `supabase/migrations/`. The superseded SQL was **not** copied anywhere; Git history preserves it. ADR-017 records every superseded version, filename, and introducing commit SHA.
+  - `20260813020000_baseline_extensions_and_private_helpers.sql`
+  - `20260813020100_baseline_tenancy_and_membership.sql`
+  - `20260813020200_baseline_roles_and_assignments.sql`
+  - `20260813020300_baseline_audit_foundation.sql`
+  - `20260813020400_baseline_workforce_invitations.sql`
+  - `20260813020500_baseline_authorization_helpers_and_policies.sql`
+  - `20260813020600_baseline_administrative_rpcs.sql`
+  - `20260813020700_baseline_final_grants.sql` — **the only file that grants**
+- Added `docs/decisions/ADR-017-phase1-secure-migration-baseline.md`.
+- Added `supabase/MIGRATION_FREEZE.md` and a narrowly scoped mechanical freeze guard (`assertMigrationFreezeAllows` in `scripts/remote-database-test-guard.mjs`, called from `scripts/run-guarded-supabase-command.mjs`), plus 5 unit tests.
+- Updated `supabase/README.md` with the freeze notice and the grant-last rule.
 
 ## Security / Tenancy Design
 
-- `/api/health` is intentionally unauthenticated and intentionally minimal. It was checked against the explicit prohibition list before implementation: no environment values, no Supabase URL/keys, no dependency versions, no infrastructure details, no database identifiers, no organization/tenant information, no secrets. Verified live (see below) — the actual HTTP response body is exactly `{"status":"ok"}`.
-- No RLS, migration, authorization helper, or tenancy code was touched. This checkpoint has no tenant-isolation surface.
+**The grant-last invariant:** files 1–7 grant nothing to `PUBLIC`, `anon`, or `authenticated`. File 8 is the only file that grants.
+
+The invariant is enforced by **explicit revocation adjacent to each `CREATE`**, not by the absence of a `GRANT`. Two default-privilege mechanisms would otherwise leak access silently:
+
+- PostgreSQL grants `EXECUTE` on new functions to `PUBLIC` — a live definer-rights path for `SECURITY DEFINER` functions from the instant of creation;
+- Supabase's `ALTER DEFAULT PRIVILEGES` grants new `public` objects to `anon`/`authenticated`/`service_role`. In the superseded chain, tables inherited broad write privileges at boundaries 2–8 and were held closed only by RLS-with-no-policies.
+
+**The guarantee does not depend on transaction semantics.** No claim is made that a migration file or a whole `db push` is atomic. Because privileges are revoked statement-adjacently and granted only in file 8, an interruption anywhere leaves a state strictly more restrictive than the final one. R6-D will test boundary behaviour empirically.
+
+`ALTER DEFAULT PRIVILEGES` is deliberately **not** used: it is role-specific, R6-A had no database contact, and the object-creating role could not be verified. Explicit per-object `REVOKE` is correct regardless of owner. Adding a reviewed `ALTER DEFAULT PRIVILEGES` remains a candidate after R6-C/D identify the creating role.
+
+**Scope:** the invariant is asserted for `PUBLIC`, `anon`, `authenticated`. `service_role` is explicitly out of scope — server-only, `BYPASSRLS` by design, and **unchanged** from the accepted schema at every boundary. R6 is remediation, not authorization redesign.
 
 ## Database / Remote State
 
-- R1 required no migration, schema, seed, database-type, dependency, or remote Supabase change.
-- No direct SQL, MCP write, reset, reseed, local Supabase runtime, Docker database, production access, or credential output occurred.
+- **No remote database was contacted.** No `db push`, `db push --dry-run`, `migration list`, `migration repair`, `db reset`, remote SQL, MCP call, TEST creation, or DEV modification occurred.
+- **DEV migration history was NOT repaired and intentionally remains unreconciled.** DEV holds the 13 superseded versions and none of the 8 baseline versions. DEV's schema is correct and unchanged.
+- **Migration pushes against DEV are frozen until R6-F.** See `supabase/MIGRATION_FREEZE.md`.
+- **Full equivalence remains unproven until R6-C/D/E.** What follows is static evidence, not remote verification.
 
 ## Verification Performed
 
-- `npx vitest run src/app/api/health/route.test.ts` — passed, 3/3 tests.
-- Live HTTP verification: started `next dev` locally (synthetic placeholder env values only, matching the project's own CI placeholder convention — no real credentials), confirmed via `curl`:
-  - `GET /api/health` → `200 OK`
-  - Body: exactly `{"status":"ok"}`
-  - Headers include the full existing global security-header set (CSP, Permissions-Policy, Referrer-Policy, X-Content-Type-Options, X-Frame-Options) plus `cache-control: no-store`
-  - No `Strict-Transport-Security` in local HTTP dev, matching existing `browser-policy.ts` logic (HSTS only added for production+HTTPS) — expected, not a defect.
-  - The local `.env.local` used for this manual smoke test was deleted immediately after verification; it was never committed (already `.gitignore`d in any case) and contained only synthetic placeholder values, no real secrets.
-- `npm run verify` (lint → typecheck → unit tests → build → secretlint → npm audit):
-  - `npm run lint` — passed, no errors.
-  - `npm run typecheck` — passed, no errors.
-  - `npm run test:unit` — passed, 116/116 tests across 19 files (up from 113 tests / 18 files at the prior checkpoint).
-  - `npm run build` — passed once the required build-time environment variables were supplied (same synthetic placeholders the CI `application` job already uses: `APP_ENVIRONMENT=development`, `APP_URL=http://127.0.0.1:3000`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_ci_placeholder`, `NEXT_PUBLIC_SUPABASE_URL=https://cibuildplaceholder.supabase.co`, `SUPABASE_PROJECT_ID=cibuildplaceholder`). Build output confirms `/api/health` is listed as `ƒ` (Dynamic), not `○` (Static) — `force-dynamic` took effect. Note: the initial `npm run verify` invocation failed at the build step only because the ad hoc local `.env.local` had already been deleted as part of test cleanup at that point; re-running `npm run build` with the CI-equivalent placeholder env vars passed cleanly. Lint/typecheck/unit results above are from the same `npm run verify` run and are unaffected by this.
-  - `npm run security:secrets` (secretlint) — passed, no findings.
-  - `npm run security:audit` (`npm audit --audit-level=high`) — passed, 0 vulnerabilities.
-- `git diff --cached --check` — passed, no whitespace errors (CRLF-on-checkout warnings are pre-existing Windows Git behavior across the whole repo, not specific to this change).
-- Full staged diff manually reviewed for scope creep and sensitive-data exposure — confirmed the change touches only the six new files listed above; no unrelated files modified.
+All checks were local/static. Comparisons read the superseded chain from `git show d9bcf82:...`.
 
-## Self-Review / Scope Boundaries
+- **Final function/policy set:** 27 functions and 11 surviving policies compared whitespace-normalized against the superseded chain's final definitions — **exact match**, no missing/extra objects. All 21 policies dropped by the old chain confirmed absent.
+- **Schema object sets:** tables 11/11, named constraints 31/31, indexes 14/14, triggers 10/10, RLS-enables 10/10 — **exact match**.
+- **Table column definitions:** identical for all 11 tables except `audit_events`, whose only differences are the intended consolidation of the P1-19 `ALTER TABLE ADD CONSTRAINT` statements and the `correlation_id` default into `CREATE TABLE`. All 7 P1-19 constraint expressions verified preserved byte-for-byte (whitespace-normalized).
+- **Adjacency:** every created function and table has a `revoke all` within the statements immediately following it.
+- **`search_path`:** 27/27 functions declare `set search_path = ''`. 21 are `SECURITY DEFINER`.
+- **Boundary privilege simulation** (models PostgreSQL `PUBLIC` `EXECUTE` defaults, Supabase default privileges, and ACL preservation across `CREATE OR REPLACE`):
+  - superseded chain: 16→80 `public`-table write privileges held by browser-reachable roles at boundaries 2–8; 76 at boundaries 9–10 (the H2 window, exploitable once permissive mutation policies existed); 5 at the end.
+  - **baseline: 0 write privileges and 0 definer `EXECUTE` for `PUBLIC`/`anon`/`authenticated` at every boundary 1–7**; at boundary 8 exactly 5 (the `profiles` self-service columns) and 11 definer `EXECUTE` grants.
+  - **final effective privilege state identical: 104 entries each.**
+- `npm run verify`: lint ✓, typecheck ✓, unit tests **121/121 across 19 files** (was 116/19; +5 freeze-guard tests) ✓, build ✓ (CI placeholder env), secretlint ✓ no findings, `npm audit --audit-level=high` ✓ 0 vulnerabilities.
+- `git diff --cached --check` ✓ (CRLF warnings are pre-existing Windows Git behaviour).
 
-- Confirmed `/api/health` is the only new route; no other route, action, or migration was touched.
-- Confirmed the four ADRs describe only decisions already reflected in existing, already-committed code/migrations (cited by commit SHA and file path in each ADR) — no new architecture, library, or pattern was introduced or implied.
-- Confirmed no `.env.local` or other credential material was committed.
-- No later domain, patient/clinical feature, migration change, RLS change, or other remediation item (R2–R10) was started.
+## Known Limitations / Open Items
+
+- **Equivalence is a reviewed authoring claim plus static evidence — not a proof.** Only R6-C/D/E against a disposable Cloud TEST project can prove it.
+- **R6-E must use a cloud-safe equivalence method.** `supabase db diff` may require a local shadow/container; ADR-016 forbids introducing a local Supabase runtime or Docker requirement, so Docker-based `db diff` must not be mandatory. Privilege comparison must be semantic (`has_*_privilege`), not textual ACL comparison.
+- **The CI database job will now fail while the freeze is active**, by design. It also targets a TEST project that already holds the 13 superseded versions, so pushing the baseline there would fail regardless. R6-C must create a genuinely new disposable TEST project. (Moot today: per H1 the repository still has no Git remote, so CI has never executed.)
+- **pgTAP is retained unchanged** in baseline file 1. Removing it would create per-environment schema drift, which is out of R6 scope. ADR-017 records this as an **open decision requiring human approval**, with a recommendation to gate it at the production-bootstrap step.
+- The freeze guard covers the `npm run db:*` paths only; it cannot intercept a raw `npx supabase db push`. `MIGRATION_FREEZE.md` recommends removing local `supabase/.temp/` link state as an additional operator precaution.
+- The superseded chain's correctness quietly depended on `CREATE OR REPLACE FUNCTION` preserving ACLs (`051000`/`051100` replace functions without re-revoking). The baseline creates every function exactly once, removing that dependency.
+
+## Areas Codex Should Scrutinize
+
+1. Semantic equivalence of the baseline to the accepted final schema — object by object, not by inspection of the summary above.
+2. Whether the grant-last property truly holds across table, column, sequence, schema, function `EXECUTE`, default, `PUBLIC`, and role-inheritance paths.
+3. Every `SECURITY DEFINER` function: fail-closed creation, `set search_path = ''`, and preserved AAL2 / anti-self-escalation / permission-superset / advisory-lock / audit behaviour.
+4. That the five administrative RPCs and `record_mfa_enrollment` are the final (`051000` + `051100` + P1-19) versions, not earlier ones.
+5. Whether the freeze guard is correctly scoped and cannot be bypassed through the guarded npm command paths.
+6. Whether ADR-017 or this handoff overstates what R6-A proves.
 
 ## Independent Review Note
 
-Codex is temporarily unavailable (usage limit reached). This checkpoint is low-risk (no migrations, RLS, authorization, or tenancy code touched) and does not strictly require the same urgency as H2/R6-class changes, but it should still receive a normal Codex pass when available, primarily to confirm the ADRs accurately reflect implemented behavior and that `/api/health` truly discloses nothing sensitive under production build conditions.
+**Codex is unavailable (usage limit reached). No independent review has occurred and none is claimed.** Unlike R1, this checkpoint changes security-sensitive migration architecture and **must not be treated as accepted** until Codex has independently reviewed it against the actual Git diff.

@@ -19,6 +19,34 @@ npx supabase migration list --linked
 
 Supabase CLI link state is stored under the ignored `supabase/.temp/` directory and must not be committed.
 
+## Migration freeze is currently ACTIVE
+
+**Read [`MIGRATION_FREEZE.md`](MIGRATION_FREEZE.md) before running any database
+command.** R6-A replaced the thirteen superseded Phase 1 migration files with an
+eight-file grant-last secure baseline, so the Git baseline intentionally
+disagrees with the linked DEV project's recorded migration history until R6-F
+reconciliation. DEV's schema is correct and unchanged.
+
+Until the freeze lifts, `db push`, `migration up`, `migration repair`,
+`db reset`, and any schema-changing SQL are frozen against DEV. The guarded
+`npm run db:push:*` / `db:seed:*` scripts refuse to run while the freeze file
+exists unless `MIGRATION_FREEZE_ACK` is set for the approved Cloud TEST steps.
+
+## Phase 1 secure baseline
+
+`migrations/` contains eight baseline files that build the complete Phase 1
+foundation from zero. The security-critical property, recorded in
+[ADR-017](../docs/decisions/ADR-017-phase1-secure-migration-baseline.md), is:
+
+> Files 1 through 7 grant nothing to `PUBLIC`, `anon`, or `authenticated`.
+> `20260813020700_baseline_final_grants.sql` is the only file that grants.
+
+Every object revokes its inherited and default privileges in the same statement
+sequence that creates it, so every migration boundary is strictly more
+restrictive than the final state without depending on any assumption about
+migration transaction atomicity. When adding Phase 2 migrations, preserve this
+rule: grant only in the final file of a set, and never broaden then narrow.
+
 ## Migration workflow
 
 Create schema changes as reviewable migration files under `migrations/`. Do not create application tables in the Supabase Dashboard and leave them untracked.
@@ -165,3 +193,9 @@ seed, lint, advisor, type, pgTAP, and E2E checks; see
 adds the controlled verified-TOTP enrollment projection, and adds its dedicated
 pgTAP suite; see `docs/security/AUDIT_FOUNDATION.md`. P1-20 and every later
 domain remain out of scope here.
+
+R6-A replaced the P1-05 through P1-19 migration chain with the eight-file secure
+baseline described above. The committed schema behavior is unchanged; only the
+migration path to it changed. See ADR-017 for the superseded version list, the
+grant-last invariant, the intentional temporary DEV history divergence, and the
+outstanding R6-B through R6-F work.
