@@ -62,6 +62,11 @@ jobs:
       - name: Audit dependencies
         run: npm run security:audit
 
+  # While supabase/MIGRATION_FREEZE.md exists (R6), every migration-applying step
+  # in this job is refused by the guarded runner and the job fails. That is
+  # intended. Do NOT add MIGRATION_FREEZE_ACK to this workflow: a CI-wide bypass
+  # would defeat the control. The freeze is removed by the approved R6-F
+  # reconciliation, after which this job runs normally.
   cloud-test:
     name: Cloud TEST database and E2E
     if: github.event_name == 'push' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -139,6 +144,15 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:push:test
+
+      # ADR-018: the canonical baseline is production-shaped and installs no
+      # extension. pgTAP is provisioned only into non-production projects, and
+      # the pgTAP suites below cannot run without this step.
+      - name: Provision non-production database test tooling
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
+        run: npm run db:provision:test
 
       - name: Load idempotent synthetic fixtures
         env:

@@ -144,18 +144,23 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
 ]);
 
 /**
- * Extensions the baseline is permitted to create.
+ * Extensions the canonical baseline is permitted to create.
  *
- * Extension functions are created with PUBLIC EXECUTE by default and cannot be
- * revoked object-by-object by a static checker, so each one is an explicit,
- * separately reasoned exception to the fail-closed creation rule.
+ * Deliberately EMPTY (R6-C1, ADR-018). Extension functions are created with
+ * PUBLIC EXECUTE by default and cannot be revoked object-by-object by a static
+ * checker, so every extension is an exception to the fail-closed creation rule
+ * and needs an explicit, separately reasoned approval entry here.
+ *
+ * pgTAP was removed from the baseline and moved to
+ * `supabase/provisioning/nonproduction/001_database_test_tooling.sql`, which is
+ * applied only to DEV and disposable Cloud TEST projects. Reconstructing the
+ * application schema — including in a future production project — must not
+ * require installing testing infrastructure.
+ *
+ * An empty list means any `CREATE EXTENSION` in `supabase/migrations/` is a
+ * violation. That is the intended review gate: adding one requires an entry
+ * here stating why the extension belongs in every environment.
  */
-export const APPROVED_EXTENSIONS = Object.freeze([
-  Object.freeze({
-    name: "pgtap",
-    reason:
-      "Retained unchanged from the superseded chain so DEV/TEST and production share one schema. Not reachable through the Data API (the extensions schema is not exposed). ADR-017 records removing it from the canonical baseline as an open decision requiring human approval at the production-bootstrap gate.",
-  }),
-]);
+export const APPROVED_EXTENSIONS = Object.freeze([]);
 
 export const MIGRATIONS_DIRECTORY = "supabase/migrations";

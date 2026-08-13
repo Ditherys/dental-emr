@@ -33,9 +33,35 @@ describe("guarded Supabase command", () => {
   });
 });
 
+describe("non-production provisioning command (R6-C1)", () => {
+  it("targets only the non-migration provisioning file, through the linked project", () => {
+    expect(resolveCiDatabaseCommand("db-provision-test-tooling")).toEqual([
+      "db",
+      "query",
+      "--linked",
+      "--output-format",
+      "json",
+      "--file",
+      "supabase/provisioning/nonproduction/001_database_test_tooling.sql",
+    ]);
+  });
+
+  it("is not reachable as a migration", () => {
+    const command = resolveCiDatabaseCommand("db-provision-test-tooling");
+
+    expect(command).not.toContain("push");
+    expect(command.join(" ")).not.toContain("supabase/migrations");
+  });
+});
+
 describe("R6 migration freeze", () => {
   it("refuses every migration-applying command while the freeze is active", () => {
-    for (const commandName of ["db-push-dry", "db-push", "db-seed"]) {
+    for (const commandName of [
+      "db-push-dry",
+      "db-push",
+      "db-seed",
+      "db-provision-test-tooling",
+    ]) {
       expect(() =>
         assertMigrationFreezeAllows(commandName, true, {}),
       ).toThrow(/migration freeze is active/);

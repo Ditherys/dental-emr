@@ -35,7 +35,13 @@ exists unless `MIGRATION_FREEZE_ACK` is set for the approved Cloud TEST steps.
 ## Phase 1 secure baseline
 
 `migrations/` contains eight baseline files that build the complete Phase 1
-foundation from zero. The security-critical property, recorded in
+foundation from zero. They are **production-shaped**: they create no extension,
+and reconstructing the application schema never requires installing testing
+infrastructure. Database test tooling (pgTAP) is provisioned separately into
+non-production projects only — see "Non-production test tooling" below and
+[ADR-018](../docs/decisions/ADR-018-nonproduction-database-test-tooling.md).
+
+The security-critical property, recorded in
 [ADR-017](../docs/decisions/ADR-017-phase1-secure-migration-baseline.md), is:
 
 > Files 1 through 7 grant nothing to `PUBLIC`, `anon`, or `authenticated`.
@@ -75,6 +81,27 @@ registration is the review gate — see `docs/decisions/ADR-017-phase1-secure-mi
 `supabase/verification/r6d/` holds the dynamic counterpart, which verifies
 effective privileges against a live database. It is authored but **not yet
 executed**; see its README.
+
+## Non-production test tooling
+
+`provisioning/nonproduction/001_database_test_tooling.sql` installs pgTAP. It is
+**not a migration** and lives outside `migrations/` on purpose, so `db push`
+cannot apply it and a production replay can never pick it up.
+
+```powershell
+npm run db:provision:test
+```
+
+That command routes through the same guarded runner as every other remote write:
+the linked project must be the designated disposable Cloud TEST project, and while
+the R6 freeze is active it also requires the scoped acknowledgement. It asserts a
+`P1_PROVISION_PASS` sentinel read from the live catalog, so a skipped run cannot
+pass silently.
+
+The pgTAP suites in `tests/` require this step. DEV already carries pgTAP from the
+superseded chain and is deliberately left unchanged. The complete order for
+building a disposable TEST project is in
+[`docs/deployment/CLOUD_TEST_PROVISIONING.md`](../docs/deployment/CLOUD_TEST_PROVISIONING.md).
 
 ## Migration workflow
 

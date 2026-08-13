@@ -12,6 +12,7 @@ const MIGRATION_APPLYING_COMMANDS = Object.freeze([
   "db-push-dry",
   "db-push",
   "db-seed",
+  "db-provision-test-tooling",
 ]);
 
 const CI_DATABASE_COMMANDS = Object.freeze({
@@ -23,6 +24,19 @@ const CI_DATABASE_COMMANDS = Object.freeze({
     "--linked",
     "--file",
     "supabase/seed.sql",
+  ],
+  // R6-C1 / ADR-018. Installs pgTAP into a non-production project only. It is
+  // deliberately not a migration, so it is listed here rather than being
+  // reachable through `db push`, and it is treated as migration-applying so the
+  // R6 freeze acknowledgement is required for it too.
+  "db-provision-test-tooling": [
+    "db",
+    "query",
+    "--linked",
+    "--output-format",
+    "json",
+    "--file",
+    "supabase/provisioning/nonproduction/001_database_test_tooling.sql",
   ],
   "db-lint": [
     "db",
@@ -60,6 +74,19 @@ function required(environment, name) {
   return value;
 }
 
+/**
+ * Commands whose single result row must carry an explicit success sentinel.
+ *
+ * A guarded command that produced no rows, was silently skipped, or partially
+ * applied must not read as success merely because the CLI exited zero.
+ */
+const COMMAND_RESULT_SENTINELS = Object.freeze({
+  "db-provision-test-tooling": Object.freeze({
+    column: "p1_provision_result",
+    value: "P1_PROVISION_PASS",
+  }),
+});
+
 export function resolveCiDatabaseCommand(commandName) {
   if (!Object.hasOwn(CI_DATABASE_COMMANDS, commandName)) {
     throw new Error("Select one of the allowlisted CI database commands.");
@@ -67,6 +94,14 @@ export function resolveCiDatabaseCommand(commandName) {
 
   const command = CI_DATABASE_COMMANDS[commandName];
   return [...command];
+}
+
+export function resolveCommandResultSentinel(commandName) {
+  if (!Object.hasOwn(COMMAND_RESULT_SENTINELS, commandName)) {
+    return null;
+  }
+
+  return COMMAND_RESULT_SENTINELS[commandName];
 }
 
 function persistedAcknowledgementWarning(commandName) {
@@ -166,6 +201,12 @@ export function validateRemoteDatabaseTestEnvironment(
     );
   }
 
+  // R6-C1: the DEV reference is mandatory, not merely honoured when present.
+  // An omitted value used to make the "TEST must differ from DEV" check pass
+  // vacuously, so forgetting to export it weakened the strongest protection the
+  // non-disposable DEV project has.
+  required(environment, "SUPABASE_DEV_PROJECT_ID");
+
   for (const protectedVariable of [
     "SUPABASE_DEV_PROJECT_ID",
     "SUPABASE_PRODUCTION_PROJECT_ID",
@@ -223,7 +264,11 @@ export function validateTransactionalSuite(source, filename) {
   }
 }
 
-export function parseSupabaseQueryResult(output, filename) {
+export function parseSupabaseQueryResult(
+  output,
+  filename,
+  expectation = { column: "p1_test_result", value: "P1_TEST_PASS" },
+) {
   let result;
 
   try {
@@ -233,11 +278,13 @@ export function parseSupabaseQueryResult(output, filename) {
   }
 
   if (!Array.isArray(result.rows) || result.rows.length !== 1) {
-    throw new Error(`${filename} did not return one pgTAP completion row.`);
+    throw new Error(`${filename} did not return one completion row.`);
   }
 
-  if (result.rows[0]?.p1_test_result !== "P1_TEST_PASS") {
-    throw new Error(`${filename} reported a pgTAP failure.`);
+  if (result.rows[0]?.[expectation.column] !== expectation.value) {
+    throw new Error(
+      `${filename} did not report ${expectation.value} in ${expectation.column}.`,
+    );
   }
 }
 

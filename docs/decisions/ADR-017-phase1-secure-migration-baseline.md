@@ -53,7 +53,7 @@ The thirteen superseded files are removed from the active `supabase/migrations/`
 
 | # | Baseline file | Contents |
 |---|---|---|
-| 1 | `20260813020000_baseline_extensions_and_private_helpers.sql` | pgTAP, `private` schema, `private.set_updated_at()` |
+| 1 | `20260813020000_baseline_private_helpers.sql` | `private` schema, `private.set_updated_at()` (renamed in R6-C1; pgTAP removed — see ADR-018) |
 | 2 | `20260813020100_baseline_tenancy_and_membership.sql` | `organizations`, `branches`, `profiles`, `organization_members` |
 | 3 | `20260813020200_baseline_roles_and_assignments.sql` | `roles`, `permissions`, `role_permissions`, `branch_memberships`, `member_roles`, system-role seed |
 | 4 | `20260813020300_baseline_audit_foundation.sql` | `private.audit_metadata_is_safe`, `audit_events` incl. all P1-19 hardening |
@@ -194,7 +194,9 @@ R6-E must therefore prove equivalence using remote-safe mechanisms only — for 
 
 ## pgTAP: recorded, not silently decided
 
-`create extension if not exists pgtap with schema extensions` was present in the superseded chain and is **retained unchanged** in baseline file 1.
+> **RESOLVED in R6-C1 by [ADR-018](ADR-018-nonproduction-database-test-tooling.md): option (c).** The canonical baseline now creates no extension; pgTAP moved to `supabase/provisioning/nonproduction/`, applied only to DEV and disposable Cloud TEST projects, and the empty `APPROVED_EXTENSIONS` list makes any `CREATE EXTENSION` in a migration a lint violation. The rest of this section records the reasoning as it stood at R6-A and is retained for history.
+
+`create extension if not exists pgtap with schema extensions` was present in the superseded chain and was **retained unchanged** in baseline file 1 at R6-A.
 
 The concern is real: pgTAP is a testing extension, and installing it in a future production project is unnecessary attack surface and schema-introspection surface. It is not directly Data API-callable (the `extensions` schema is not exposed through PostgREST), so this is a hygiene issue rather than a live escalation path.
 
@@ -231,6 +233,7 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 |---|---|---|
 | R6-A | Author baseline + ADR in Git; no database contact | **Complete (this ADR)** |
 | R6-B | Static grant-last lint (enforced in `verify` + CI) and dynamic boundary-invariant tooling **authored only** | **Complete**; no database contact. See section 7 |
+| R6-C1 | Separate database test tooling from the canonical baseline; mandatory `SUPABASE_DEV_PROJECT_ID`; one-slot TEST runbook | **Complete**; no database contact. See [ADR-018](ADR-018-nonproduction-database-test-tooling.md) |
 | R6-C | Create disposable Cloud TEST project from zero | Not started — requires approval |
 | R6-D | Interrupted-replay boundary validation | Not started — requires approval |
 | R6-E | Cloud-safe equivalence + full verification | Not started — requires approval |

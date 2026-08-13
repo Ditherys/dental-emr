@@ -1,4 +1,4 @@
--- Phase 1 secure baseline — file 1 of 8: extensions and non-exposed helpers.
+-- Phase 1 secure baseline — file 1 of 8: non-exposed private helpers.
 --
 -- BASELINE INVARIANT (see docs/decisions/ADR-017-phase1-secure-migration-baseline.md)
 --
@@ -12,8 +12,11 @@
 -- projects additionally carry ALTER DEFAULT PRIVILEGES granting new objects in
 -- `public` to anon/authenticated/service_role. Both are neutralized explicitly
 -- and immediately below rather than relied upon to be absent.
-
-create extension if not exists pgtap with schema extensions;
+--
+-- The canonical baseline creates NO extension (R6-C1, ADR-018). Database test
+-- tooling — pgTAP — is provisioned separately and only into non-production
+-- projects by `supabase/provisioning/nonproduction/`. Reconstructing the
+-- application schema must never require installing testing infrastructure.
 
 create schema if not exists private;
 

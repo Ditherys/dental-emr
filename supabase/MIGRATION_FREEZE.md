@@ -53,8 +53,9 @@ the accepted schema on a disposable Cloud TEST project.
 ## Mechanical fail-safe
 
 `scripts/remote-database-test-guard.mjs` refuses the migration-applying commands
-in the CI allowlist (`db-push`, `db-push-dry`, `db-seed`) while this file exists,
-unless the operator sets **both** of the following:
+in the CI allowlist (`db-push`, `db-push-dry`, `db-seed`,
+`db-provision-test-tooling`) while this file exists, unless the operator sets
+**both** of the following:
 
 ```powershell
 $env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
@@ -76,9 +77,11 @@ Remove-Item Env:\MIGRATION_FREEZE_ACK, Env:\MIGRATION_FREEZE_ACK_COMMAND
 That acknowledgement does **not** weaken any existing control. The pre-existing
 Cloud TEST target guard still applies in full: `APP_ENVIRONMENT` must be `test`,
 `SUPABASE_PROJECT_ID` must equal `SUPABASE_TEST_PROJECT_ID`, the linked project
-must match it, the TEST project must differ from both `SUPABASE_DEV_PROJECT_ID`
-and `SUPABASE_PRODUCTION_PROJECT_ID`, and `DATABASE_TEST_CONFIRMATION` must be
-set. The acknowledgement is an additional gate layered on top, so an accidental
+must match it, `SUPABASE_DEV_PROJECT_ID` must be **set** (R6-C1 — it is no longer
+optional, so its absence can no longer make the next check pass vacuously), the
+TEST project must differ from both `SUPABASE_DEV_PROJECT_ID` and
+`SUPABASE_PRODUCTION_PROJECT_ID`, and `DATABASE_TEST_CONFIRMATION` must be set.
+The acknowledgement is an additional gate layered on top, so an accidental
 DEV-targeted push is refused twice.
 
 The same scoped acknowledgement is required by the R6-D boundary invariant runner

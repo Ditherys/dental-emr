@@ -1,0 +1,50 @@
+-- NON-PRODUCTION PROVISIONING — 001: database test tooling (pgTAP)
+--
+-- THIS FILE IS NOT A MIGRATION. It is deliberately outside
+-- `supabase/migrations/` so that it can never be replayed as part of the
+-- canonical application schema, and so `supabase db push` can never apply it.
+--
+-- Authority: docs/decisions/ADR-018-nonproduction-database-test-tooling.md
+--            (option (c) of the open pgTAP decision recorded in ADR-017)
+--
+-- Why this is separate
+-- --------------------
+-- pgTAP is database *testing* infrastructure. Requiring a production project to
+-- install it merely to reconstruct the application schema is unnecessary attack
+-- surface and unnecessary schema-introspection surface. The canonical baseline
+-- is therefore production-shaped and creates no extension at all; the migration
+-- privilege lint enforces that by holding an empty approved-extension list.
+--
+-- Where it is applied
+-- -------------------
+-- DEV and disposable Cloud TEST projects only, through the guarded runner:
+--
+--   npm run db:provision:test
+--
+-- That path requires APP_ENVIRONMENT=test, a linked project equal to
+-- SUPABASE_TEST_PROJECT_ID, a TEST reference distinct from both
+-- SUPABASE_DEV_PROJECT_ID (now mandatory) and SUPABASE_PRODUCTION_PROJECT_ID,
+-- DATABASE_TEST_CONFIRMATION, and — while the R6 freeze is active — the scoped
+-- MIGRATION_FREEZE_ACK acknowledgement. DEV already carries pgTAP from the
+-- superseded chain and must not be modified to remove it (ADR-018 §4).
+--
+-- Idempotent. Contains no application schema, no data, and no privilege grant
+-- to PUBLIC, anon, or authenticated on any application object.
+
+create extension if not exists pgtap with schema extensions;
+
+-- Evidence row. The guarded runner asserts this exact sentinel so a silently
+-- skipped or partially applied provisioning step cannot read as success.
+select
+  case
+    when exists (
+      select 1
+      from pg_catalog.pg_extension as installed
+      join pg_catalog.pg_namespace as schema_of
+        on schema_of.oid = installed.extnamespace
+      where installed.extname = 'pgtap'
+        and schema_of.nspname = 'extensions'
+    )
+    then 'P1_PROVISION_PASS'
+    else 'P1_PROVISION_FAIL'
+  end as p1_provision_result;

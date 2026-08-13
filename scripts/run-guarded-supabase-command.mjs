@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertMigrationFreezeAllows,
+  parseSupabaseQueryResult,
   readLinkedProjectId,
   resolveCiDatabaseCommand,
+  resolveCommandResultSentinel,
   validateRemoteDatabaseTestEnvironment,
 } from "./remote-database-test-guard.mjs";
 
@@ -65,11 +67,15 @@ try {
     readLinkedProjectId(linkedProjectFile),
   );
 
+  const sentinel = resolveCommandResultSentinel(commandName);
+
   const result = spawnSync(process.execPath, [supabaseCli, ...command], {
     cwd: repositoryRoot,
     encoding: "utf8",
     env: process.env,
-    stdio: "inherit",
+    maxBuffer: 16 * 1024 * 1024,
+    // A sentinel-checked command's stdout must be captured to be asserted on.
+    stdio: sentinel ? ["inherit", "pipe", "inherit"] : "inherit",
   });
 
   if (result.error) {
@@ -78,6 +84,11 @@ try {
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+
+  if (sentinel) {
+    parseSupabaseQueryResult(result.stdout ?? "", commandName, sentinel);
+    console.log(`PASS ${commandName} (${sentinel.value})`);
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : "Unknown failure.");

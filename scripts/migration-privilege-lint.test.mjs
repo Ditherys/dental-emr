@@ -341,6 +341,9 @@ describe("the active Phase 1 baseline", () => {
     expect(count("table")).toBe(11);
     expect(count("function")).toBe(27);
     expect(count("policy")).toBe(11);
+    // R6-C1 / ADR-018: the canonical baseline is production-shaped and creates
+    // no extension. pgTAP is provisioned only into non-production projects.
+    expect(count("extension")).toBe(0);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
     ).toBe(21);
@@ -600,6 +603,29 @@ describe("the approved final privilege set", () => {
     for (const extension of APPROVED_EXTENSIONS) {
       expect(extension.reason ?? "").not.toBe("");
     }
+  });
+
+  // R6-C1 / ADR-018. The empty list is the enforcement mechanism, so a test
+  // must fail if a later change quietly re-approves an extension without the
+  // review that entry represents.
+  it("approves no extension in the canonical baseline", () => {
+    expect(APPROVED_EXTENSIONS).toEqual([]);
+  });
+
+  it("refuses pgTAP if it is ever reintroduced into a migration", () => {
+    const result = lintMigrations({
+      files: [
+        {
+          name: FIXTURE_OBJECTS_FILE,
+          source: "create extension if not exists pgtap with schema extensions;\n",
+        },
+        { name: FIXTURE_FINAL_FILE, source: readFixture("safe-final-grants.sql") },
+      ],
+      terminalMigrations: FIXTURE_TERMINALS,
+      approvedExtensions: APPROVED_EXTENSIONS,
+    });
+
+    expect(rulesOf(result)).toContain("unapproved-extension");
   });
 
   it("grants browser-reachable roles no write privilege beyond the profiles self-service columns", () => {
