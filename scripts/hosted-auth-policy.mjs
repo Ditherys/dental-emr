@@ -106,6 +106,16 @@ export const HOSTED_AUTH_POLICY = Object.freeze([
     satisfied: (value) => typeof value === "string" && value.trim() !== "",
   },
   {
+    // Added after the Supabase security advisor flagged this as disabled on the
+    // first real TEST project (R6-E). The R4 policy had missed it entirely.
+    key: "password_hibp_enabled",
+    type: BOOLEAN,
+    expectation: "true",
+    reason:
+      "Leaked-password protection checks new passwords against HaveIBeenPwned. Credential stuffing is the most common way a workforce account holding health information is taken over, and a length-and-character policy does nothing against a password that is already public.",
+    satisfied: (value) => value === true,
+  },
+  {
     key: "security_update_password_require_reauthentication",
     type: BOOLEAN,
     expectation: "true",

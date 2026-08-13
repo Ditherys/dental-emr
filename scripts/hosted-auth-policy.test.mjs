@@ -17,6 +17,7 @@ const compliantConfiguration = {
   mfa_phone_enroll_enabled: false,
   mfa_phone_verify_enabled: false,
   password_min_length: 12,
+  password_hibp_enabled: true,
   password_required_characters:
     "abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789",
   security_update_password_require_reauthentication: true,
@@ -61,6 +62,7 @@ describe("hosted Auth policy", () => {
     ["mfa_phone_verify_enabled", true],
     ["password_min_length", 8],
     ["password_required_characters", ""],
+    ["password_hibp_enabled", false],
     ["security_update_password_require_reauthentication", false],
     ["refresh_token_rotation_enabled", false],
     ["security_refresh_token_reuse_interval", 600],

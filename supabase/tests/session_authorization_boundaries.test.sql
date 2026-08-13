@@ -236,6 +236,17 @@ select extensions.is(
   'A0 control: the branch-scoped user starts able to see exactly their branch'
 );
 
+-- The RLS helpers are correctly unreachable from `authenticated` — the schema
+-- and every helper are revoked, and RLS policy expressions do not require the
+-- querying role to hold EXECUTE. So probe them with the role dropped while the
+-- victim's JWT claims stay exactly as they were: `auth.uid()` reads
+-- `request.jwt.claim.sub`, which is unchanged, so the helper still answers
+-- "what may THIS user do", which is the question under test.
+--
+-- Calling them as `authenticated` instead would only re-prove that the private
+-- schema is locked down, which `foundation_rls.test.sql` already asserts.
+reset role;
+
 select extensions.ok(
   (select private.has_branch_access('83000000-0000-0000-0000-000000000001')),
   'A0 control: exact-branch access is held before revocation'
@@ -269,7 +280,6 @@ select extensions.lives_ok(
 
 -- Back to the victim's ORIGINAL session context, unchanged.
 reset role;
-set local role authenticated;
 select set_config('request.jwt.claim.sub', '81000000-0000-0000-0000-000000000003', true);
 select set_config('request.jwt.claims', '{"aal":"aal1"}', true);
 
@@ -285,6 +295,10 @@ select extensions.ok(
   )),
   'A3 the branch-scoped role confers nothing once branch access is revoked'
 );
+
+-- Same claims, now back under the browser-reachable role, so this asserts the
+-- effect through RLS rather than through the helper.
+set local role authenticated;
 
 select extensions.is(
   (select count(*)::integer from public.branches),

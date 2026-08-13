@@ -4,19 +4,32 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R8 preparation and the Phase 1 acceptance review — everything about CI that can exist before a Git remote does, plus a formal, honest acceptance decision
+**Task / slice:** R6-C and R6-E executed against the real disposable Cloud TEST project — the first database evidence in this remediation
 
-**Previous checkpoints:** R4 (`1c92e8a`) hosted-Auth verifier; R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Previous checkpoints:** R8 prep + acceptance review (`d6cf076`), R3 docs (`65545c7`); R4 (`1c92e8a`) hosted-Auth verifier; R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
-**Status:** Implemented and locally verified. **No remote database and no hosted project were contacted at any checkpoint.** R6-A/R6-B equivalence and boundary claims remain unproven; independent Codex review of every R6 and R5 checkpoint is REQUIRED and still pending.
+**Status:** TEST-01 reconstruction and verification COMPLETE. Six pgTAP suites, type-drift, schema lint, and security advisors all green against a project built from the baseline alone. One real test defect found and fixed by executing previously-unrun SQL; one real security gap found by the advisors. R6-A/R6-B equivalence and boundary claims remain unproven; independent Codex review of every R6 and R5 checkpoint is REQUIRED and still pending.
 
 ## Context
 
 Every checkpoint since `35092e7` is work that can be *authored and locally verified* without a hosted project, deliberately sequenced so that when TEST-01 exists the whole remaining verification set can run in one pass rather than in five separate approval rounds.
 
 What that leaves unproven is stated plainly throughout: authored SQL, authored E2E, and an authored hosted-Auth policy have never executed. None of it counts as evidence until it runs.
+
+## What Changed (R6-C / R6-E execution)
+
+**First remote database contact of this remediation.** Target verified as `dental-emr-test-01` on every command; `dental-emr-dev` reported `linked: false` throughout.
+
+- **The missed step was pgTAP provisioning.** The operator had applied the eight baseline migrations but not `npm run db:provision:test`, so pgTAP was absent and every database suite would have failed at its first `extensions.no_plan()`. The catalog-read sentinel surfaced it cleanly instead of as a confusing downstream error.
+- **6/6 pgTAP suites PASS**, including the never-executed R5-A suite. `db:types:check:test` reports no drift; `db:lint:test` clean; advisors 0 ERROR / 7 WARN.
+- **The four pre-existing suites were written against the superseded thirteen-migration chain and pass unmodified against the baseline.** That is real behavioural evidence the consolidation preserved semantics — though not yet a catalog-level equivalence proof.
+- **R5-A failed on first execution and was fixed.** It probed `private.*` RLS helpers while acting as `authenticated`; that schema is correctly revoked, and PostgreSQL does not require the querying role to hold EXECUTE for functions inside a policy expression. The defect was the test's, not the system's. Fixed by dropping the role for helper probes while leaving the victim's JWT claims untouched, so `auth.uid()` still resolves to the victim. Had it shipped unrun it would have looked like coverage and delivered none.
+- **The advisors found a real gap in this project's own R4 policy:** leaked-password protection is disabled and `password_hibp_enabled` was not among the 14 rules. Rule and test added; the hosted setting still needs enabling in the Dashboard.
+- The six `SECURITY DEFINER` advisor warnings are accepted and documented: they are the entire authenticated write surface, definer-rights precisely so AAL2, anti-self-escalation, delegation checks, the advisory lock, and audit emission cannot be skipped.
+- New `scripts/provision-e2e-identities.mjs` (`npm run e2e:provision`) — creates the three synthetic login identities, wires them to the seeded graph, and enrolls **and verifies** an owner TOTP factor (no admin API exists for that; a factor only reaches `verified` by answering a challenge). Refuses a TOTP-secret output path inside the repository.
+- New `docs/evidence/R6C-R6E-test01.md`.
 
 ## What Changed (R8 prep + R10)
 

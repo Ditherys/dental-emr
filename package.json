@@ -17,6 +17,7 @@
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list",
     "test:e2e:responsive": "playwright test --grep @responsive",
+    "e2e:provision": "node scripts/provision-e2e-identities.mjs",
     "test:db": "node scripts/run-remote-database-tests.mjs",
     "verify": "npm run security:migrations && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run security:secrets && npm run security:audit",
     "security:audit": "npm audit --audit-level=high",
