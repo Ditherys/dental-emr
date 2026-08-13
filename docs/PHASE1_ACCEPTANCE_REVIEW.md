@@ -34,11 +34,21 @@ It is not a claim about runtime behaviour on a real database — see H-1.
 
 ### High
 
-**H-1 — The secure baseline's equivalence to the accepted schema is unproven.**
-`supabase/migrations/` (8 files) claims to build the same schema DEV already
-holds. Nothing has verified that. R6-E exists precisely to prove it and has not
-run. Every future Phase 2 migration would rest on this unverified premise, and
-R6-F would assert "applied" against a database never shown to match.
+**H-1 — [RESOLVED 2026-08-14]** The secure baseline's catalog-level equivalence
+to DEV is now proven. R6-C/R6-E's suite/lint/type/advisor results
+(`docs/evidence/R6C-R6E-test01.md`) plus a direct schema-only `pg_dump`
+comparison of `public`/`private`/`extensions` between DEV and TEST-01
+(`docs/evidence/R6E-catalog-comparison.md`) found the two catalogs
+byte-for-byte identical, modulo pg_dump's own per-run `\restrict` nonce. This
+closes the equivalence question; it does not close H-2 below, which is a
+separate claim about migration *history*, not schema content.
+
+**H-1 (original wording) — The secure baseline's equivalence to the accepted
+schema is unproven.** `supabase/migrations/` (8 files) claims to build the same
+schema DEV already holds. Nothing has verified that. R6-E exists precisely to
+prove it and has not run. Every future Phase 2 migration would rest on this
+unverified premise, and R6-F would assert "applied" against a database never
+shown to match.
 *Evidence needed:* R6-C reconstruction on a disposable Cloud TEST project, then
 R6-E cloud-safe equivalence. *Blocked on:* human creation of TEST-01.
 

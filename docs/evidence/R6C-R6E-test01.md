@@ -111,7 +111,7 @@ procurement decision, not a configuration one.
 
 | Item | Why it is not closed |
 |---|---|
-| Catalog-level equivalence, TEST vs DEV | Requires a read-only connection to DEV. The CLI is linked to TEST, and re-linking mid-session would put a DEV-targeted command one mistake away. Needs a deliberate, separately approved step. |
+| Catalog-level equivalence, TEST vs DEV | **Resolved 2026-08-14** — see `docs/evidence/R6E-catalog-comparison.md`. Used a direct `pg_dump` connection through Supabase's Session Pooler; `supabase link` was never issued against DEV, so the re-linking risk this row originally described did not apply to the method actually used. |
 | `npm run security:auth` | Needs `SUPABASE_ACCESS_TOKEN` in the process environment. The CLI's own session does not satisfy the script. |
 | Playwright flows (R5-B, R9 matrix) | Need the three synthetic login identities and a verified owner TOTP factor. `npm run e2e:provision` now automates this; it needs `SUPABASE_SECRET_KEY`. `verified_mfa_factors` was 0 at the time of writing. |
 | R6-D interrupted-boundary replay | Requires a second, genuinely fresh project (TEST-02) after TEST-01 is disposed. |
