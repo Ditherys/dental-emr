@@ -99,7 +99,54 @@ Phase 1 is consolidated into a baseline; Phase 2 resumes small, reviewable domai
 
 > Privileges to `authenticated` / `anon` are granted only in the final file of a migration set, and are never broadened and later narrowed.
 
-R6-B will add static and dynamic enforcement of this rule so it cannot silently erode as patients, scheduling, clinical, and billing tables arrive.
+R6-B adds static and dynamic enforcement of this rule so it cannot silently erode as patients, scheduling, clinical, and billing tables arrive. See section 7.
+
+### 7. How the invariant is enforced (R6-B)
+
+A rule that lives only in prose erodes. The invariant is therefore mechanically enforced, in two layers with deliberately different failure modes.
+
+#### 7.1 Static enforcement — `npm run security:migrations`
+
+`scripts/migration-privilege-lint.mjs` parses every active migration into statements and evaluates rules over a structured privilege model. It is offline and contacts no database. It runs in `npm run verify` and in the CI application job.
+
+It is explicitly **not** a keyword search for `GRANT INSERT`. The H2 defect class includes several forms that no such search would catch, and each has a rule and a negative fixture:
+
+| Vector | Rule |
+|---|---|
+| `GRANT` on tables/columns/schemas/sequences/functions before the terminal file | `grant-outside-terminal-migration` |
+| A new function keeping PostgreSQL's default `PUBLIC EXECUTE` | `creation-not-fail-closed` / `security-definer-not-fail-closed` |
+| A new table inheriting Supabase's default privileges | `creation-not-fail-closed` |
+| `ALTER DEFAULT PRIVILEGES` | `alter-default-privileges` |
+| `GRANT <role> TO authenticated` (role membership) | `role-membership-grant` |
+| `GRANT ... ON ALL TABLES IN SCHEMA public` | `unapproved-grant` |
+| `GRANT` assembled at run time inside a function body or `DO` block | `dynamic-privilege-statement` |
+| `WITH GRANT OPTION` | `grant-option` |
+| An unqualified grant target resolved through `search_path` | `unqualified-grant-target` |
+| A Data API table created without RLS | `public-table-without-rls` |
+| A definer-rights function without `set search_path = ''` | `function-search-path` |
+
+**The approved final privilege set is data, not code.** `scripts/approved-final-grants.mjs` records all 30 approved privileges — 22 to `authenticated`, 8 to `service_role`, none to `anon` or `PUBLIC` — each with the reason it exists. The comparison is exact in both directions and column-precise: an extra privilege fails, and a privilege the approved list still records but the migration no longer grants also fails, because a stale allowlist is a false record of the boundary. Changing the set requires editing that file, which is a review-visible diff stating what changed and why.
+
+**The checker fails closed.** Anything unparseable in a privilege-relevant position — a malformed file, an unmodelled object class, a `GRANT` form the parser does not understand, an empty migration, a renamed terminal migration — is reported as a violation. It never passes because it failed to look.
+
+**Deliberate conservatism** (documented expected false positives): a migration outside a registered terminal file may contain no `GRANT` at all, even to `service_role`; `ALTER DEFAULT PRIVILEGES` is refused everywhere; a covering `REVOKE` must be `REVOKE ALL` and must name the object explicitly; an unnamed multi-word-typed function parameter may not resolve, in which case the author must name the parameter. Each of these fails loudly rather than silently.
+
+The checker is proven to **catch** the defect, not merely to agree with today's files: `scripts/fixtures/migration-privilege-lint/` holds synthetic unsafe migrations — including `GRANT INSERT ON public.roles TO authenticated` and an unrevoked `SECURITY DEFINER` function — that the test suite asserts are rejected. They live outside `supabase/migrations/`, carry a `FIXTURE_NOT_A_MIGRATION` marker, and a test asserts no active migration contains that marker.
+
+#### 7.2 Dynamic enforcement — R6-D, authored but not executed
+
+Static analysis proves the files *say* the right thing. It cannot prove what PostgreSQL *does*: default privileges, role inheritance, ACL retention across `CREATE OR REPLACE`, and Supabase's own project defaults all live outside the SQL text.
+
+`supabase/verification/r6d/` and `scripts/boundary-privilege-invariant.mjs` close that gap by comparing **effective** privileges (`has_table_privilege`, `has_column_privilege`, `has_function_privilege`, `has_schema_privilege`, `has_sequence_privilege`, and `aclexplode` over `coalesce(acl, acldefault(...))` for `PUBLIC`) against a platform baseline measured on the target project before any baseline migration is applied.
+
+Two properties make a passing run mean something:
+
+- **The comparison is relative to a measured baseline**, not to a guess at Supabase's defaults, so it stays correct when those defaults change.
+- **A blind probe cannot read as a clean result.** The tooling refuses a snapshot in which the browser-reachable roles were not found, in which fewer objects were examined than the applied migrations create, in which its view shrank between boundaries, or which is missing or malformed.
+
+The live authorization probe uses a synthetic actor holding the system `OWNER` role — the exact actor the superseded chain *would* have permitted every prohibited operation — and runs four meaningfulness controls before any prohibited attempt, so a refusal is a privilege boundary rather than a powerless user.
+
+The decision logic is unit-tested offline. **None of it has been executed against a database**, and R6-D remains outstanding and separately approval-gated.
 
 ## Superseded migrations
 
@@ -183,7 +230,7 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 | Step | Scope | Status |
 |---|---|---|
 | R6-A | Author baseline + ADR in Git; no database contact | **Complete (this ADR)** |
-| R6-B | Static grant-last lint + dynamic boundary-invariant test | Not started |
+| R6-B | Static grant-last lint (enforced in `verify` + CI) and dynamic boundary-invariant tooling **authored only** | **Complete**; no database contact. See section 7 |
 | R6-C | Create disposable Cloud TEST project from zero | Not started — requires approval |
 | R6-D | Interrupted-replay boundary validation | Not started — requires approval |
 | R6-E | Cloud-safe equivalence + full verification | Not started — requires approval |
@@ -201,3 +248,12 @@ R6-A changes security-sensitive migration architecture and must receive an indep
 4. that the five administrative RPCs and `record_mfa_enrollment` preserve AAL2 gating, anti-self-escalation, permission-superset checks, the organization-scoped advisory lock, and audit emission;
 5. that the migration-freeze guard is correctly scoped and cannot be bypassed by the guarded npm command paths;
 6. that this ADR does not overstate what R6-A proves.
+
+R6-B adds a second review surface with its own questions:
+
+7. that the static lint's parser is not defeatable — quoted identifiers, dollar-quoted bodies, nested comments, `CREATE OR REPLACE`, overloaded signatures, wildcard grants, role membership, and dynamic SQL;
+8. that its rules genuinely cover the H2 class rather than the current file set, and that the negative fixtures fail for the reason claimed;
+9. that the approved final privilege set in `scripts/approved-final-grants.mjs` matches `20260813020700_baseline_final_grants.sql` privilege by privilege, column by column;
+10. that the R6-D SQL is correct — it has never been executed, and its catalog assumptions, `acldefault` usage, and pgTAP assertions are unverified;
+11. that the R6-D vacuity guards actually prevent a blind probe from reading as a clean result;
+12. that the scoped freeze acknowledgement narrowed the bypass rather than widening it.

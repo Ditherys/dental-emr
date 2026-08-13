@@ -69,17 +69,40 @@ export function resolveCiDatabaseCommand(commandName) {
   return [...command];
 }
 
+function persistedAcknowledgementWarning(commandName) {
+  return (
+    `A migration freeze bypass token is present in the environment while ` +
+    `running "${commandName}", which does not need one. A bypass token must ` +
+    `not persist in a shell session. Clear it:\n` +
+    `  Remove-Item Env:\\MIGRATION_FREEZE_ACK, Env:\\MIGRATION_FREEZE_ACK_COMMAND`
+  );
+}
+
+/**
+ * Refuses migration-applying commands while the R6 freeze file exists.
+ *
+ * Returns warnings for the caller to surface; throws when the command is
+ * refused. The acknowledgement is narrowly scoped on purpose: it authorizes one
+ * named command, so a token left exported after an approved step cannot silently
+ * authorize the next one. It is additive — every pre-existing Cloud TEST target
+ * check in validateRemoteDatabaseTestEnvironment still applies in full.
+ */
 export function assertMigrationFreezeAllows(
   commandName,
   freezeIsActive,
   environment,
 ) {
-  if (!freezeIsActive) {
-    return;
-  }
+  const warnings = [];
+  const acknowledgementPresent =
+    (environment.MIGRATION_FREEZE_ACK?.trim() ?? "") !== "" ||
+    (environment.MIGRATION_FREEZE_ACK_COMMAND?.trim() ?? "") !== "";
 
-  if (!MIGRATION_APPLYING_COMMANDS.includes(commandName)) {
-    return;
+  if (!freezeIsActive || !MIGRATION_APPLYING_COMMANDS.includes(commandName)) {
+    if (acknowledgementPresent) {
+      warnings.push(persistedAcknowledgementWarning(commandName));
+    }
+
+    return warnings;
   }
 
   if (environment.MIGRATION_FREEZE_ACK?.trim() !== MIGRATION_FREEZE_ACK) {
@@ -90,6 +113,30 @@ export function assertMigrationFreezeAllows(
         `TEST target check still applies.`,
     );
   }
+
+  if (environment.MIGRATION_FREEZE_ACK_COMMAND?.trim() !== commandName) {
+    throw new Error(
+      `The R6 migration freeze acknowledgement is scoped to one command. ` +
+        `Set MIGRATION_FREEZE_ACK_COMMAND to exactly "${commandName}" to ` +
+        `authorize this step. This prevents an acknowledgement left in a shell ` +
+        `session from silently authorizing a different migration command.`,
+    );
+  }
+
+  warnings.push(
+    [
+      "",
+      "  ============================================================",
+      "   R6 MIGRATION FREEZE BYPASS IN USE",
+      `   command : ${commandName}`,
+      "   This is only approved for the disposable Cloud TEST project.",
+      "   If this is DEV, stop now — see supabase/MIGRATION_FREEZE.md.",
+      "  ============================================================",
+      "",
+    ].join("\n"),
+  );
+
+  return warnings;
 }
 
 export function validateRemoteDatabaseTestEnvironment(

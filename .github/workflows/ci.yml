@@ -33,6 +33,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      # Static, offline, and contacts no database. Runs before the rest so a
+      # broken migration privilege boundary fails the build immediately.
+      - name: Verify migration privilege invariant
+        run: npm run security:migrations
+
       - name: Run lint
         run: npm run lint
 

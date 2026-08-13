@@ -40,11 +40,15 @@ try {
   const commandName = process.argv[2];
   const command = resolveCiDatabaseCommand(commandName);
 
-  assertMigrationFreezeAllows(
+  const freezeWarnings = assertMigrationFreezeAllows(
     commandName,
     existsSync(migrationFreezeFile),
     process.env,
   );
+
+  for (const warning of freezeWarnings) {
+    console.warn(warning);
+  }
 
   if (!existsSync(linkedProjectFile)) {
     throw new Error(

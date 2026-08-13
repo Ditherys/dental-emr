@@ -4,91 +4,86 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R6-A — author the Phase 1 secure migration baseline (grant-last, fail-closed) in Git only
+**Task / slice:** R6-B — automated enforcement of the ADR-017 grant-last invariant: a static migration privilege lint (enforced), plus dynamic boundary-invariant tooling (authored only)
 
-**Implementing agent:** Claude Code, resumed as primary implementation agent (Codex temporarily unavailable — usage limit reached)
+**Implementing agent:** Claude Code (Codex still unavailable)
 
-**Status:** Implemented and statically verified. **No remote database was contacted. Independent Codex review is REQUIRED and still pending.**
+**Status:** Implemented and locally verified. **No remote database was contacted. R6-A's baseline equivalence remains unproven. Independent Codex review of both R6-A and R6-B is REQUIRED and still pending.**
 
 ## Context
 
-R6 remediates confirmed finding H2: the superseded migration chain contained a real intermediate weaker-authorization window. `20260812050800_foundation_rls_policies.sql` granted `authenticated` direct administrative table writes carried only by RLS policies; `20260812051000_harden_foundation_admin_mutations.sql` revoked them and replaced them with AAL2-gated RPCs. Two committed boundaries (after `050800` and after `050900`) therefore exposed AAL1, unaudited, non-superset-checked privilege escalation to an intra-organization actor holding `role.manage`.
+R6-A replaced the thirteen superseded Phase 1 migrations with an eight-file grant-last secure baseline, closing the H2 intermediate-weaker-authorization window structurally. That invariant lived only in prose and reviewer discipline. R6-B makes it mechanical, so it cannot erode silently as Phase 2 domains arrive.
 
-The accepted **final** schema was never the vulnerability. The defect was in the migration **path**, and an additive migration cannot fix an ordering defect.
+Two deliverables, with deliberately different status:
 
-The approved strategy is **Option A2** (grant-last, multi-file secure baseline) plus **Option E1** (static and dynamic enforcement of the invariant). R6-A delivers only the baseline and ADR. R6-B through R6-F are not started.
+1. **Static lint — enforced today.** Offline, wired into `npm run verify` and the CI application job.
+2. **Dynamic boundary tooling — authored, never executed.** R6-C/D remain approval-gated; only remote execution is left to add.
 
 ## What Changed
 
-- **Replaced 13 superseded migration files with 8 baseline files** in `supabase/migrations/`. The superseded SQL was **not** copied anywhere; Git history preserves it. ADR-017 records every superseded version, filename, and introducing commit SHA.
-  - `20260813020000_baseline_extensions_and_private_helpers.sql`
-  - `20260813020100_baseline_tenancy_and_membership.sql`
-  - `20260813020200_baseline_roles_and_assignments.sql`
-  - `20260813020300_baseline_audit_foundation.sql`
-  - `20260813020400_baseline_workforce_invitations.sql`
-  - `20260813020500_baseline_authorization_helpers_and_policies.sql`
-  - `20260813020600_baseline_administrative_rpcs.sql`
-  - `20260813020700_baseline_final_grants.sql` — **the only file that grants**
-- Added `docs/decisions/ADR-017-phase1-secure-migration-baseline.md`.
-- Added `supabase/MIGRATION_FREEZE.md` and a narrowly scoped mechanical freeze guard (`assertMigrationFreezeAllows` in `scripts/remote-database-test-guard.mjs`, called from `scripts/run-guarded-supabase-command.mjs`), plus 5 unit tests.
-- Updated `supabase/README.md` with the freeze notice and the grant-last rule.
+**Static lint**
+- `scripts/migration-privilege-lint.mjs` — SQL statement splitter (line/nested-block comments, string literals, quoted identifiers, dollar-quoted bodies), privilege-statement parser, and the rule engine.
+- `scripts/approved-final-grants.mjs` — the approved final privilege set as reviewable data: 30 entries, each with a reason (22 `authenticated`, 8 `service_role`, zero `anon`/`PUBLIC`), plus the approved-extension list.
+- `scripts/run-migration-privilege-lint.mjs` — CLI; `npm run security:migrations`.
+- `scripts/migration-privilege-lint.test.mjs` — 40 tests.
+- `scripts/fixtures/migration-privilege-lint/` — 13 synthetic unsafe migrations + README.
+
+**Dynamic R6-D tooling (authored only)**
+- `supabase/verification/r6d/boundary-privilege-snapshot.sql` — effective-privilege probe for PUBLIC/anon/authenticated across tables, columns, functions, schemas, sequences.
+- `supabase/verification/r6d/live-authorization-probe.sql` — transactional pgTAP probe with a deliberately privileged synthetic actor and four meaningfulness controls.
+- `scripts/boundary-privilege-invariant.mjs` — assertion logic (no I/O), unit-tested offline.
+- `scripts/run-boundary-privilege-invariant.mjs` — four-way-gated runner; `--mode=file` and `--mode=statement` (interrupted replay).
+- `scripts/boundary-privilege-invariant.test.mjs` — 23 tests.
+- `supabase/verification/r6d/README.md`.
+
+**Freeze guard, integration, docs**
+- `scripts/remote-database-test-guard.mjs` — the freeze acknowledgement is now **scoped to one named command** via `MIGRATION_FREEZE_ACK_COMMAND`, prints a conspicuous banner when used, and warns when a bypass token persists in the environment. Bypass strength was narrowed, not widened.
+- `package.json` — `security:migrations`, added as the first step of `verify`.
+- `.github/workflows/ci.yml` — "Verify migration privilege invariant" step in the application job.
+- `docs/decisions/ADR-017-…` §7 (enforcement), R6-B marked complete, six added Codex review questions; `supabase/MIGRATION_FREEZE.md`; `supabase/README.md`.
 
 ## Security / Tenancy Design
 
-**The grant-last invariant:** files 1–7 grant nothing to `PUBLIC`, `anon`, or `authenticated`. File 8 is the only file that grants.
+**What the static lint refuses.** Not a keyword search. Rules cover: grants outside a registered grant-terminal migration; tables/functions/schemas/sequences created without an adjacent `REVOKE ALL` from PUBLIC/anon/authenticated; `ALTER DEFAULT PRIVILEGES` (ADR-017 §4); role-membership grants; `ON ALL … IN SCHEMA` wildcards; `WITH GRANT OPTION`; unqualified grant targets; privilege statements built at run time inside function bodies or `DO` blocks; `public` tables without RLS; functions without `set search_path = ''`.
 
-The invariant is enforced by **explicit revocation adjacent to each `CREATE`**, not by the absence of a `GRANT`. Two default-privilege mechanisms would otherwise leak access silently:
+**Terminal-migration allowlist.** Exact in both directions and column-precise. An extra privilege fails; a privilege the approved list records but the migration no longer grants also fails, because a stale allowlist is a false record of the boundary.
 
-- PostgreSQL grants `EXECUTE` on new functions to `PUBLIC` — a live definer-rights path for `SECURITY DEFINER` functions from the instant of creation;
-- Supabase's `ALTER DEFAULT PRIVILEGES` grants new `public` objects to `anon`/`authenticated`/`service_role`. In the superseded chain, tables inherited broad write privileges at boundaries 2–8 and were held closed only by RLS-with-no-policies.
+**Fail-closed.** Malformed SQL, unmodelled object classes, unparseable `GRANT` forms, empty migrations, and a renamed/deleted terminal migration are all violations. The checker never passes because it failed to look. Deliberate conservatism is documented in ADR-017 §7.1.
 
-**The guarantee does not depend on transaction semantics.** No claim is made that a migration file or a whole `db push` is atomic. Because privileges are revoked statement-adjacently and granted only in file 8, an interruption anywhere leaves a state strictly more restrictive than the final one. R6-D will test boundary behaviour empirically.
+**Proven to catch, not merely to agree.** The fixtures include `GRANT INSERT ON public.roles TO authenticated` and an unrevoked `SECURITY DEFINER` function. They live outside `supabase/migrations/`, carry `FIXTURE_NOT_A_MIGRATION`, and a test asserts no active migration contains that marker.
 
-`ALTER DEFAULT PRIVILEGES` is deliberately **not** used: it is role-specific, R6-A had no database contact, and the object-creating role could not be verified. Explicit per-object `REVOKE` is correct regardless of owner. Adding a reviewed `ALTER DEFAULT PRIVILEGES` remains a candidate after R6-C/D identify the creating role.
-
-**Scope:** the invariant is asserted for `PUBLIC`, `anon`, `authenticated`. `service_role` is explicitly out of scope — server-only, `BYPASSRLS` by design, and **unchanged** from the accepted schema at every boundary. R6 is remediation, not authorization redesign.
+**R6-D design (unexecuted).** Effective privileges, not ACL text — `has_*_privilege` for named roles, `aclexplode(coalesce(acl, acldefault(...)))` for PUBLIC, so a `NULL` `proacl` is correctly read as "EXECUTE TO PUBLIC". Compared against a platform baseline measured on the target project before any baseline migration, so no guess at Supabase defaults is baked in. Vacuity guards refuse a snapshot that found neither browser role, examined fewer objects than the applied migrations create, shrank between boundaries, or is missing/malformed. The live probe's synthetic actor holds the system `OWNER` role — exactly the actor the superseded chain would have permitted every prohibited operation — and four controls (identity bound, permissions genuinely held, approved RPC succeeds, AAL1 refused) must pass before any refusal counts as evidence.
 
 ## Database / Remote State
 
-- **No remote database was contacted.** No `db push`, `db push --dry-run`, `migration list`, `migration repair`, `db reset`, remote SQL, MCP call, TEST creation, or DEV modification occurred.
-- **DEV migration history was NOT repaired and intentionally remains unreconciled.** DEV holds the 13 superseded versions and none of the 8 baseline versions. DEV's schema is correct and unchanged.
-- **Migration pushes against DEV are frozen until R6-F.** See `supabase/MIGRATION_FREEZE.md`.
-- **Full equivalence remains unproven until R6-C/D/E.** What follows is static evidence, not remote verification.
+- **No remote database was contacted.** No `db push`, `--dry-run`, `migration list`, `migration repair`, `db reset`, remote SQL, MCP call, TEST creation, or DEV modification.
+- **The migration freeze remains ACTIVE.** `supabase/MIGRATION_FREEZE.md` is unchanged in force; only its documentation of the now-scoped acknowledgement changed.
+- **DEV history remains intentionally unreconciled** (13 superseded versions recorded, 8 baseline versions not). DEV's schema is correct and unchanged.
+- **R6-C, R6-D, R6-E, R6-F all remain outstanding and separately approval-gated.**
 
 ## Verification Performed
 
-All checks were local/static. Comparisons read the superseded chain from `git show d9bcf82:...`.
-
-- **Final function/policy set:** 27 functions and 11 surviving policies compared whitespace-normalized against the superseded chain's final definitions — **exact match**, no missing/extra objects. All 21 policies dropped by the old chain confirmed absent.
-- **Schema object sets:** tables 11/11, named constraints 31/31, indexes 14/14, triggers 10/10, RLS-enables 10/10 — **exact match**.
-- **Table column definitions:** identical for all 11 tables except `audit_events`, whose only differences are the intended consolidation of the P1-19 `ALTER TABLE ADD CONSTRAINT` statements and the `correlation_id` default into `CREATE TABLE`. All 7 P1-19 constraint expressions verified preserved byte-for-byte (whitespace-normalized).
-- **Adjacency:** every created function and table has a `revoke all` within the statements immediately following it.
-- **`search_path`:** 27/27 functions declare `set search_path = ''`. 21 are `SECURITY DEFINER`.
-- **Boundary privilege simulation** (models PostgreSQL `PUBLIC` `EXECUTE` defaults, Supabase default privileges, and ACL preservation across `CREATE OR REPLACE`):
-  - superseded chain: 16→80 `public`-table write privileges held by browser-reachable roles at boundaries 2–8; 76 at boundaries 9–10 (the H2 window, exploitable once permissive mutation policies existed); 5 at the end.
-  - **baseline: 0 write privileges and 0 definer `EXECUTE` for `PUBLIC`/`anon`/`authenticated` at every boundary 1–7**; at boundary 8 exactly 5 (the `profiles` self-service columns) and 11 definer `EXECUTE` grants.
-  - **final effective privilege state identical: 104 entries each.**
-- `npm run verify`: lint ✓, typecheck ✓, unit tests **121/121 across 19 files** (was 116/19; +5 freeze-guard tests) ✓, build ✓ (CI placeholder env), secretlint ✓ no findings, `npm audit --audit-level=high` ✓ 0 vulnerabilities.
-- `git diff --cached --check` ✓ (CRLF warnings are pre-existing Windows Git behaviour).
+- `npm run security:migrations` ✓ — 8 files, 232 statements, 93 GRANT/REVOKE statements, 1 terminal migration, 30 approved privileges, 0 violations.
+- Parser cross-check against the R6-A record: 11 tables, 27 functions (21 `SECURITY DEFINER`, 27/27 with `set search_path = ''`), 11 policies — exact match, so the lint is inspecting the baseline rather than skipping it.
+- `npm run verify` ✓ — migration lint, lint, typecheck, unit tests **188/188 across 21 files** (was 121/19: +40 migration lint, +23 boundary invariant, +5 freeze-guard, −1 freeze-guard test replaced by the scoped-acknowledgement tests), build (CI placeholder env), secretlint 0 findings, `npm audit --audit-level=high` 0 vulnerabilities.
+- `git diff --check` ✓ (CRLF warnings are pre-existing Windows Git behaviour).
 
 ## Known Limitations / Open Items
 
-- **Equivalence is a reviewed authoring claim plus static evidence — not a proof.** Only R6-C/D/E against a disposable Cloud TEST project can prove it.
-- **R6-E must use a cloud-safe equivalence method.** `supabase db diff` may require a local shadow/container; ADR-016 forbids introducing a local Supabase runtime or Docker requirement, so Docker-based `db diff` must not be mandatory. Privilege comparison must be semantic (`has_*_privilege`), not textual ACL comparison.
-- **The CI database job will now fail while the freeze is active**, by design. It also targets a TEST project that already holds the 13 superseded versions, so pushing the baseline there would fail regardless. R6-C must create a genuinely new disposable TEST project. (Moot today: per H1 the repository still has no Git remote, so CI has never executed.)
-- **pgTAP is retained unchanged** in baseline file 1. Removing it would create per-environment schema drift, which is out of R6 scope. ADR-017 records this as an **open decision requiring human approval**, with a recommendation to gate it at the production-bootstrap step.
-- The freeze guard covers the `npm run db:*` paths only; it cannot intercept a raw `npx supabase db push`. `MIGRATION_FREEZE.md` recommends removing local `supabase/.temp/` link state as an additional operator precaution.
-- The superseded chain's correctness quietly depended on `CREATE OR REPLACE FUNCTION` preserving ACLs (`051000`/`051100` replace functions without re-revoking). The baseline creates every function exactly once, removing that dependency.
+- **The R6-D SQL has never been executed.** Syntax, catalog assumptions, `acldefault` usage, and pgTAP assertions are unverified authored work; expect corrections on first run.
+- **R6-A equivalence to the accepted DEV schema is still unproven.** The static lint proves an invariant about the migration *path*; it says nothing about equivalence. That is R6-E.
+- **The static lint is intentionally conservative.** Non-terminal migrations may contain no `GRANT` at all; `ALTER DEFAULT PRIVILEGES` is refused everywhere; a covering `REVOKE` must be `REVOKE ALL` naming the object explicitly; an unnamed multi-word-typed function parameter may not resolve and requires naming. Each fails loudly.
+- **Phase 2 will need an allowlist entry.** Adding privileges means registering a new grant-terminal migration and its exact grants in `scripts/approved-final-grants.mjs`. That is the intended review gate, not an obstacle to work around.
+- **The freeze guard still covers only the `npm run db:*` paths.** It cannot intercept a raw `npx supabase db push` typed at a shell, and no repository-level change can. The recommended operator precaution (removing local `supabase/.temp/` link state) stands.
+- **`service_role` is out of scope** for both layers, per ADR-017 §5.
+- **pgTAP in the canonical baseline remains an open decision** requiring human approval (ADR-017).
+- **No independent review has occurred.** ADR-017 lists twelve verification questions, six of them added for R6-B.
 
-## Areas Codex Should Scrutinize
+## What Codex Should Scrutinize
 
-1. Semantic equivalence of the baseline to the accepted final schema — object by object, not by inspection of the summary above.
-2. Whether the grant-last property truly holds across table, column, sequence, schema, function `EXECUTE`, default, `PUBLIC`, and role-inheritance paths.
-3. Every `SECURITY DEFINER` function: fail-closed creation, `set search_path = ''`, and preserved AAL2 / anti-self-escalation / permission-superset / advisory-lock / audit behaviour.
-4. That the five administrative RPCs and `record_mfa_enrollment` are the final (`051000` + `051100` + P1-19) versions, not earlier ones.
-5. Whether the freeze guard is correctly scoped and cannot be bypassed through the guarded npm command paths.
-6. Whether ADR-017 or this handoff overstates what R6-A proves.
-
-## Independent Review Note
-
-**Codex is unavailable (usage limit reached). No independent review has occurred and none is claimed.** Unlike R1, this checkpoint changes security-sensitive migration architecture and **must not be treated as accepted** until Codex has independently reviewed it against the actual Git diff.
+1. Whether the statement splitter can be defeated — nested comments, `''` escapes, quoted identifiers, `$tag$` bodies, `$1` parameters, statements without trailing semicolons.
+2. Whether the rule set covers the H2 class or merely the current files; whether each negative fixture fails for the stated reason.
+3. Whether `scripts/approved-final-grants.mjs` matches `20260813020700_baseline_final_grants.sql` privilege by privilege and column by column.
+4. Whether the R6-D SQL is correct, and whether the vacuity guards genuinely prevent a blind probe from reading as a clean result.
+5. Whether the scoped freeze acknowledgement narrowed the bypass rather than widening it.
+6. Whether this handoff and ADR-017 §7 overstate what R6-B proves.

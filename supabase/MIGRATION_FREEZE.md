@@ -54,10 +54,23 @@ the accepted schema on a disposable Cloud TEST project.
 
 `scripts/remote-database-test-guard.mjs` refuses the migration-applying commands
 in the CI allowlist (`db-push`, `db-push-dry`, `db-seed`) while this file exists,
-unless the operator sets:
+unless the operator sets **both** of the following:
 
 ```powershell
 $env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
+$env:MIGRATION_FREEZE_ACK_COMMAND='db-push'   # the exact command being run
+```
+
+The acknowledgement is **scoped to one named command** (R6-B). A token left
+exported after an approved `db-push-dry` does not authorize a later `db-push`;
+the second variable must be changed deliberately for each step. Whenever the
+bypass is used the guard prints a conspicuous banner naming the command, and
+whenever a `MIGRATION_FREEZE_ACK` value is found in the environment for a command
+that does not need one, the guard warns that a bypass token is persisting and
+should be cleared:
+
+```powershell
+Remove-Item Env:\MIGRATION_FREEZE_ACK, Env:\MIGRATION_FREEZE_ACK_COMMAND
 ```
 
 That acknowledgement does **not** weaken any existing control. The pre-existing
@@ -67,6 +80,11 @@ must match it, the TEST project must differ from both `SUPABASE_DEV_PROJECT_ID`
 and `SUPABASE_PRODUCTION_PROJECT_ID`, and `DATABASE_TEST_CONFIRMATION` must be
 set. The acknowledgement is an additional gate layered on top, so an accidental
 DEV-targeted push is refused twice.
+
+The same scoped acknowledgement is required by the R6-D boundary invariant runner
+(`scripts/run-boundary-privilege-invariant.mjs`), which additionally requires
+`--approved-r6d` and `R6D_BOUNDARY_TEST_CONFIRMATION`. Nothing in the repository
+satisfies those gates today.
 
 ### Known limitation
 

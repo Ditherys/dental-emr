@@ -50,12 +50,56 @@ describe("R6 migration freeze", () => {
     ).toThrow(/migration freeze is active/);
   });
 
-  it("allows the approved Cloud TEST steps to proceed with the exact acknowledgement", () => {
+  it("refuses an acknowledgement that is not scoped to the command being run", () => {
     expect(() =>
       assertMigrationFreezeAllows("db-push", true, {
         MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
       }),
+    ).toThrow(/scoped to one command/);
+
+    // A token left over from an approved dry run must not authorize the push.
+    expect(() =>
+      assertMigrationFreezeAllows("db-push", true, {
+        MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
+        MIGRATION_FREEZE_ACK_COMMAND: "db-push-dry",
+      }),
+    ).toThrow(/scoped to one command/);
+  });
+
+  it("allows the approved Cloud TEST steps to proceed with the exact scoped acknowledgement", () => {
+    expect(() =>
+      assertMigrationFreezeAllows("db-push", true, {
+        MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
+        MIGRATION_FREEZE_ACK_COMMAND: "db-push",
+      }),
     ).not.toThrow();
+  });
+
+  it("announces the bypass conspicuously when it is used", () => {
+    const warnings = assertMigrationFreezeAllows("db-push", true, {
+      MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
+      MIGRATION_FREEZE_ACK_COMMAND: "db-push",
+    });
+
+    expect(warnings.join("\n")).toContain("R6 MIGRATION FREEZE BYPASS IN USE");
+  });
+
+  it("warns when a bypass token is left in the environment for a command that does not need it", () => {
+    const warnings = assertMigrationFreezeAllows("db-lint", true, {
+      MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
+    });
+
+    expect(warnings.join("\n")).toContain("must not");
+    expect(
+      assertMigrationFreezeAllows("db-push", false, {
+        MIGRATION_FREEZE_ACK: MIGRATION_FREEZE_ACK,
+      }).join("\n"),
+    ).toContain("must not");
+  });
+
+  it("stays silent when no bypass token is present", () => {
+    expect(assertMigrationFreezeAllows("db-lint", true, {})).toEqual([]);
+    expect(assertMigrationFreezeAllows("db-push", false, {})).toEqual([]);
   });
 
   it("never blocks read-only inspection commands", () => {

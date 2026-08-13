@@ -47,6 +47,35 @@ restrictive than the final state without depending on any assumption about
 migration transaction atomicity. When adding Phase 2 migrations, preserve this
 rule: grant only in the final file of a set, and never broaden then narrow.
 
+### The rule is enforced, not just documented
+
+```powershell
+npm run security:migrations
+```
+
+`scripts/run-migration-privilege-lint.mjs` parses every active migration and
+fails the build if the invariant breaks. It is part of `npm run verify` and of
+the CI application job, is entirely offline, and contacts no database.
+
+In practice this means:
+
+- a migration outside a registered grant-terminal file may contain **no** `GRANT`
+  at all;
+- every table, function, schema, and sequence must revoke `PUBLIC`, `anon`, and
+  `authenticated` before the next privilege-bearing `CREATE` in the same file;
+- every `public`-schema table must enable RLS in the file that creates it;
+- every function must declare `set search_path = ''`;
+- the grant-terminal migration's privileges must equal the approved set in
+  `scripts/approved-final-grants.mjs` exactly, column lists included.
+
+To add a privilege in a future phase, register the new terminal migration and its
+exact grants in `scripts/approved-final-grants.mjs` with a reason for each. That
+registration is the review gate — see `docs/decisions/ADR-017-phase1-secure-migration-baseline.md`.
+
+`supabase/verification/r6d/` holds the dynamic counterpart, which verifies
+effective privileges against a live database. It is authored but **not yet
+executed**; see its README.
+
 ## Migration workflow
 
 Create schema changes as reviewable migration files under `migrations/`. Do not create application tables in the Supabase Dashboard and leave them untracked.
