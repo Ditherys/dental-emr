@@ -62,6 +62,7 @@ Configure these environment secrets:
 SUPABASE_TEST_ACCESS_TOKEN
 SUPABASE_TEST_DB_PASSWORD
 SUPABASE_TEST_PUBLISHABLE_KEY
+SUPABASE_TEST_SECRET_KEY
 E2E_OWNER_EMAIL, E2E_OWNER_PASSWORD, E2E_OWNER_TOTP_SECRET
 E2E_BRANCH_USER_EMAIL, E2E_BRANCH_USER_PASSWORD
 E2E_SUSPENDED_EMAIL, E2E_SUSPENDED_PASSWORD
@@ -76,11 +77,26 @@ operation invokes the same target guard as the pgTAP runner. The guard requires
 `APP_ENVIRONMENT=test`, exact project/URL agreement before linking, exact
 linked/project/URL agreement afterward, explicit disposable confirmation, and
 separation from declared DEV/production project references.
-It then dry-runs and applies pending migrations, loads the idempotent synthetic
-seed, runs rollback-bounded pgTAP suites, checks generated database types, runs
-linked schema lint/security advisors, and exercises desktop/iPad Playwright
-flows. It never starts a local Supabase/Docker stack and never resets the remote
-database.
+It then dry-runs and applies pending migrations, provisions non-production
+database test tooling ([ADR-018](../decisions/ADR-018-nonproduction-database-test-tooling.md) —
+the canonical baseline installs no extension, so the pgTAP suites cannot run
+without this step), loads the idempotent synthetic seed, runs rollback-bounded
+pgTAP suites, checks generated database types, runs linked schema lint and
+security advisors, verifies the hosted Auth posture read-only, and exercises the
+Playwright flows across desktop, iPad, and the phone/tablet responsive matrix. It
+never starts a local Supabase/Docker stack and never resets the remote database.
+
+### While the R6 migration freeze is active
+
+`supabase/MIGRATION_FREEZE.md` makes the guarded runner refuse every
+migration-applying command, so the Cloud TEST job **cannot pass** until the
+approved R6-F reconciliation removes the freeze. That is intended.
+
+Do **not** add `MIGRATION_FREEZE_ACK` to the workflow. A CI-wide bypass would
+convert a deliberate, per-command, human-acknowledged control into an automatic
+one, which is the opposite of what the freeze is for. Until the freeze lifts,
+treat `CI / Application verification` as the required check and add
+`CI / Cloud TEST database and E2E` to branch protection the moment it can pass.
 
 Protected credentials are step-scoped: package installation and target metadata
 validation receive none; database credentials are exposed only to the relevant

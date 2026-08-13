@@ -4,9 +4,9 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R4 — hosted Supabase Auth posture: a read-only, reproducible verifier plus the recorded baseline it asserts
+**Task / slice:** R8 preparation and the Phase 1 acceptance review — everything about CI that can exist before a Git remote does, plus a formal, honest acceptance decision
 
-**Previous checkpoints:** R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Previous checkpoints:** R4 (`1c92e8a`) hosted-Auth verifier; R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
@@ -18,7 +18,16 @@ Every checkpoint since `35092e7` is work that can be *authored and locally verif
 
 What that leaves unproven is stated plainly throughout: authored SQL, authored E2E, and an authored hosted-Auth policy have never executed. None of it counts as evidence until it runs.
 
-## What Changed (R4)
+## What Changed (R8 prep + R10)
+
+- New `docs/deployment/GITHUB_BOOTSTRAP.md` — the minimum human-only GitHub actions: private repository and remote, secret scanning and push protection, the protected `cloud-test` environment, and branch protection with the exact required-check names. States plainly that a workflow file is not CI evidence.
+- New `docs/PHASE1_ACCEPTANCE_REVIEW.md` — **decision: Phase 1 is NOT accepted.** Zero Critical, eight High, four Medium, four Low. Seven of the eight High findings are "evidence has never been produced" rather than "a defect was found", and every one of those is gated on a human action rather than on further implementation.
+- `docs/deployment/CI_FOUNDATION.md` — adds `SUPABASE_TEST_SECRET_KEY`, the new provisioning and hosted-Auth steps, and an explicit instruction never to add `MIGRATION_FREEZE_ACK` to CI.
+- All four workflow/config files verified to parse, with job and step names matching the required-check names.
+
+**The one substantive scope finding (H-5):** branch update and archive are unimplemented, while the plan's audit framework names `branch.updated` and `branch.archived` — two declared audit actions no code path can emit. Deferred until after R6-F on purpose: implementing it needs migration 9, and adding one now would put a freshly built TEST project out of step with DEV and invalidate the equivalence R6-E exists to prove.
+
+## What Changed (R4, `1c92e8a`)
 
 - New `scripts/hosted-auth-policy.mjs` — the approved posture as data: 14 rules, each with its expectation and the reason it exists (invitation-only signup, anonymous identities off, no email auto-confirm, TOTP enroll/verify on, phone MFA off, password floor and character classes, reauthentication to change a password, refresh-token rotation with a short reuse window, bounded `jwt_exp`, and a wildcard-free redirect allow list restricted to approved origins per environment).
 - New `scripts/verify-hosted-auth-config.mjs` — issues exactly **one HTTP GET** against the Management API. There is no write path, deliberately: `supabase config push` would apply a generated file carrying unrelated local defaults capable of replacing hosted redirect, email, password, and invitation settings nobody intended to change.
@@ -124,7 +133,9 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 
 ## Next Checkpoint
 
-R8 preparation — everything about CI that can exist before a Git remote does, then the consolidated human-action stop. R2 (branch update/archive) and R3 (MFA removal audit) stay deferred until after R6-F, because both need a migration and adding one now would put TEST and DEV out of step and invalidate the equivalence R6-E must prove.
+**BLOCKED — awaiting human action.** Every remaining Phase 1 item needs either a hosted Supabase project or a Git remote. The full checklist is in `docs/PHASE1_ACCEPTANCE_REVIEW.md` and `docs/deployment/CLOUD_TEST_PROVISIONING.md` / `GITHUB_BOOTSTRAP.md`.
+
+On resume, in order: R6-C (build TEST-01 from the baseline) → R6-E (equivalence, pgTAP, advisors, types, hosted Auth, Playwright, responsive matrix) → dispose TEST-01 → R6-D on TEST-02 → R6-F reconciliation and freeze removal → H-5 branch update/archive → re-run the acceptance review.
 
 ## Commits Requiring Later Codex Review
 
@@ -134,4 +145,5 @@ R8 preparation — everything about CI that can exist before a Git remote does, 
 - `37ef684` R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
 - `afb5518` R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
 - `3f2c658` R9-A responsive/accessibility matrix (MEDIUM — test tooling and a dev dependency; no production code path)
-- this commit, R4 hosted Auth verifier (MEDIUM — read-only, but its key names are unvalidated against a live project)
+- `1c92e8a` R4 hosted Auth verifier (MEDIUM — read-only, but its key names are unvalidated against a live project)
+- this commit, R8 prep and the acceptance review (LOW — documentation only)
