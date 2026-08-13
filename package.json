@@ -20,6 +20,7 @@
     "test:db": "node scripts/run-remote-database-tests.mjs",
     "verify": "npm run security:migrations && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run security:secrets && npm run security:audit",
     "security:audit": "npm audit --audit-level=high",
+    "security:auth": "node scripts/verify-hosted-auth-config.mjs",
     "security:migrations": "node scripts/run-migration-privilege-lint.mjs",
     "security:secrets": "secretlint \"**/*\"",
     "auth:bootstrap-owner": "node scripts/bootstrap-first-owner.mjs",

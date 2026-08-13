@@ -4,21 +4,32 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R9-A — responsive and accessibility verification: an automated matrix across five form factors plus the manual QA checklist the automated layer cannot replace
+**Task / slice:** R4 — hosted Supabase Auth posture: a read-only, reproducible verifier plus the recorded baseline it asserts
 
-**Previous checkpoints:** R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
+**Previous checkpoints:** R9-A (`3f2c658`) responsive/accessibility matrix; R5-B (`afb5518`) mid-session withdrawal E2E; R5-A (`37ef684`) pgTAP session-boundary suite; R6-C1 (`e790ffe`) — separate database test tooling from the canonical migration baseline, make the DEV project reference mandatory for guarded TEST operations, write the one-slot disposable Cloud TEST runbook
 
 **Implementing agent:** Claude Code (Codex still unavailable)
 
-**Status:** Implemented and locally verified. **No remote database was contacted.** R6-A/R6-B equivalence and boundary claims remain unproven; independent Codex review of R6-A, R6-B, and now R6-C1 is REQUIRED and still pending.
+**Status:** Implemented and locally verified. **No remote database and no hosted project were contacted at any checkpoint.** R6-A/R6-B equivalence and boundary claims remain unproven; independent Codex review of every R6 and R5 checkpoint is REQUIRED and still pending.
 
 ## Context
 
-The existing suites prove a *fresh* session with the wrong authorization is refused. They did not prove the complementary property — that authorization stops applying the instant it is withdrawn, with no re-login and no new JWT. That is where the Phase 1 exit review's R5 scenarios live, and it is the class of defect that survives a "all negative tests pass" review.
+Every checkpoint since `35092e7` is work that can be *authored and locally verified* without a hosted project, deliberately sequenced so that when TEST-01 exists the whole remaining verification set can run in one pass rather than in five separate approval rounds.
 
-R5-A covers the database half. R5-B (next) covers the browser/session half in Playwright.
+What that leaves unproven is stated plainly throughout: authored SQL, authored E2E, and an authored hosted-Auth policy have never executed. None of it counts as evidence until it runs.
 
-## What Changed (R9-A)
+## What Changed (R4)
+
+- New `scripts/hosted-auth-policy.mjs` — the approved posture as data: 14 rules, each with its expectation and the reason it exists (invitation-only signup, anonymous identities off, no email auto-confirm, TOTP enroll/verify on, phone MFA off, password floor and character classes, reauthentication to change a password, refresh-token rotation with a short reuse window, bounded `jwt_exp`, and a wildcard-free redirect allow list restricted to approved origins per environment).
+- New `scripts/verify-hosted-auth-config.mjs` — issues exactly **one HTTP GET** against the Management API. There is no write path, deliberately: `supabase config push` would apply a generated file carrying unrelated local defaults capable of replacing hosted redirect, email, password, and invitation settings nobody intended to change.
+- New `scripts/hosted-auth-policy.test.mjs` — 26 tests, including one weakening case per rule and six redirect-allow-list attacks (wildcard entry, bare wildcard, unapproved origin, approved-beside-unapproved, unparseable entry, empty list).
+- New `docs/security/HOSTED_AUTH_BASELINE.md`; `package.json` `security:auth`; CI runs it in the cloud-test job.
+
+**Fail-closed.** A setting the API does not report is reported as `UNVERIFIED` and exits non-zero. Supabase renames and adds configuration keys; a checker that skipped absent keys would report a posture it never inspected. This also means any key name that turns out to be wrong surfaces loudly on first run instead of passing falsely — which matters, because no hosted project has been read yet.
+
+**Never printed:** the access token, and the raw configuration payload (it can contain SMTP credentials and provider secrets). Only the specific policy keys and their scalar values are rendered.
+
+## What Changed (R9-A, `3f2c658`)
 
 - `playwright.config.ts` — five new projects: `phone-360`, `phone-430`, `ipad-portrait`, `ipad-landscape`, `desktop-responsive`, each running only `@responsive`-tagged flows. Re-running the authorization suite on five viewports would cost time without covering anything the desktop run already covers.
 - New `e2e/responsive-accessibility.spec.ts` — seven flows: axe WCAG 2.1 A/AA scans of sign-in, dashboard, branch settings, account & security, and the opened mobile navigation; horizontal-overflow assertions; WCAG 2.2 minimum target size (24 px); focus-indicator visibility; keyboard-only sign-in tab order; keyboard operation of the collapsed navigation (open, Escape, focus restored to trigger) and the branch selector; and an orientation change that must preserve entered form values.
@@ -90,6 +101,8 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 - Static review of the new SQL ✓ — balanced dollar quotes, balanced parentheses, 40 assertions, transaction-bounded (asserted by a unit test, not by eye).
 - Staged-diff review ✓ at both checkpoints — no secret, no application-behaviour change, no schema-object change beyond removing the extension.
 - `npx secretlint "e2e/**/*"` ✓ — 0 findings across the new harness and specs.
+- `npm run verify` ✓ after R4 — **225/225 unit tests across 22 files** (+26 hosted-Auth policy tests).
+- Hosted-Auth guard paths exercised locally ✓ — missing access token refused, TEST-equals-DEV refused, production target refused without the explicit `--read-production` flag. No network call was made in any of those paths.
 - `npx playwright test --list` ✓ with synthetic placeholder metadata — **54 tests across 3 files** resolve across the seven projects, confirming the `@responsive` grep and the form-factor matrix are wired as intended. No browser was launched and no server started.
 - **Not verified against a database or a browser:** the R6-C1 provisioning SQL, the entire R5-A suite, and the entire R5-B spec have never executed. All run first at R6-C/R6-E against TEST-01. Expect first-run corrections, exactly as with the R6-D SQL.
 
@@ -111,7 +124,7 @@ ADR-018 resolves ADR-017's open pgTAP decision as option (c): the canonical base
 
 ## Next Checkpoint
 
-R4 — hosted Supabase Auth posture: a reproducible verification script that reads the hosted configuration and asserts the intended posture (invitation-only onboarding, public signup disabled, password policy, redirect allowlist, TOTP enabled), rather than silently overwriting hosted settings. Then the R8 CI preparation, then the consolidated human-action stop.
+R8 preparation — everything about CI that can exist before a Git remote does, then the consolidated human-action stop. R2 (branch update/archive) and R3 (MFA removal audit) stay deferred until after R6-F, because both need a migration and adding one now would put TEST and DEV out of step and invalidate the equivalence R6-E must prove.
 
 ## Commits Requiring Later Codex Review
 
@@ -120,4 +133,5 @@ R4 — hosted Supabase Auth posture: a reproducible verification script that rea
 - `e790ffe` R6-C1 baseline + guard change (HIGH)
 - `37ef684` R5-A session-boundary pgTAP suite (HIGH — authorization tests that have never run)
 - `afb5518` R5-B mid-session withdrawal harness (HIGH — introduces secret-key use in the test process)
-- this commit, R9-A responsive/accessibility matrix (MEDIUM — test tooling and a dev dependency; no production code path)
+- `3f2c658` R9-A responsive/accessibility matrix (MEDIUM — test tooling and a dev dependency; no production code path)
+- this commit, R4 hosted Auth verifier (MEDIUM — read-only, but its key names are unvalidated against a live project)

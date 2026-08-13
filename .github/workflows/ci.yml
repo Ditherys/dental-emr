@@ -176,6 +176,12 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:lint:test
 
+      # Read-only. Asserts the hosted Auth posture; it never pushes config.
+      - name: Verify hosted Auth posture
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
+        run: npm run security:auth
+
       - name: Run database security advisors
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
