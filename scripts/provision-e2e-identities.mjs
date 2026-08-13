@@ -1,7 +1,7 @@
 /**
- * Provisions the three synthetic E2E login identities on a disposable Cloud
+ * Provisions the four synthetic E2E login identities on a disposable Cloud
  * TEST project, wires them to the seeded synthetic tenant graph, and enrolls a
- * verified TOTP factor for the owner.
+ * verified TOTP factor for the owner and the admin.
  *
  * The seed's nine `auth.users` rows are deliberately non-login placeholders: no
  * password, no confirmed email, no factor. The Playwright flows need real
@@ -10,6 +10,15 @@
  * would make the R5 authorization tests fail for a reason that has nothing to do
  * with authorization.
  *
+ * The admin identity is dedicated to `session-boundaries.spec.ts`'s mid-session
+ * suspension-then-mutation test. It reuses the seed's existing `org-a-admin`
+ * row, which already carries an organization-wide ADMIN assignment — ADMIN
+ * holds `branch.manage`, the same permission OWNER uses to add a branch, so the
+ * test still exercises a real authorized mutation. Suspending THIS identity
+ * mid-test, instead of the shared owner every other spec file signs in as,
+ * means a failure here can no longer cascade into unrelated tests running
+ * concurrently in other Playwright workers.
+ *
  * SAFETY
  * ------
  * - Refuses any target that is not the explicitly designated, linked, disposable
@@ -17,15 +26,17 @@
  * - Synthetic data only. Emails come from the caller; the documented fixtures use
  *   `.example.test`, which cannot receive real mail.
  * - Passwords are read from the environment and never printed or logged.
- * - The owner's TOTP secret is a credential. It is written to a file **outside
- *   the repository** that the caller names, with 0600-equivalent intent, and only
- *   the path is printed. It is never echoed to the terminal.
+ * - A TOTP secret is a credential. Newly enrolled secrets are written to a file
+ *   **outside the repository** that the caller names, with 0600-equivalent
+ *   intent, and only the path is printed. They are never echoed to the terminal.
  * - Idempotent: re-running repairs state rather than duplicating it.
  *
  * USAGE
  * -----
  *   $env:E2E_OWNER_EMAIL='owner@p1e2e.example.test'
  *   $env:E2E_OWNER_PASSWORD='<generated>'
+ *   $env:E2E_ADMIN_EMAIL='admin@p1e2e.example.test'
+ *   $env:E2E_ADMIN_PASSWORD='<generated>'
  *   $env:E2E_BRANCH_USER_EMAIL='branch@p1e2e.example.test'
  *   $env:E2E_BRANCH_USER_PASSWORD='<generated>'
  *   $env:E2E_SUSPENDED_EMAIL='suspended@p1e2e.example.test'
@@ -300,11 +311,11 @@ async function ensureRole(admin, memberId, roleId, branchId) {
 }
 
 /**
- * Enrolls and verifies a TOTP factor for the owner using a normal user session.
+ * Enrolls and verifies a TOTP factor for a fixture using a normal user session.
  * There is no admin API for this: a factor only reaches `verified` by answering
  * a challenge, which is exactly the property the AAL2 gate depends on.
  */
-async function ensureOwnerTotp(url, publishableKey, email, password) {
+async function ensureTotpFactor(url, publishableKey, email, password) {
   const user = createClient(url, publishableKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -398,10 +409,12 @@ try {
   });
 
   const ownerEmail = required("E2E_OWNER_EMAIL");
+  const adminEmail = required("E2E_ADMIN_EMAIL");
   const branchUserEmail = required("E2E_BRANCH_USER_EMAIL");
   const suspendedEmail = required("E2E_SUSPENDED_EMAIL");
 
   const ownerRoleId = await resolveSystemRoleId(admin, "OWNER");
+  const adminRoleId = await resolveSystemRoleId(admin, "ADMIN");
   const receptionistRoleId = await resolveSystemRoleId(admin, "RECEPTIONIST");
 
   // Owner: organization-wide OWNER, active, MFA-enrolled.
@@ -413,6 +426,18 @@ try {
   const ownerMemberId = await upsertMembership(admin, ownerUserId, "active");
   await ensureRole(admin, ownerMemberId, ownerRoleId, null);
   console.log("owner identity and organization-wide OWNER assignment ready");
+
+  // Admin: organization-wide ADMIN, active, MFA-enrolled. Dedicated to the
+  // mid-session suspension-then-mutation test so suspending it never touches
+  // the shared owner every other spec file signs in as.
+  const adminUserId = await upsertIdentity(
+    admin,
+    adminEmail,
+    required("E2E_ADMIN_PASSWORD"),
+  );
+  const adminMemberId = await upsertMembership(admin, adminUserId, "active");
+  await ensureRole(admin, adminMemberId, adminRoleId, null);
+  console.log("admin identity and organization-wide ADMIN assignment ready");
 
   // Branch user: active, RECEPTIONIST scoped to Branch A1 only, no MFA.
   const branchUserId = await upsertIdentity(
@@ -434,24 +459,37 @@ try {
   await upsertMembership(admin, suspendedUserId, "suspended");
   console.log("suspended identity ready");
 
-  const secret = await ensureOwnerTotp(
+  const ownerSecret = await ensureTotpFactor(
     url,
     publishableKey,
     ownerEmail,
     required("E2E_OWNER_PASSWORD"),
   );
+  const adminSecret = await ensureTotpFactor(
+    url,
+    publishableKey,
+    adminEmail,
+    required("E2E_ADMIN_PASSWORD"),
+  );
 
-  if (secret) {
-    writeFileSync(totpSecretOut, `${secret}\n`, { encoding: "utf8", mode: 0o600 });
+  const newlyEnrolled = [];
+  if (ownerSecret) newlyEnrolled.push(`E2E_OWNER_TOTP_SECRET=${ownerSecret}`);
+  if (adminSecret) newlyEnrolled.push(`E2E_ADMIN_TOTP_SECRET=${adminSecret}`);
+
+  if (newlyEnrolled.length > 0) {
+    writeFileSync(totpSecretOut, `${newlyEnrolled.join("\n")}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
     console.log(
-      `owner TOTP factor enrolled and verified; secret written to ${totpSecretOut}`,
+      `${newlyEnrolled.length} new TOTP factor(s) enrolled and verified; written to ${totpSecretOut}`,
     );
     console.log(
-      "Set E2E_OWNER_TOTP_SECRET from that file, then delete the file. It is a credential.",
+      "Set the matching E2E_*_TOTP_SECRET value(s) from that file, then delete the file. They are credentials.",
     );
   } else {
     console.log(
-      "owner already holds a verified TOTP factor; existing secret left untouched",
+      "owner and admin already hold verified TOTP factors; existing secrets left untouched",
     );
   }
 

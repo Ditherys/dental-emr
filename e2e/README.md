@@ -37,6 +37,9 @@ E2E_BRANCH_B1_ID=<synthetic-branch-b1-uuid>
 E2E_OWNER_EMAIL=<synthetic-owner-email>
 E2E_OWNER_PASSWORD=<secret-store-value>
 E2E_OWNER_TOTP_SECRET=<secret-store-value>
+E2E_ADMIN_EMAIL=<synthetic-admin-email>
+E2E_ADMIN_PASSWORD=<secret-store-value>
+E2E_ADMIN_TOTP_SECRET=<secret-store-value>
 E2E_BRANCH_USER_EMAIL=<synthetic-branch-user-email>
 E2E_BRANCH_USER_PASSWORD=<secret-store-value>
 E2E_SUSPENDED_EMAIL=<synthetic-suspended-user-email>
@@ -48,6 +51,15 @@ The owner fixture must have a verified TOTP factor and organization-wide
 `branch.manage`; the suspended identity must have no active organization
 membership. `E2E_RUN_ID` makes the Branch A3 creation unique in a disposable
 test run.
+
+The admin fixture must have a verified TOTP factor and organization-wide
+`branch.manage`, same as the owner, but must be a **different identity** from
+`E2E_OWNER_EMAIL`. `session-boundaries.spec.ts` suspends this identity
+mid-test to prove a mutation submitted after mid-session suspension is refused;
+using a dedicated identity keeps that suspension from touching the shared owner
+every other spec file signs in as. `npm run e2e:provision` provisions it from
+the seed's existing `org-a-admin` row, which already carries an
+organization-wide ADMIN assignment.
 
 ## Mid-session withdrawal flows (R5)
 

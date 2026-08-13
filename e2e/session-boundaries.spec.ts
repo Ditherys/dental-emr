@@ -15,6 +15,13 @@ import { signInOwnerWithTotp } from "./support/login";
  * restores the fixture in a `finally` block, and a final safety net runs after
  * the file so a mid-test failure cannot leave the shared TEST project degraded
  * for later runs.
+ *
+ * The mutation-after-suspension test below suspends `environment.adminUser`, a
+ * fixture dedicated to this file, rather than `environment.owner`. The owner is
+ * shared with every other spec file; a failure that left it suspended (a timed-
+ * out test skipping its `finally`, for example) would cascade into unrelated
+ * tests signing in concurrently in other Playwright workers. Suspending a
+ * fixture nothing else logs in as keeps that failure contained to this file.
  */
 
 const harness = createAdminHarness();
@@ -25,10 +32,6 @@ async function submitLogin(page: Page, email: string, password: string) {
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-}
-
-async function loginOwner(page: Page) {
-  await signInOwnerWithTotp(page, environment.owner);
 }
 
 async function loginBranchUser(page: Page) {
@@ -55,11 +58,11 @@ test.afterAll(async () => {
   );
   await harness.setMembershipStatus(branchMemberId, "active");
 
-  const ownerMemberId = await harness.resolveMemberId(
+  const adminMemberId = await harness.resolveMemberId(
     environment.organizationAId,
-    environment.owner.email,
+    environment.adminUser.email,
   );
-  await harness.setMembershipStatus(ownerMemberId, "active");
+  await harness.setMembershipStatus(adminMemberId, "active");
 });
 
 test("branch access revoked mid-session disappears from the open session", async ({
@@ -144,13 +147,13 @@ test("a mutation submitted after mid-session suspension is refused", async ({
 }) => {
   const memberId = await harness.resolveMemberId(
     environment.organizationAId,
-    environment.owner.email,
+    environment.adminUser.email,
   );
   const branchName = `E2E Suspended Attempt ${environment.runId}`;
   const branchCode = `SA-${environment.runId}`.toUpperCase();
   const branchSlug = `e2e-suspended-attempt-${environment.runId}`;
 
-  await loginOwner(page);
+  await signInOwnerWithTotp(page, environment.adminUser);
   await page.goto("/settings/branches");
 
   // The form is filled while the session is fully authorized. Authorization is

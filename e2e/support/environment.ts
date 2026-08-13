@@ -124,6 +124,15 @@ export function loadE2EEnvironment() {
       password: required("E2E_OWNER_PASSWORD"),
       totpSecret: required("E2E_OWNER_TOTP_SECRET"),
     },
+    // Dedicated to session-boundaries.spec.ts's mid-session suspension-then-
+    // mutation test. Organization-wide ADMIN (holds branch.manage, same as
+    // OWNER), MFA-enrolled. Suspending this identity mid-test must never
+    // suspend the shared `owner` fixture every other spec file signs in as.
+    adminUser: {
+      email: required("E2E_ADMIN_EMAIL"),
+      password: required("E2E_ADMIN_PASSWORD"),
+      totpSecret: required("E2E_ADMIN_TOTP_SECRET"),
+    },
     branchUser: {
       email: required("E2E_BRANCH_USER_EMAIL"),
       password: required("E2E_BRANCH_USER_PASSWORD"),
