@@ -23,7 +23,10 @@ hosted redirect, email, password, and invitation settings that nobody intended
 to change. A verifier that reports drift is safer than a pusher that silently
 resolves it.
 
-**A setting the API does not report counts as a failure**, not a pass. Supabase
+**A setting the API does not report counts as a failure**, not a pass. A rule
+carrying `requiredIn` is reported everywhere but only *fails* in the environments
+that require it — visible, never dropped, and never a check that cannot pass on
+the project it runs against. Supabase
 renames and adds configuration keys; a checker that skipped absent keys would
 report a posture it never inspected.
 
@@ -45,6 +48,7 @@ value anywhere; set it in the shell for the run.
 | `mfa_phone_verify_enabled` | `false` | Same. |
 | `password_min_length` | `>= 12` | Supabase's default of 6 is below the project floor for accounts that reach clinical data. |
 | `password_required_characters` | non-empty | Length alone permits trivially guessable secrets. |
+| `password_hibp_enabled` | `true` in staging/production | Leaked-password protection (HaveIBeenPwned). Credential stuffing is the main route to taking over a workforce account, and a length policy does nothing against an already-public password. **Supabase gates this on Pro plan and above**, so a Free-tier disposable TEST project cannot enable it — the checker reports it as `ADVISORY` there and as `FAIL` in staging/production. Dashboard location: Auth settings → Email provider settings → "Prevent the use of leaked passwords". |
 | `security_update_password_require_reauthentication` | `true` | Stops a hijacked session from locking out the legitimate owner. |
 | `refresh_token_rotation_enabled` | `true` | Rotation makes a stolen refresh token detectable rather than indefinitely usable. |
 | `security_refresh_token_reuse_interval` | `<= 10s` | The window exists for request races. A long window is a replay window. |
@@ -80,4 +84,5 @@ that reasoning. The policy is the intent; the hosted project is the observation.
 
 - **Not yet executed.** No hosted project has been read at the time of writing; the key names below come from the Management API's documented Auth configuration surface. Any key Supabase reports under a different name will surface as `UNVERIFIED` on first run rather than as a false pass, and the policy file is then corrected.
 - Email template bodies, SMTP configuration, and rate-limit tuning are not asserted.
+- **Production gate:** the production project must be provisioned on a plan that supports leaked-password protection. That is a procurement decision, not a configuration one, and it cannot be satisfied on a Free-tier project.
 - The checker verifies configuration, not behaviour. The behavioural counterparts are the invitation and MFA flows in `supabase/tests/workforce_invitations.test.sql`, `supabase/tests/session_authorization_boundaries.test.sql`, and `e2e/`.

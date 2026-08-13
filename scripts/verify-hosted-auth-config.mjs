@@ -133,7 +133,9 @@ try {
         ? "PASS"
         : finding.status === "violation"
           ? "FAIL"
-          : "UNVERIFIED";
+          : finding.status === "advisory"
+            ? "ADVISORY"
+            : "UNVERIFIED";
 
     console.log(`${marker.padEnd(11)} ${finding.key}`);
     console.log(`            expected : ${finding.expectation}`);
@@ -146,7 +148,9 @@ try {
 
   console.log("");
   console.log(
-    `${summary.ok} passed, ${summary.violations} violations, ${summary.unverified} unverified.`,
+    `${summary.ok} passed, ${summary.violations} violations, ` +
+      `${summary.unverified} unverified, ${summary.advisories} advisory ` +
+      `(not required in "${environment}", still required before production).`,
   );
 
   if (summary.violations > 0 || summary.unverified > 0) {

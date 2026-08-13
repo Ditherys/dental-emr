@@ -109,6 +109,14 @@ that a removal assertion must be captured **before** the unenroll, because after
 it the factor row is gone and absence is indistinguishable from "never existed".
 Implementation needs a migration and is deferred until after R6-F.
 
+**M-5 — Leaked-password protection is unavailable on the current Supabase plan.**
+The security advisors flagged it as disabled; it is gated on Pro plan and above,
+so the disposable Free-tier TEST project cannot enable it. Recorded as a **Phase 1
+production gate**: the production project must be provisioned on a plan that
+supports it. The hosted-Auth checker requires it in staging/production and
+reports it as advisory elsewhere, so it stays visible without producing a check
+that can never pass.
+
 **M-3 — Phase 1 has no branch-scoped write path.** Every mutation is
 organization-wide-permission gated, so the R5-A branch-revocation section asserts
 authorization *predicates* and read visibility rather than a refused branch-bound

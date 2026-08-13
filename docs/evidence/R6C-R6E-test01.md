@@ -89,9 +89,23 @@ project's own R4 policy, which did not cover it.**
 Leaked-password protection is disabled. Credential stuffing is the most common
 route to taking over a workforce account that reaches health information, and a
 length-and-character policy does nothing against a password that is already
-public. The rule `password_hibp_enabled` has been added to
-`scripts/hosted-auth-policy.mjs`; **the hosted setting still needs to be enabled
-in the Dashboard.**
+public.
+
+**It cannot be enabled on this project.** Supabase gates the feature on Pro plan
+and above (Auth settings → Email provider settings → "Prevent the use of leaked
+passwords"), and TEST-01 is below that tier — which is why the toggle is not
+visible in the Dashboard at all.
+
+The rule `password_hibp_enabled` was added to `scripts/hosted-auth-policy.mjs`
+and then corrected: it is **required in staging and production** and reported as
+**advisory** elsewhere. Requiring it everywhere would have made the check
+permanently red on the only project it currently runs against, and a check that
+can never pass teaches people to ignore it. The finding is still printed in every
+environment, so it cannot be forgotten.
+
+**Converted to a Phase 1 production gate:** the production project must be
+provisioned on a plan that supports leaked-password protection. That is a
+procurement decision, not a configuration one.
 
 ## Still open after this session
 

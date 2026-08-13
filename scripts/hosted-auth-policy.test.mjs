@@ -48,6 +48,7 @@ describe("hosted Auth policy", () => {
       ok: HOSTED_AUTH_POLICY.length,
       violations: 0,
       unverified: 0,
+      advisories: 0,
     });
   });
 
@@ -62,7 +63,6 @@ describe("hosted Auth policy", () => {
     ["mfa_phone_verify_enabled", true],
     ["password_min_length", 8],
     ["password_required_characters", ""],
-    ["password_hibp_enabled", false],
     ["security_update_password_require_reauthentication", false],
     ["refresh_token_rotation_enabled", false],
     ["security_refresh_token_reuse_interval", 600],
@@ -74,6 +74,51 @@ describe("hosted Auth policy", () => {
     );
 
     expect(findingFor(result, key)?.status).toBe("violation");
+  });
+
+  // Plan-gated in Supabase (Pro and above), so a Free-tier TEST project cannot
+  // satisfy it. It must still be REQUIRED where real credentials exist.
+  describe("environment-scoped rules", () => {
+    const weakened = { ...compliantConfiguration, password_hibp_enabled: false };
+
+    it.each(["staging", "production"])(
+      "fails leaked-password protection in %s",
+      (environment) => {
+        const result = evaluateHostedAuthPolicy(weakened, { environment });
+
+        expect(findingFor(result, "password_hibp_enabled")?.status).toBe(
+          "violation",
+        );
+      },
+    );
+
+    it.each(["test", "development"])(
+      "reports it as advisory rather than failing in %s",
+      (environment) => {
+        const result = evaluateHostedAuthPolicy(weakened, { environment });
+
+        expect(findingFor(result, "password_hibp_enabled")?.status).toBe(
+          "advisory",
+        );
+        expect(summarizeHostedAuthFindings(result.findings).violations).toBe(0);
+        expect(summarizeHostedAuthFindings(result.findings).advisories).toBe(1);
+      },
+    );
+
+    it("never silently drops the finding", () => {
+      const result = evaluateHostedAuthPolicy(weakened, { environment: "test" });
+
+      expect(findingFor(result, "password_hibp_enabled")).toBeDefined();
+    });
+
+    it("still requires every other rule in a non-production environment", () => {
+      const result = evaluateHostedAuthPolicy(
+        { ...compliantConfiguration, disable_signup: false },
+        { environment: "test" },
+      );
+
+      expect(findingFor(result, "disable_signup")?.status).toBe("violation");
+    });
   });
 
   it("treats an unreported setting as unverified, never as compliant", () => {

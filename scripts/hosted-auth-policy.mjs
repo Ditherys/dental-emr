@@ -108,11 +108,19 @@ export const HOSTED_AUTH_POLICY = Object.freeze([
   {
     // Added after the Supabase security advisor flagged this as disabled on the
     // first real TEST project (R6-E). The R4 policy had missed it entirely.
+    //
+    // Supabase gates this feature on Pro plan and above, so a disposable
+    // Free-tier TEST project cannot enable it. Requiring it everywhere would
+    // make this check permanently red on the only project it currently runs
+    // against, and a check that can never pass teaches people to ignore it.
+    // It is therefore a REQUIREMENT where real credentials exist and an
+    // ADVISORY elsewhere — never silently dropped.
     key: "password_hibp_enabled",
     type: BOOLEAN,
-    expectation: "true",
+    expectation: "true (required in staging/production; plan-gated elsewhere)",
+    requiredIn: ["staging", "production"],
     reason:
-      "Leaked-password protection checks new passwords against HaveIBeenPwned. Credential stuffing is the most common way a workforce account holding health information is taken over, and a length-and-character policy does nothing against a password that is already public.",
+      "Leaked-password protection checks new passwords against HaveIBeenPwned. Credential stuffing is the most common way a workforce account holding health information is taken over, and a length-and-character policy does nothing against a password that is already public. Provisioning the production project on a plan that supports it is a Phase 1 production gate.",
     satisfied: (value) => value === true,
   },
   {
@@ -227,9 +235,26 @@ export function evaluateHostedAuthPolicy(configuration, context) {
 
     const observed = configuration[rule.key];
 
+    if (rule.satisfied(observed, context)) {
+      return {
+        key: rule.key,
+        status: "ok",
+        expectation: rule.expectation,
+        reason: rule.reason,
+        observed,
+      };
+    }
+
+    // A rule scoped to specific environments still reports everywhere — it just
+    // does not fail a run in an environment where it is not yet required. The
+    // finding stays visible so it cannot be forgotten at the production gate.
+    const required = rule.requiredIn
+      ? rule.requiredIn.includes(context.environment)
+      : true;
+
     return {
       key: rule.key,
-      status: rule.satisfied(observed, context) ? "ok" : "violation",
+      status: required ? "violation" : "advisory",
       expectation: rule.expectation,
       reason: rule.reason,
       observed,
@@ -251,5 +276,8 @@ export function summarizeHostedAuthFindings(findings) {
     unverified: findings.filter((finding) =>
       ["not-reported", "unreadable"].includes(finding.status),
     ).length,
+    // Reported, deliberately non-failing in this environment, never dropped.
+    advisories: findings.filter((finding) => finding.status === "advisory")
+      .length,
   };
 }
