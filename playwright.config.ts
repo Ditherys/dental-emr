@@ -11,6 +11,23 @@ const responsiveMatrix = /@responsive/;
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
+  // signInOwnerWithTotp (support/login.ts) can spend up to ~30s waiting out a
+  // TOTP window after a single-use-code collision - its own documented
+  // worst case. Playwright's 30s default test timeout leaves zero room for
+  // that retry plus the rest of the test, so any test that logs in and hits
+  // a collision times out even when every step it performs actually
+  // succeeds. Give real headroom above that worst case.
+  timeout: 60_000,
+  // Every flow signs in as one of a handful of shared, MFA-enrolled synthetic
+  // identities against a single hosted, rate-limited Supabase Auth project.
+  // signInOwnerWithTotp's retry-once logic in support/login.ts only accounts
+  // for one code-collision within a 30s TOTP window; it assumes a serial
+  // suite, but Playwright's local default (workers = half the CPU count) runs
+  // several projects' logins concurrently against that same shared identity.
+  // That produced cascading "Unable to verify the session security level"
+  // server errors and browser sessions closing under contention. Force
+  // genuinely serial execution so the suite matches what it already assumes.
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",

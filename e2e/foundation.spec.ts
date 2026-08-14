@@ -37,7 +37,14 @@ test("owner completes MFA and sees the authorized shell @shell", async ({
 }) => {
   await loginOwner(page);
 
-  await expect(page.getByText(environment.organizationAName).first()).toBeVisible();
+  // The org name renders twice — an xl:-only sidebar copy and a
+  // sm:block xl:hidden header copy for narrower widths — so .first() alone
+  // isn't reliable: on viewports below the app's xl (1280px) breakpoint the
+  // sidebar copy is first in DOM order but CSS-hidden. Filter to the one
+  // that's actually visible at the current viewport.
+  await expect(
+    page.getByText(environment.organizationAName).filter({ visible: true }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Branch context: All Branches" }),
   ).toBeVisible();
@@ -99,7 +106,14 @@ test("an Org A owner cannot select an Org B administrative context", async ({
     `/settings/branches?organizationId=${environment.organizationBId}`,
   );
 
-  await expect(page.getByText(environment.organizationAName).first()).toBeVisible();
+  // The org name renders twice — an xl:-only sidebar copy and a
+  // sm:block xl:hidden header copy for narrower widths — so .first() alone
+  // isn't reliable: on viewports below the app's xl (1280px) breakpoint the
+  // sidebar copy is first in DOM order but CSS-hidden. Filter to the one
+  // that's actually visible at the current viewport.
+  await expect(
+    page.getByText(environment.organizationAName).filter({ visible: true }).first(),
+  ).toBeVisible();
   await expect(page.getByText(environment.organizationBName)).toHaveCount(0);
 
   await page.evaluate(

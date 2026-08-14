@@ -114,7 +114,12 @@ test("a member suspended mid-session loses tenant content on the next request", 
   );
 
   await loginBranchUser(page);
-  await expect(page.getByText(environment.organizationAName).first()).toBeVisible();
+  // See the comment on the equivalent assertion in foundation.spec.ts: the org
+  // name renders twice (an xl:-only sidebar copy, a narrower-viewport header
+  // copy), so filter to the one actually visible rather than trusting DOM order.
+  await expect(
+    page.getByText(environment.organizationAName).filter({ visible: true }).first(),
+  ).toBeVisible();
 
   try {
     await harness.setMembershipStatus(memberId, "suspended");

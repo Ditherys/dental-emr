@@ -61,11 +61,15 @@ async function expectUsableTargets(page: Page, label: string) {
       const box = element.getBoundingClientRect();
       const id = element.getAttribute("id");
 
-      if (!id) {
-        return box;
-      }
-
-      const label = document.querySelector(`label[for="${CSS.escape(id)}"]`);
+      // Explicit association: <label for="id">.
+      const explicitLabel = id
+        ? document.querySelector(`label[for="${CSS.escape(id)}"]`)
+        : null;
+      // Implicit association: <label><input/>...</label>. Just as real a
+      // target — clicking anywhere in the wrapping label activates the
+      // control — but invisible to the id/for check above.
+      const implicitLabel = element.closest("label");
+      const label = explicitLabel ?? implicitLabel;
 
       if (!label) {
         return box;
@@ -200,7 +204,11 @@ test("@responsive navigation is reachable without a pointer on every form factor
 }, testInfo) => {
   await loginOwner(page);
 
-  const isNarrow = (page.viewportSize()?.width ?? 0) < 1024;
+  // Must match the app's real collapse breakpoint (emr-shell.tsx /
+  // mobile-navigation.tsx use Tailwind's xl: = 1280px), not an assumed one.
+  // iPad landscape (1194px) sits below 1280, so it renders the collapsed nav
+  // even though it's above the old, incorrect 1024px guess here.
+  const isNarrow = (page.viewportSize()?.width ?? 0) < 1280;
   const trigger = isNarrow
     ? page.getByRole("button", { name: "Open primary navigation" })
     : page.getByRole("link", { name: "Dashboard" });
