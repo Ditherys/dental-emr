@@ -20,10 +20,10 @@ const environment = loadE2EEnvironment();
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
-// WCAG 2.2 SC 2.5.8 Target Size (Minimum). The project's own guidance prefers a
-// larger coarse-pointer target; that preference is a manual review item rather
-// than a build failure, and is recorded in the QA checklist.
+// WCAG 2.2 SC 2.5.8 baseline. Owned form controls and menu choices have a
+// separate 44 px coarse-pointer assertion below to enforce project guidance.
 const MINIMUM_TARGET_PX = 24;
+const COARSE_POINTER_TARGET_PX = 44;
 
 async function loginOwner(page: Page) {
   await signInOwnerWithTotp(page, environment.owner);
@@ -34,8 +34,11 @@ async function expectNoAxeViolations(page: Page, label: string) {
   const summary = results.violations.map((violation) => ({
     id: violation.id,
     impact: violation.impact,
-    nodes: violation.nodes.length,
     help: violation.help,
+    nodes: violation.nodes.map((node) => ({
+      target: node.target.join(" > "),
+      failureSummary: node.failureSummary,
+    })),
   }));
 
   expect(summary, `axe violations on ${label}`).toEqual([]);
@@ -120,6 +123,56 @@ async function expectUsableTargets(page: Page, label: string) {
   expect(undersized, `undersized targets on ${label}`).toEqual([]);
 }
 
+async function expectCoarsePointerTargets(
+  page: Page,
+  label: string,
+  selector: string,
+) {
+  const isCoarsePointer = await page.evaluate(() =>
+    window.matchMedia("(pointer: coarse)").matches,
+  );
+
+  if (!isCoarsePointer) {
+    return;
+  }
+
+  // Menus open with a brief 95%-to-100% scale transition. Poll the rendered
+  // activation area so the assertion measures the stable target, not an
+  // intentionally smaller animation frame.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          ({ minimum, selector }) =>
+            Array.from(document.querySelectorAll(selector))
+              .filter((element) => {
+                const style = window.getComputedStyle(element);
+                const box = element.getBoundingClientRect();
+                return (
+                  style.display !== "none" &&
+                  style.visibility !== "hidden" &&
+                  box.width > 0 &&
+                  box.height > 0 &&
+                  (box.width < minimum || box.height < minimum)
+                );
+              })
+              .map((element) => {
+                const box = element.getBoundingClientRect();
+                return `${element.tagName.toLowerCase()}[${
+                  element.getAttribute("aria-label") ??
+                  element.textContent?.trim().slice(0, 32) ??
+                  ""
+                }] ${Math.round(box.width)}x${Math.round(box.height)}`;
+              }),
+          { minimum: COARSE_POINTER_TARGET_PX, selector },
+        ),
+      {
+        message: `coarse-pointer targets below ${COARSE_POINTER_TARGET_PX}px on ${label}`,
+      },
+    )
+    .toEqual([]);
+}
+
 /** The first keyboard-reachable control must show a visible focus indicator. */
 async function expectVisibleFocusIndicator(page: Page, label: string) {
   await page.keyboard.press("Tab");
@@ -164,6 +217,11 @@ test("@responsive the sign-in screen is accessible and does not overflow", async
   await expectNoAxeViolations(page, "login");
   await expectNoHorizontalOverflow(page, "login");
   await expectUsableTargets(page, "login");
+  await expectCoarsePointerTargets(
+    page,
+    "login form",
+    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea',
+  );
   await expectVisibleFocusIndicator(page, "login");
 });
 
@@ -222,9 +280,18 @@ test("@responsive navigation is reachable without a pointer on every form factor
     // The collapsed navigation must open from the keyboard, not only by tap.
     await trigger.focus();
     await page.keyboard.press("Enter");
-    await expect(
-      page.getByRole("navigation", { name: "Primary navigation" }),
-    ).toBeVisible();
+    const navigation = page.getByRole("navigation", {
+      name: "Primary navigation",
+    });
+    await expect(navigation).toBeVisible();
+
+    // Radix exposes the sheet as visible as soon as its fade-in starts. Axe
+    // must inspect the stable rendered colors, not the deliberately translucent
+    // intermediate animation frame, which produces false contrast failures.
+    await expect(page.locator('[data-slot="sheet-content"]')).toHaveCSS(
+      "opacity",
+      "1",
+    );
     await expectNoAxeViolations(page, "mobile navigation");
 
     await page.keyboard.press("Escape");
@@ -246,6 +313,11 @@ test("@responsive the branch selector is operable by keyboard", async ({
 
   const options = page.getByRole("menuitemradio");
   await expect(options.first()).toBeVisible();
+  await expectCoarsePointerTargets(
+    page,
+    "branch selector",
+    '[role="menuitemradio"]',
+  );
 
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
@@ -264,10 +336,20 @@ test("@responsive the branch settings work surface survives an orientation chang
   await expectNoAxeViolations(page, "branch settings");
   await expectNoHorizontalOverflow(page, "branch settings");
   await expectUsableTargets(page, "branch settings");
+  await expectCoarsePointerTargets(
+    page,
+    "branch settings form",
+    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea',
+  );
 
   const viewport = page.viewportSize();
 
   if (viewport) {
+    // BranchForm keeps submission disabled until its client state is hydrated.
+    // Enter the draft only after that existing readiness signal so a late
+    // hydration cannot be mistaken for orientation-driven state loss.
+    await expect(page.getByRole("button", { name: "Add branch" })).toBeEnabled();
+
     // Rotate. Content entered before the rotation must survive it, and the
     // rotated layout must not overflow either.
     await page.getByLabel("Branch name").fill("Orientation Draft");
@@ -295,4 +377,9 @@ test("@responsive the account and security screen is accessible", async ({
   await expectNoAxeViolations(page, "account and security");
   await expectNoHorizontalOverflow(page, "account and security");
   await expectUsableTargets(page, "account and security");
+  await expectCoarsePointerTargets(
+    page,
+    "account and security form",
+    'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea',
+  );
 });

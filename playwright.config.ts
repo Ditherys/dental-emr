@@ -11,13 +11,11 @@ const responsiveMatrix = /@responsive/;
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
-  // signInOwnerWithTotp (support/login.ts) can spend up to ~30s waiting out a
-  // TOTP window after a single-use-code collision - its own documented
-  // worst case. Playwright's 30s default test timeout leaves zero room for
-  // that retry plus the rest of the test, so any test that logs in and hits
-  // a collision times out even when every step it performs actually
-  // succeeds. Give real headroom above that worst case.
-  timeout: 60_000,
+  // signInOwnerWithTotp (support/login.ts) can perform one bounded hosted
+  // password retry and then spend up to ~30s waiting out a TOTP window after
+  // a single-use-code collision. Give that explicit recovery budget room to
+  // complete without making any individual wait unbounded.
+  timeout: 90_000,
   // Every flow signs in as one of a handful of shared, MFA-enrolled synthetic
   // identities against a single hosted, rate-limited Supabase Auth project.
   // signInOwnerWithTotp's retry-once logic in support/login.ts only accounts
@@ -34,7 +32,10 @@ export default defineConfig({
   use: {
     baseURL,
     screenshot: "only-on-failure",
-    trace: "retain-on-failure",
+    // These hosted flows type passwords and send authenticated Supabase
+    // requests. Playwright traces retain DOM input values and request headers,
+    // so even failure-only traces would persist credentials and bearer tokens.
+    trace: "off",
   },
   webServer: process.env.E2E_BASE_URL
     ? undefined

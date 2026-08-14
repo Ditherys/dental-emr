@@ -172,7 +172,23 @@ export function createAdminHarness() {
     }
   }
 
+  async function branchExistsBySlug(organizationId: string, branchSlug: string) {
+    const { data, error } = await client
+      .from("branches")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("slug", branchSlug)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`The harness could not verify branch absence: ${error.message}`);
+    }
+
+    return data !== null;
+  }
+
   return {
+    branchExistsBySlug,
     environment,
     resolveMemberId,
     setBranchAccess,

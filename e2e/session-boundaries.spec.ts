@@ -175,8 +175,24 @@ test("a mutation submitted after mid-session suspension is refused", async ({
     await harness.setMembershipStatus(memberId, "suspended");
     await page.getByRole("button", { name: "Add branch" }).click();
 
-    await expect(page.getByText(`${branchName} was added`)).toHaveCount(0);
-    await expect(page.getByText(branchName)).toHaveCount(0);
+    // Await the server action's terminal state before restoring membership.
+    // Absence checks alone resolve immediately while useActionState is still
+    // pending, which previously let the finally block reactivate the actor
+    // before authorization reached the database.
+    await expect(
+      page.getByRole("alert").filter({
+        hasText:
+          "Your current organization access does not allow branch creation.",
+      }),
+    ).toHaveText(
+      "Your current organization access does not allow branch creation.",
+    );
+    expect(
+      await harness.branchExistsBySlug(
+        environment.organizationAId,
+        branchSlug,
+      ),
+    ).toBe(false);
   } finally {
     await harness.setMembershipStatus(memberId, "active");
   }

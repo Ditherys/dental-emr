@@ -46,7 +46,7 @@
  */
 
 import { createHmac } from "node:crypto";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -56,6 +56,7 @@ import {
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
 } from "./remote-database-test-guard.mjs";
+import { createTotpSecretWriter } from "./e2e-totp-secret-output.mjs";
 
 /* -------------------------------------------------------------------------- */
 /* The synthetic tenant graph these identities attach to (supabase/seed.sql).  */
@@ -459,28 +460,35 @@ try {
   await upsertMembership(admin, suspendedUserId, "suspended");
   console.log("suspended identity ready");
 
+  const newlyEnrolled = [];
+  const writeTotpSecret = createTotpSecretWriter(totpSecretOut);
+
   const ownerSecret = await ensureTotpFactor(
     url,
     publishableKey,
     ownerEmail,
     required("E2E_OWNER_PASSWORD"),
   );
+  if (ownerSecret) {
+    // Persist each credential before attempting the next enrollment. If the
+    // later admin enrollment fails, the already-verified owner factor must not
+    // be stranded with its secret only in process memory.
+    writeTotpSecret("E2E_OWNER_TOTP_SECRET", ownerSecret);
+    newlyEnrolled.push("E2E_OWNER_TOTP_SECRET");
+  }
+
   const adminSecret = await ensureTotpFactor(
     url,
     publishableKey,
     adminEmail,
     required("E2E_ADMIN_PASSWORD"),
   );
-
-  const newlyEnrolled = [];
-  if (ownerSecret) newlyEnrolled.push(`E2E_OWNER_TOTP_SECRET=${ownerSecret}`);
-  if (adminSecret) newlyEnrolled.push(`E2E_ADMIN_TOTP_SECRET=${adminSecret}`);
+  if (adminSecret) {
+    writeTotpSecret("E2E_ADMIN_TOTP_SECRET", adminSecret);
+    newlyEnrolled.push("E2E_ADMIN_TOTP_SECRET");
+  }
 
   if (newlyEnrolled.length > 0) {
-    writeFileSync(totpSecretOut, `${newlyEnrolled.join("\n")}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    });
     console.log(
       `${newlyEnrolled.length} new TOTP factor(s) enrolled and verified; written to ${totpSecretOut}`,
     );

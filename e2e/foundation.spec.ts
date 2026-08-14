@@ -71,6 +71,28 @@ test("owner completes MFA and sees the authorized shell @shell", async ({
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test("invitation validation accepts the owner's database identifiers", async ({
+  page,
+}) => {
+  await loginOwner(page);
+  await page.goto("/settings/users/invite");
+
+  const organization = page.getByLabel("Organization");
+  await expect(organization).toHaveValue(environment.organizationAId);
+
+  // Leave email empty so the server action cannot issue an invitation. The
+  // selected organization and role still cross the real hosted action boundary
+  // and must not be rejected merely because their PostgreSQL UUIDs are not
+  // RFC-versioned UUIDs.
+  await page.getByRole("button", { name: "Send invitation" }).click();
+
+  await expect(page.getByText("Enter a valid email address.")).toBeVisible();
+  await expect(organization).not.toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator("#invite-organization-error")).toHaveCount(0);
+  await expect(page.locator("#invite-role-error")).toHaveCount(0);
+  await expect(page.locator("#invite-branch-error")).toHaveCount(0);
+});
+
 test("owner creates Branch A3 and selects it", async ({ page }) => {
   const branchName = `E2E Branch A3 ${environment.runId}`;
   const branchCode = `A3-${environment.runId}`.toUpperCase();

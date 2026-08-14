@@ -11,12 +11,13 @@ import {
   requireAal2,
   requirePermission,
 } from "@/lib/authorization";
+import { databaseUuid } from "@/lib/validation/database-uuid";
 
 const inviteSchema = z.object({
-  organizationId: z.uuid("Choose an organization."),
+  organizationId: databaseUuid,
   email: z.email("Enter a valid email address.").max(320),
-  roleId: z.uuid("Choose a role."),
-  branchId: z.union([z.uuid("Choose a valid branch."), z.literal("")]),
+  roleId: databaseUuid,
+  branchId: z.union([databaseUuid, z.literal("")]),
 });
 
 export type InviteWorkforceState = {
