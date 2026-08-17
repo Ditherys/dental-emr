@@ -15,6 +15,7 @@ import {
 } from "./boundary-privilege-invariant.mjs";
 import { splitSqlStatements } from "./migration-privilege-lint.mjs";
 import {
+  assertOverrideTargetsLinkedProject,
   assertR6dExecutionIsApproved,
   assertStatementModeFile,
   R6D_BOUNDARY_TEST_CONFIRMATION,
@@ -1204,6 +1205,35 @@ describe("resolveQueryArgs (IPv6-unsupported network fallback)", () => {
         override: "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
         linkedProjectId: null,
       }),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+});
+
+describe("assertOverrideTargetsLinkedProject (shared by the CLI and psql fallback paths)", () => {
+  it("passes when the override references the linked project", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        "abcdefghijklmnopqrst",
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses an override for a different project", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres.someotherref00000000:pw@host:5432/postgres",
+        "abcdefghijklmnopqrst",
+      ),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+
+  it("refuses when there is no linked project to compare against", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        null,
+      ),
     ).toThrow(/does not reference the linked TEST project/);
   });
 });

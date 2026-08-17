@@ -280,6 +280,28 @@ export function validateTransactionalSuite(source, filename) {
   }
 }
 
+function escapeRegExp(text) {
+  return text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * A multi-statement query run via `psql` (scripts/run-boundary-privilege-
+ * invariant.mjs's R6D_DB_URL_OVERRIDE fallback, since the Supabase CLI's
+ * `--db-url` cannot run more than one statement) returns psql's default
+ * aligned plain-text table format, not the Supabase CLI's JSON. Matches that
+ * exact shape -- column header, dash separator, value, "(1 row)" -- rather
+ * than a loose substring check, so pgTAP's own "ok N - ..." output can never
+ * coincidentally satisfy it.
+ */
+function matchesPsqlPlainTextCompletion(output, expectation) {
+  const pattern = new RegExp(
+    `^\\s*${escapeRegExp(expectation.column)}\\s*$\\r?\\n-+\\r?\\n\\s*${escapeRegExp(expectation.value)}\\s*$\\r?\\n\\(1 row\\)`,
+    "m",
+  );
+
+  return pattern.test(output);
+}
+
 export function parseSupabaseQueryResult(
   output,
   filename,
@@ -290,7 +312,13 @@ export function parseSupabaseQueryResult(
   try {
     result = JSON.parse(output);
   } catch {
-    throw new Error(`${filename} returned malformed Supabase CLI JSON.`);
+    if (!matchesPsqlPlainTextCompletion(output, expectation)) {
+      throw new Error(
+        `${filename} did not report ${expectation.value} in ${expectation.column}.`,
+      );
+    }
+
+    return;
   }
 
   if (!Array.isArray(result.rows) || result.rows.length !== 1) {

@@ -125,6 +125,32 @@ describe("remote database test suite contract", () => {
       ),
     ).toThrow(/one completion row/);
   });
+
+  it("also accepts psql's plain-text output (the multi-statement override fallback)", () => {
+    const passingPsqlOutput =
+      "ok 1 - some earlier pgTAP assertion\n" +
+      "(1 row)\n\n" +
+      " p1_test_result \n" +
+      "----------------\n" +
+      " P1_TEST_PASS\n" +
+      "(1 row)\n\n" +
+      "ROLLBACK\n";
+
+    expect(() =>
+      parseSupabaseQueryResult(passingPsqlOutput, "passing.test.sql"),
+    ).not.toThrow();
+
+    const failingPsqlOutput =
+      " p1_test_result \n----------------\n P1_TEST_FAIL\n(1 row)\n\nROLLBACK\n";
+
+    expect(() =>
+      parseSupabaseQueryResult(failingPsqlOutput, "failing.test.sql"),
+    ).toThrow(/P1_TEST_PASS/);
+
+    expect(() =>
+      parseSupabaseQueryResult("ok 1 - unrelated output\n", "no-completion.test.sql"),
+    ).toThrow(/P1_TEST_PASS/);
+  });
 });
 
 describe("registered database suites", () => {

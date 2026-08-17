@@ -122,15 +122,23 @@ const IPV6_RETRY_DELAY_MS = 2000;
  * stops a stray or malicious override from silently redirecting a boundary
  * check (or, worse, a migration-applying statement) at a different project.
  */
+export function assertOverrideTargetsLinkedProject(override, linkedProjectId) {
+  if (!linkedProjectId || !override.includes(linkedProjectId)) {
+    throw new Error(
+      "R6D_DB_URL_OVERRIDE does not reference the linked TEST project " +
+        `(${linkedProjectId || "unknown"}). Refusing to query an unverified target.`,
+    );
+  }
+}
+
+function currentLinkedProjectId() {
+  return existsSync(linkedProjectFile) ? readLinkedProjectId(linkedProjectFile) : null;
+}
+
 export function resolveQueryArgs(
   file,
   json,
-  {
-    override = process.env.R6D_DB_URL_OVERRIDE,
-    linkedProjectId = existsSync(linkedProjectFile)
-      ? readLinkedProjectId(linkedProjectFile)
-      : null,
-  } = {},
+  { override = process.env.R6D_DB_URL_OVERRIDE, linkedProjectId = currentLinkedProjectId() } = {},
 ) {
   const outputArgs = json ? ["--output-format", "json"] : [];
 
@@ -138,18 +146,74 @@ export function resolveQueryArgs(
     return ["db", "query", "--linked", ...outputArgs, "--file", file];
   }
 
-  if (!linkedProjectId || !override.includes(linkedProjectId)) {
-    throw new Error(
-      "R6D_DB_URL_OVERRIDE does not reference the linked TEST project " +
-        `(${linkedProjectId || "unknown"}). Refusing to query an unverified target.`,
-    );
-  }
+  assertOverrideTargetsLinkedProject(override, linkedProjectId);
 
   return ["db", "query", "--db-url", override, ...outputArgs, "--file", file];
 }
 
-function runSupabaseQuery(file, { json = true } = {}) {
-  const args = resolveQueryArgs(file, json);
+/**
+ * `supabase db query --db-url` cannot run a multi-statement file at all (see
+ * POOLER_PREPARED_STATEMENT_ERROR below), because it always issues the query
+ * over the extended/prepared-statement protocol. `psql`'s default `-f`
+ * behavior sends a script through the simple query protocol instead, which
+ * Postgres does allow to carry multiple statements — so a multi-statement
+ * query with an override set runs via `psql` against the same
+ * already-validated connection string, never the Supabase CLI.
+ */
+function runMultiStatementOverrideViaPsql(file, override) {
+  assertOverrideTargetsLinkedProject(override, currentLinkedProjectId());
+
+  const probe = spawnSync("psql", ["--version"], { encoding: "utf8" });
+
+  if (probe.error || probe.status !== 0) {
+    throw new Error(
+      `R6D_DB_URL_OVERRIDE is set and ${file} contains more than one statement, which the ` +
+        "Session Pooler cannot run through the Supabase CLI (prepared-statement protocol " +
+        "limit). This path requires `psql` on PATH, which was not found.",
+    );
+  }
+
+  const result = spawnSync("psql", [override, "-v", "ON_ERROR_STOP=1", "-f", file], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+
+  if (result.error) {
+    throw new Error(`psql could not start for ${file}.`);
+  }
+
+  if (result.status !== 0) {
+    throw new Error(`Remote execution via psql failed for ${file}.\n${result.stderr ?? ""}`);
+  }
+
+  return result.stdout;
+}
+
+const POOLER_PREPARED_STATEMENT_ERROR =
+  "cannot insert multiple commands into a prepared statement";
+
+/**
+ * The Supabase CLI's `db query --db-url` (the pooler path `R6D_DB_URL_OVERRIDE`
+ * uses) always issues the query over the extended/prepared-statement
+ * protocol, and Postgres refuses a prepared statement containing more than
+ * one command ("cannot insert multiple commands into a prepared statement").
+ * That is a protocol-level limitation, not a transient network issue. A
+ * multi-statement query this script knows about in advance -- an entire
+ * migration file replayed in `--mode=file`, and the transactional
+ * `live-authorization-probe.sql` -- therefore never goes through the CLI's
+ * `--db-url` path: with an override set, it runs via `psql` instead (which
+ * supports multi-statement scripts over the same connection); without one,
+ * it falls back to `--linked` like everything else.
+ */
+function runSupabaseQuery(file, { json = true, multiStatement = false } = {}) {
+  const override = process.env.R6D_DB_URL_OVERRIDE;
+
+  if (multiStatement && override) {
+    return runMultiStatementOverrideViaPsql(file, override);
+  }
+
+  const args = resolveQueryArgs(file, json, multiStatement ? { override: undefined } : undefined);
   const usingOverride = args.includes("--db-url");
   const attempts = usingOverride ? 1 : IPV6_RETRY_ATTEMPTS;
   let lastResult;
@@ -188,13 +252,26 @@ function runSupabaseQuery(file, { json = true } = {}) {
     }
   }
 
-  throw new Error(
-    `Remote execution failed for ${file}.` +
-      (lastResult && `${lastResult.stdout ?? ""}${lastResult.stderr ?? ""}`.includes(IPV6_CONNECTIVITY_ERROR)
-        ? " Network cannot reach Supabase's direct connection host (IPv6 required.) " +
-          "Set R6D_DB_URL_OVERRIDE to the TEST project's Session Pooler connection string to work around this."
-        : ""),
-  );
+  const finalOutput = lastResult ? `${lastResult.stdout ?? ""}${lastResult.stderr ?? ""}` : "";
+  let remedy = "";
+
+  if (finalOutput.includes(IPV6_CONNECTIVITY_ERROR)) {
+    // Reaching this branch with multiStatement=true means no override was set
+    // (an override would have short-circuited to the psql path above), so the
+    // remedy is the same for both: set the override, which now handles a
+    // multi-statement query too, via psql instead of the CLI.
+    remedy =
+      " Network cannot reach Supabase's direct connection host (IPv6 required). " +
+      "Set R6D_DB_URL_OVERRIDE to the TEST project's Session Pooler connection string to work around this.";
+  } else if (finalOutput.includes(POOLER_PREPARED_STATEMENT_ERROR)) {
+    remedy =
+      " The Session Pooler cannot run a multi-statement query over the " +
+      "prepared-statement protocol. This should be unreachable -- this query " +
+      "was not marked multiStatement but evidently contains more than one " +
+      "statement; treat this as a tooling bug, not an environment issue.";
+  }
+
+  throw new Error(`Remote execution failed for ${file}.${remedy}`);
 }
 
 function takeSnapshot(label) {
@@ -416,7 +493,7 @@ function main() {
       report.push(...result.report);
       previousSnapshot = result.previousSnapshot;
     } else {
-      runSupabaseQuery(file.path, { json: false });
+      runSupabaseQuery(file.path, { json: false, multiStatement: true });
     }
 
     applied.push(file);
@@ -451,7 +528,10 @@ function main() {
   // privileged session can actually do.
   const liveProbe = join(repositoryRoot, ...LIVE_AUTHORIZATION_PROBE_FILE.split("/"));
   validateTransactionalSuite(readFileSync(liveProbe, "utf8"), LIVE_AUTHORIZATION_PROBE_FILE);
-  parseSupabaseQueryResult(runSupabaseQuery(liveProbe), LIVE_AUTHORIZATION_PROBE_FILE);
+  parseSupabaseQueryResult(
+    runSupabaseQuery(liveProbe, { multiStatement: true }),
+    LIVE_AUTHORIZATION_PROBE_FILE,
+  );
   console.log(`PASS ${LIVE_AUTHORIZATION_PROBE_FILE}`);
 
   writeFileSync(
