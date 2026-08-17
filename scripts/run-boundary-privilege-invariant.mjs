@@ -121,13 +121,43 @@ const IPV6_RETRY_DELAY_MS = 2000;
  * project already validated as the linked TEST target — this check is what
  * stops a stray or malicious override from silently redirecting a boundary
  * check (or, worse, a migration-applying statement) at a different project.
+ *
+ * The check parses the URL and requires the *host and username* to match the
+ * linked project's known Supabase connection shape (Session Pooler:
+ * `postgres.<ref>@*.pooler.supabase.com`; direct: `postgres@db.<ref>.supabase.co`)
+ * -- not merely that the project ref appears somewhere in the string. A
+ * substring check alone would accept, for example, the real ref embedded in
+ * the password field of a URL whose actual host is unrelated.
  */
 export function assertOverrideTargetsLinkedProject(override, linkedProjectId) {
-  if (!linkedProjectId || !override.includes(linkedProjectId)) {
+  const refuse = () => {
     throw new Error(
       "R6D_DB_URL_OVERRIDE does not reference the linked TEST project " +
         `(${linkedProjectId || "unknown"}). Refusing to query an unverified target.`,
     );
+  };
+
+  if (!linkedProjectId) {
+    refuse();
+  }
+
+  let parsed;
+
+  try {
+    parsed = new URL(override);
+  } catch {
+    refuse();
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  const username = decodeURIComponent(parsed.username);
+  const isPoolerTarget =
+    hostname.endsWith(".pooler.supabase.com") && username === `postgres.${linkedProjectId}`;
+  const isDirectTarget =
+    hostname === `db.${linkedProjectId}.supabase.co` && username === "postgres";
+
+  if (!isPoolerTarget && !isDirectTarget) {
+    refuse();
   }
 }
 
@@ -165,7 +195,7 @@ function runMultiStatementOverrideViaPsql(file, override) {
 
   const probe = spawnSync("psql", ["--version"], { encoding: "utf8" });
 
-  if (probe.error || probe.status !== 0) {
+  if (probe.error) {
     throw new Error(
       `R6D_DB_URL_OVERRIDE is set and ${file} contains more than one statement, which the ` +
         "Session Pooler cannot run through the Supabase CLI (prepared-statement protocol " +
@@ -173,6 +203,19 @@ function runMultiStatementOverrideViaPsql(file, override) {
     );
   }
 
+  if (probe.status !== 0) {
+    throw new Error(
+      `R6D_DB_URL_OVERRIDE is set and ${file} contains more than one statement, which the ` +
+        "Session Pooler cannot run through the Supabase CLI (prepared-statement protocol " +
+        `limit). \`psql\` is on PATH but failed its own --version check (exit code ${probe.status}): ` +
+        `${(probe.stderr || probe.stdout || "no output").trim()}`,
+    );
+  }
+
+  // The connection string (including the password) is never echoed into an
+  // error message below: R6D_DB_URL_OVERRIDE is a live database credential
+  // (see supabase/verification/r6d/README.md), and a failed psql invocation
+  // can echo connection details back in its own stderr.
   const result = spawnSync("psql", [override, "-v", "ON_ERROR_STOP=1", "-f", file], {
     cwd: repositoryRoot,
     encoding: "utf8",
@@ -184,7 +227,12 @@ function runMultiStatementOverrideViaPsql(file, override) {
   }
 
   if (result.status !== 0) {
-    throw new Error(`Remote execution via psql failed for ${file}.\n${result.stderr ?? ""}`);
+    const combinedOutput = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+    const remedy = combinedOutput.includes(POOLER_PREPARED_STATEMENT_ERROR)
+      ? " Unexpected: psql itself reported a multi-statement/prepared-statement error; treat this as a tooling bug, not an environment issue."
+      : " (output withheld: R6D_DB_URL_OVERRIDE is a live database credential and psql's own error output can echo connection details.)";
+
+    throw new Error(`Remote execution via psql failed for ${file} (exit code ${result.status}).${remedy}`);
   }
 
   return result.stdout;
@@ -206,7 +254,7 @@ const POOLER_PREPARED_STATEMENT_ERROR =
  * supports multi-statement scripts over the same connection); without one,
  * it falls back to `--linked` like everything else.
  */
-function runSupabaseQuery(file, { json = true, multiStatement = false } = {}) {
+function runSupabaseQuery(file, { json = true, multiStatement = false, mutatesSchema = false } = {}) {
   const override = process.env.R6D_DB_URL_OVERRIDE;
 
   if (multiStatement && override) {
@@ -215,7 +263,16 @@ function runSupabaseQuery(file, { json = true, multiStatement = false } = {}) {
 
   const args = resolveQueryArgs(file, json, multiStatement ? { override: undefined } : undefined);
   const usingOverride = args.includes("--db-url");
-  const attempts = usingOverride ? 1 : IPV6_RETRY_ATTEMPTS;
+  // Retrying on a connectivity error is only safe where a retry cannot mask a
+  // genuine partial success: read-only snapshots (safe to re-run), and the
+  // transactional, always-ROLLBACK live-authorization-probe (idempotent by
+  // construction). `LegacyDbConfigIpv6Error` is understood to fail before any
+  // query reaches Postgres, but that is a claim about a third-party CLI's
+  // internals this script cannot verify -- so schema-mutating replay (a
+  // migration statement or file actually applying DDL) never auto-retries,
+  // and instead fails closed on the first connectivity error, requiring a
+  // fresh disposable-project cycle rather than risking a silent double-apply.
+  const attempts = usingOverride || mutatesSchema ? 1 : IPV6_RETRY_ATTEMPTS;
   let lastResult;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -470,7 +527,7 @@ function main() {
 
       for (const [index, statement] of statements.entries()) {
         writeFileSync(statementFile, `${statement.raw}\n`, "utf8");
-        runSupabaseQuery(statementFile, { json: false });
+        runSupabaseQuery(statementFile, { json: false, mutatesSchema: true });
         snapshots.push(
           takeSnapshot(`${file.name} statement ${index + 1}/${statements.length}`),
         );
@@ -493,7 +550,7 @@ function main() {
       report.push(...result.report);
       previousSnapshot = result.previousSnapshot;
     } else {
-      runSupabaseQuery(file.path, { json: false, multiStatement: true });
+      runSupabaseQuery(file.path, { json: false, multiStatement: true, mutatesSchema: true });
     }
 
     applied.push(file);

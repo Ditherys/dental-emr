@@ -288,18 +288,32 @@ function escapeRegExp(text) {
  * A multi-statement query run via `psql` (scripts/run-boundary-privilege-
  * invariant.mjs's R6D_DB_URL_OVERRIDE fallback, since the Supabase CLI's
  * `--db-url` cannot run more than one statement) returns psql's default
- * aligned plain-text table format, not the Supabase CLI's JSON. Matches that
- * exact shape -- column header, dash separator, value, "(1 row)" -- rather
- * than a loose substring check, so pgTAP's own "ok N - ..." output can never
- * coincidentally satisfy it.
+ * aligned plain-text table format, not the Supabase CLI's JSON: one such
+ * block per statement in the script, in order.
+ *
+ * Matches the exact shape -- column header, dash separator, a captured value,
+ * "(1 row)" -- rather than a loose substring check, so pgTAP's own
+ * "ok N - ..." output can never coincidentally satisfy it. Critically, this
+ * evaluates only the LAST such block for the expected column, mirroring the
+ * JSON path's `rows.length !== 1` strictness: an earlier statement in the
+ * script that happens to render a same-shaped block (e.g. a leftover debug
+ * `select ... as p1_test_result`) must never be mistaken for the script's
+ * actual, final completion row.
  */
 function matchesPsqlPlainTextCompletion(output, expectation) {
-  const pattern = new RegExp(
-    `^\\s*${escapeRegExp(expectation.column)}\\s*$\\r?\\n-+\\r?\\n\\s*${escapeRegExp(expectation.value)}\\s*$\\r?\\n\\(1 row\\)`,
-    "m",
+  const blockPattern = new RegExp(
+    `^\\s*${escapeRegExp(expectation.column)}\\s*$\\r?\\n-+\\r?\\n\\s*(.*?)\\s*$\\r?\\n\\(1 row\\)`,
+    "gm",
   );
 
-  return pattern.test(output);
+  let lastValue = null;
+  let match;
+
+  while ((match = blockPattern.exec(output)) !== null) {
+    lastValue = match[1];
+  }
+
+  return lastValue === expectation.value;
 }
 
 export function parseSupabaseQueryResult(

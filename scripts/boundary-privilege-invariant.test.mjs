@@ -1202,7 +1202,7 @@ describe("resolveQueryArgs (IPv6-unsupported network fallback)", () => {
   it("refuses an override when there is no linked project to compare against", () => {
     expect(() =>
       resolveQueryArgs("snapshot.sql", true, {
-        override: "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        override: "postgresql://postgres.abcdefghijklmnopqrst:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres",
         linkedProjectId: null,
       }),
     ).toThrow(/does not reference the linked TEST project/);
@@ -1210,28 +1210,61 @@ describe("resolveQueryArgs (IPv6-unsupported network fallback)", () => {
 });
 
 describe("assertOverrideTargetsLinkedProject (shared by the CLI and psql fallback paths)", () => {
-  it("passes when the override references the linked project", () => {
+  it("passes for a Session Pooler URL matching the linked project", () => {
     expect(() =>
       assertOverrideTargetsLinkedProject(
-        "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        "postgresql://postgres.abcdefghijklmnopqrst:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres",
         "abcdefghijklmnopqrst",
       ),
     ).not.toThrow();
   });
 
-  it("refuses an override for a different project", () => {
+  it("passes for a direct-connection URL matching the linked project", () => {
     expect(() =>
       assertOverrideTargetsLinkedProject(
-        "postgresql://postgres.someotherref00000000:pw@host:5432/postgres",
+        "postgresql://postgres:pw@db.abcdefghijklmnopqrst.supabase.co:5432/postgres",
         "abcdefghijklmnopqrst",
       ),
+    ).not.toThrow();
+  });
+
+  it("refuses an override for a different project (same shape, different ref)", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres.someotherref00000000:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres",
+        "abcdefghijklmnopqrst",
+      ),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+
+  it("refuses an override with the real ref hidden elsewhere in the URL but pointed at an unrelated host", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres:pw@evil-attacker-host.example.com:5432/postgres?note=abcdefghijklmnopqrst",
+        "abcdefghijklmnopqrst",
+      ),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+
+  it("refuses a URL on the right project ref but an unapproved host suffix", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject(
+        "postgresql://postgres.abcdefghijklmnopqrst:pw@abcdefghijklmnopqrst.evil-mirror.example.com:5432/postgres",
+        "abcdefghijklmnopqrst",
+      ),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+
+  it("refuses a value that is not a valid URL at all", () => {
+    expect(() =>
+      assertOverrideTargetsLinkedProject("not a url", "abcdefghijklmnopqrst"),
     ).toThrow(/does not reference the linked TEST project/);
   });
 
   it("refuses when there is no linked project to compare against", () => {
     expect(() =>
       assertOverrideTargetsLinkedProject(
-        "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        "postgresql://postgres.abcdefghijklmnopqrst:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres",
         null,
       ),
     ).toThrow(/does not reference the linked TEST project/);

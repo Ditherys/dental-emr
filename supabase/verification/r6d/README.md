@@ -140,16 +140,35 @@ These decisions are unit-tested offline in
 `supabase db query --linked` can fail with `LegacyDbConfigIpv6Error` on a
 network without IPv6 connectivity — observed in practice failing
 mid-run (after a platform-baseline snapshot and an entire migration file's
-worth of statement snapshots had already succeeded on the same network),
-so the runner retries a few times automatically before giving up.
+worth of statement snapshots had already succeeded on the same network), so
+the runner retries a few times automatically before giving up. Retry is only
+attempted for read-only snapshots and the transactional (always-`ROLLBACK`)
+live-authorization-probe; a schema-mutating migration statement or file never
+auto-retries on this error — it fails closed on the first occurrence, since
+the assumption that this specific error can only occur before a query reaches
+Postgres is unverified against the Supabase CLI's own internals.
 
 If it still cannot complete, set `R6D_DB_URL_OVERRIDE` to the disposable TEST
 project's Session Pooler connection string (percent-encoded, IPv4-compatible)
-before running the script. The runner refuses to use it unless it references
-the same project ref already validated as the linked TEST target, so it
-cannot silently redirect a boundary check — or a migration-applying
-statement — at an unverified project. Never commit this value or paste it
-into chat/a document; it is a live database credential.
+before running the script. The runner refuses to use it unless its host and
+username match the linked project's known connection shape (Session Pooler:
+`postgres.<ref>@*.pooler.supabase.com`; direct: `postgres@db.<ref>.supabase.co`)
+— not merely that the project ref appears somewhere in the string — so it
+cannot silently redirect a boundary check, or a migration-applying statement,
+at an unverified project. Never commit this value or paste it into chat/a
+document; it is a live database credential.
+
+### Multi-statement queries over the override: requires `psql`
+
+`supabase db query --db-url` (the override's CLI path) cannot run a
+multi-statement file at all — Postgres refuses a prepared statement
+containing more than one command, and the CLI always issues `--db-url`
+queries that way. Two call sites are inherently multi-statement: `--mode=file`'s
+whole-migration-file replay, and the transactional `live-authorization-probe.sql`.
+With an override set, both run via `psql` instead (its default script mode
+uses the simple query protocol, which does support multiple statements) — so
+using `R6D_DB_URL_OVERRIDE` requires `psql` on `PATH`. Without an override,
+neither call site is affected; they run through `--linked` as usual.
 
 ## Known limitations
 

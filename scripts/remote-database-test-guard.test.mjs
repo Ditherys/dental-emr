@@ -151,6 +151,28 @@ describe("remote database test suite contract", () => {
       parseSupabaseQueryResult("ok 1 - unrelated output\n", "no-completion.test.sql"),
     ).toThrow(/P1_TEST_PASS/);
   });
+
+  it("evaluates only the LAST plain-text completion block, not an earlier one", () => {
+    const spuriousPassThenRealFail =
+      " p1_test_result \n----------------\n P1_TEST_PASS\n(1 row)\n\n" +
+      "ok 1 - unrelated assertion\n(1 row)\n\n" +
+      " p1_test_result \n----------------\n P1_TEST_FAIL\n(1 row)\n\n" +
+      "ROLLBACK\n";
+
+    expect(() =>
+      parseSupabaseQueryResult(spuriousPassThenRealFail, "spurious-pass.test.sql"),
+    ).toThrow(/P1_TEST_PASS/);
+
+    const earlierFailThenRealPass =
+      " p1_test_result \n----------------\n P1_TEST_FAIL\n(1 row)\n\n" +
+      "ok 1 - unrelated assertion\n(1 row)\n\n" +
+      " p1_test_result \n----------------\n P1_TEST_PASS\n(1 row)\n\n" +
+      "ROLLBACK\n";
+
+    expect(() =>
+      parseSupabaseQueryResult(earlierFailThenRealPass, "earlier-fail.test.sql"),
+    ).not.toThrow();
+  });
 });
 
 describe("registered database suites", () => {
