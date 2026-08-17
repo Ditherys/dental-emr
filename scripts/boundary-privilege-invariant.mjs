@@ -348,20 +348,34 @@ const KNOWN_CREATION_DEFAULT_PRIVILEGES = Object.freeze([
 /**
  * True only when `entry` is exactly the PostgreSQL-automatic default
  * privilege created by `statement` on the object `statement` just created —
- * not merely any newly observed privilege. All three must hold:
+ * not merely any newly observed privilege. All of the following must hold:
  *
  *   1. `statement` is a qualifying object creation (CREATE FUNCTION/PROCEDURE
  *      with a resolved identity);
- *   2. `entry` names that same object, by canonical identity; and
+ *   2. `entry` names that same object, by canonical identity;
  *   3. the (objectClass, grantee, privilege) triple is a documented
  *      PostgreSQL default for that object class, per
- *      KNOWN_CREATION_DEFAULT_PRIVILEGES above.
+ *      KNOWN_CREATION_DEFAULT_PRIVILEGES above; and
+ *   4. for an `anon`/`authenticated` entry, the SAME statement's newly-added
+ *      set also contains the correlated PUBLIC EXECUTE row for the same
+ *      object.
+ *
+ * Requirement 4 exists because an effective `anon`/`authenticated` privilege
+ * does not by itself prove PUBLIC granted it — PostgreSQL also permits a
+ * direct GRANT to those roles, role-inheritance effects, or an `ALTER DEFAULT
+ * PRIVILEGES` on functions/routines (not just tables). The only fact ADR-017
+ * treats as a PostgreSQL constant is "CREATE FUNCTION grants PUBLIC EXECUTE,"
+ * which surfaces in the probe as three correlated rows (public/anon/
+ * authenticated) for one object. Grace is for that correlated trio, observed
+ * together, not for any row that merely has the right shape in isolation — an
+ * anon/authenticated row without its PUBLIC sibling in the same statement's
+ * diff is not evidence of the PostgreSQL default and must fail immediately.
  *
  * Anything else — an explicit GRANT, a side effect of a DO block, a default
  * privilege on a class PostgreSQL does not actually auto-grant — is not a
  * default this function recognizes, however "adjacent" its later removal is.
  */
-export function isKnownCreationDefaultPrivilege(statement, entry) {
+export function isKnownCreationDefaultPrivilege(statement, entry, siblingEntries = []) {
   if (!statement || statement.type !== "create" || !statement.identity) {
     return false;
   }
@@ -378,9 +392,25 @@ export function isKnownCreationDefaultPrivilege(statement, entry) {
     return false;
   }
 
-  return (
+  const sameObject =
     normalizeObjectIdentity(entry.objectClass, entry.object) ===
-    normalizeObjectIdentity(statement.objectClass, statement.identity)
+    normalizeObjectIdentity(statement.objectClass, statement.identity);
+
+  if (!sameObject) {
+    return false;
+  }
+
+  if (entry.grantee === "public") {
+    return true;
+  }
+
+  return siblingEntries.some(
+    (sibling) =>
+      sibling.grantee === "public" &&
+      sibling.objectClass === entry.objectClass &&
+      sibling.privilege === entry.privilege &&
+      normalizeObjectIdentity(sibling.objectClass, sibling.object) ===
+        normalizeObjectIdentity(entry.objectClass, entry.object),
   );
 }
 
@@ -439,10 +469,11 @@ export function assertPreFinalStatementBoundary({
     );
 
   const newlyAdded = notAccepted.filter(({ key }) => !pendingKeys.has(key));
+  const newlyAddedEntries = newlyAdded.map(({ entry }) => entry);
   const nextPending = [];
 
   for (const candidate of newlyAdded) {
-    if (isKnownCreationDefaultPrivilege(statement, candidate.entry)) {
+    if (isKnownCreationDefaultPrivilege(statement, candidate.entry, newlyAddedEntries)) {
       nextPending.push(candidate);
       continue;
     }

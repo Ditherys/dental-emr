@@ -478,6 +478,35 @@ describe("statement-mode grace window", () => {
     expect(result.pending).toEqual([]);
   });
 
+  it("does not grace an anon/authenticated EXECUTE row unless the same statement's diff also holds the correlated PUBLIC EXECUTE row", () => {
+    // Same grantee, privilege, and object as the recognized default, but the
+    // PUBLIC row that would prove it came from PostgreSQL's own CREATE
+    // FUNCTION default is absent — this could equally be a direct GRANT to
+    // authenticated, so it must fail immediately, not get graced on shape
+    // alone.
+    const AUTHENTICATED_EXECUTE_WITHOUT_PUBLIC_SIBLING = {
+      grantee: "authenticated",
+      object_class: "function",
+      object: "public.set_role_permission(uuid, text, boolean)",
+      privilege: "execute",
+      column: null,
+    };
+
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N (authenticated EXECUTE with no correlated PUBLIC row)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({
+        privileges: [...PLATFORM_BASELINE.privileges, AUTHENTICATED_EXECUTE_WITHOUT_PUBLIC_SIBLING],
+      }),
+      pending: [],
+      statement: CREATE_SET_ROLE_PERMISSION,
+    });
+
+    expect(result.problems).toHaveLength(1);
+    expect(result.problems[0]).toContain("set_role_permission");
+    expect(result.pending).toEqual([]);
+  });
+
   it("grants the same grace to CREATE PROCEDURE, matched by object_class rather than assumed to be a function", () => {
     const CREATE_A_PROCEDURE = {
       type: "create",
@@ -722,14 +751,25 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     expect(fileBoundaryProblems.join("\n")).toContain("set_role_permission");
   });
 
-  it("does not carry a resolved file's grace state into the next file", () => {
+  it("reports the second file's carried-over privilege as a fresh immediate violation, not a carried-pending adjacent one", () => {
     // File one deliberately omits the REVOKE (unlike
     // CREATE_SET_ROLE_PERMISSION_SQL above), so its pending grace is genuinely
     // non-empty when the file ends — the exact state a carryover bug would
-    // need to leak for this test to mean anything. If assertStatementModeFile
-    // ever started threading `pendingGrace` across calls instead of always
-    // initializing it fresh, this is the scenario that would go quiet instead
-    // of failing.
+    // need to leak for this test to mean anything. The privilege is still
+    // present in file two, so a leaked `pendingGrace` would NOT go quiet: it
+    // would still fail, because `assertPreFinalStatementBoundary` reports any
+    // pending key still present as an "adjacent" violation regardless of which
+    // file introduced the grace. A leak is therefore distinguished by WHICH
+    // violation message comes back, not by whether one comes back at all:
+    //   - correct (no leak): a fresh, non-default privilege at first
+    //     appearance, phrased as "did not exist in the platform baseline...",
+    //     never mentioning "adjacent";
+    //   - leaked: the pending entry from file one surviving into file two's
+    //     check, phrased as "...at the statement following the one where it
+    //     first appeared... adjacent".
+    // If assertStatementModeFile ever started threading `pendingGrace` across
+    // calls instead of always initializing it fresh per file, file two would
+    // report the leaked "adjacent" message instead of the correct fresh one.
     const firstFileSource = `
       create function public.set_role_permission(p_role_id uuid, p_permission text, p_granted boolean)
       returns void
@@ -757,13 +797,6 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     // is the moment `pendingGrace` holds the still-open entry.
     expect(firstFile.problems).toEqual([]);
 
-    // A second file whose one statement is not a CREATE at all and does not
-    // revoke anything. The same privilege is still present. If grace had
-    // leaked across the file boundary, this would be silently treated as
-    // "still within the grace opened by file one's CREATE" and produce no
-    // problem. It must instead be reported as a fresh, non-adjacent violation
-    // — exactly as if no prior grace existed, because per-file grace must not
-    // exist.
     const secondFileStatements = splitSqlStatements(
       "select 1;",
       "0101_unrelated.sql",
@@ -772,6 +805,40 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
       privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE],
     });
 
+    // Control: this is what a LEAKED pendingGrace would actually produce —
+    // not silence, but the "adjacent" message, because
+    // assertPreFinalStatementBoundary reports any surviving pending key that
+    // way regardless of which file opened the grace. Reusing the exact
+    // pending array file one's own CREATE produced (via a direct, ungraced
+    // call to assertPreFinalStatementBoundary, mirroring the "reports it as a
+    // real violation if it is still present the following statement" case
+    // above) makes this the true leaked-state comparison, not a guess at its
+    // shape.
+    const openedByCreate = assertPreFinalStatementBoundary({
+      label: "control (file one's own CREATE, for its pending shape only)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: afterCreate,
+      pending: [],
+      statement: {
+        type: "create",
+        objectClass: "function",
+        identity: "public.set_role_permission(uuid, text, boolean)",
+      },
+    });
+    const leakedPendingControl = assertPreFinalStatementBoundary({
+      label: "control (leaked pendingGrace carried into file two)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: secondFileSnapshot,
+      pending: openedByCreate.pending,
+      statement: { type: "other" },
+    });
+    expect(leakedPendingControl.problems).toHaveLength(1);
+    expect(leakedPendingControl.problems[0]).toContain("adjacent");
+
+    // The real assertStatementModeFile call for file two: per-file grace
+    // reset means this must NOT match the leaked-control message above. It
+    // must instead be reported as a fresh, immediate violation — exactly as
+    // if no prior grace existed, because per-file grace must not exist.
     const secondFile = assertStatementModeFile({
       file: { name: "0101_unrelated.sql" },
       statements: secondFileStatements,
