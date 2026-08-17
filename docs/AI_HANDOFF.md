@@ -18,7 +18,9 @@
 
 **Result: R6-D is now fully proven in both modes.** `--mode=file` was proven in the prior checkpoint; `--mode=statement` (the interrupted-mid-migration proof) is proven by this checkpoint. Both known R6-D tooling gaps found in the process (IPv6 connectivity, pooler multi-statement protocol limits) are fixed with regression tests (274/274 unit tests, up from 265).
 
-**Still open, not touched by this checkpoint:** whether R6-E needs a fresh catalog-equivalence re-run against this specific TEST-02 (the existing DEV-vs-TEST-01 proof did not change any baseline file, but has not been re-run against this project); R6-F (DEV migration-history reconciliation and freeze removal), gated on that decision plus its own separate approval; this checkpoint's own commits (`033754f`, `338c59c`) need independent Codex review before R6-F proceeds.
+**R6-E decision (2026-08-18, project owner):** no fresh re-verification against the current TEST-02 is required. No baseline migration file has changed since the original DEV-vs-TEST-01 catalog equivalence proof (2026-08-14) — only R6-D's own verification tooling changed, never anything under `supabase/migrations/`. Since the eight baseline files deterministically reconstruct the same schema regardless of which disposable project they're applied to, the existing proof (`docs/evidence/R6E-catalog-comparison.md`) is treated as still valid. R6-D's own statement-mode run against the current TEST-02 (zero boundary violations across the full replay) is independent, corroborating evidence of the same underlying fact.
+
+**Session stopped here, deliberately.** R6-F requires independent Codex review of this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) first — the project owner chose to run those reviews separately rather than continue this session. R6-F itself (DEV migration-history reconciliation and freeze removal) is not started and remains gated on that review plus its own separate approval.
 
 ---
 
@@ -182,7 +184,7 @@ Five application defects, none visible to any static check, unit test, or databa
 | Item | State |
 |---|---|
 | **H-1** catalog-level TEST-vs-DEV equivalence | **Resolved 2026-08-14.** See `docs/evidence/R6E-catalog-comparison.md`. |
-| **H-2** — R6-D on a fresh TEST-02, then R6-F reconciliation and freeze removal | **R6-D is now fully proven in both modes** — see current checkpoint above and "What is now proven". Still open: (1) this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) need independent Codex review before proceeding; (2) R6-E has not been freshly re-verified against the current TEST-02 instance (a decision, not necessarily a re-run — see below). R6-F (the only step that writes to DEV) remains gated on both of the above plus its own separate approval. |
+| **H-2** — R6-D on a fresh TEST-02, then R6-F reconciliation and freeze removal | **R6-D is now fully proven in both modes** — see current checkpoint above and "What is now proven". **R6-E decision made 2026-08-18:** the existing DEV-vs-TEST-01 equivalence proof still covers the current (unchanged) baseline; no fresh re-run needed. Only remaining blocker: this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) need independent Codex review before R6-F can be requested. |
 | Playwright harness sequencing | **Resolved 2026-08-15.** Fresh-ID TEST-01 acceptance run passed 54/54; the corrected suspension mutation test also proves direct database absence before membership restoration. |
 | Responsive matrix on the other four form factors | **Resolved 2026-08-15.** All seven configured projects passed in one 54/54 matrix; the later manual device/accessibility pass is also complete under H-6 below. |
 | **H-5** branch update/archive | Design doc committed (`docs/plans/pending-h5-branch-update-archive.md`) — draft migration SQL, grant registration, and TS/UI implementation spec, ready to implement once R6-F lifts the freeze and types can be regenerated. Not implemented; the actual migration/code deliberately deferred until after R6-F. |
@@ -196,13 +198,12 @@ Five application defects, none visible to any static check, unit test, or databa
 
 1. Configure the GitHub `cloud-test` environment (variables and secrets per `docs/deployment/CI_FOUNDATION.md`) — only useful after R6-F.
 2. **Decided 2026-08-14:** the project owner will stay on the current Supabase plan until there is real clinic demand (a second clinic interested), and upgrade then. M-5 (leaked-password protection) remains open as a pre-production gate, not a Phase 1 blocker.
-3. Independent Codex review of this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) — required before R6-F proceeds, per the standing "must not be self-reviewed" rule.
-4. Decide whether R6-E needs a fresh catalog-equivalence re-run against the current TEST-02 (ref `plkjajlfnhsklmdloaut`), or whether the existing DEV-vs-TEST-01 proof still covers it since no baseline migration file changed.
-5. After both of the above: approve R6-F (DEV migration-history reconciliation and freeze removal) as its own separately gated step.
+3. **Sole remaining blocker before R6-F can be requested:** independent Codex review of this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) — required per the standing "must not be self-reviewed" rule. The project owner chose to run these separately rather than continue in this session (2026-08-18).
+4. After that review (and addressing any findings): approve R6-F (DEV migration-history reconciliation and freeze removal) as its own separately gated step.
 
 ## Next Checkpoint
 
-R6-D is fully proven in both modes (see current checkpoint and "What is now proven" above). Next: (1) independent Codex review of this checkpoint's two tooling commits (`033754f`, `338c59c`) — same rule, must not be self-reviewed; (2) decide and, if needed, execute an R6-E fresh re-verification against the current TEST-02; (3) only then is R6-F (DEV migration-history reconciliation and freeze removal) ready to request approval for; (4) after R6-F, H-5's already-designed migration (`docs/plans/pending-h5-branch-update-archive.md`) can be implemented for real. `docs/PHASE1_ACCEPTANCE_REVIEW.md` remains a historical review at an older checkpoint and must not be treated as the current status; rerun/update acceptance after the remaining gates close.
+R6-D is fully proven in both modes, and the R6-E decision is made (existing proof still covers the unchanged baseline — see current checkpoint above). The session stopped here deliberately, pending the human action above. Next new-session checkpoint should: (1) confirm the Codex review of `033754f`/`338c59c` happened and address any findings; (2) only then request R6-F (DEV migration-history reconciliation and freeze removal) approval; (3) after R6-F, H-5's already-designed migration (`docs/plans/pending-h5-branch-update-archive.md`) can be implemented for real; (4) re-run/update `docs/PHASE1_ACCEPTANCE_REVIEW.md` against the current repository state once R6-F lands — it remains a historical review at an older checkpoint and must not be treated as current status until then.
 
 ## Commits Requiring Later Codex Review
 

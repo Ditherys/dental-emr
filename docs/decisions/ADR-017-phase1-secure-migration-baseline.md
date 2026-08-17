@@ -236,8 +236,8 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 | R6-C1 | Separate database test tooling from the canonical baseline; mandatory `SUPABASE_DEV_PROJECT_ID`; one-slot TEST runbook | **Complete**; no database contact. See [ADR-018](ADR-018-nonproduction-database-test-tooling.md) |
 | R6-C | Create disposable Cloud TEST project from zero | **Complete** — executed against TEST-01, 2026-08-14 (`P1_PROVISION_PASS`; see `docs/evidence/R6C-R6E-test01.md`). TEST-01 has since been deleted; the proof stands as a historical execution, not a standing environment |
 | R6-D | Interrupted-replay boundary validation | **Complete** — both `--mode=file` and `--mode=statement` pass against fresh, empty Cloud TEST projects: zero boundary invariant violations across the full statement-by-statement replay of all 8 baseline files, plus the live-authorization-probe verified passing. See `docs/AI_HANDOFF.md`'s current checkpoint for the exact verification method and two tooling bugs found and fixed in the process |
-| R6-E | Cloud-safe equivalence + full verification | **Complete against TEST-01** (2026-08-14; see `docs/evidence/R6C-R6E-test01.md` and `docs/evidence/R6E-catalog-comparison.md`). Whether a fresh re-verification against the current TEST-02 is also required is an open decision, not a first run |
-| R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires approval; gated on independent Codex review of R6-D's two tooling-fix commits and the R6-E re-verification decision |
+| R6-E | Cloud-safe equivalence + full verification | **Complete against TEST-01** (2026-08-14; see `docs/evidence/R6C-R6E-test01.md` and `docs/evidence/R6E-catalog-comparison.md`). **Decided 2026-08-18:** no fresh re-verification against a later TEST-02 is required — no baseline migration file has changed since this proof, only R6-D's own verification tooling |
+| R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires approval; sole remaining gate is independent Codex review of R6-D's two tooling-fix commits (`033754f`, `338c59c`) |
 
 ## Independent review requirement
 
