@@ -87,17 +87,20 @@ security advisors, verifies the hosted Auth posture read-only, and exercises the
 Playwright flows across desktop, iPad, and the phone/tablet responsive matrix. It
 never starts a local Supabase/Docker stack and never resets the remote database.
 
-### While the R6 migration freeze is active
+### The R6 migration freeze (resolved 2026-08-18)
 
-`supabase/MIGRATION_FREEZE.md` makes the guarded runner refuse every
-migration-applying command, so the Cloud TEST job **cannot pass** until the
-approved R6-F reconciliation removes the freeze. That is intended.
+`supabase/MIGRATION_FREEZE.md` made the guarded runner refuse every
+migration-applying command, so the Cloud TEST job could not pass until the
+approved R6-F reconciliation removed the freeze — which has now happened; see
+`docs/evidence/R6F-migration-history-reconciliation.md`. The file is deleted
+and the guard is a no-op. The Cloud TEST job's remaining blocker is the
+unconfigured `cloud-test` environment (credentials/variables), not the freeze.
 
-Do **not** add `MIGRATION_FREEZE_ACK` to the workflow. A CI-wide bypass would
-convert a deliberate, per-command, human-acknowledged control into an automatic
-one, which is the opposite of what the freeze is for. Until the freeze lifts,
-treat `CI / Application verification` as the required check and add
-`CI / Cloud TEST database and E2E` to branch protection the moment it can pass.
+`MIGRATION_FREEZE_ACK` was never added to this workflow while the freeze was
+active, and should not be added now either — it existed to bypass a control
+that no longer exists. Once the `cloud-test` environment is configured and
+this job passes, add `CI / Cloud TEST database and E2E` to branch protection
+alongside `CI / Application verification`.
 
 Protected credentials are step-scoped: package installation and target metadata
 validation receive none; database credentials are exposed only to the relevant

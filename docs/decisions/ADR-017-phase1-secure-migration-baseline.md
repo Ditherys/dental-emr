@@ -1,6 +1,6 @@
 # ADR-017 — Phase 1 secure migration baseline and the grant-last fail-closed invariant
 
-**Status:** Accepted for R6-A (baseline authored in Git). R6-C/R6-D/R6-E empirical validation is complete (see "Outstanding work" below); R6-D's two tooling-fix commits were reviewed 2026-08-18 (a fresh-context agent, not Codex, at the project owner's explicit direction — see `docs/AI_HANDOFF.md`), with findings fixed in `afbb3a8`. Reconciliation with the linked DEV project (R6-F) remains outstanding pending its own separate explicit approval.
+**Status:** Accepted and fully executed through R6-F (2026-08-18). R6-C/R6-D/R6-E empirical validation is complete; R6-D's two tooling-fix commits were reviewed by a fresh-context agent, not Codex, at the project owner's explicit direction (see `docs/AI_HANDOFF.md`), with findings fixed in `afbb3a8`. R6-F reconciled DEV's migration history via `migration repair` and the migration freeze is lifted — see `docs/evidence/R6F-migration-history-reconciliation.md`. See "Outstanding work" below for the per-step record.
 **Date:** 2026-08-13
 **Decision owner:** Project owner
 **Supersedes:** the thirteen Phase 1 foundation migration files listed below
@@ -172,13 +172,15 @@ Where the chain replaced an object more than once, the baseline carries **only t
 
 ## Intentional temporary DEV history divergence
 
+**Resolved 2026-08-18 by R6-F** — this section describes the state that existed from R6-A until then, kept as historical record. DEV's migration history is now reconciled and clean; see `docs/evidence/R6F-migration-history-reconciliation.md` and the "Outstanding work" table below.
+
 From this checkpoint until R6-F completes, the linked Supabase Cloud DEV project's `supabase_migrations.schema_migrations` table intentionally disagrees with the local baseline: DEV holds the thirteen superseded versions and none of the eight baseline versions.
 
 **This divergence is expected, intentional, and temporary.** It is not drift to be "fixed" by pushing.
 
 DEV's *schema* is unaffected. DEV already sits at the accepted hardened final state, and R6-A contacted no database.
 
-A migration freeze is in force for the duration — see `supabase/MIGRATION_FREEZE.md`. Until R6-F, no `db push`, `migration up`, `migration repair`, `db reset`, schema-changing SQL, or migration deployment may run against DEV.
+A migration freeze was in force for the duration — see `supabase/MIGRATION_FREEZE.md` (deleted at R6-F completion, per its own instructions). Until R6-F, no `db push`, `migration up`, `migration repair`, `db reset`, schema-changing SQL, or migration deployment could run against DEV.
 
 ### R6-F reconciliation requirement
 
@@ -237,7 +239,7 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 | R6-C | Create disposable Cloud TEST project from zero | **Complete** — executed against TEST-01, 2026-08-14 (`P1_PROVISION_PASS`; see `docs/evidence/R6C-R6E-test01.md`). TEST-01 has since been deleted; the proof stands as a historical execution, not a standing environment |
 | R6-D | Interrupted-replay boundary validation | **Complete** — both `--mode=file` and `--mode=statement` pass against fresh, empty Cloud TEST projects: zero boundary invariant violations across the full statement-by-statement replay of all 8 baseline files, plus the live-authorization-probe verified passing. See `docs/AI_HANDOFF.md`'s current checkpoint for the exact verification method and two tooling bugs found and fixed in the process |
 | R6-E | Cloud-safe equivalence + full verification | **Complete against TEST-01** (2026-08-14; see `docs/evidence/R6C-R6E-test01.md` and `docs/evidence/R6E-catalog-comparison.md`). **Decided 2026-08-18:** no fresh re-verification against a later TEST-02 is required — no baseline migration file has changed since this proof, only R6-D's own verification tooling |
-| R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires explicit project-owner approval. R6-D's two tooling-fix commits (`033754f`, `338c59c`) were reviewed 2026-08-18 by a fresh-context agent at the project owner's explicit direction, not Codex — see `docs/AI_HANDOFF.md`'s current checkpoint for the recorded deviation and the findings fixed in `afbb3a8` |
+| R6-F | Reconcile DEV migration history via `migration repair` | **Complete** — executed 2026-08-18 with explicit project-owner approval, after R6-D's two tooling-fix commits were reviewed by a fresh-context agent (not Codex, project owner's explicit direction; findings fixed in `afbb3a8`). The 13 superseded versions marked `reverted`, the 8 baseline versions marked `applied`; `migration list --linked` against DEV is clean. `supabase/MIGRATION_FREEZE.md` deleted. See `docs/evidence/R6F-migration-history-reconciliation.md` |
 
 ## Independent review requirement
 
