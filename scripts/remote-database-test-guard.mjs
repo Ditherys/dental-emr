@@ -76,6 +76,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "audit_foundation.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
+  "branch_lifecycle.test.sql",
 ]);
 
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;

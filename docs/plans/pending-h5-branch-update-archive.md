@@ -1,8 +1,13 @@
-# H-5 — Branch update/archive (pending migration 9)
+# H-5 — Branch update/archive (implemented)
 
-**Status:** design/prep only. Not implemented. Do not add the SQL below to
-`supabase/migrations/` until R6-F has completed and the migration freeze is
-lifted — see `docs/AI_HANDOFF.md` and `supabase/MIGRATION_FREEZE.md`.
+**Status: implemented 2026-08-18**, after R6-F lifted the migration freeze.
+This document is kept as the historical design record; the live migration is
+`supabase/migrations/20260818010000_branch_update_and_archive.sql` (applied
+verbatim from the draft below), registered in
+`scripts/approved-final-grants.mjs`, and verified in
+`docs/evidence/H5-branch-lifecycle-verification.md`. The TypeScript/UI layer
+described in the implementation spec below is also implemented — see that
+evidence file for exact file locations.
 
 ## Why this is staged here instead of in `supabase/migrations/`
 
@@ -310,7 +315,7 @@ multiple registered terminal migrations — `terminalByFile` is a `Map` and
 only the registration above. Run `npm run security:migrations` after adding
 the migration file to confirm.
 
-## Why the TypeScript/UI layer isn't written yet
+## Why the TypeScript/UI layer was not written at design time (resolved)
 
 `src/lib/supabase/server.ts`'s `createClient()` is typed
 `createServerClient<Database>(...)` from `src/types/database.generated.ts`.
@@ -321,7 +326,7 @@ this code today without either breaking typecheck or using an `any`/
 a documented third-party issue. Regenerate types (`npm run db:types`) against
 a project that actually has the migration applied before writing this layer.
 
-## Implementation spec for the deferred TypeScript/UI layer
+## Implementation spec used for the TypeScript/UI layer (now implemented)
 
 When R6-F lifts the freeze and this migration is pushed to DEV and types are
 regenerated:

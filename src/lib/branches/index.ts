@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
-import type { BranchFormValues } from "./schema";
+import type { BranchFormValues, BranchUpdateFormValues } from "./schema";
 import { createClient } from "@/lib/supabase/server";
 
 const branchSummarySchema = z.object({
@@ -28,7 +28,13 @@ export type BranchSummary = z.infer<typeof branchSummarySchema>;
 
 export class BranchManagementError extends Error {
   constructor(
-    public readonly code: "DUPLICATE" | "NOT_AUTHORIZED" | "FAILED",
+    public readonly code:
+      | "DUPLICATE"
+      | "NOT_AUTHORIZED"
+      | "ARCHIVED"
+      | "ALREADY_ARCHIVED"
+      | "LAST_BRANCH"
+      | "FAILED",
   ) {
     super(code);
     this.name = "BranchManagementError";
@@ -96,6 +102,78 @@ export async function createBranch({
 
     if (error.code === "42501") {
       throw new BranchManagementError("NOT_AUTHORIZED");
+    }
+
+    throw new BranchManagementError("FAILED");
+  }
+
+  return databaseUuid.parse(data);
+}
+
+type UpdateBranchInput = BranchUpdateFormValues & {
+  branchId: string;
+};
+
+export async function updateBranch({
+  branchId,
+  name,
+  phone,
+  email,
+  addressLine1,
+  addressLine2,
+  city,
+  province,
+  postalCode,
+  timezone,
+  websiteVisible,
+}: UpdateBranchInput) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_branch", {
+    target_branch_id: branchId,
+    branch_name: name,
+    branch_address_line1: addressLine1,
+    branch_city: city,
+    branch_province: province,
+    branch_timezone: timezone,
+    branch_website_visible: websiteVisible,
+    ...(phone ? { branch_phone: phone } : {}),
+    ...(email ? { branch_email: email } : {}),
+    ...(addressLine2 ? { branch_address_line2: addressLine2 } : {}),
+    ...(postalCode ? { branch_postal_code: postalCode } : {}),
+  });
+
+  if (error) {
+    if (error.code === "42501") {
+      throw new BranchManagementError("NOT_AUTHORIZED");
+    }
+
+    if (error.code === "22023" && error.message.includes("archived branch")) {
+      throw new BranchManagementError("ARCHIVED");
+    }
+
+    throw new BranchManagementError("FAILED");
+  }
+
+  return databaseUuid.parse(data);
+}
+
+export async function archiveBranch(branchId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("archive_branch", {
+    target_branch_id: branchId,
+  });
+
+  if (error) {
+    if (error.code === "42501") {
+      throw new BranchManagementError("NOT_AUTHORIZED");
+    }
+
+    if (error.code === "22023" && error.message.includes("already archived")) {
+      throw new BranchManagementError("ALREADY_ARCHIVED");
+    }
+
+    if (error.code === "22023" && error.message.includes("only remaining branch")) {
+      throw new BranchManagementError("LAST_BRANCH");
     }
 
     throw new BranchManagementError("FAILED");

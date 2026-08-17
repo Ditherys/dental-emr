@@ -129,6 +129,23 @@ const finalGrants = [
   })),
 ];
 
+const BRANCH_LIFECYCLE_MIGRATION = "20260818010000_branch_update_and_archive.sql";
+
+const BRANCH_LIFECYCLE_RPCS = Object.freeze([
+  "public.update_branch(uuid, text, text, text, text, text, text, text, text, text, boolean)",
+  "public.archive_branch(uuid)",
+]);
+
+const branchLifecycleGrants = BRANCH_LIFECYCLE_RPCS.map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "The sole branch update/archive mutation path (H-5). Derives organization_id from the target branch row (never accepted from the client), calls private.require_aal2() first, takes the organization-scoped advisory lock, re-derives authorization from the current user context, and emits an audit event in the same transaction.",
+}));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -140,6 +157,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: FINAL_GRANTS_MIGRATION,
     grants: Object.freeze(finalGrants),
+  }),
+  Object.freeze({
+    file: BRANCH_LIFECYCLE_MIGRATION,
+    grants: Object.freeze(branchLifecycleGrants),
   }),
 ]);
 

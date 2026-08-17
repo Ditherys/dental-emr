@@ -494,6 +494,7 @@ export type Database = {
         }
         Returns: string
       }
+      archive_branch: { Args: { target_branch_id: string }; Returns: string }
       create_branch: {
         Args: {
           branch_address_line1: string
@@ -581,6 +582,22 @@ export type Database = {
           grant_permission: boolean
           target_permission_code: string
           target_role_id: string
+        }
+        Returns: string
+      }
+      update_branch: {
+        Args: {
+          branch_address_line1: string
+          branch_address_line2?: string
+          branch_city: string
+          branch_email?: string
+          branch_name: string
+          branch_phone?: string
+          branch_postal_code?: string
+          branch_province: string
+          branch_timezone?: string
+          branch_website_visible?: boolean
+          target_branch_id: string
         }
         Returns: string
       }

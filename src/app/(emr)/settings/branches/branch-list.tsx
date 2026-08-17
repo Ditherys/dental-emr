@@ -1,5 +1,7 @@
 import { Building2, Globe2 } from "lucide-react";
 
+import { BranchArchiveDialog } from "./branch-archive-dialog";
+import { BranchEditDialog } from "./branch-edit-dialog";
 import type { BranchSummary } from "@/lib/branches";
 
 function contactLabel(branch: BranchSummary) {
@@ -62,6 +64,9 @@ export function BranchList({ branches }: { branches: BranchSummary[] }) {
                   <th scope="col" className="px-3 py-2.5 font-medium">
                     Website
                   </th>
+                  <th scope="col" className="px-3 py-2.5 font-medium">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -84,6 +89,14 @@ export function BranchList({ branches }: { branches: BranchSummary[] }) {
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">
                       {branch.website_visible ? "Visible" : "Hidden"}
+                    </td>
+                    <td className="px-3 py-3">
+                      {branch.status !== "archived" && (
+                        <div className="flex justify-end gap-2">
+                          <BranchEditDialog branch={branch} />
+                          <BranchArchiveDialog branch={branch} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -122,6 +135,12 @@ export function BranchList({ branches }: { branches: BranchSummary[] }) {
                     </dd>
                   </div>
                 </dl>
+                {branch.status !== "archived" && (
+                  <div className="mt-4 flex gap-2">
+                    <BranchEditDialog branch={branch} />
+                    <BranchArchiveDialog branch={branch} />
+                  </div>
+                )}
               </article>
             ))}
           </div>

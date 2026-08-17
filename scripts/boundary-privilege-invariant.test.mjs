@@ -105,6 +105,8 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.set_branch_membership(uuid, uuid, text)",
     "public.update_organization_member_status(uuid, text)",
     "public.record_mfa_enrollment(uuid)",
+    "public.update_branch(uuid, text, text, text, text, text, text, text, text, text, boolean)",
+    "public.archive_branch(uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1116,7 +1118,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(22);
+    expect(approved.size).toBe(24);
   });
 });
 

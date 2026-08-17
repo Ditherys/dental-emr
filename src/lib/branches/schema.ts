@@ -57,6 +57,13 @@ export const branchFormSchema = z.object({
 
 export type BranchFormValues = z.infer<typeof branchFormSchema>;
 
+export const branchUpdateFormSchema = branchFormSchema.omit({
+  code: true,
+  slug: true,
+});
+
+export type BranchUpdateFormValues = z.infer<typeof branchUpdateFormSchema>;
+
 export function branchSlugFromName(name: string) {
   return name
     .normalize("NFKD")

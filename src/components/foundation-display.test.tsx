@@ -1,7 +1,19 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+// BranchList renders BranchEditDialog/BranchArchiveDialog for active branches,
+// which import the "use server" actions module -- that module's real
+// implementation transitively imports "server-only" via @/lib/branches,
+// which throws/fails to resolve outside a real Next.js server context (jsdom
+// has no such handling). Mocked here for exactly the same reason
+// actions.test.ts mocks @/lib/branches: this test never submits either
+// dialog's form, so the real implementations are never needed.
+vi.mock("@/app/(emr)/settings/branches/actions", () => ({
+  updateBranchAction: vi.fn(),
+  archiveBranchAction: vi.fn(),
+}));
 
 import { BranchList } from "@/app/(emr)/settings/branches/branch-list";
 import { PermissionDenied } from "@/components/feedback/permission-denied";

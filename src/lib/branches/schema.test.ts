@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { branchFormSchema, branchSlugFromName } from "./schema";
+import {
+  branchFormSchema,
+  branchSlugFromName,
+  branchUpdateFormSchema,
+} from "./schema";
 
 describe("branchFormSchema", () => {
   it("normalizes branch identifiers and keeps website visibility explicit", () => {
@@ -44,6 +48,31 @@ describe("branchFormSchema", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("branchUpdateFormSchema", () => {
+  it("accepts a full valid payload without code or slug", () => {
+    const result = branchUpdateFormSchema.parse({
+      name: "Demo Third",
+      phone: "",
+      email: "",
+      addressLine1: "300 Synthetic Avenue",
+      addressLine2: "",
+      city: "Quezon City",
+      province: "Metro Manila",
+      postalCode: "1100",
+      timezone: "Asia/Manila",
+      websiteVisible: false,
+    });
+
+    expect(result).toMatchObject({
+      name: "Demo Third",
+      addressLine1: "300 Synthetic Avenue",
+      websiteVisible: false,
+    });
+    expect(result).not.toHaveProperty("code");
+    expect(result).not.toHaveProperty("slug");
   });
 });
 
