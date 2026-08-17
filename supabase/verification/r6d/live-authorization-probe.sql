@@ -164,6 +164,33 @@ values (
   false
 );
 
+-- CONTROL 1b calls a private helper by schema-qualified name as an ad hoc
+-- statement. A real authenticated session never does this directly — RLS
+-- policies embed an already-resolved reference to the helper, so evaluating a
+-- policy only ever re-checks EXECUTE on that function, never schema USAGE on
+-- `private`. But control 1b's raw SQL text requires fresh name resolution
+-- under whichever role runs it, which needs schema USAGE — correctly absent
+-- for `authenticated` (ADR-017: `private` is not browser-reachable in any
+-- form). This ephemeral wrapper is created while still connected as the
+-- initial role (which does have access to `private`), so control 1b can
+-- prove the actor holds each permission without granting the probe's session
+-- role any capability the real production baseline does not already grant.
+-- `pg_temp` is always reachable by the owning backend regardless of the
+-- current role, so the later role switch below does not affect this.
+create function pg_temp.r6d_probe_has_org_permission(
+  target_organization_id uuid,
+  target_permission_code text
+)
+returns boolean
+language sql
+security definer
+set search_path = ''
+as $$
+  select private.has_org_permission(target_organization_id, target_permission_code);
+$$;
+
+grant execute on function pg_temp.r6d_probe_has_org_permission(uuid, text) to authenticated;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '91000000-0000-0000-0000-000000000001', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -184,27 +211,27 @@ select extensions.is(
 -- 1b. The actor genuinely holds every management permission the superseded
 --     chain's mutation policies were gated on.
 select extensions.ok(
-  (select private.has_org_permission('92000000-0000-0000-0000-000000000001', 'role.manage')),
+  (select pg_temp.r6d_probe_has_org_permission('92000000-0000-0000-0000-000000000001', 'role.manage')),
   'CONTROL 1b: actor holds role.manage, so the superseded chain would have allowed role_permissions DML'
 );
 
 select extensions.ok(
-  (select private.has_org_permission('92000000-0000-0000-0000-000000000001', 'user.manage')),
+  (select pg_temp.r6d_probe_has_org_permission('92000000-0000-0000-0000-000000000001', 'user.manage')),
   'CONTROL 1b: actor holds user.manage, so the superseded chain would have allowed organization_members DML'
 );
 
 select extensions.ok(
-  (select private.has_org_permission('92000000-0000-0000-0000-000000000001', 'branch.manage')),
+  (select pg_temp.r6d_probe_has_org_permission('92000000-0000-0000-0000-000000000001', 'branch.manage')),
   'CONTROL 1b: actor holds branch.manage, so the superseded chain would have allowed branches DML'
 );
 
 select extensions.ok(
-  (select private.has_org_permission('92000000-0000-0000-0000-000000000001', 'organization.manage')),
+  (select pg_temp.r6d_probe_has_org_permission('92000000-0000-0000-0000-000000000001', 'organization.manage')),
   'CONTROL 1b: actor holds organization.manage, so the superseded chain would have allowed organizations DML'
 );
 
 select extensions.ok(
-  (select private.has_org_permission('92000000-0000-0000-0000-000000000001', 'security.manage')),
+  (select pg_temp.r6d_probe_has_org_permission('92000000-0000-0000-0000-000000000001', 'security.manage')),
   'CONTROL 1b: actor holds security.manage, the highest Phase 1 authority'
 );
 

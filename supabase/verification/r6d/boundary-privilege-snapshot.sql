@@ -122,8 +122,22 @@ routines as (
     -- "function", matching what classifyStatement would call anything that
     -- isn't literally CREATE PROCEDURE.
     case when procedure.prokind = 'p' then 'procedure' else 'function' end as object_class,
+    -- Bare comma-separated types, matching normalizeObjectIdentity's expected
+    -- input shape (scripts/migration-privilege-lint.mjs) and
+    -- approved-final-grants.mjs's signature strings. pg_get_function_identity_
+    -- arguments() includes parameter NAMES ("target_branch_id uuid"), which
+    -- normalizeObjectIdentity's whitespace-stripping then glues into one wrong
+    -- token ("target_branch_iduuid") instead of extracting the type — a false
+    -- boundary violation on every named-parameter function, found on R6-D's
+    -- first real execution. proargtypes carries only IN/INOUT/VARIADIC
+    -- argument types, with no names, in the same order identity_arguments
+    -- would list them; no baseline function uses VARIADIC, so the distinct
+    -- array-type spelling that would apply there is not a concern here.
     schema.nspname || '.' || procedure.proname
-      || '(' || pg_catalog.pg_get_function_identity_arguments(procedure.oid) || ')'
+      || '(' || (
+        select coalesce(string_agg(pg_catalog.format_type(argument.argtype, null), ','), '')
+        from unnest(procedure.proargtypes) as argument(argtype)
+      ) || ')'
       as identity
   from pg_catalog.pg_proc as procedure
   join target_schemas as schema on schema.oid = procedure.pronamespace
