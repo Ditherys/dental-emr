@@ -282,6 +282,18 @@ export function assertPreFinalBoundary({ label, baselineSnapshot, snapshot }) {
  * is created, it is assigned an owner... PUBLIC represents the notion of
  * 'all roles, including those that might be created later'. ... EXECUTE
  * privilege for functions and procedures is granted to PUBLIC by default."
+ *
+ * The live probe (`boundary-privilege-snapshot.sql`) does not read ACL text —
+ * it asks PostgreSQL what each role can effectively do (`has_function_privilege`
+ * for `anon`/`authenticated`; `aclexplode` for PUBLIC). A privilege held by
+ * PUBLIC is, by PostgreSQL's ACL semantics, held by every role, `anon` and
+ * `authenticated` included — that is not a Supabase-specific or
+ * project-specific fact, it is what "PUBLIC" means. So the single PostgreSQL
+ * default above surfaces as three effective-privilege rows in the probe's
+ * output, not one: `public`/execute, `anon`/execute, `authenticated`/execute,
+ * all naming the same object. All three are listed explicitly rather than
+ * deriving `anon`/`authenticated` from the `public` entry at match time, so
+ * this remains a flat, exhaustive, auditable table.
  */
 const KNOWN_CREATION_DEFAULT_PRIVILEGES = Object.freeze([
   Object.freeze({
@@ -290,11 +302,48 @@ const KNOWN_CREATION_DEFAULT_PRIVILEGES = Object.freeze([
     privilege: "execute",
   }),
   Object.freeze({
+    objectClass: "function",
+    grantee: "anon",
+    privilege: "execute",
+  }),
+  Object.freeze({
+    objectClass: "function",
+    grantee: "authenticated",
+    privilege: "execute",
+  }),
+  Object.freeze({
     objectClass: "procedure",
     grantee: "public",
     privilege: "execute",
   }),
+  Object.freeze({
+    objectClass: "procedure",
+    grantee: "anon",
+    privilege: "execute",
+  }),
+  Object.freeze({
+    objectClass: "procedure",
+    grantee: "authenticated",
+    privilege: "execute",
+  }),
 ]);
+
+/**
+ * DELIBERATELY NOT COVERED: Supabase's `ALTER DEFAULT PRIVILEGES` on newly
+ * created tables (ADR-017 §2, §4). Unlike the function/procedure PUBLIC
+ * EXECUTE default above, that grant is not a PostgreSQL-wide constant — it is
+ * a per-project, `FOR ROLE`-scoped configuration whose effective grantees and
+ * privileges depend on which role actually creates the object during
+ * `supabase db push`, a fact ADR-017 §4 records as unverified until R6-C/R6-D
+ * execute against a real database. Hardcoding a guess here would be exactly
+ * the "policy choice" this list's own contract forbids, and would silently
+ * paper over a table-creation transient the invariant exists to catch. If a
+ * live R6-D run observes such a transient, the correct fix is to measure it
+ * (e.g. `pg_default_acl` for the creating role) and compute grace from that
+ * measurement — not to extend this table by guesswork. Until then, statement
+ * mode fails closed on any newly observed table privilege, adjacent-REVOKE or
+ * not, which is the intended behavior, not a defect.
+ */
 
 /**
  * True only when `entry` is exactly the PostgreSQL-automatic default

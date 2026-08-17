@@ -114,6 +114,14 @@ routines as (
     procedure.oid,
     procedure.proowner,
     procedure.proacl,
+    -- `object_class` mirrors migration-privilege-lint.mjs's classifyStatement,
+    -- which reads the literal CREATE keyword ("function" or "procedure") off
+    -- the migration text. prokind = 'p' is PostgreSQL's own way of recording
+    -- that the routine was declared with CREATE PROCEDURE. Any other prokind
+    -- ('f' normal function, 'a' aggregate, 'w' window) is reported as
+    -- "function", matching what classifyStatement would call anything that
+    -- isn't literally CREATE PROCEDURE.
+    case when procedure.prokind = 'p' then 'procedure' else 'function' end as object_class,
     schema.nspname || '.' || procedure.proname
       || '(' || pg_catalog.pg_get_function_identity_arguments(procedure.oid) || ')'
       as identity
@@ -185,7 +193,7 @@ public_sequence_privileges as (
 public_function_privileges as (
   select
     'public' as grantee,
-    'function' as object_class,
+    routine.object_class,
     routine.identity as object,
     lower(entry.privilege_type) as privilege,
     null::text as column_name
@@ -275,7 +283,7 @@ role_sequence_privileges as (
 role_function_privileges as (
   select
     browser_role.rolname::text as grantee,
-    'function' as object_class,
+    routine.object_class,
     routine.identity as object,
     lower(privilege.privilege_type) as privilege,
     null::text as column_name

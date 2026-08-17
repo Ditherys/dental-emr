@@ -420,6 +420,100 @@ describe("statement-mode grace window", () => {
     expect(second.pending).toEqual([]);
   });
 
+  it("grants grace to all three probe-shaped rows the same PUBLIC EXECUTE default produces, and closes all three on the adjacent REVOKE", () => {
+    // The live probe does not read ACL text — it asks has_function_privilege
+    // per role. A single PostgreSQL PUBLIC EXECUTE default is therefore
+    // observed as three effective-privilege rows, not one: PUBLIC's own,
+    // and anon's/authenticated's derived-through-PUBLIC rows.
+    const THREE_ROLE_ROWS = [
+      { ...NEW_FUNCTION_EXECUTE, grantee: "public" },
+      { ...NEW_FUNCTION_EXECUTE, grantee: "anon" },
+      { ...NEW_FUNCTION_EXECUTE, grantee: "authenticated" },
+    ];
+
+    const first = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE FUNCTION statement, probe-shaped)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...THREE_ROLE_ROWS] }),
+      pending: [],
+      statement: CREATE_SET_ROLE_PERMISSION,
+    });
+
+    expect(first.problems).toEqual([]);
+    expect(first.pending).toHaveLength(3);
+
+    const second = assertPreFinalStatementBoundary({
+      label: "boundary N+1 (adjacent REVOKE closes all three)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
+      pending: first.pending,
+      statement: NOT_A_CREATE,
+    });
+
+    expect(second.problems).toEqual([]);
+    expect(second.pending).toEqual([]);
+  });
+
+  it("still fails immediately on an anon/authenticated grant that is not the statement's own default", () => {
+    // Same grantees as the recognized default, but naming a different
+    // function than the one this statement created — must not be graced.
+    const UNRELATED_ROLE_EXECUTE = {
+      grantee: "authenticated",
+      object_class: "function",
+      object: "public.set_member_role(uuid, uuid, uuid, boolean)",
+      privilege: "execute",
+      column: null,
+    };
+
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N (unrelated function, probe-shaped)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, UNRELATED_ROLE_EXECUTE] }),
+      pending: [],
+      statement: CREATE_SET_ROLE_PERMISSION,
+    });
+
+    expect(result.problems).toHaveLength(1);
+    expect(result.problems[0]).toContain("set_member_role");
+    expect(result.pending).toEqual([]);
+  });
+
+  it("grants the same grace to CREATE PROCEDURE, matched by object_class rather than assumed to be a function", () => {
+    const CREATE_A_PROCEDURE = {
+      type: "create",
+      objectClass: "procedure",
+      identity: "public.archive_branch(uuid)",
+    };
+
+    const PROCEDURE_EXECUTE_ROWS = [
+      {
+        grantee: "public",
+        object_class: "procedure",
+        object: "public.archive_branch(uuid)",
+        privilege: "execute",
+        column: null,
+      },
+      {
+        grantee: "authenticated",
+        object_class: "procedure",
+        object: "public.archive_branch(uuid)",
+        privilege: "execute",
+        column: null,
+      },
+    ];
+
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE PROCEDURE statement, probe-shaped)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...PROCEDURE_EXECUTE_ROWS] }),
+      pending: [],
+      statement: CREATE_A_PROCEDURE,
+    });
+
+    expect(result.problems).toEqual([]);
+    expect(result.pending).toHaveLength(2);
+  });
+
   it("never treats the accepted extension-schema exception as pending", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N",
@@ -629,35 +723,49 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
   });
 
   it("does not carry a resolved file's grace state into the next file", () => {
-    const statements = splitSqlStatements(
-      CREATE_SET_ROLE_PERMISSION_SQL,
-      "0100_creates_and_revokes.sql",
-    );
+    // File one deliberately omits the REVOKE (unlike
+    // CREATE_SET_ROLE_PERMISSION_SQL above), so its pending grace is genuinely
+    // non-empty when the file ends — the exact state a carryover bug would
+    // need to leak for this test to mean anything. If assertStatementModeFile
+    // ever started threading `pendingGrace` across calls instead of always
+    // initializing it fresh, this is the scenario that would go quiet instead
+    // of failing.
+    const firstFileSource = `
+      create function public.set_role_permission(p_role_id uuid, p_permission text, p_granted boolean)
+      returns void
+      language plpgsql
+      security definer
+      set search_path = ''
+      as $$ begin null; end; $$;
+    `;
+    const firstFileStatements = splitSqlStatements(firstFileSource, "0100_leaves_open.sql");
     const afterCreate = snapshot({
       privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE],
     });
-    const afterRevoke = snapshot({ privileges: PLATFORM_BASELINE.privileges });
 
     const firstFile = assertStatementModeFile({
-      file: { name: "0100_creates_and_revokes.sql" },
-      statements,
-      snapshots: [afterCreate, afterRevoke],
+      file: { name: "0100_leaves_open.sql" },
+      statements: firstFileStatements,
+      snapshots: [afterCreate],
       baselineSnapshot: PLATFORM_BASELINE,
       isTerminal: false,
       previousSnapshot: PLATFORM_BASELINE,
     });
 
+    // Nothing has failed yet inside file one — correct, since there is no
+    // following statement within this file to check the grace against. This
+    // is the moment `pendingGrace` holds the still-open entry.
     expect(firstFile.problems).toEqual([]);
 
-    // A second, unrelated file whose single statement is not a CREATE at all.
-    // If pending grace had leaked from the first file (a regression this test
-    // exists to catch), there would be nothing pending to leak into anyway in
-    // this scenario — so instead assert directly that a fresh call starts
-    // clean: an entry appearing here with no matching CREATE in *this* file's
-    // statement must fail immediately, not be silently treated as still
-    // within some carried-over grace.
+    // A second file whose one statement is not a CREATE at all and does not
+    // revoke anything. The same privilege is still present. If grace had
+    // leaked across the file boundary, this would be silently treated as
+    // "still within the grace opened by file one's CREATE" and produce no
+    // problem. It must instead be reported as a fresh, non-adjacent violation
+    // — exactly as if no prior grace existed, because per-file grace must not
+    // exist.
     const secondFileStatements = splitSqlStatements(
-      "revoke all on table public.branches from anon;",
+      "select 1;",
       "0101_unrelated.sql",
     );
     const secondFileSnapshot = snapshot({
