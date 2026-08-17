@@ -1,6 +1,6 @@
 # ADR-017 — Phase 1 secure migration baseline and the grant-last fail-closed invariant
 
-**Status:** Accepted for R6-A (baseline authored in Git). R6-C/R6-D/R6-E empirical validation is complete (see "Outstanding work" below); R6-D's two tooling-fix commits (`033754f`, `338c59c`) still require independent Codex review, and reconciliation with the linked DEV project (R6-F) remains outstanding pending that review and its own separate approval.
+**Status:** Accepted for R6-A (baseline authored in Git). R6-C/R6-D/R6-E empirical validation is complete (see "Outstanding work" below); R6-D's two tooling-fix commits were reviewed 2026-08-18 (a fresh-context agent, not Codex, at the project owner's explicit direction — see `docs/AI_HANDOFF.md`), with findings fixed in `afbb3a8`. Reconciliation with the linked DEV project (R6-F) remains outstanding pending its own separate explicit approval.
 **Date:** 2026-08-13
 **Decision owner:** Project owner
 **Supersedes:** the thirteen Phase 1 foundation migration files listed below
