@@ -133,7 +133,7 @@ It is explicitly **not** a keyword search for `GRANT INSERT`. The H2 defect clas
 
 The checker is proven to **catch** the defect, not merely to agree with today's files: `scripts/fixtures/migration-privilege-lint/` holds synthetic unsafe migrations — including `GRANT INSERT ON public.roles TO authenticated` and an unrevoked `SECURITY DEFINER` function — that the test suite asserts are rejected. They live outside `supabase/migrations/`, carry a `FIXTURE_NOT_A_MIGRATION` marker, and a test asserts no active migration contains that marker.
 
-#### 7.2 Dynamic enforcement — R6-D, authored but not executed
+#### 7.2 Dynamic enforcement — R6-D, `--mode=file` executed; `--mode=statement` outstanding
 
 Static analysis proves the files *say* the right thing. It cannot prove what PostgreSQL *does*: default privileges, role inheritance, ACL retention across `CREATE OR REPLACE`, and Supabase's own project defaults all live outside the SQL text.
 
@@ -146,7 +146,7 @@ Two properties make a passing run mean something:
 
 The live authorization probe uses a synthetic actor holding the system `OWNER` role — the exact actor the superseded chain *would* have permitted every prohibited operation — and runs four meaningfulness controls before any prohibited attempt, so a refusal is a privilege boundary rather than a powerless user.
 
-The decision logic is unit-tested offline. **None of it has been executed against a database**, and R6-D remains outstanding and separately approval-gated.
+The decision logic is unit-tested offline. **`--mode=file` has been executed against a fresh, empty Cloud TEST project and passes cleanly** (see `docs/AI_HANDOFF.md`'s current checkpoint). `--mode=statement` has not yet run, and R6-D as a whole remains outstanding and separately approval-gated until both modes pass and the checkpoint receives independent review.
 
 ## Superseded migrations
 

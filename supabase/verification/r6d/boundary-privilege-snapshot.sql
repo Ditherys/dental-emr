@@ -1,4 +1,7 @@
--- R6-D boundary privilege snapshot — AUTHORED IN R6-B, NOT YET EXECUTED.
+-- R6-D boundary privilege snapshot — PASSES against a fresh, empty Cloud TEST
+-- project as of `--mode=file` (see docs/AI_HANDOFF.md's current checkpoint;
+-- the function-signature normalization bug, found on that first real run, is
+-- fixed). --mode=statement has not yet run against this file.
 --
 -- Read-only. Creates nothing, changes nothing, and returns one JSON row
 -- describing the EFFECTIVE privileges the browser-reachable roles hold at the
@@ -133,10 +136,18 @@ routines as (
     -- argument types, with no names, in the same order identity_arguments
     -- would list them; no baseline function uses VARIADIC, so the distinct
     -- array-type spelling that would apply there is not a concern here.
+    --
+    -- string_agg's input order is unspecified without an explicit ORDER BY
+    -- (unnest's own storage order is not a documented guarantee for
+    -- aggregation purposes) — ORDER BY ordinality pins it to proargtypes'
+    -- actual positional order, which is the call signature.
     schema.nspname || '.' || procedure.proname
       || '(' || (
-        select coalesce(string_agg(pg_catalog.format_type(argument.argtype, null), ','), '')
-        from unnest(procedure.proargtypes) as argument(argtype)
+        select coalesce(
+          string_agg(pg_catalog.format_type(argument.argtype, null), ',' order by argument.ordinality),
+          ''
+        )
+        from unnest(procedure.proargtypes) with ordinality as argument(argtype, ordinality)
       ) || ')'
       as identity
   from pg_catalog.pg_proc as procedure

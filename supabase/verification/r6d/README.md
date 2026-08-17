@@ -1,10 +1,14 @@
-# R6-D boundary invariant tooling — AUTHORED, NOT EXECUTED
+# R6-D boundary invariant tooling — file mode executed; statement mode outstanding
 
-**Nothing in this directory has been run against any database.** It was authored
-during R6-B so that R6-D adds only the remote execution, not the design.
+**`--mode=file` has passed cleanly against a fresh, empty Cloud TEST project** (see
+`docs/AI_HANDOFF.md`'s current checkpoint for the run and the two tooling bugs its
+first execution found and fixed). It was originally authored during R6-B, before
+any database contact.
 
-R6-C (create a disposable Cloud TEST project) and R6-D (run these probes against
-it) both require separate human approval. See
+**`--mode=statement` (the interrupted-mid-migration proof) has not yet run.** It
+needs its own fresh, empty Cloud TEST project, since file mode leaves the project
+fully baselined. R6-C (create a disposable Cloud TEST project) and each R6-D run
+against it both require separate human approval. See
 [ADR-017](../../../docs/decisions/ADR-017-phase1-secure-migration-baseline.md).
 
 ## What this proves, and what it cannot

@@ -1,4 +1,7 @@
--- R6-D live authorization probe — AUTHORED IN R6-B, NOT YET EXECUTED.
+-- R6-D live authorization probe — PASSES against a fresh, empty Cloud TEST
+-- project as of `--mode=file` (see docs/AI_HANDOFF.md's current checkpoint;
+-- control 1b's schema-USAGE bug, found on that first real run, is fixed).
+-- --mode=statement has not yet run against this file.
 --
 -- Catalog inspection proves what the ACLs say. This file proves what a real
 -- session can do. It runs entirely inside one transaction and ends in ROLLBACK.
@@ -189,6 +192,13 @@ as $$
   select private.has_org_permission(target_organization_id, target_permission_code);
 $$;
 
+-- PostgreSQL grants EXECUTE on every new function to PUBLIC by default (the
+-- same fact the baseline itself revokes adjacent to every CREATE — see
+-- ADR-017 section 2). Without this revoke, anon and every other role sharing
+-- this backend would also be able to call the wrapper, which is broader than
+-- what this probe is testing and broader than what the comment above claims.
+revoke all on function pg_temp.r6d_probe_has_org_permission(uuid, text)
+  from public, anon, authenticated;
 grant execute on function pg_temp.r6d_probe_has_org_permission(uuid, text) to authenticated;
 
 set local role authenticated;
