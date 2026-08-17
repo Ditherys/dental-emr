@@ -222,6 +222,7 @@ export function assertStatementModeFile({
       const result = assertPreFinalStatementBoundary({
         label,
         baselineSnapshot,
+        previousSnapshot: previous,
         snapshot,
         pending: pendingGrace,
         statement: classifyStatement(statement),

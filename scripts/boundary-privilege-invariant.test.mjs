@@ -367,6 +367,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N (CREATE FUNCTION statement)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
@@ -378,10 +379,15 @@ describe("statement-mode grace window", () => {
   });
 
   it("reports it as a real violation if it is still present the following statement", () => {
+    const afterCreate = snapshot({
+      privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE],
+    });
+
     const first = assertPreFinalStatementBoundary({
       label: "boundary N (CREATE FUNCTION statement)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterCreate,
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
     });
@@ -389,7 +395,8 @@ describe("statement-mode grace window", () => {
     const second = assertPreFinalStatementBoundary({
       label: "boundary N+1 (still not revoked)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      previousSnapshot: afterCreate,
+      snapshot: afterCreate,
       pending: first.pending,
       statement: NOT_A_CREATE,
     });
@@ -400,10 +407,15 @@ describe("statement-mode grace window", () => {
   });
 
   it("reports nothing once the adjacent REVOKE closes it by the following statement", () => {
+    const afterCreate = snapshot({
+      privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE],
+    });
+
     const first = assertPreFinalStatementBoundary({
       label: "boundary N (CREATE FUNCTION statement)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterCreate,
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
     });
@@ -411,6 +423,7 @@ describe("statement-mode grace window", () => {
     const second = assertPreFinalStatementBoundary({
       label: "boundary N+1 (REVOKE statement)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterCreate,
       snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
       pending: first.pending,
       statement: NOT_A_CREATE,
@@ -430,11 +443,13 @@ describe("statement-mode grace window", () => {
       { ...NEW_FUNCTION_EXECUTE, grantee: "anon" },
       { ...NEW_FUNCTION_EXECUTE, grantee: "authenticated" },
     ];
+    const afterCreate = snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...THREE_ROLE_ROWS] });
 
     const first = assertPreFinalStatementBoundary({
       label: "boundary N (CREATE FUNCTION statement, probe-shaped)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...THREE_ROLE_ROWS] }),
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterCreate,
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
     });
@@ -445,6 +460,7 @@ describe("statement-mode grace window", () => {
     const second = assertPreFinalStatementBoundary({
       label: "boundary N+1 (adjacent REVOKE closes all three)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterCreate,
       snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
       pending: first.pending,
       statement: NOT_A_CREATE,
@@ -468,6 +484,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N (unrelated function, probe-shaped)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, UNRELATED_ROLE_EXECUTE] }),
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
@@ -495,6 +512,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N (authenticated EXECUTE with no correlated PUBLIC row)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({
         privileges: [...PLATFORM_BASELINE.privileges, AUTHENTICATED_EXECUTE_WITHOUT_PUBLIC_SIBLING],
       }),
@@ -534,6 +552,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N (CREATE PROCEDURE statement, probe-shaped)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...PROCEDURE_EXECUTE_ROWS] }),
       pending: [],
       statement: CREATE_A_PROCEDURE,
@@ -547,6 +566,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({
         privileges: [
           ...PLATFORM_BASELINE.privileges,
@@ -571,6 +591,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({
         privileges: PLATFORM_BASELINE.privileges,
         public_tables_without_rls: ["public.branches"],
@@ -590,11 +611,13 @@ describe("statement-mode grace window", () => {
       privilege: "delete",
       column: null,
     };
+    const afterGrant = snapshot({ privileges: [...PLATFORM_BASELINE.privileges, UNEXPECTED_GRANT] });
 
     const first = assertPreFinalStatementBoundary({
       label: "boundary N (unexplained privilege appears)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, UNEXPECTED_GRANT] }),
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterGrant,
       pending: [],
       statement: NOT_A_CREATE,
     });
@@ -609,6 +632,7 @@ describe("statement-mode grace window", () => {
     const second = assertPreFinalStatementBoundary({
       label: "boundary N+1 (removed by REVOKE)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterGrant,
       snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
       pending: first.pending,
       statement: NOT_A_CREATE,
@@ -625,6 +649,7 @@ describe("statement-mode grace window", () => {
     const result = assertPreFinalStatementBoundary({
       label: "boundary N (unrelated CREATE FUNCTION)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
       pending: [],
       statement: CREATE_SET_MEMBER_ROLE,
@@ -637,10 +662,15 @@ describe("statement-mode grace window", () => {
 
   it("attributes two interleaved privilege-bearing creates to their own objects independently", () => {
     // Statement 1: CREATE FUNCTION set_role_permission — its own default appears.
+    const afterFirstCreate = snapshot({
+      privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE],
+    });
+
     const first = assertPreFinalStatementBoundary({
       label: "boundary 1 (CREATE FUNCTION set_role_permission)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterFirstCreate,
       pending: [],
       statement: CREATE_SET_ROLE_PERMISSION,
     });
@@ -653,12 +683,15 @@ describe("statement-mode grace window", () => {
     // it, and a different CREATE intervened rather than A's own adjacent
     // REVOKE, so A is a real ADR-017 violation right here, not still-graced.
     // Object B, created by *this* statement, gets its own fresh grace.
+    const afterSecondCreate = snapshot({
+      privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE, NEW_MEMBER_ROLE_EXECUTE],
+    });
+
     const second = assertPreFinalStatementBoundary({
       label: "boundary 2 (CREATE FUNCTION set_member_role)",
       baselineSnapshot: PLATFORM_BASELINE,
-      snapshot: snapshot({
-        privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE, NEW_MEMBER_ROLE_EXECUTE],
-      }),
+      previousSnapshot: afterFirstCreate,
+      snapshot: afterSecondCreate,
       pending: first.pending,
       statement: CREATE_SET_MEMBER_ROLE,
     });
@@ -675,6 +708,7 @@ describe("statement-mode grace window", () => {
     const third = assertPreFinalStatementBoundary({
       label: "boundary 3 (still no REVOKE for set_member_role)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterSecondCreate,
       snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_MEMBER_ROLE_EXECUTE] }),
       pending: second.pending,
       statement: NOT_A_CREATE,
@@ -683,6 +717,99 @@ describe("statement-mode grace window", () => {
     expect(third.problems).toHaveLength(1);
     expect(third.problems[0]).toContain("set_member_role");
     expect(third.problems[0]).not.toContain("set_role_permission");
+  });
+
+  it("does not re-admit an already-reported violation into pending when a later CREATE OR REPLACE targets the same object", () => {
+    // Reproduces the exact Codex-identified failure: an unrelated statement
+    // introduces a PUBLIC/anon/authenticated EXECUTE trio on some function Q
+    // that this statement did NOT create (so it is reported immediately, and
+    // — being a real violation, not a grace candidate — never enters
+    // `pending`). If "newly added" were computed as "anything beyond baseline
+    // that isn't already pending" (the pre-fix behavior), that stale,
+    // still-present trio would look "new" again at any later boundary and — if
+    // that later statement happens to CREATE OR REPLACE the very same object —
+    // would satisfy the sibling-correlation check and get waved through as
+    // that statement's own default, vanishing from view instead of remaining a
+    // violation.
+    const Q_ROWS = [
+      { grantee: "public", object_class: "function", object: "public.q()", privilege: "execute", column: null },
+      { grantee: "anon", object_class: "function", object: "public.q()", privilege: "execute", column: null },
+      {
+        grantee: "authenticated",
+        object_class: "function",
+        object: "public.q()",
+        privilege: "execute",
+        column: null,
+      },
+    ];
+    const afterUnrelatedStatement = snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...Q_ROWS] });
+
+    const first = assertPreFinalStatementBoundary({
+      label: "boundary 1 (unrelated statement grants Q's trio)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: afterUnrelatedStatement,
+      pending: [],
+      statement: NOT_A_CREATE,
+    });
+
+    expect(first.problems).toHaveLength(3);
+    expect(first.pending).toEqual([]);
+
+    // Statement 2: CREATE OR REPLACE FUNCTION q() — same object, snapshot
+    // unchanged (nothing was actually added since the immediately preceding
+    // statement). Must not re-grace Q's rows into pending, and must not
+    // re-report them either — they were already reported once, at boundary 1.
+    const CREATE_Q = { type: "create", objectClass: "function", identity: "public.q()" };
+
+    const second = assertPreFinalStatementBoundary({
+      label: "boundary 2 (CREATE OR REPLACE FUNCTION q(), snapshot unchanged)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterUnrelatedStatement,
+      snapshot: afterUnrelatedStatement,
+      pending: first.pending,
+      statement: CREATE_Q,
+    });
+
+    expect(second.problems).toEqual([]);
+    expect(second.pending).toEqual([]);
+  });
+
+  it("does not let an unrelated PUBLIC row correlate with this statement's own anon/authenticated row for a different object", () => {
+    // A CREATE FUNCTION y() statement whose diff (relative to the immediately
+    // preceding statement) happens to contain two unrelated new rows in the
+    // same batch: PUBLIC EXECUTE on a *different* function z() (not created by
+    // this statement), and authenticated EXECUTE on y() itself with no
+    // correlated PUBLIC EXECUTE row for y() present. Neither may be graced:
+    // the PUBLIC row fails the same-object check against the statement's own
+    // identity, and the authenticated row fails the sibling-correlation check
+    // because the only PUBLIC row in the newly-added set names a different
+    // object.
+    const CREATE_Y = { type: "create", objectClass: "function", identity: "public.y()" };
+    const NEW_ROWS = [
+      { grantee: "public", object_class: "function", object: "public.z()", privilege: "execute", column: null },
+      {
+        grantee: "authenticated",
+        object_class: "function",
+        object: "public.y()",
+        privilege: "execute",
+        column: null,
+      },
+    ];
+
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE FUNCTION y(), unrelated PUBLIC-z sibling noise)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, ...NEW_ROWS] }),
+      pending: [],
+      statement: CREATE_Y,
+    });
+
+    expect(result.problems).toHaveLength(2);
+    expect(result.problems.some((problem) => problem.includes("public.z()"))).toBe(true);
+    expect(result.problems.some((problem) => problem.includes("public.y()"))).toBe(true);
+    expect(result.pending).toEqual([]);
   });
 });
 
@@ -751,25 +878,30 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     expect(fileBoundaryProblems.join("\n")).toContain("set_role_permission");
   });
 
-  it("reports the second file's carried-over privilege as a fresh immediate violation, not a carried-pending adjacent one", () => {
+  it("does not leak file one's pendingGrace into file two, and does not re-flag an already-caught carried-over privilege as newly appeared", () => {
     // File one deliberately omits the REVOKE (unlike
     // CREATE_SET_ROLE_PERMISSION_SQL above), so its pending grace is genuinely
     // non-empty when the file ends — the exact state a carryover bug would
-    // need to leak for this test to mean anything. The privilege is still
-    // present in file two, so a leaked `pendingGrace` would NOT go quiet: it
-    // would still fail, because `assertPreFinalStatementBoundary` reports any
-    // pending key still present as an "adjacent" violation regardless of which
-    // file introduced the grace. A leak is therefore distinguished by WHICH
-    // violation message comes back, not by whether one comes back at all:
-    //   - correct (no leak): a fresh, non-default privilege at first
-    //     appearance, phrased as "did not exist in the platform baseline...",
-    //     never mentioning "adjacent";
-    //   - leaked: the pending entry from file one surviving into file two's
-    //     check, phrased as "...at the statement following the one where it
-    //     first appeared... adjacent".
-    // If assertStatementModeFile ever started threading `pendingGrace` across
-    // calls instead of always initializing it fresh per file, file two would
-    // report the leaked "adjacent" message instead of the correct fresh one.
+    // need to leak for this test to mean anything.
+    //
+    // Grace's "newly added" set is now correctly relative to the actual
+    // preceding statement snapshot (this checkpoint's fix for the Codex
+    // finding that it was previously derived from "beyond baseline and not
+    // already pending" — a proxy that let an already-reported, never-revoked
+    // violation re-enter the newly-added set at a later, unrelated boundary).
+    // The privilege carried over from file one is therefore not "newly
+    // added" at file two's first statement — it already existed before file
+    // two started — so file two's own inner statement-mode check correctly
+    // stays silent about it. That is not a masked violation: it was already
+    // reported once, at the point it first appeared, and the caller's own
+    // ungraced "boundary after <file>" check (proven by the neighboring test
+    // above) catches it independently at every file boundary where it
+    // remains. What must never happen, and what this test actually proves, is
+    // a *leaked* `pendingGrace`: if assertStatementModeFile ever started
+    // threading `pendingGrace` across calls instead of always initializing it
+    // fresh per file, file two would instead report the entry as an
+    // "adjacent" violation (the message a real pending carryover produces),
+    // which is a different — and wrong — failure mode from silence.
     const firstFileSource = `
       create function public.set_role_permission(p_role_id uuid, p_permission text, p_granted boolean)
       returns void
@@ -817,6 +949,7 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     const openedByCreate = assertPreFinalStatementBoundary({
       label: "control (file one's own CREATE, for its pending shape only)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: PLATFORM_BASELINE,
       snapshot: afterCreate,
       pending: [],
       statement: {
@@ -828,6 +961,7 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     const leakedPendingControl = assertPreFinalStatementBoundary({
       label: "control (leaked pendingGrace carried into file two)",
       baselineSnapshot: PLATFORM_BASELINE,
+      previousSnapshot: afterCreate,
       snapshot: secondFileSnapshot,
       pending: openedByCreate.pending,
       statement: { type: "other" },
@@ -836,9 +970,11 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     expect(leakedPendingControl.problems[0]).toContain("adjacent");
 
     // The real assertStatementModeFile call for file two: per-file grace
-    // reset means this must NOT match the leaked-control message above. It
-    // must instead be reported as a fresh, immediate violation — exactly as
-    // if no prior grace existed, because per-file grace must not exist.
+    // reset means pendingGrace is empty going in, and the privilege is not
+    // newly added relative to the real preceding snapshot (file one's own
+    // last snapshot, which already held it), so file two reports nothing of
+    // its own — the opposite of, and clearly distinguishable from, the
+    // leaked-control result above.
     const secondFile = assertStatementModeFile({
       file: { name: "0101_unrelated.sql" },
       statements: secondFileStatements,
@@ -848,9 +984,8 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
       previousSnapshot: firstFile.previousSnapshot,
     });
 
-    expect(secondFile.problems).toHaveLength(1);
-    expect(secondFile.problems[0]).toContain("set_role_permission");
-    expect(secondFile.problems[0]).not.toContain("adjacent");
+    expect(secondFile.problems).toEqual([]);
+    expect(secondFile.problems).not.toEqual(leakedPendingControl.problems);
   });
 
   it("reports assertSnapshotUsable and assertExaminedGrowth problems per statement", () => {

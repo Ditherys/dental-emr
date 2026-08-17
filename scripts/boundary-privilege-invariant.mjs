@@ -446,10 +446,34 @@ export function isKnownCreationDefaultPrivilege(statement, entry, siblingEntries
  * `pending` fresh for each file, and the unmodified boundary-after-file check
  * (using the full, ungraced assertPreFinalBoundary) still catches any entry
  * left open at file end.
+ *
+ * "NEWLY ADDED" IS RELATIVE TO THE PRECEDING STATEMENT, NOT TO THE BASELINE
+ *
+ * `previousSnapshot` must be the snapshot taken immediately before the
+ * statement now being judged — the caller's running per-statement cursor, not
+ * the platform baseline and not "whatever isn't currently pending." Sibling
+ * correlation and grace eligibility are both computed from
+ * `diffAgainstBaseline(previousSnapshot, snapshot)`: only a key that is absent
+ * from the immediately preceding statement's snapshot and present in this
+ * one counts as new here. This matters because an already-reported violation
+ * — one that failed grace at an earlier statement and was therefore never
+ * added to `pending` — remains present in every later snapshot (nothing
+ * revoked it) and therefore remains present in `baselineSnapshot`-relative
+ * `added` forever. Deriving "newly added" from "not already pending" (as
+ * opposed to "not already in the previous snapshot") let that stale violation
+ * re-enter the newly-added set at a later, unrelated statement boundary and
+ * serve as a false correlated PUBLIC sibling — or, if a later CREATE OR
+ * REPLACE happened to target the very same object, get its own rows
+ * mistakenly re-graced into `pending` as if they were that later statement's
+ * fresh default. Anchoring to the preceding statement's actual snapshot
+ * instead means a key already present before this statement ran is never
+ * "newly added" here, however it is later disposed of by the
+ * pending/currentKeys check above.
  */
 export function assertPreFinalStatementBoundary({
   label,
   baselineSnapshot,
+  previousSnapshot,
   snapshot,
   pending,
   statement,
@@ -457,7 +481,6 @@ export function assertPreFinalStatementBoundary({
   const { added } = diffAgainstBaseline(baselineSnapshot, snapshot);
   const notAccepted = added.filter(({ entry }) => !isAccepted(entry));
   const currentKeys = new Set(notAccepted.map(({ key }) => key));
-  const pendingKeys = new Set(pending.map(({ key }) => key));
 
   const problems = pending
     .filter(({ key }) => currentKeys.has(key))
@@ -468,7 +491,9 @@ export function assertPreFinalStatementBoundary({
         'CREATE" — this privilege was not closed by then.',
     );
 
-  const newlyAdded = notAccepted.filter(({ key }) => !pendingKeys.has(key));
+  const { added: addedSinceLastStatement } = diffAgainstBaseline(previousSnapshot, snapshot);
+  const addedSinceLastStatementKeys = new Set(addedSinceLastStatement.map(({ key }) => key));
+  const newlyAdded = notAccepted.filter(({ key }) => addedSinceLastStatementKeys.has(key));
   const newlyAddedEntries = newlyAdded.map(({ entry }) => entry);
   const nextPending = [];
 
