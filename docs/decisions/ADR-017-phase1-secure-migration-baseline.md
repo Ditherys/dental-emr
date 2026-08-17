@@ -235,9 +235,9 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 | R6-B | Static grant-last lint (enforced in `verify` + CI) and dynamic boundary-invariant tooling **authored only** | **Complete**; no database contact. See section 7 |
 | R6-C1 | Separate database test tooling from the canonical baseline; mandatory `SUPABASE_DEV_PROJECT_ID`; one-slot TEST runbook | **Complete**; no database contact. See [ADR-018](ADR-018-nonproduction-database-test-tooling.md) |
 | R6-C | Create disposable Cloud TEST project from zero | **Complete** — executed against TEST-01, 2026-08-14 (`P1_PROVISION_PASS`; see `docs/evidence/R6C-R6E-test01.md`). TEST-01 has since been deleted; the proof stands as a historical execution, not a standing environment |
-| R6-D | Interrupted-replay boundary validation | **Partially complete** — `--mode=file` passes against a fresh, empty Cloud TEST project (see `docs/AI_HANDOFF.md`'s current checkpoint); `--mode=statement` not started, requires approval |
+| R6-D | Interrupted-replay boundary validation | **Complete** — both `--mode=file` and `--mode=statement` pass against fresh, empty Cloud TEST projects: zero boundary invariant violations across the full statement-by-statement replay of all 8 baseline files, plus the live-authorization-probe verified passing. See `docs/AI_HANDOFF.md`'s current checkpoint for the exact verification method and two tooling bugs found and fixed in the process |
 | R6-E | Cloud-safe equivalence + full verification | **Complete against TEST-01** (2026-08-14; see `docs/evidence/R6C-R6E-test01.md` and `docs/evidence/R6E-catalog-comparison.md`). Whether a fresh re-verification against the current TEST-02 is also required is an open decision, not a first run |
-| R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires approval; gated on R6-D `--mode=statement` and the R6-E re-verification decision |
+| R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires approval; gated on independent Codex review of R6-D's two tooling-fix commits and the R6-E re-verification decision |
 
 ## Independent review requirement
 

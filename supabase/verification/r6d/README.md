@@ -1,15 +1,18 @@
-# R6-D boundary invariant tooling — file mode executed; statement mode outstanding
+# R6-D boundary invariant tooling — both modes executed and passing
 
-**`--mode=file` has passed cleanly against a fresh, empty Cloud TEST project** (see
-`docs/AI_HANDOFF.md`'s current checkpoint for the run and the two tooling bugs its
-first execution found and fixed). It was originally authored during R6-B, before
-any database contact.
+**Both `--mode=file` and `--mode=statement` have passed cleanly against fresh,
+empty Cloud TEST projects** (see `docs/AI_HANDOFF.md`'s current checkpoint for
+the runs and the tooling bugs their first executions found and fixed —
+two for file mode, two more for statement mode). It was originally authored
+during R6-B, before any database contact.
 
-**`--mode=statement` (the interrupted-mid-migration proof) has not yet run.** It
-needs its own fresh, empty Cloud TEST project, since file mode leaves the project
-fully baselined. R6-C (create a disposable Cloud TEST project) and each R6-D run
-against it both require separate human approval. See
-[ADR-017](../../../docs/decisions/ADR-017-phase1-secure-migration-baseline.md).
+**`--mode=statement`'s live-authorization-probe verification used a targeted
+follow-up check, not one unbroken script invocation** — see the current
+checkpoint in `docs/AI_HANDOFF.md` for exactly what ran and why (a tooling fix
+was needed mid-run, and the script does not support resuming a partially
+baselined project). The result is fully evidenced: zero boundary violations
+across the entire statement-by-statement replay, and the live probe verified
+passing (26/26 pgTAP assertions, `P1_TEST_PASS`, clean rollback).
 
 ## What this proves, and what it cannot
 
@@ -150,10 +153,11 @@ into chat/a document; it is a live database credential.
 
 ## Known limitations
 
-- **`--mode=file` has run and passed** against a fresh, empty Cloud TEST
-  project (see `docs/AI_HANDOFF.md`'s current checkpoint). **`--mode=statement`
-  has not yet run** — its catalog assumptions and pgTAP assertions in that path
-  remain unverified until it does. Expect to correct it on first run.
+- **Both `--mode=file` and `--mode=statement` have run and passed** against
+  fresh, empty Cloud TEST projects (see `docs/AI_HANDOFF.md`'s current
+  checkpoint). Statement mode's catalog assumptions and pgTAP assertions have
+  now been exercised for real, including the previously-unverified
+  interrupted-mid-migration grace-window logic.
 - **`--mode=statement` gives PostgreSQL's own default-privilege grants exactly
   one statement of grace.** ADR-017 §2 requires a revoke "adjacent to the
   CREATE" — the very next statement, since SQL has no atomic CREATE+REVOKE.
