@@ -22,9 +22,10 @@ import {
 } from "./run-boundary-privilege-invariant.mjs";
 
 /**
- * Synthetic snapshots. R6-D has not run; these exercise the decision logic that
- * will judge the real snapshots, so the only thing R6-D adds is the remote
- * execution itself.
+ * Synthetic snapshots. R6-D `--mode=file` has already run against TEST-02 (see
+ * docs/AI_HANDOFF.md); `--mode=statement` has not. These exercise the decision
+ * logic that judges the real snapshots in both modes, independent of whether a
+ * given mode has executed remotely yet.
  */
 function snapshot({ privileges = [], examined = {}, ...rest } = {}) {
   return {

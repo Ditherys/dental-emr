@@ -62,9 +62,12 @@ runs. Combined with R6-E's earlier suite/lint/type/advisor results
 
 **Does not prove:** that DEV's *migration history* (`supabase_migrations.schema_migrations`)
 matches Git. That is **H-2 / R6-F**, still gated on **R6-D** (a statement-level
-interrupted-replay proof on a fresh, disposable TEST-02 — not started). This
-comparison contacted DEV read-only; no schema, data, or migration-history row
-on DEV was read, written, or modified. The only change made to DEV as part of
+interrupted-replay proof on a fresh, disposable TEST project). Status *at the time
+this file was written* (2026-08-14): R6-D not started. **Current status:** see
+`docs/AI_HANDOFF.md` — R6-D `--mode=file` has since passed against TEST-02;
+`--mode=statement` remains outstanding. This comparison itself contacted DEV
+read-only; no schema, data, or migration-history row on DEV was read, written,
+or modified. The only change made to DEV as part of
 this work was rotating its database password, at the operator's explicit
 direction, after the operator's own initial attempts to supply it in this
 session were unsuccessful.

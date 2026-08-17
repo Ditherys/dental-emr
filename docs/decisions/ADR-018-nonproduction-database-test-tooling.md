@@ -72,7 +72,7 @@ Previously the "the TEST project must differ from DEV" check was skipped when th
 
 - `npm run security:migrations` — passes with the empty extension list; the baseline parses to 0 extensions, 11 tables, 27 functions, 11 policies.
 - Unit tests assert the empty list, the rejection of a reintroduced pgTAP migration, the provisioning command's exact argument vector, its inclusion in the freeze-refused set, its success sentinel, and the mandatory `SUPABASE_DEV_PROJECT_ID`.
-- **Not yet verified against a database.** The provisioning SQL has never been executed. First execution is part of R6-C.
+- **Verified against a database.** The provisioning SQL executed successfully as part of R6-C against TEST-01 (2026-08-14, `P1_PROVISION_PASS`; see `docs/evidence/R6C-R6E-test01.md`) and again during the R6-D checkpoints against TEST-02 (see `docs/AI_HANDOFF.md`).
 
 ## Independent review
 
