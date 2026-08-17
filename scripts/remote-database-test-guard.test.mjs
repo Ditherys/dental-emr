@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertPgtapIsProvisioned,
   DATABASE_TEST_CONFIRMATION,
   DATABASE_TEST_SUITES,
   parseSupabaseQueryResult,
@@ -186,5 +187,62 @@ describe("non-production provisioning sentinel (R6-C1)", () => {
         sentinel,
       ),
     ).toThrow(/P1_PROVISION_PASS/);
+  });
+});
+
+describe("pgTAP provisioning preflight (R6-D)", () => {
+  it("passes when the presence check reports pgTAP present", () => {
+    expect(() =>
+      assertPgtapIsProvisioned(
+        JSON.stringify({ rows: [{ r6d_pgtap_presence: "R6D_PGTAP_PRESENT" }] }),
+      ),
+    ).not.toThrow();
+  });
+
+  it("fails closed on malformed JSON rather than treating it as absent", () => {
+    expect(() => assertPgtapIsProvisioned("not json")).toThrow(/malformed Supabase CLI JSON/);
+  });
+
+  it("fails closed when the probe returns no rows", () => {
+    expect(() => assertPgtapIsProvisioned(JSON.stringify({ rows: [] }))).toThrow(
+      /did not return one row/,
+    );
+  });
+
+  it("fails closed when the probe returns more than one row", () => {
+    expect(() =>
+      assertPgtapIsProvisioned(
+        JSON.stringify({
+          rows: [
+            { r6d_pgtap_presence: "R6D_PGTAP_PRESENT" },
+            { r6d_pgtap_presence: "R6D_PGTAP_PRESENT" },
+          ],
+        }),
+      ),
+    ).toThrow(/did not return one row/);
+  });
+
+  it("fails closed when the column name is wrong", () => {
+    expect(() =>
+      assertPgtapIsProvisioned(JSON.stringify({ rows: [{ wrong_column: "R6D_PGTAP_PRESENT" }] })),
+    ).toThrow(/pgTAP is not installed/);
+  });
+
+  it("fails closed when the sentinel value is wrong", () => {
+    expect(() =>
+      assertPgtapIsProvisioned(
+        JSON.stringify({ rows: [{ r6d_pgtap_presence: "R6D_PGTAP_ABSENT" }] }),
+      ),
+    ).toThrow(/pgTAP is not installed/);
+  });
+
+  it("names the exact provisioning remedy in the failure", () => {
+    try {
+      assertPgtapIsProvisioned(JSON.stringify({ rows: [{ r6d_pgtap_presence: "absent" }] }));
+      throw new Error("expected assertPgtapIsProvisioned to throw");
+    } catch (error) {
+      expect(error.message).toContain("npm run db:provision:test");
+      expect(error.message).toContain("MIGRATION_FREEZE_ACK");
+    }
   });
 });

@@ -182,6 +182,61 @@ function expectedObjectCounts(appliedFiles) {
   return { tables, functions, securityDefinerFunctions };
 }
 
+/**
+ * Pure statement-mode grace bookkeeping for one migration file. Takes the
+ * file's split statements and the snapshot already taken after each was
+ * executed (no I/O here — the caller executes and snapshots), and returns the
+ * accumulated problems plus the report rows and the snapshot to carry forward
+ * as `previousSnapshot` into the next file.
+ *
+ * `pendingGrace` always starts empty inside this function and is never a
+ * parameter. That is what keeps ADR-017's "adjacent to the CREATE" promise
+ * from silently stretching across a file boundary: an entry left ungraced at
+ * one file's last statement is caught by that file's own unmodified
+ * "boundary after <file>" check (assertPreFinalBoundary/assertFinalBoundary,
+ * called by the caller against this function's returned `previousSnapshot`),
+ * never carried into the next file's first statement as if it were still
+ * within grace.
+ */
+export function assertStatementModeFile({
+  file,
+  statements,
+  snapshots,
+  baselineSnapshot,
+  isTerminal,
+  previousSnapshot,
+}) {
+  const problems = [];
+  const report = [];
+  let pendingGrace = [];
+  let previous = previousSnapshot;
+
+  statements.forEach((statement, index) => {
+    const snapshot = snapshots[index];
+    const label = `${file.name} statement ${index + 1}/${statements.length}`;
+
+    problems.push(...assertSnapshotUsable(snapshot, label));
+    problems.push(...assertExaminedGrowth(previous, snapshot, label));
+
+    if (!isTerminal) {
+      const result = assertPreFinalStatementBoundary({
+        label,
+        baselineSnapshot,
+        snapshot,
+        pending: pendingGrace,
+        statement: classifyStatement(statement),
+      });
+      problems.push(...result.problems);
+      pendingGrace = result.pending;
+    }
+
+    previous = snapshot;
+    report.push({ boundary: label, snapshot });
+  });
+
+  return { problems, report, previousSnapshot: previous };
+}
+
 function main() {
   assertR6dExecutionIsApproved(process.argv.slice(2), process.env);
   const mode = resolveMode(process.argv.slice(2));
@@ -267,38 +322,32 @@ function main() {
       // interruption anywhere inside a file is covered, not just between files.
       const statements = splitSqlStatements(file.source, file.name);
       const statementFile = join(workingDirectory, "statement.sql");
-
-      // Grace state for assertPreFinalStatementBoundary. Reset per file: the
-      // file's own unmodified "boundary after <file>" check below (using the
-      // full, ungraced assertPreFinalBoundary/assertFinalBoundary) is what
-      // actually catches anything left open past the file's last statement.
-      let pendingGrace = [];
+      const snapshots = [];
 
       for (const [index, statement] of statements.entries()) {
         writeFileSync(statementFile, `${statement.raw}\n`, "utf8");
         runSupabaseQuery(statementFile, { json: false });
-
-        const label = `${file.name} statement ${index + 1}/${statements.length}`;
-        const snapshot = takeSnapshot(label);
-        problems.push(...assertSnapshotUsable(snapshot, label));
-        problems.push(...assertExaminedGrowth(previousSnapshot, snapshot, label));
-
-        // Inside the terminal file the privilege set is mid-flight, so only the
-        // pre-final assertion is meaningful until the file completes.
-        if (!isTerminal) {
-          const result = assertPreFinalStatementBoundary({
-            label,
-            baselineSnapshot: platformBaseline,
-            snapshot,
-            pending: pendingGrace,
-          });
-          problems.push(...result.problems);
-          pendingGrace = result.pending;
-        }
-
-        previousSnapshot = snapshot;
-        report.push({ boundary: label, snapshot });
+        snapshots.push(
+          takeSnapshot(`${file.name} statement ${index + 1}/${statements.length}`),
+        );
       }
+
+      // Inside the terminal file the privilege set is mid-flight, so only the
+      // pre-final assertion is meaningful until the file completes; the grace
+      // state itself always starts fresh for this file (see
+      // assertStatementModeFile).
+      const result = assertStatementModeFile({
+        file,
+        statements,
+        snapshots,
+        baselineSnapshot: platformBaseline,
+        isTerminal,
+        previousSnapshot,
+      });
+
+      problems.push(...result.problems);
+      report.push(...result.report);
+      previousSnapshot = result.previousSnapshot;
     } else {
       runSupabaseQuery(file.path, { json: false });
     }

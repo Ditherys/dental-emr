@@ -27,7 +27,7 @@
  * roles reachable from a browser holding a publishable key.
  */
 
-import { canonicalGrantKey } from "./migration-privilege-lint.mjs";
+import { canonicalGrantKey, normalizeObjectIdentity } from "./migration-privilege-lint.mjs";
 
 export const BOUNDARY_PROBE_FILE =
   "supabase/verification/r6d/boundary-privilege-snapshot.sql";
@@ -272,12 +272,76 @@ export function assertPreFinalBoundary({ label, baselineSnapshot, snapshot }) {
 }
 
 /**
+ * Object classes for which PostgreSQL itself grants a default privilege to
+ * PUBLIC at the instant of CREATE, before any adjacent REVOKE can run. This is
+ * the exhaustive list of PostgreSQL's own automatic grants for objects the
+ * baseline creates; it is not a policy choice and must not be extended to
+ * cover anything ADR-017 actually expects the migration author to avoid.
+ *
+ * https://www.postgresql.org/docs/current/ddl-priv.html — "Whenever an object
+ * is created, it is assigned an owner... PUBLIC represents the notion of
+ * 'all roles, including those that might be created later'. ... EXECUTE
+ * privilege for functions and procedures is granted to PUBLIC by default."
+ */
+const KNOWN_CREATION_DEFAULT_PRIVILEGES = Object.freeze([
+  Object.freeze({
+    objectClass: "function",
+    grantee: "public",
+    privilege: "execute",
+  }),
+  Object.freeze({
+    objectClass: "procedure",
+    grantee: "public",
+    privilege: "execute",
+  }),
+]);
+
+/**
+ * True only when `entry` is exactly the PostgreSQL-automatic default
+ * privilege created by `statement` on the object `statement` just created —
+ * not merely any newly observed privilege. All three must hold:
+ *
+ *   1. `statement` is a qualifying object creation (CREATE FUNCTION/PROCEDURE
+ *      with a resolved identity);
+ *   2. `entry` names that same object, by canonical identity; and
+ *   3. the (objectClass, grantee, privilege) triple is a documented
+ *      PostgreSQL default for that object class, per
+ *      KNOWN_CREATION_DEFAULT_PRIVILEGES above.
+ *
+ * Anything else — an explicit GRANT, a side effect of a DO block, a default
+ * privilege on a class PostgreSQL does not actually auto-grant — is not a
+ * default this function recognizes, however "adjacent" its later removal is.
+ */
+export function isKnownCreationDefaultPrivilege(statement, entry) {
+  if (!statement || statement.type !== "create" || !statement.identity) {
+    return false;
+  }
+
+  const known = KNOWN_CREATION_DEFAULT_PRIVILEGES.find(
+    (candidate) =>
+      candidate.objectClass === statement.objectClass &&
+      candidate.objectClass === entry.objectClass &&
+      candidate.grantee === entry.grantee &&
+      candidate.privilege === entry.privilege,
+  );
+
+  if (!known) {
+    return false;
+  }
+
+  return (
+    normalizeObjectIdentity(entry.objectClass, entry.object) ===
+    normalizeObjectIdentity(statement.objectClass, statement.identity)
+  );
+}
+
+/**
  * Statement-mode counterpart to assertPreFinalBoundary for a non-terminal
  * file's INNER statement-by-statement snapshots only. The file's own
  * "boundary after <file>" snapshot must still go through the full, ungraced
  * assertPreFinalBoundary — this function must never be substituted for that.
  *
- * WHY A GRACE WINDOW EXISTS
+ * WHY A GRACE WINDOW EXISTS, AND WHY IT IS NARROW
  *
  * ADR-017 §2 requires every object to have its inherited/default privileges
  * revoked "adjacent to the CREATE" — the very next statement — because SQL has
@@ -289,15 +353,28 @@ export function assertPreFinalBoundary({ label, baselineSnapshot, snapshot }) {
  * ADR-017 promises "adjacent," not "the same statement," because the latter is
  * not expressible in SQL. It is not a boundary defect.
  *
- * This gives an added, not-already-accepted entry exactly one statement of
- * grace. An entry still present at the FOLLOWING statement snapshot did not
- * close adjacently and is reported as a real violation, exactly where
- * ADR-017's "adjacent" promise was actually broken. Grace never spans a file
- * boundary: callers must start `pending` fresh for each file, and the
- * unmodified boundary-after-file check (using the full, ungraced
- * assertPreFinalBoundary) still catches any entry left open at file end.
+ * Grace is therefore given to a specific, narrow claim — "the statement I just
+ * executed is a CREATE FUNCTION/PROCEDURE, and this added entry is exactly
+ * PostgreSQL's own PUBLIC EXECUTE default on the object that statement just
+ * created" (isKnownCreationDefaultPrivilege) — never to "some privilege was
+ * added and something later removed it." A newly added entry that is not that
+ * specific default is reported as a violation immediately, at the boundary
+ * where it first appears, rather than waiting a statement to see whether it
+ * happens to get cleaned up. An entry that does qualify but is still present
+ * at the FOLLOWING statement snapshot did not close adjacently and is
+ * reported as a real violation, exactly where ADR-017's "adjacent" promise was
+ * actually broken. Grace never spans a file boundary: callers must start
+ * `pending` fresh for each file, and the unmodified boundary-after-file check
+ * (using the full, ungraced assertPreFinalBoundary) still catches any entry
+ * left open at file end.
  */
-export function assertPreFinalStatementBoundary({ label, baselineSnapshot, snapshot, pending }) {
+export function assertPreFinalStatementBoundary({
+  label,
+  baselineSnapshot,
+  snapshot,
+  pending,
+  statement,
+}) {
   const { added } = diffAgainstBaseline(baselineSnapshot, snapshot);
   const notAccepted = added.filter(({ entry }) => !isAccepted(entry));
   const currentKeys = new Set(notAccepted.map(({ key }) => key));
@@ -312,9 +389,24 @@ export function assertPreFinalStatementBoundary({ label, baselineSnapshot, snaps
         'CREATE" — this privilege was not closed by then.',
     );
 
-  problems.push(...assertStructuralExpectations(label, snapshot));
+  const newlyAdded = notAccepted.filter(({ key }) => !pendingKeys.has(key));
+  const nextPending = [];
 
-  const nextPending = notAccepted.filter(({ key }) => !pendingKeys.has(key));
+  for (const candidate of newlyAdded) {
+    if (isKnownCreationDefaultPrivilege(statement, candidate.entry)) {
+      nextPending.push(candidate);
+      continue;
+    }
+
+    problems.push(
+      `${label}: a browser-reachable role holds "${candidate.key}", which did not exist in the platform ` +
+        "baseline and is not a known PostgreSQL default privilege created by the statement just executed. " +
+        "Before the grant-terminal migration every boundary must be strictly more restrictive than the " +
+        "final state (ADR-017 §2).",
+    );
+  }
+
+  problems.push(...assertStructuralExpectations(label, snapshot));
 
   return { problems, pending: nextPending };
 }
