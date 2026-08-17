@@ -61,13 +61,14 @@ runs. Combined with R6-E's earlier suite/lint/type/advisor results
 `docs/PHASE1_ACCEPTANCE_REVIEW.md`.
 
 **Does not prove:** that DEV's *migration history* (`supabase_migrations.schema_migrations`)
-matches Git. That is **H-2 / R6-F**, still gated on **R6-D** (a statement-level
-interrupted-replay proof on a fresh, disposable TEST project). Status *at the time
-this file was written* (2026-08-14): R6-D not started. **Current status:** see
-`docs/AI_HANDOFF.md` — R6-D `--mode=file` has since passed against TEST-02;
-`--mode=statement` remains outstanding. This comparison itself contacted DEV
-read-only; no schema, data, or migration-history row on DEV was read, written,
-or modified. The only change made to DEV as part of
+matches Git. That is **H-2 / R6-F**, gated on **R6-D** (a statement-level
+interrupted-replay proof on a fresh, disposable TEST project). Status *at the
+time this file was written* (2026-08-14): R6-D not started. **R6-D has since
+completed in both modes** (see `docs/AI_HANDOFF.md`'s current checkpoint,
+2026-08-18) — this file is a historical snapshot and is not updated further;
+treat `docs/AI_HANDOFF.md` as the current status for R6-D/R6-E/R6-F. This
+comparison itself contacted DEV read-only; no schema, data, or
+migration-history row on DEV was read, written, or modified. The only change made to DEV as part of
 this work was rotating its database password, at the operator's explicit
 direction, after the operator's own initial attempts to supply it in this
 session were unsuccessful.

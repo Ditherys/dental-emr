@@ -1,7 +1,7 @@
 -- R6-D live authorization probe — PASSES against a fresh, empty Cloud TEST
--- project as of `--mode=file` (see docs/AI_HANDOFF.md's current checkpoint;
--- control 1b's schema-USAGE bug, found on that first real run, is fixed).
--- --mode=statement has not yet run against this file.
+-- project in both `--mode=file` and `--mode=statement` (see docs/AI_HANDOFF.md's
+-- current checkpoint; control 1b's schema-USAGE bug, found on the first real
+-- `--mode=file` run, is fixed).
 --
 -- Catalog inspection proves what the ACLs say. This file proves what a real
 -- session can do. It runs entirely inside one transaction and ends in ROLLBACK.

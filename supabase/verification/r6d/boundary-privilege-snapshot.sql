@@ -1,7 +1,7 @@
 -- R6-D boundary privilege snapshot — PASSES against a fresh, empty Cloud TEST
--- project as of `--mode=file` (see docs/AI_HANDOFF.md's current checkpoint;
--- the function-signature normalization bug, found on that first real run, is
--- fixed). --mode=statement has not yet run against this file.
+-- project in both `--mode=file` and `--mode=statement` (see docs/AI_HANDOFF.md's
+-- current checkpoint; the function-signature normalization bug, found on the
+-- first real `--mode=file` run, is fixed).
 --
 -- Read-only. Creates nothing, changes nothing, and returns one JSON row
 -- describing the EFFECTIVE privileges the browser-reachable roles hold at the

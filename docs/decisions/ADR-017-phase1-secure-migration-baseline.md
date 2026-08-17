@@ -1,6 +1,6 @@
 # ADR-017 — Phase 1 secure migration baseline and the grant-last fail-closed invariant
 
-**Status:** Accepted for R6-A (baseline authored in Git). Reconciliation with the linked DEV project and empirical validation remain outstanding — see "Outstanding work" below.
+**Status:** Accepted for R6-A (baseline authored in Git). R6-C/R6-D/R6-E empirical validation is complete (see "Outstanding work" below); R6-D's two tooling-fix commits (`033754f`, `338c59c`) still require independent Codex review, and reconciliation with the linked DEV project (R6-F) remains outstanding pending that review and its own separate approval.
 **Date:** 2026-08-13
 **Decision owner:** Project owner
 **Supersedes:** the thirteen Phase 1 foundation migration files listed below
@@ -133,7 +133,7 @@ It is explicitly **not** a keyword search for `GRANT INSERT`. The H2 defect clas
 
 The checker is proven to **catch** the defect, not merely to agree with today's files: `scripts/fixtures/migration-privilege-lint/` holds synthetic unsafe migrations — including `GRANT INSERT ON public.roles TO authenticated` and an unrevoked `SECURITY DEFINER` function — that the test suite asserts are rejected. They live outside `supabase/migrations/`, carry a `FIXTURE_NOT_A_MIGRATION` marker, and a test asserts no active migration contains that marker.
 
-#### 7.2 Dynamic enforcement — R6-D, `--mode=file` executed; `--mode=statement` outstanding
+#### 7.2 Dynamic enforcement — R6-D, both `--mode=file` and `--mode=statement` executed and passing
 
 Static analysis proves the files *say* the right thing. It cannot prove what PostgreSQL *does*: default privileges, role inheritance, ACL retention across `CREATE OR REPLACE`, and Supabase's own project defaults all live outside the SQL text.
 
@@ -146,7 +146,7 @@ Two properties make a passing run mean something:
 
 The live authorization probe uses a synthetic actor holding the system `OWNER` role — the exact actor the superseded chain *would* have permitted every prohibited operation — and runs four meaningfulness controls before any prohibited attempt, so a refusal is a privilege boundary rather than a powerless user.
 
-The decision logic is unit-tested offline. **`--mode=file` has been executed against a fresh, empty Cloud TEST project and passes cleanly** (see `docs/AI_HANDOFF.md`'s current checkpoint). `--mode=statement` has not yet run, and R6-D as a whole remains outstanding and separately approval-gated until both modes pass and the checkpoint receives independent review.
+The decision logic is unit-tested offline. **Both `--mode=file` and `--mode=statement` have been executed against fresh, empty Cloud TEST projects and pass cleanly** — `--mode=statement` replayed all 8 baseline files with zero boundary invariant violations, and the live-authorization-probe verified passing (see `docs/AI_HANDOFF.md`'s current checkpoint for the exact runs and the tooling bugs found and fixed in the process). R6-D's empirical execution is complete; what remains outstanding is independent Codex review of the two tooling-fix commits (`033754f`, `338c59c`), required before R6-F may proceed.
 
 ## Superseded migrations
 
@@ -257,6 +257,6 @@ R6-B adds a second review surface with its own questions:
 7. that the static lint's parser is not defeatable — quoted identifiers, dollar-quoted bodies, nested comments, `CREATE OR REPLACE`, overloaded signatures, wildcard grants, role membership, and dynamic SQL;
 8. that its rules genuinely cover the H2 class rather than the current file set, and that the negative fixtures fail for the reason claimed;
 9. that the approved final privilege set in `scripts/approved-final-grants.mjs` matches `20260813020700_baseline_final_grants.sql` privilege by privilege, column by column;
-10. that the R6-D SQL is correct — `--mode=file` has executed and passed against a fresh Cloud TEST project, but `--mode=statement` has never been executed, and its own catalog assumptions and pgTAP assertions remain unverified;
+10. that the R6-D SQL is correct — both `--mode=file` and `--mode=statement` have executed and passed against fresh Cloud TEST projects, including `--mode=statement`'s own catalog assumptions and pgTAP assertions; the two tooling-fix commits this required (`033754f`, `338c59c`) still need this independent review;
 11. that the R6-D vacuity guards actually prevent a blind probe from reading as a clean result;
 12. that the scoped freeze acknowledgement narrowed the bypass rather than widening it.
