@@ -1,243 +1,179 @@
 # Phase 1 acceptance review
 
-**Reviewed at:** `1c92e8a` (plus the R8 preparation commit that carries this file)
-**Reviewer:** Claude Code, acting as implementing agent. **This is not an independent review.** Codex was unavailable throughout; no second agent has examined any R5, R6, R9, or R4 checkpoint.
-**Decision: PHASE 1 IS NOT ACCEPTED.**
+**Reviewed at:** `21694ec` (H-5 implementation, current `HEAD` as of this re-review)
+**Reviewer:** Claude Code, acting as implementing agent. **This is still not an independent review** — see H-8 below, which is the one finding this re-review cannot resolve by itself.
+**Decision: PHASE 1 IS SUBSTANTIALLY COMPLETE. One process gate (H-8) and one verification gap (CI has not run against this work) remain open, both requiring the project owner, not further implementation.**
 
-Not because a defect was found in the design, and not because remediation stalled
-— the remaining blockers are almost entirely *evidence that has never been
-produced*, and producing it requires a hosted project and a Git remote that only
-a human can create.
+This supersedes the prior review at `1c92e8a`, which found 8 High findings, almost
+all "evidence has never been produced." Every one of those is now produced. What
+remains is not a defect and not missing work — it is that this session's ~20
+commits (R6-D completion, R6-F execution, H-5 implementation) are still local
+only, and that the independent-review requirement was satisfied by a same-model
+fresh-context agent rather than a genuinely independent reviewer, at the project
+owner's explicit, recorded direction.
 
 ## Method
 
-Assessed against `docs/plans/001-foundation.md`, `docs/SECURITY_ARCHITECTURE.md`,
-`docs/DATABASE_DESIGN.md`, `docs/FRONTEND_ARCHITECTURE.md`, ADR-001 through
-ADR-018, the actual Git history, and the actual test evidence — where "evidence"
-means a command that ran and whose output was read, not a file that exists.
+Same as the prior review: assessed against `docs/plans/001-foundation.md`,
+`docs/SECURITY_ARCHITECTURE.md`, `docs/DATABASE_DESIGN.md`,
+`docs/FRONTEND_ARCHITECTURE.md`, the ADRs, actual Git history, and actual test
+evidence — a command that ran and whose output was read, not a file that exists.
 
-That distinction does most of the work below. A large amount of correct-looking
-authorization SQL, E2E coverage, and hosted-configuration policy now exists in
-this repository and **none of it has ever executed**.
-
-## Findings
+## Findings, re-assessed
 
 ### Critical
 
-None. No cross-tenant exploit is demonstrated, and none was found by this review.
-The H2 intermediate-weaker-authorization window identified by the earlier exit
-review is closed structurally by the ADR-017 grant-last baseline and mechanically
-enforced by `npm run security:migrations`.
-
-That statement is about the migration *path* and the static text of the schema.
-It is not a claim about runtime behaviour on a real database — see H-1.
+None, unchanged from the prior review.
 
 ### High
 
-**H-1 — [RESOLVED 2026-08-14]** The secure baseline's catalog-level equivalence
-to DEV is now proven. R6-C/R6-E's suite/lint/type/advisor results
-(`docs/evidence/R6C-R6E-test01.md`) plus a direct schema-only `pg_dump`
-comparison of `public`/`private`/`extensions` between DEV and TEST-01
-(`docs/evidence/R6E-catalog-comparison.md`) found the two catalogs
-byte-for-byte identical, modulo pg_dump's own per-run `\restrict` nonce. This
-closes the equivalence question; it does not close H-2 below, which is a
-separate claim about migration *history*, not schema content.
+**H-1 — [Still resolved, unchanged.]** Catalog-level equivalence (DEV vs. TEST-01,
+byte-for-byte identical schema-only `pg_dump`) — `docs/evidence/R6E-catalog-comparison.md`.
+The project owner decided 2026-08-18 that this proof still covers the current
+baseline (no migration file changed since), so no fresh re-run against a later
+TEST project was required.
 
-**H-1 (original wording) — The secure baseline's equivalence to the accepted
-schema is unproven.** `supabase/migrations/` (8 files) claims to build the same
-schema DEV already holds. Nothing has verified that. R6-E exists precisely to
-prove it and has not run. Every future Phase 2 migration would rest on this
-unverified premise, and R6-F would assert "applied" against a database never
-shown to match.
-*Evidence needed:* R6-C reconstruction on a disposable Cloud TEST project, then
-R6-E cloud-safe equivalence. *Blocked on:* human creation of TEST-01.
+**H-2 — [RESOLVED 2026-08-18.]** DEV's migration history is reconciled: the 13
+superseded versions marked `reverted`, the 8 baseline versions marked `applied`
+via `supabase migration repair`, `migration list --linked` against DEV clean
+(`local === remote` on every row). The migration freeze
+(`supabase/MIGRATION_FREEZE.md`) is deleted per its own instructions. See
+`docs/evidence/R6F-migration-history-reconciliation.md`. Migration 9 (H-5) was
+pushed to DEV afterward through the now-normal `db push` workflow, and DEV's
+history remains clean at 9/9.
 
-**H-2 — DEV migration history and Git intentionally disagree.**
-DEV records the 13 superseded versions and none of the 8 baseline versions. The
-freeze (`supabase/MIGRATION_FREEZE.md`) makes this safe but not resolved. Phase 1
-cannot be accepted with a development database whose history is knowingly
-inconsistent with source control. *Evidence needed:* R6-F reconciliation, gated
-on R6-D and R6-E. *Blocked on:* the same TEST work.
+**H-3 — [Still resolved at the database layer; R6-D adds the interrupted-replay
+proof this review previously listed as blocked.]** R6-D now proves both
+`--mode=file` and `--mode=statement`: the full statement-by-statement replay of
+all 8 baseline files against a fresh TEST-02 produced **zero boundary invariant
+violations**, and the live-authorization-probe (26/26 pgTAP assertions)
+independently confirms no browser-reachable role ever holds more than the
+approved privilege set, including mid-migration. Two real tooling bugs were
+found and fixed in the process (an IPv6 connectivity issue, a pooler
+multi-statement protocol limitation) — see `docs/AI_HANDOFF.md`'s R6-D
+checkpoints. The browser-half Playwright gap this review previously listed is
+unchanged from before (still resolved per the 2026-08-15 checkpoint, 54/54).
 
-**H-3 — [RESOLVED at the database layer 2026-08-14]** All six pgTAP suites now
-pass against TEST-01 rebuilt from the baseline alone, including the R5-A
-session-boundary suite. Generated types show no drift, schema lint is clean, and
-the advisors report 0 errors. See `docs/evidence/R6C-R6E-test01.md`.
+**H-4 — CI evidence is now stale relative to this session's work, not absent.**
+`CI / Application verification` was green on `main` as of the last pushed
+commit, but **this session's ~20 commits (all of R6-D's completion, R6-F,
+H-5) are still local only — `git status` shows `main` 20 commits ahead of
+`origin/main`.** CI has not executed against any of them. This is not a defect
+in the work; it is simply that nothing has been pushed yet. `CI / Cloud TEST
+database and E2E` no longer fails on the migration freeze (H-2 resolved it),
+but still fails on the unconfigured `cloud-test` GitHub environment
+(credentials/variables) — unchanged, a human action, not blocked on Phase 1
+work.
 
-The browser half is partially evidenced: 14–15 of 18 desktop Playwright flows
-pass, with the remainder failing on test-harness sequencing rather than
-application behaviour (the suspension flow suspends the shared owner identity).
-First execution found **four real application defects** — a UUID validator that
-rejected the project's own valid rows, a dev server that refused to serve its own
-client chunks over 127.0.0.1 so nothing hydrated, a one-time TOTP code reachable
-in a URL on pre-hydration submit, and a seed that broke Supabase's Admin API
-project-wide. All four are fixed with regression coverage.
+**H-5 — [RESOLVED 2026-08-18.]** `update_branch`/`archive_branch` implemented:
+migration 9 live on DEV, full TypeScript/UI layer (schema, client functions,
+server actions, edit/archive dialogs), and a new pgTAP suite
+(`supabase/tests/branch_lifecycle.test.sql`, 18/18 assertions) proving the real
+authorization and business-rule behavior — cross-organization denial, missing-
+permission denial, AAL2 requirement, a successful update reflected in the row
+and an audit event, archiving setting `archived_at` and emitting an audit
+event, refusing to edit an archived branch, refusing to double-archive, and
+refusing to archive an organization's only remaining branch. Both declared
+audit actions (`branch.updated`, `branch.archived`) are now reachable. See
+`docs/evidence/H5-branch-lifecycle-verification.md`. Residual, non-blocking gap:
+no Playwright E2E coverage for the edit/archive UI flows yet.
 
-**H-3 (original wording) — No authorization test has been executed against a
-database at any checkpoint in this remediation.** The R5-A suite (40 assertions), the R6-D
-boundary tooling, and the R6-C1 provisioning step are all authored and unrun.
-The pre-existing suites were last exercised at earlier checkpoints against DEV;
-this review does not treat that as current evidence for the current baseline,
-because the baseline changed underneath them.
-*Evidence needed:* `npm run test:db` green against a TEST project rebuilt from
-the baseline. *Blocked on:* TEST-01. Expect first-run corrections; unrun SQL is
-usually not correct SQL.
+**H-6 — [Still resolved, unchanged.]** Manual responsive/accessibility pass
+complete, `docs/evidence/TEST-01-responsive-accessibility-manual-qa-2026-08-15.md`.
 
-**H-4 — CI evidence is partial.** *(Updated 2026-08-14 — the remote now exists
-and CI has run.)* `CI / Application verification` **passes on `main`**. Its first
-run caught a real defect that local verification could not: `tsc --noEmit`
-succeeded locally off a stale `.next/` directory and failed in CI, where
-typecheck runs before the build — see `docs/evidence/CI-first-runs.md`. Fixed and
-re-verified against a simulated clean checkout.
+**H-7 — [Still resolved, unchanged.]** Hosted Auth posture verified on both
+projects, 14/14 passed.
 
-Still open: `CI / Cloud TEST database and E2E` cannot pass while the R6 freeze is
-active (by design), and `CodeQL` and `Dependency review` cannot run at all on a
-private repository without GitHub Advanced Security — see M-6.
-
-**H-5 — Branch update and archive are not implemented.** `docs/plans/001-foundation.md`
-§"Phase 1 audit framework should record at least" names *branch updated/archived*,
-and the audit action catalog names `branch.updated` and `branch.archived`. No
-migration defines an update or archive RPC, no server action calls one, and the
-branch settings screen offers only create and list. Two declared audit actions
-are therefore unreachable by any code path.
-*Deliberately deferred until after R6-F:* implementing it needs a new migration,
-and adding migration 9 now would put a freshly built TEST project out of step
-with DEV and invalidate the equivalence R6-E must prove. Recorded here as an open
-Phase 1 scope item, not as complete.
-
-**H-6 — The manual responsive and accessibility pass has not been performed.**
-The automated matrix (`e2e/responsive-accessibility.spec.ts`, 5 form factors) is
-authored but unrun, and `docs/testing/RESPONSIVE_ACCESSIBILITY_QA.md` is blank.
-Automated scanning cannot judge virtual-keyboard behaviour, screen-reader output,
-focus *order*, or one-handed reachability. A blank checklist is a blocker.
-
-**H-7 — [RESOLVED 2026-08-14]** Both hosted projects now report **14 passed, 0
-violations, 0 unverified, 1 advisory**. Public signup is disabled, the password
-floor is 12 with a character-class requirement, password change requires
-reauthentication, and TEST-01's redirect allow list is configured. The remaining
-advisory is Pro-gated leaked-password protection, carried as production gate M-5.
-Applied by targeted `PATCH` with before/after verification across all 242 config
-keys (no unintended drift) and a sign-in re-check of all three fixtures.
-
-**H-7 (as first found) —** Both hosted projects
-were read. All 15 policy keys resolved (0 `UNVERIFIED`). TOTP enroll/verify,
-anonymous sign-in, email auto-confirm, phone MFA, refresh-token rotation, reuse
-interval, and `jwt_exp` all pass on both.
-
-**Open on both TEST-01 and DEV:** public signup is *enabled* (`disable_signup:
-false`), the password floor is Supabase's default `6` rather than `12`, no
-character-class requirement is set, and password change does not require
-reauthentication. TEST-01 additionally has an empty redirect allow list, which
-blocks invitation acceptance there.
-
-Open signup directly contradicts the invitation-only posture. It is mitigated —
-an identity created that way has no membership, no role, and reaches nothing,
-which `foundation_rls` and the R5-A suite both prove — but it is a stated
-requirement that is not met, so it stays a High finding until the four Dashboard
-settings are changed. Remediation steps: `docs/security/HOSTED_AUTH_BASELINE.md`.
-
-**H-8 — No independent review of the security-critical remediation.**
-ADR-017 lists twelve verification questions and ADR-018 four more, all
-outstanding. The project's own workflow forbids the implementing agent being the
-only reviewer of database, RLS, and migration-sensitive work. This is a process
-blocker that no amount of further implementation resolves.
+**H-8 — Independent review is still not genuinely independent.** The prior
+review named this "a process blocker that no amount of further implementation
+resolves," and that remains literally true: R6-D's two tooling-fix commits
+(`033754f`, `338c59c`) and their fixes (`afbb3a8`), and this session's H-5
+implementation commit, have been reviewed only by a fresh-context Claude agent
+(no shared conversation history with the implementing agent, but the same
+underlying model) — **at the project owner's explicit direction, recorded
+honestly in `docs/AI_HANDOFF.md`, as a deliberate substitute for the
+originally-required Codex review, not as equivalent to it.** A single Codex
+review did occur and pass cleanly on the *documentation* checkpoint `109646f`
+(one Low finding, fixed) — but not on the security-relevant tooling code
+itself, nor on the H-5 migration/RPC implementation. This finding stays open
+as a matter of record. Whether it blocks Phase 2 in practice is the project
+owner's call, already made once for R6-D/H-5; re-affirming it (or reversing it)
+for future security-sensitive work is a standing decision, not a one-time
+exception this review can retroactively grant.
 
 ### Medium
 
-**M-1 — Hosted Auth policy key names are unvalidated.** The 14 keys come from the
-documented Management API surface, not from a live response. Any renamed key
-surfaces as `UNVERIFIED` (exit non-zero) rather than as a false pass, so the
-failure mode is safe — but the policy file will likely need correction on first
-run.
+**M-1 through M-6 — unchanged from the prior review**, except:
 
-**M-2 — MFA factor *removal* is not projected into application audit history.**
-`public.record_mfa_enrollment` covers enrollment only. The plan lists
-`mfa.removed` as *"(later/privileged)"*, so this is a documented deferral rather
-than a missed Phase 1 requirement. The reconciliation semantics are now written
-down in `docs/security/AUDIT_FOUNDATION.md` — including the non-negotiable point
-that a removal assertion must be captured **before** the unenroll, because after
-it the factor row is gone and absence is indistinguishable from "never existed".
-Implementation needs a migration and is deferred until after R6-F.
+**M-3 — Phase 1 now has one branch-scoped-adjacent write path.** `update_branch`/
+`archive_branch` are organization-wide-permission gated, same as every other
+Phase 1 mutation — this finding's underlying observation (no *branch-scoped*
+write RPC exists yet) is unchanged, since H-5 didn't introduce one. Still
+correct for what exists.
 
-**M-6 — CodeQL and Dependency review cannot run on the current GitHub plan.**
-Both fail on every run: code scanning and dependency review require GitHub
-Advanced Security on a private repository. `npm run security:audit` and
-`npm run security:secrets` run in CI and pass, but they are narrower — no static
-taint analysis, no PR-diff-scoped dependency gate. Recorded as an accepted gap
-with a plan gate, not as equivalent coverage. `continue-on-error` was deliberately
-not used: a job reporting success while doing nothing is worse than an honest red.
-
-**M-5 — Leaked-password protection is unavailable on the current Supabase plan.**
-The security advisors flagged it as disabled; it is gated on Pro plan and above,
-so the disposable Free-tier TEST project cannot enable it. Recorded as a **Phase 1
-production gate**: the production project must be provisioned on a plan that
-supports it. The hosted-Auth checker requires it in staging/production and
-reports it as advisory elsewhere, so it stays visible without producing a check
-that can never pass.
-
-**M-3 — Phase 1 has no branch-scoped write path.** Every mutation is
-organization-wide-permission gated, so the R5-A branch-revocation section asserts
-authorization *predicates* and read visibility rather than a refused branch-bound
-mutation. Correct for what exists; a mutation-level assertion must be added with
-the first Phase 2 branch-scoped write.
-
-**M-4 — The freeze guard cannot intercept a raw CLI invocation.** It covers the
-`npm run db:*` paths only. No repository change can cover a `npx supabase db push`
-typed at a shell. The documented operator precaution (removing `supabase/.temp/`)
-has not been applied, and local link state still points at DEV.
+**M-4 — unchanged.** Local link state currently points at DEV (relinked after
+H-5's TEST-02 work); `supabase/.temp/` was not removed as the documented
+operator precaution suggests. Low practical risk now that the freeze itself no
+longer exists to bypass.
 
 ### Low
 
-- **L-1** Migration file 1 was renamed in R6-C1; ADR-017's table is updated, but any external note referencing the old filename is now stale.
-- **L-2** The automated target-size check enforces the WCAG 2.2 minimum (24 px), not the project's larger coarse-pointer preference. Deliberate; carried by manual row P6.
-- **L-3** Email template bodies, SMTP configuration, and Auth rate limits are outside the hosted-Auth checker.
-- **L-4** `service_role` privileges are out of scope for both migration-privilege layers per ADR-017 §5. Correct for R6, but it means "no browser-reachable role can write" is proven while "the server role holds only what it needs" is not.
+**L-1 through L-4 — unchanged from the prior review.**
+
+**L-5 (new) — TEST-02 (ref `plkjajlfnhsklmdloaut`) is still live.** Used for
+both R6-D and H-5 verification; its evidence is fully captured in both cases.
+Disposing it (or keeping it) is an open, low-stakes decision for the project
+owner — see `docs/AI_HANDOFF.md`'s human actions list.
 
 ## Acceptance criteria — passed
 
+All rows from the prior review, plus:
+
 | Criterion | Evidence |
 |---|---|
-| Repository/application scaffold, environment separation | `npm run verify` green, environment-pairing guards, `docs/deployment/ENVIRONMENT_SEPARATION.md` |
-| Grant-last fail-closed migration invariant, mechanically enforced | `npm run security:migrations`: 8 files, 231 statements, 93 GRANT/REVOKE, 30 approved privileges, 0 violations, 0 extensions; 40 lint unit tests incl. 13 negative fixtures |
-| Canonical baseline is production-shaped | ADR-018; empty `APPROVED_EXTENSIONS`; unit tests assert reintroducing pgTAP fails |
-| Lint, strict typecheck, unit/component tests, production build | 225/225 tests across 22 files; ESLint 0 problems; `tsc --noEmit` clean; build succeeds |
-| Secret scanning | secretlint 0 findings across the tree |
-| Dependency audit | `npm audit --audit-level=high`: 0 vulnerabilities |
-| Guarded remote-command architecture | TEST-target guard tests, scoped freeze acknowledgement tests, mandatory `SUPABASE_DEV_PROJECT_ID`, sentinel-checked provisioning |
-| Authorization test *matrix* authored to the required scenario list | R5-A (database) + R5-B (browser) + pre-existing suites; suite registration asserted against the directory |
-| Documented architecture decisions | ADR-001…ADR-005, ADR-016, ADR-017, ADR-018 |
+| Grant-last invariant holds under interrupted-replay (statement-level) | `docs/AI_HANDOFF.md` R6-D checkpoints — zero violations across the full 8-file statement-by-statement replay, two fresh TEST-02 cycles |
+| DEV migration history reconciled with Git | `docs/evidence/R6F-migration-history-reconciliation.md` — 9/9 versions `local === remote` |
+| Branch update/archive implemented and tested | `docs/evidence/H5-branch-lifecycle-verification.md` — 18/18 pgTAP assertions, full TS/UI layer, 290/290 unit tests |
+| Migration privilege lint scales to a second grant-terminal migration | `npm run security:migrations`: 9 files, 2 grant-terminal migrations, 0 violations |
 
 ## Acceptance criteria — still open
 
 | Criterion | Blocked by | Unblocked by |
 |---|---|---|
-| Fresh Cloud TEST reconstruction from committed migrations | H-1 | Human: create TEST-01 |
-| pgTAP / RLS / tenant-isolation suites green on that project | H-3 | TEST-01 |
-| Interrupted-boundary (statement-level) verification | H-1 | Human: create TEST-02 after TEST-01 is disposed |
-| Schema/security equivalence, DB lint, security advisors, generated-type drift | H-1 | TEST-01 |
-| DEV migration-history reconciliation and freeze removal | H-2 | R6-D + R6-E green, then approval |
-| Hosted Auth posture verified | H-7 | TEST-01 + access token |
-| Playwright hosted security scenarios executed | H-3 | TEST-01 + synthetic login identities |
-| Responsive matrix executed + manual QA recorded | H-6 | TEST-01, then a human with real devices |
-| CI executed, required checks configured | H-4 | Human: GitHub bootstrap |
-| Branch update/archive implemented and tested | H-5 | After R6-F |
-| Independent review of high-risk commits | H-8 | Codex availability |
+| This session's work verified by CI | H-4 (stale, not absent) | Human: `git push` |
+| `CI / Cloud TEST database and E2E` passes | Human action 1 in `docs/AI_HANDOFF.md` | Human: configure the `cloud-test` GitHub environment |
+| Genuinely independent review of R6-D tooling and H-5 | H-8 | Human: run the CODEX REVIEW PROMPTs already printed in this session's transcript, or accept the fresh-agent review as sufficient (a decision, not a default) |
+| M-5/M-6 production gates | Plan-gated, unchanged | Supabase plan upgrade / GitHub Advanced Security, at production time, not Phase 1 |
+| TEST-02 disposition | L-5 | Human: dispose or keep, low stakes either way |
 
 ## Decision
 
-**Phase 1 is not accepted.** Eight High findings are open. Seven of them are
-"evidence has never been produced" rather than "a defect was found", and every
-one of those is gated on a human action, not on further implementation.
+**Phase 1's implementation and evidence are complete.** Every High finding from
+the prior review that was "evidence has never been produced" now has that
+evidence, produced and recorded. The two things left open are not
+implementation gaps:
 
-The honest summary is: the remediation *work* is substantially complete and the
-remediation *proof* has not started, because proof requires a hosted project and
-a remote that do not yet exist.
+1. **This session's work has not been pushed**, so CI has not run against it.
+   This is mechanical, not a defect — push, watch `CI / Application
+   verification` pass, and this closes.
+2. **H-8 (independent review) is satisfied only by a same-model fresh-context
+   agent, not a genuinely independent reviewer**, for the R6-D tooling commits
+   and the H-5 implementation. The project owner has already explicitly chosen
+   this substitution once, in writing, with the limitation stated up front. It
+   remains a standing choice to make consciously for future security-sensitive
+   work, not a box this review can check on the project owner's behalf.
 
-Phase 2 has not been started and must not be.
+Whether that is sufficient to consider Phase 1 **accepted** — as opposed to
+substantially complete pending those two items — is the project owner's call,
+not this review's. This review's job is to state the facts precisely enough
+that the call is an informed one: no cross-tenant exploit, no known defect, no
+missing evidence anywhere else in the eight prior High findings; only the push
+and the review-provenance question remain.
 
 ## Re-review trigger
 
-Re-run this review after: R6-C, R6-D, R6-E, R6-F complete with preserved
-evidence; CI has executed; the manual QA checklist is filled in; branch
-update/archive ships; and Codex has reviewed the high-risk commits listed in
-`docs/AI_HANDOFF.md`.
+Re-run this review after: this session's commits are pushed and
+`CI / Application verification` has run against them; and, if the project
+owner decides genuine independent review is still wanted for `033754f` /
+`338c59c` / `afbb3a8` / the H-5 implementation commit, after that review
+completes and any findings are addressed.
