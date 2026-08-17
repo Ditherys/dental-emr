@@ -7,6 +7,7 @@ import {
   assertExaminedGrowth,
   assertFinalBoundary,
   assertPreFinalBoundary,
+  assertPreFinalStatementBoundary,
   assertSnapshotUsable,
   browserReachableApprovedKeys,
   diffAgainstBaseline,
@@ -326,6 +327,105 @@ describe("pre-final boundaries", () => {
         }),
       }),
     ).toHaveLength(1);
+  });
+});
+
+describe("statement-mode grace window", () => {
+  const NEW_FUNCTION_EXECUTE = {
+    grantee: "public",
+    object_class: "function",
+    object: "public.set_role_permission(uuid, text, boolean)",
+    privilege: "execute",
+    column: null,
+  };
+
+  it("does not report PostgreSQL's own default PUBLIC EXECUTE the statement it first appears", () => {
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE FUNCTION statement)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      pending: [],
+    });
+
+    expect(result.problems).toEqual([]);
+    expect(result.pending).toHaveLength(1);
+    expect(result.pending[0].key).toContain("set_role_permission");
+  });
+
+  it("reports it as a real violation if it is still present the following statement", () => {
+    const first = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE FUNCTION statement)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      pending: [],
+    });
+
+    const second = assertPreFinalStatementBoundary({
+      label: "boundary N+1 (still not revoked)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      pending: first.pending,
+    });
+
+    expect(second.problems).toHaveLength(1);
+    expect(second.problems[0]).toContain("set_role_permission");
+    expect(second.problems[0]).toContain("adjacent");
+  });
+
+  it("reports nothing once the adjacent REVOKE closes it by the following statement", () => {
+    const first = assertPreFinalStatementBoundary({
+      label: "boundary N (CREATE FUNCTION statement)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: [...PLATFORM_BASELINE.privileges, NEW_FUNCTION_EXECUTE] }),
+      pending: [],
+    });
+
+    const second = assertPreFinalStatementBoundary({
+      label: "boundary N+1 (REVOKE statement)",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
+      pending: first.pending,
+    });
+
+    expect(second.problems).toEqual([]);
+    expect(second.pending).toEqual([]);
+  });
+
+  it("never treats the accepted extension-schema exception as pending", () => {
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({
+        privileges: [
+          ...PLATFORM_BASELINE.privileges,
+          {
+            grantee: "public",
+            object_class: "function",
+            object: "extensions.pgtap_version()",
+            privilege: "execute",
+            column: null,
+          },
+        ],
+      }),
+      pending: [],
+    });
+
+    expect(result.problems).toEqual([]);
+    expect(result.pending).toEqual([]);
+  });
+
+  it("still enforces structural expectations every statement, ungraced", () => {
+    const result = assertPreFinalStatementBoundary({
+      label: "boundary N",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({
+        privileges: PLATFORM_BASELINE.privileges,
+        public_tables_without_rls: ["public.branches"],
+      }),
+      pending: [],
+    });
+
+    expect(result.problems.join("\n")).toContain("row level security disabled");
   });
 });
 

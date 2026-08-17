@@ -307,3 +307,41 @@ export function parseSupabaseQueryResult(
 export function readLinkedProjectId(filename) {
   return readFileSync(filename, "utf8").trim();
 }
+
+export const PGTAP_PRESENCE_CHECK_FILE = "supabase/verification/r6d/pgtap-presence-check.sql";
+
+/**
+ * Fails closed, with an actionable remedy, if pgTAP was never provisioned on
+ * the linked project. Without this, live-authorization-probe.sql fails deep
+ * inside its own execution with a cryptic "function extensions.no_plan() does
+ * not exist" error — after R6-D has already spent time replaying every
+ * baseline migration. See ADR-018: pgTAP is deliberately not part of the
+ * canonical baseline and must be provisioned separately per environment.
+ */
+export function assertPgtapIsProvisioned(output) {
+  let result;
+
+  try {
+    result = JSON.parse(output);
+  } catch {
+    throw new Error(`${PGTAP_PRESENCE_CHECK_FILE} returned malformed Supabase CLI JSON.`);
+  }
+
+  if (!Array.isArray(result.rows) || result.rows.length !== 1) {
+    throw new Error(`${PGTAP_PRESENCE_CHECK_FILE} did not return one row.`);
+  }
+
+  if (result.rows[0]?.r6d_pgtap_presence === "R6D_PGTAP_PRESENT") {
+    return;
+  }
+
+  throw new Error(
+    "pgTAP is not installed on the linked project. live-authorization-probe.sql requires it and pgTAP is " +
+      "deliberately not part of the canonical baseline (ADR-018), so it must be provisioned separately against " +
+      "this exact disposable Cloud TEST project before R6-D runs:\n" +
+      "  $env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'\n" +
+      "  $env:MIGRATION_FREEZE_ACK_COMMAND='db-provision-test-tooling'\n" +
+      "  npm run db:provision:test\n" +
+      "Then clear MIGRATION_FREEZE_ACK_COMMAND (or reset it to 'db-push') before running R6-D itself.",
+  );
+}

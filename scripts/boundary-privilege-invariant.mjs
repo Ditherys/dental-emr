@@ -272,6 +272,54 @@ export function assertPreFinalBoundary({ label, baselineSnapshot, snapshot }) {
 }
 
 /**
+ * Statement-mode counterpart to assertPreFinalBoundary for a non-terminal
+ * file's INNER statement-by-statement snapshots only. The file's own
+ * "boundary after <file>" snapshot must still go through the full, ungraced
+ * assertPreFinalBoundary — this function must never be substituted for that.
+ *
+ * WHY A GRACE WINDOW EXISTS
+ *
+ * ADR-017 §2 requires every object to have its inherited/default privileges
+ * revoked "adjacent to the CREATE" — the very next statement — because SQL has
+ * no atomic CREATE+REVOKE. PostgreSQL grants EXECUTE on every new function to
+ * PUBLIC at the instant of CREATE. Statement-mode replay therefore observes
+ * that exact grant at exactly one statement boundary for every function the
+ * baseline creates: the snapshot taken right after its CREATE and right
+ * before its own adjacent REVOKE. That is the invariant working as designed —
+ * ADR-017 promises "adjacent," not "the same statement," because the latter is
+ * not expressible in SQL. It is not a boundary defect.
+ *
+ * This gives an added, not-already-accepted entry exactly one statement of
+ * grace. An entry still present at the FOLLOWING statement snapshot did not
+ * close adjacently and is reported as a real violation, exactly where
+ * ADR-017's "adjacent" promise was actually broken. Grace never spans a file
+ * boundary: callers must start `pending` fresh for each file, and the
+ * unmodified boundary-after-file check (using the full, ungraced
+ * assertPreFinalBoundary) still catches any entry left open at file end.
+ */
+export function assertPreFinalStatementBoundary({ label, baselineSnapshot, snapshot, pending }) {
+  const { added } = diffAgainstBaseline(baselineSnapshot, snapshot);
+  const notAccepted = added.filter(({ entry }) => !isAccepted(entry));
+  const currentKeys = new Set(notAccepted.map(({ key }) => key));
+  const pendingKeys = new Set(pending.map(({ key }) => key));
+
+  const problems = pending
+    .filter(({ key }) => currentKeys.has(key))
+    .map(
+      ({ key }) =>
+        `${label}: a browser-reachable role still holds "${key}" at the statement following the one ` +
+        'where it first appeared. ADR-017 §2 requires the revoke to be the statement "adjacent to the ' +
+        'CREATE" — this privilege was not closed by then.',
+    );
+
+  problems.push(...assertStructuralExpectations(label, snapshot));
+
+  const nextPending = notAccepted.filter(({ key }) => !pendingKeys.has(key));
+
+  return { problems, pending: nextPending };
+}
+
+/**
  * At the grant-terminal migration the effective privilege set must equal the
  * platform baseline plus exactly the approved grants — no more, no less.
  */

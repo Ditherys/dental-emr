@@ -34,6 +34,7 @@ import {
   assertExaminedGrowth,
   assertFinalBoundary,
   assertPreFinalBoundary,
+  assertPreFinalStatementBoundary,
   assertSnapshotUsable,
   BOUNDARY_PROBE_FILE,
   LIVE_AUTHORIZATION_PROBE_FILE,
@@ -45,7 +46,9 @@ import {
 } from "./migration-privilege-lint.mjs";
 import {
   assertMigrationFreezeAllows,
+  assertPgtapIsProvisioned,
   parseSupabaseQueryResult,
+  PGTAP_PRESENCE_CHECK_FILE,
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
   validateTransactionalSuite,
@@ -204,6 +207,15 @@ function main() {
 
   validateRemoteDatabaseTestEnvironment(process.env, readLinkedProjectId(linkedProjectFile));
 
+  // Fail fast, before spending time replaying every baseline migration: the
+  // live authorization probe at the end of this run requires pgTAP, which the
+  // canonical baseline deliberately never installs (ADR-018).
+  assertPgtapIsProvisioned(
+    runSupabaseQuery(join(repositoryRoot, ...PGTAP_PRESENCE_CHECK_FILE.split("/")), {
+      json: true,
+    }),
+  );
+
   const files = readdirSync(migrationsDirectory)
     .filter((name) => name.toLowerCase().endsWith(".sql"))
     .sort()
@@ -256,6 +268,12 @@ function main() {
       const statements = splitSqlStatements(file.source, file.name);
       const statementFile = join(workingDirectory, "statement.sql");
 
+      // Grace state for assertPreFinalStatementBoundary. Reset per file: the
+      // file's own unmodified "boundary after <file>" check below (using the
+      // full, ungraced assertPreFinalBoundary/assertFinalBoundary) is what
+      // actually catches anything left open past the file's last statement.
+      let pendingGrace = [];
+
       for (const [index, statement] of statements.entries()) {
         writeFileSync(statementFile, `${statement.raw}\n`, "utf8");
         runSupabaseQuery(statementFile, { json: false });
@@ -268,13 +286,14 @@ function main() {
         // Inside the terminal file the privilege set is mid-flight, so only the
         // pre-final assertion is meaningful until the file completes.
         if (!isTerminal) {
-          problems.push(
-            ...assertPreFinalBoundary({
-              label,
-              baselineSnapshot: platformBaseline,
-              snapshot,
-            }),
-          );
+          const result = assertPreFinalStatementBoundary({
+            label,
+            baselineSnapshot: platformBaseline,
+            snapshot,
+            pending: pendingGrace,
+          });
+          problems.push(...result.problems);
+          pendingGrace = result.pending;
         }
 
         previousSnapshot = snapshot;

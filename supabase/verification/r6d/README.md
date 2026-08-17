@@ -51,6 +51,26 @@ Four controls run first, and the run is void if any fails:
 
 ## Running it, when R6-D is approved
 
+### Step 0 — provision pgTAP first
+
+`live-authorization-probe.sql` requires pgTAP. pgTAP is deliberately **not**
+part of the canonical baseline (ADR-018), so it must be provisioned separately
+against this exact disposable Cloud TEST project before the boundary invariant
+run:
+
+```powershell
+$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
+$env:MIGRATION_FREEZE_ACK_COMMAND='db-provision-test-tooling'
+npm run db:provision:test
+```
+
+`scripts/run-boundary-privilege-invariant.mjs` checks for pgTAP's presence
+before applying any migration and fails closed with this same remedy if the
+step above was skipped — but running it first avoids spending the time to
+replay the whole baseline only to fail at the very end.
+
+### Step 1 — the boundary invariant run
+
 `scripts/run-boundary-privilege-invariant.mjs` orchestrates the run. It is gated
 four ways and nothing in the repository satisfies those gates:
 
@@ -64,6 +84,8 @@ referenced by any CI job.
 
 ```powershell
 # R6-D only, against a genuinely disposable Cloud TEST project.
+# Reset MIGRATION_FREEZE_ACK_COMMAND from step 0's value first — the
+# acknowledgement is scoped to exactly one command at a time.
 $env:R6D_BOUNDARY_TEST_CONFIRMATION='I_UNDERSTAND_THIS_APPLIES_THE_BASELINE_TO_A_DISPOSABLE_CLOUD_TEST_PROJECT'
 $env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
 $env:MIGRATION_FREEZE_ACK_COMMAND='db-push'
@@ -111,6 +133,20 @@ These decisions are unit-tested offline in
 - **The SQL in this directory has never been executed.** It is reviewed authored
   work. Syntax, catalog assumptions, and pgTAP assertions are unverified until
   R6-D runs. Expect to correct it on first run.
+- **`--mode=statement` gives PostgreSQL's own default-privilege grants exactly
+  one statement of grace.** ADR-017 §2 requires a revoke "adjacent to the
+  CREATE" — the very next statement, since SQL has no atomic CREATE+REVOKE.
+  PostgreSQL grants EXECUTE on every new function to PUBLIC at the instant of
+  CREATE, so a snapshot taken right after that CREATE and before its own
+  adjacent REVOKE always shows that grant; without the grace window, statement
+  mode would report this expected transient on every function the baseline
+  creates. `assertPreFinalStatementBoundary` in `scripts/boundary-privilege-
+  invariant.mjs` accepts it for exactly one statement and reports a real
+  violation if it is still present the statement after — i.e. it verifies
+  "adjacent" rather than assuming it. This is unverified against a real
+  database until R6-D runs, and independent review should specifically check
+  that the grace window cannot mask a genuine leftover grant (see AI_HANDOFF.md
+  and ADR-017's independent review requirement, item 10).
 - `service_role` is not probed. ADR-017 §5 scopes the invariant to
   browser-reachable roles.
 - Extension-owned objects are excluded from the snapshot and counted separately;
