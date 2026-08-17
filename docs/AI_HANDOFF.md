@@ -4,7 +4,23 @@
 
 ## Current Checkpoint
 
-**Task / slice:** R6-D `--mode=statement` executed for the first time against a fresh, empty TEST-02 (ref `plkjajlfnhsklmdloaut`, `ap-southeast-1`) — two real tooling bugs found and fixed, then the full statement-by-statement replay of all 8 baseline files completed with **zero boundary invariant violations**, and the live-authorization-probe verified passing. Also: the R6-C/R6-E execution-status doc corrections from a Codex review of `70fd29a` (commit `a5c8689`), and a design-only prep document for H-5 (commit `33a58b6`, no live migration).
+**Task / slice:** the R6-D tooling-fix commits (`033754f`, `338c59c`) received review and remediation — first a Codex review of the docs checkpoint that recorded them (`109646f`), finding one Low (fixed in `e6e7f2d`); then, **at the project owner's explicit direction, a fresh-context review agent instead of Codex** reviewed the tooling commits themselves, found one High and three Medium issues, all fixed in `afbb3a8`. R6-D's tooling is now considered review-complete for this project's purposes; R6-F is ready to be requested.
+
+**Explicit deviation, recorded honestly:** ADR-017 names Codex specifically as the required independent reviewer for security-sensitive migration architecture. The project owner directed Claude Code to instead run a fresh general-purpose agent (no memory of authoring the code, launched via the `Agent` tool, not a context-sharing fork) against the two tooling commits, and to self-fix any findings, rather than pause for an external Codex pass. This is **not equivalent to genuine independent review** — the agent runs on the same underlying model as the implementing agent, just without shared context — and that limitation was stated to the project owner before proceeding. The review did surface real, material findings (below), which is evidence it was not vacuous, but it should not be read as having satisfied ADR-017's Codex-specific requirement; it satisfies the project owner's explicit choice to proceed without it.
+
+**Findings from the fresh-agent review of `033754f`/`338c59c`, fixed in `afbb3a8`:**
+1. **HIGH** — `assertOverrideTargetsLinkedProject` validated `R6D_DB_URL_OVERRIDE` with `override.includes(linkedProjectId)`, a substring check defeatable by embedding the real ref in an unrelated field (e.g. the password) of a URL pointed at a different host. Fixed: parses the URL and requires host+username to match Supabase's actual Session Pooler (`postgres.<ref>@*.pooler.supabase.com`) or direct-connection (`postgres@db.<ref>.supabase.co`) shape.
+2. **MEDIUM-HIGH** — `matchesPsqlPlainTextCompletion` matched the first occurrence of the expected column/value shape anywhere in psql's output, not necessarily the script's real final result; an earlier spurious block could have masked a later genuine failure. Fixed: evaluates only the last matching block.
+3. **MEDIUM** — a failed `psql` invocation echoed raw stdout/stderr (which can contain connection-string fragments) into the thrown error. Fixed: withholds raw output, reports a curated credential-free message.
+4. **MEDIUM** — the IPv6-error auto-retry applied to schema-mutating DDL replay (statement- and file-mode migration apply), resting on an unverified assumption that the error can only occur before a query reaches Postgres. Fixed: retry now restricted to read-only snapshots and the always-rolled-back live-authorization-probe; mutating replay fails closed on first occurrence.
+5. **LOW** — the `psql` presence-check conflated "not on PATH" with "found but broken." Fixed: distinguished, with the real error surfaced.
+6. **LOW** — the R6-D README never actually documented the `psql` dependency despite a prior claim that it did. Fixed both.
+
+274 → 279/279 unit tests, lint, typecheck, build, secret scan, and `npm audit` all pass after the fixes.
+
+---
+
+**Prior checkpoint task / slice:** R6-D `--mode=statement` executed for the first time against a fresh, empty TEST-02 (ref `plkjajlfnhsklmdloaut`, `ap-southeast-1`) — two real tooling bugs found and fixed, then the full statement-by-statement replay of all 8 baseline files completed with **zero boundary invariant violations**, and the live-authorization-probe verified passing. Also: the R6-C/R6-E execution-status doc corrections from a Codex review of `70fd29a` (commit `a5c8689`), and a design-only prep document for H-5 (commit `33a58b6`, no live migration).
 
 **What happened (2026-08-17/18, continuing the session):** two disposable-project cycles were burned diagnosing tooling gaps before a clean result:
 
@@ -184,7 +200,7 @@ Five application defects, none visible to any static check, unit test, or databa
 | Item | State |
 |---|---|
 | **H-1** catalog-level TEST-vs-DEV equivalence | **Resolved 2026-08-14.** See `docs/evidence/R6E-catalog-comparison.md`. |
-| **H-2** — R6-D on a fresh TEST-02, then R6-F reconciliation and freeze removal | **R6-D is now fully proven in both modes** — see current checkpoint above and "What is now proven". **R6-E decision made 2026-08-18:** the existing DEV-vs-TEST-01 equivalence proof still covers the current (unchanged) baseline; no fresh re-run needed. Only remaining blocker: this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) need independent Codex review before R6-F can be requested. |
+| **H-2** — R6-D on a fresh TEST-02, then R6-F reconciliation and freeze removal | **R6-D is now fully proven in both modes** — see current checkpoint above and "What is now proven". **R6-E decision made 2026-08-18:** the existing DEV-vs-TEST-01 equivalence proof still covers the current (unchanged) baseline; no fresh re-run needed. **Tooling review complete 2026-08-18** (fresh-agent review at project owner's direction, not Codex — see current checkpoint's recorded deviation): one High, three Medium, two Low findings, all fixed in `afbb3a8`. R6-F is now ready to be requested from the project owner. |
 | Playwright harness sequencing | **Resolved 2026-08-15.** Fresh-ID TEST-01 acceptance run passed 54/54; the corrected suspension mutation test also proves direct database absence before membership restoration. |
 | Responsive matrix on the other four form factors | **Resolved 2026-08-15.** All seven configured projects passed in one 54/54 matrix; the later manual device/accessibility pass is also complete under H-6 below. |
 | **H-5** branch update/archive | Design doc committed (`docs/plans/pending-h5-branch-update-archive.md`) — draft migration SQL, grant registration, and TS/UI implementation spec, ready to implement once R6-F lifts the freeze and types can be regenerated. Not implemented; the actual migration/code deliberately deferred until after R6-F. |
@@ -198,16 +214,18 @@ Five application defects, none visible to any static check, unit test, or databa
 
 1. Configure the GitHub `cloud-test` environment (variables and secrets per `docs/deployment/CI_FOUNDATION.md`) — only useful after R6-F.
 2. **Decided 2026-08-14:** the project owner will stay on the current Supabase plan until there is real clinic demand (a second clinic interested), and upgrade then. M-5 (leaked-password protection) remains open as a pre-production gate, not a Phase 1 blocker.
-3. **Sole remaining blocker before R6-F can be requested:** independent Codex review of this checkpoint's two tooling-fix commits (`033754f`, `338c59c`) — required per the standing "must not be self-reviewed" rule. The project owner chose to run these separately rather than continue in this session (2026-08-18).
-4. After that review (and addressing any findings): approve R6-F (DEV migration-history reconciliation and freeze removal) as its own separately gated step.
+3. **Decided 2026-08-18:** the project owner directed a fresh-agent review in place of the external Codex review for `033754f`/`338c59c`, given a recorded structural limitation (see current checkpoint). Real findings were found and fixed in `afbb3a8`.
+4. **Ready now:** approve R6-F (DEV migration-history reconciliation and freeze removal) as its own separately gated step — this is the step that touches DEV (via `supabase migration repair`, metadata-only, reversible by restoring the recorded rows per ADR-017).
 
 ## Next Checkpoint
 
-R6-D is fully proven in both modes, and the R6-E decision is made (existing proof still covers the unchanged baseline — see current checkpoint above). The session stopped here deliberately, pending the human action above. Next new-session checkpoint should: (1) confirm the Codex review of `033754f`/`338c59c` happened and address any findings; (2) only then request R6-F (DEV migration-history reconciliation and freeze removal) approval; (3) after R6-F, H-5's already-designed migration (`docs/plans/pending-h5-branch-update-archive.md`) can be implemented for real; (4) re-run/update `docs/PHASE1_ACCEPTANCE_REVIEW.md` against the current repository state once R6-F lands — it remains a historical review at an older checkpoint and must not be treated as current status until then.
+R6-D is fully proven in both modes, the R6-E decision is made, and the tooling review is complete (fresh-agent review, not Codex — see current checkpoint's recorded deviation). Next: (1) explicit project-owner approval to execute R6-F (DEV migration-history reconciliation and freeze removal); (2) after R6-F, H-5's already-designed migration (`docs/plans/pending-h5-branch-update-archive.md`) can be implemented for real; (3) re-run/update `docs/PHASE1_ACCEPTANCE_REVIEW.md` against the current repository state once R6-F and H-5 land — it remains a historical review at an older checkpoint and must not be treated as current status until then.
 
 ## Commits Requiring Later Codex Review
 
-`033754f` R6-D IPv6-network fallback (`R6D_DB_URL_OVERRIDE`, auto-retry) — **unreviewed.** `338c59c` R6-D psql fallback for multi-statement queries over the pooler — **unreviewed.** Both are tooling-only (no baseline migration/grant change); see the CODEX REVIEW PROMPT blocks printed for each in this session's transcript for the specific risks to scrutinize (override target-validation, regex false-pass risk on the psql plain-text parser, retry-vs-mask-a-real-failure reasoning).
+`033754f` R6-D IPv6-network fallback (`R6D_DB_URL_OVERRIDE`, auto-retry) and `338c59c` R6-D psql fallback for multi-statement queries over the pooler — reviewed 2026-08-18 by a fresh-context agent (not Codex, at the project owner's explicit direction; see current checkpoint's recorded deviation), one High and three Medium findings, all fixed in `afbb3a8`. A genuine Codex pass on all three commits (`033754f`, `338c59c`, `afbb3a8`) remains valuable and has not occurred; flagged here for whenever the project owner next wants it, not as a blocker the project owner has already chosen to proceed past.
+
+`afbb3a8` fixes for the above findings — **unreviewed** by Codex specifically (see above).
 
 `a5c8689` execution-status doc corrections (R6-C/R6-D/R6-E claims) — **unreviewed**, docs/comment-only.
 
