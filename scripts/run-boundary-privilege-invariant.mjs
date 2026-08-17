@@ -100,35 +100,101 @@ function fail(message) {
   process.exit(1);
 }
 
+const IPV6_CONNECTIVITY_ERROR = "LegacyDbConfigIpv6Error";
+const IPV6_RETRY_ATTEMPTS = 3;
+const IPV6_RETRY_DELAY_MS = 2000;
+
+/**
+ * `supabase db query --linked` opens a direct connection under the hood
+ * (despite its own help text saying "via Management API"), which some
+ * networks cannot complete because Supabase's direct/non-pooler host requires
+ * IPv6. Observed in practice: an operator's `--linked` run can succeed for a
+ * platform-baseline snapshot and an entire migration file's worth of
+ * statement-by-statement snapshots, then fail consistently afterward on the
+ * exact same network — so this is treated as retryable, not purely fatal.
+ *
+ * `R6D_DB_URL_OVERRIDE`, if set, is an escape hatch for a network where
+ * `--linked` cannot complete at all: a full Postgres connection string
+ * (percent-encoded), which the operator supplies directly (e.g. the disposable
+ * TEST project's Session Pooler URL — IPv4-compatible). It is never derived,
+ * guessed, or defaulted by this script, and it must reference the same
+ * project already validated as the linked TEST target — this check is what
+ * stops a stray or malicious override from silently redirecting a boundary
+ * check (or, worse, a migration-applying statement) at a different project.
+ */
+export function resolveQueryArgs(
+  file,
+  json,
+  {
+    override = process.env.R6D_DB_URL_OVERRIDE,
+    linkedProjectId = existsSync(linkedProjectFile)
+      ? readLinkedProjectId(linkedProjectFile)
+      : null,
+  } = {},
+) {
+  const outputArgs = json ? ["--output-format", "json"] : [];
+
+  if (!override) {
+    return ["db", "query", "--linked", ...outputArgs, "--file", file];
+  }
+
+  if (!linkedProjectId || !override.includes(linkedProjectId)) {
+    throw new Error(
+      "R6D_DB_URL_OVERRIDE does not reference the linked TEST project " +
+        `(${linkedProjectId || "unknown"}). Refusing to query an unverified target.`,
+    );
+  }
+
+  return ["db", "query", "--db-url", override, ...outputArgs, "--file", file];
+}
+
 function runSupabaseQuery(file, { json = true } = {}) {
-  const result = spawnSync(
-    process.execPath,
-    [
-      supabaseCli,
-      "db",
-      "query",
-      "--linked",
-      ...(json ? ["--output-format", "json"] : []),
-      "--file",
-      file,
-    ],
-    {
+  const args = resolveQueryArgs(file, json);
+  const usingOverride = args.includes("--db-url");
+  const attempts = usingOverride ? 1 : IPV6_RETRY_ATTEMPTS;
+  let lastResult;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    lastResult = spawnSync(process.execPath, [supabaseCli, ...args], {
       cwd: repositoryRoot,
       encoding: "utf8",
       env: process.env,
       maxBuffer: 64 * 1024 * 1024,
-    },
+    });
+
+    if (lastResult.error) {
+      throw new Error(`The pinned Supabase CLI could not start for ${file}.`);
+    }
+
+    if (lastResult.status === 0) {
+      return lastResult.stdout;
+    }
+
+    const combinedOutput = `${lastResult.stdout ?? ""}${lastResult.stderr ?? ""}`;
+    const isIpv6ConnectivityError = combinedOutput.includes(IPV6_CONNECTIVITY_ERROR);
+
+    if (!isIpv6ConnectivityError || attempt === attempts) {
+      break;
+    }
+
+    console.warn(
+      `${IPV6_CONNECTIVITY_ERROR} querying ${file} (attempt ${attempt}/${attempts}); retrying...`,
+    );
+    const until = Date.now() + IPV6_RETRY_DELAY_MS;
+    while (Date.now() < until) {
+      // Deliberate synchronous wait: this script has no event loop work to
+      // yield to between attempts, and a short fixed delay is simpler than a
+      // second async entry point solely for retry backoff.
+    }
+  }
+
+  throw new Error(
+    `Remote execution failed for ${file}.` +
+      (lastResult && `${lastResult.stdout ?? ""}${lastResult.stderr ?? ""}`.includes(IPV6_CONNECTIVITY_ERROR)
+        ? " Network cannot reach Supabase's direct connection host (IPv6 required.) " +
+          "Set R6D_DB_URL_OVERRIDE to the TEST project's Session Pooler connection string to work around this."
+        : ""),
   );
-
-  if (result.error) {
-    throw new Error(`The pinned Supabase CLI could not start for ${file}.`);
-  }
-
-  if (result.status !== 0) {
-    throw new Error(`Remote execution failed for ${file}.`);
-  }
-
-  return result.stdout;
 }
 
 function takeSnapshot(label) {

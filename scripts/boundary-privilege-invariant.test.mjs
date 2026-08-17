@@ -19,6 +19,7 @@ import {
   assertStatementModeFile,
   R6D_BOUNDARY_TEST_CONFIRMATION,
   resolveMode,
+  resolveQueryArgs,
 } from "./run-boundary-privilege-invariant.mjs";
 
 /**
@@ -1151,6 +1152,59 @@ describe("the R6-D execution gate", () => {
     expect(resolveMode([])).toBe("file");
     expect(resolveMode(["--mode=statement"])).toBe("statement");
     expect(() => resolveMode(["--mode=whatever"])).toThrow(/--mode must be/);
+  });
+});
+
+describe("resolveQueryArgs (IPv6-unsupported network fallback)", () => {
+  it("uses --linked by default when no override is set", () => {
+    expect(
+      resolveQueryArgs("snapshot.sql", true, {
+        override: undefined,
+        linkedProjectId: "abcdefghijklmnopqrst",
+      }),
+    ).toEqual(["db", "query", "--linked", "--output-format", "json", "--file", "snapshot.sql"]);
+  });
+
+  it("omits --output-format when json is false, regardless of override", () => {
+    expect(
+      resolveQueryArgs("statement.sql", false, {
+        override: undefined,
+        linkedProjectId: "abcdefghijklmnopqrst",
+      }),
+    ).toEqual(["db", "query", "--linked", "--file", "statement.sql"]);
+  });
+
+  it("uses --db-url when the override references the linked TEST project", () => {
+    const override =
+      "postgresql://postgres.abcdefghijklmnopqrst:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres";
+
+    expect(
+      resolveQueryArgs("snapshot.sql", true, {
+        override,
+        linkedProjectId: "abcdefghijklmnopqrst",
+      }),
+    ).toEqual(["db", "query", "--db-url", override, "--output-format", "json", "--file", "snapshot.sql"]);
+  });
+
+  it("refuses an override that does not reference the linked project", () => {
+    const override =
+      "postgresql://postgres.someotherref00000000:pw@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres";
+
+    expect(() =>
+      resolveQueryArgs("snapshot.sql", true, {
+        override,
+        linkedProjectId: "abcdefghijklmnopqrst",
+      }),
+    ).toThrow(/does not reference the linked TEST project/);
+  });
+
+  it("refuses an override when there is no linked project to compare against", () => {
+    expect(() =>
+      resolveQueryArgs("snapshot.sql", true, {
+        override: "postgresql://postgres.abcdefghijklmnopqrst:pw@host:5432/postgres",
+        linkedProjectId: null,
+      }),
+    ).toThrow(/does not reference the linked TEST project/);
   });
 });
 

@@ -132,6 +132,22 @@ database. `scripts/boundary-privilege-invariant.mjs` refuses that outcome:
 These decisions are unit-tested offline in
 `scripts/boundary-privilege-invariant.test.mjs`.
 
+## If your network cannot complete `--linked` queries
+
+`supabase db query --linked` can fail with `LegacyDbConfigIpv6Error` on a
+network without IPv6 connectivity — observed in practice failing
+mid-run (after a platform-baseline snapshot and an entire migration file's
+worth of statement snapshots had already succeeded on the same network),
+so the runner retries a few times automatically before giving up.
+
+If it still cannot complete, set `R6D_DB_URL_OVERRIDE` to the disposable TEST
+project's Session Pooler connection string (percent-encoded, IPv4-compatible)
+before running the script. The runner refuses to use it unless it references
+the same project ref already validated as the linked TEST target, so it
+cannot silently redirect a boundary check — or a migration-applying
+statement — at an unverified project. Never commit this value or paste it
+into chat/a document; it is a live database credential.
+
 ## Known limitations
 
 - **`--mode=file` has run and passed** against a fresh, empty Cloud TEST
