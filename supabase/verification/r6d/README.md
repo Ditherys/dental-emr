@@ -134,9 +134,10 @@ These decisions are unit-tested offline in
 
 ## Known limitations
 
-- **The SQL in this directory has never been executed.** It is reviewed authored
-  work. Syntax, catalog assumptions, and pgTAP assertions are unverified until
-  R6-D runs. Expect to correct it on first run.
+- **`--mode=file` has run and passed** against a fresh, empty Cloud TEST
+  project (see `docs/AI_HANDOFF.md`'s current checkpoint). **`--mode=statement`
+  has not yet run** — its catalog assumptions and pgTAP assertions in that path
+  remain unverified until it does. Expect to correct it on first run.
 - **`--mode=statement` gives PostgreSQL's own default-privilege grants exactly
   one statement of grace.** ADR-017 §2 requires a revoke "adjacent to the
   CREATE" — the very next statement, since SQL has no atomic CREATE+REVOKE.
@@ -148,9 +149,9 @@ These decisions are unit-tested offline in
   invariant.mjs` accepts it for exactly one statement and reports a real
   violation if it is still present the statement after — i.e. it verifies
   "adjacent" rather than assuming it. This is unverified against a real
-  database until R6-D runs, and independent review should specifically check
-  that the grace window cannot mask a genuine leftover grant (see AI_HANDOFF.md
-  and ADR-017's independent review requirement, item 10).
+  database until `--mode=statement` runs, and independent review should
+  specifically check that the grace window cannot mask a genuine leftover
+  grant (see AI_HANDOFF.md and ADR-017's independent review requirement, item 10).
 - `service_role` is not probed. ADR-017 §5 scopes the invariant to
   browser-reachable roles.
 - Extension-owned objects are excluded from the snapshot and counted separately;

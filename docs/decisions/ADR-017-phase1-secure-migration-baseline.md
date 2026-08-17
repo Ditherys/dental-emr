@@ -235,7 +235,7 @@ Recommendation for later decision: **(c)**, deferred to the production-bootstrap
 | R6-B | Static grant-last lint (enforced in `verify` + CI) and dynamic boundary-invariant tooling **authored only** | **Complete**; no database contact. See section 7 |
 | R6-C1 | Separate database test tooling from the canonical baseline; mandatory `SUPABASE_DEV_PROJECT_ID`; one-slot TEST runbook | **Complete**; no database contact. See [ADR-018](ADR-018-nonproduction-database-test-tooling.md) |
 | R6-C | Create disposable Cloud TEST project from zero | Not started — requires approval |
-| R6-D | Interrupted-replay boundary validation | Not started — requires approval |
+| R6-D | Interrupted-replay boundary validation | **Partially complete** — `--mode=file` passes against a fresh, empty Cloud TEST project (see `docs/AI_HANDOFF.md`'s current checkpoint); `--mode=statement` not started, requires approval |
 | R6-E | Cloud-safe equivalence + full verification | Not started — requires approval |
 | R6-F | Reconcile DEV migration history via `migration repair` | Not started — requires approval; gated on R6-E |
 
@@ -257,6 +257,6 @@ R6-B adds a second review surface with its own questions:
 7. that the static lint's parser is not defeatable — quoted identifiers, dollar-quoted bodies, nested comments, `CREATE OR REPLACE`, overloaded signatures, wildcard grants, role membership, and dynamic SQL;
 8. that its rules genuinely cover the H2 class rather than the current file set, and that the negative fixtures fail for the reason claimed;
 9. that the approved final privilege set in `scripts/approved-final-grants.mjs` matches `20260813020700_baseline_final_grants.sql` privilege by privilege, column by column;
-10. that the R6-D SQL is correct — it has never been executed, and its catalog assumptions, `acldefault` usage, and pgTAP assertions are unverified;
+10. that the R6-D SQL is correct — `--mode=file` has executed and passed against a fresh Cloud TEST project, but `--mode=statement` has never been executed, and its own catalog assumptions and pgTAP assertions remain unverified;
 11. that the R6-D vacuity guards actually prevent a blind probe from reading as a clean result;
 12. that the scoped freeze acknowledgement narrowed the bypass rather than widening it.
