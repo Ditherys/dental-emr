@@ -284,13 +284,13 @@ describe("pgTAP provisioning preflight (R6-D)", () => {
     ).toThrow(/pgTAP is not installed/);
   });
 
-  it("names the exact provisioning remedy in the failure", () => {
+  it("names the current provisioning remedy without obsolete freeze acknowledgements", () => {
     try {
       assertPgtapIsProvisioned(JSON.stringify({ rows: [{ r6d_pgtap_presence: "absent" }] }));
       throw new Error("expected assertPgtapIsProvisioned to throw");
     } catch (error) {
       expect(error.message).toContain("npm run db:provision:test");
-      expect(error.message).toContain("MIGRATION_FREEZE_ACK");
+      expect(error.message).not.toContain("MIGRATION_FREEZE_ACK");
     }
   });
 });

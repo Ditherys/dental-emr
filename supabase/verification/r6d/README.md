@@ -66,8 +66,6 @@ against this exact disposable Cloud TEST project before the boundary invariant
 run:
 
 ```powershell
-$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-provision-test-tooling'
 npm run db:provision:test
 ```
 
@@ -79,23 +77,21 @@ replay the whole baseline only to fail at the very end.
 ### Step 1 — the boundary invariant run
 
 `scripts/run-boundary-privilege-invariant.mjs` orchestrates the run. It is gated
-four ways and nothing in the repository satisfies those gates:
+three ways and nothing in the repository satisfies those gates:
 
 1. `--approved-r6d` on the command line;
 2. `R6D_BOUNDARY_TEST_CONFIRMATION` set to the exact constant in the script;
 3. the full pre-existing Cloud TEST target guard;
-4. the R6 migration freeze acknowledgement, scoped to `db-push`.
+The historical R6 migration freeze was lifted at R6-F. The runner retains the
+shared freeze guard so any future freeze file would still fail closed, but no
+freeze acknowledgement is required now.
 
 It is not part of `npm run verify`, not part of `npm run test:db`, and not
 referenced by any CI job.
 
 ```powershell
 # R6-D only, against a genuinely disposable Cloud TEST project.
-# Reset MIGRATION_FREEZE_ACK_COMMAND from step 0's value first — the
-# acknowledgement is scoped to exactly one command at a time.
 $env:R6D_BOUNDARY_TEST_CONFIRMATION='I_UNDERSTAND_THIS_APPLIES_THE_BASELINE_TO_A_DISPOSABLE_CLOUD_TEST_PROJECT'
-$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-push'
 node scripts/run-boundary-privilege-invariant.mjs --approved-r6d --mode=file
 ```
 
@@ -187,14 +183,13 @@ neither call site is affected; they run through `--linked` as usual.
   creates. `assertPreFinalStatementBoundary` in `scripts/boundary-privilege-
   invariant.mjs` accepts it for exactly one statement and reports a real
   violation if it is still present the statement after — i.e. it verifies
-  "adjacent" rather than assuming it. This is unverified against a real
-  database until `--mode=statement` runs, and independent review should
-  specifically check that the grace window cannot mask a genuine leftover
-  grant (see AI_HANDOFF.md and ADR-017's independent review requirement, item 10).
+  "adjacent" rather than assuming it. Statement mode has executed against a
+  real disposable database, and the multi-terminal behavior added with H-5 is
+  covered by the independent review regression tests.
 - `service_role` is not probed. ADR-017 §5 scopes the invariant to
   browser-reachable roles.
 - Extension-owned objects are excluded from the snapshot and counted separately;
   they are governed by the approved-extension list, not by per-object revokes.
 - R6-D proves boundary fail-closure. It does **not** prove the baseline is
-  equivalent to the accepted DEV schema — that is R6-E, and it remains
-  outstanding.
+  equivalent to the accepted DEV schema — that is R6-E, which completed
+  separately before R6-F.

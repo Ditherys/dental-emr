@@ -14,6 +14,7 @@ import {
   foldPrivilegeRows,
 } from "./boundary-privilege-invariant.mjs";
 import { splitSqlStatements } from "./migration-privilege-lint.mjs";
+import * as boundaryRunner from "./run-boundary-privilege-invariant.mjs";
 import {
   assertOverrideTargetsLinkedProject,
   assertR6dExecutionIsApproved,
@@ -24,10 +25,9 @@ import {
 } from "./run-boundary-privilege-invariant.mjs";
 
 /**
- * Synthetic snapshots. R6-D `--mode=file` has already run against TEST-02 (see
- * docs/AI_HANDOFF.md); `--mode=statement` has not. These exercise the decision
- * logic that judges the real snapshots in both modes, independent of whether a
- * given mode has executed remotely yet.
+ * Synthetic snapshots. R6-D has run in both modes against disposable TEST
+ * projects (see docs/AI_HANDOFF.md). These exercise the decision logic that
+ * judges the real snapshots independently of the hosted evidence.
  */
 function snapshot({ privileges = [], examined = {}, ...rest } = {}) {
   return {
@@ -1016,7 +1016,7 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
     expect(result.problems.join("\n")).toContain("fewer tables");
   });
 
-  it("skips the pre-final grace assertion for the terminal file's statements", () => {
+  it("still enforces adjacent default-privilege revocation inside a terminal migration", () => {
     const statements = splitSqlStatements(
       CREATE_SET_ROLE_PERMISSION_SQL,
       "9999_terminal.sql",
@@ -1031,10 +1031,62 @@ describe("assertStatementModeFile (per-file grace reset)", () => {
       snapshots: [afterCreate, afterCreate],
       baselineSnapshot: PLATFORM_BASELINE,
       isTerminal: true,
+      allowedTerminalMigrations: TERMINAL_MIGRATIONS,
       previousSnapshot: PLATFORM_BASELINE,
     });
 
-    expect(result.problems).toEqual([]);
+    expect(result.problems.join("\n")).toContain("adjacent");
+  });
+
+  it("rejects an unapproved privilege introduced inside a terminal migration", () => {
+    const statements = splitSqlStatements(
+      "grant insert on public.audit_events to authenticated;",
+      "9999_terminal.sql",
+    );
+    const unapprovedInsert = {
+      grantee: "authenticated",
+      object_class: "table",
+      object: "public.audit_events",
+      privilege: "insert",
+      column: null,
+    };
+
+    const result = assertStatementModeFile({
+      file: { name: "9999_terminal.sql" },
+      statements,
+      snapshots: [
+        snapshot({
+          privileges: [...PLATFORM_BASELINE.privileges, unapprovedInsert],
+        }),
+      ],
+      baselineSnapshot: PLATFORM_BASELINE,
+      isTerminal: true,
+      allowedTerminalMigrations: TERMINAL_MIGRATIONS,
+      previousSnapshot: PLATFORM_BASELINE,
+    });
+
+    expect(result.problems.join("\n")).toContain(
+      "not a known PostgreSQL default privilege",
+    );
+  });
+});
+
+describe("multiple grant-terminal migrations", () => {
+  it("expects only the approved grants whose terminal file has been reached", () => {
+    const [baselineTerminal, branchLifecycleTerminal] = TERMINAL_MIGRATIONS;
+
+    expect(
+      boundaryRunner.terminalMigrationsThroughFile(
+        TERMINAL_MIGRATIONS,
+        baselineTerminal.file,
+      ),
+    ).toEqual([baselineTerminal]);
+    expect(
+      boundaryRunner.terminalMigrationsThroughFile(
+        TERMINAL_MIGRATIONS,
+        branchLifecycleTerminal.file,
+      ),
+    ).toEqual([baselineTerminal, branchLifecycleTerminal]);
   });
 });
 

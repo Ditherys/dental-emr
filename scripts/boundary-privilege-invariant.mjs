@@ -415,10 +415,11 @@ export function isKnownCreationDefaultPrivilege(statement, entry, siblingEntries
 }
 
 /**
- * Statement-mode counterpart to assertPreFinalBoundary for a non-terminal
- * file's INNER statement-by-statement snapshots only. The file's own
- * "boundary after <file>" snapshot must still go through the full, ungraced
- * assertPreFinalBoundary — this function must never be substituted for that.
+ * Statement-mode check for a migration file's INNER statement-by-statement
+ * snapshots. Approved grants from terminal migrations reached so far may be
+ * present, but every other privilege remains subject to the adjacent-revoke
+ * rule below. The file's own "boundary after <file>" snapshot still receives
+ * an exact baseline-plus-accumulated-approvals comparison.
  *
  * WHY A GRACE WINDOW EXISTS, AND WHY IT IS NARROW
  *
@@ -477,9 +478,12 @@ export function assertPreFinalStatementBoundary({
   snapshot,
   pending,
   statement,
+  approvedKeys = new Map(),
 }) {
   const { added } = diffAgainstBaseline(baselineSnapshot, snapshot);
-  const notAccepted = added.filter(({ entry }) => !isAccepted(entry));
+  const notAccepted = added.filter(
+    ({ key, entry }) => !isAccepted(entry) && !approvedKeys.has(key),
+  );
   const currentKeys = new Set(notAccepted.map(({ key }) => key));
 
   const problems = pending

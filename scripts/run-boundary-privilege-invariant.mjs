@@ -5,7 +5,7 @@
  *
  * Running this applies the Phase 1 baseline to a Supabase Cloud project one
  * boundary at a time, snapshotting effective privileges after each. It is
- * therefore gated four ways, and every gate must be satisfied deliberately:
+ * therefore gated three ways, and every gate must be satisfied deliberately:
  *
  *   1. the `--approved-r6d` argument, which nothing in the repository passes;
  *   2. R6D_BOUNDARY_TEST_CONFIRMATION set to the exact constant below;
@@ -13,7 +13,9 @@
  *      SUPABASE_PROJECT_ID === SUPABASE_TEST_PROJECT_ID, the linked project
  *      matching it, TEST differing from DEV and production, and
  *      DATABASE_TEST_CONFIRMATION);
- *   4. the R6 migration freeze acknowledgement, because this applies migrations.
+ *
+ * The historical R6 migration freeze was lifted at R6-F. The shared guard
+ * still fails closed if a future freeze file is introduced.
  *
  * It is not wired into `npm run verify` or into any CI job, and it is not
  * referenced by `npm run test:db`.
@@ -33,10 +35,10 @@ import {
   assertBaselineObservesPrivileges,
   assertExaminedGrowth,
   assertFinalBoundary,
-  assertPreFinalBoundary,
   assertPreFinalStatementBoundary,
   assertSnapshotUsable,
   BOUNDARY_PROBE_FILE,
+  browserReachableApprovedKeys,
   LIVE_AUTHORIZATION_PROBE_FILE,
 } from "./boundary-privilege-invariant.mjs";
 import {
@@ -93,6 +95,23 @@ export function resolveMode(argv) {
   }
 
   return mode;
+}
+
+/**
+ * Returns the approved terminal migrations whose files have been reached at
+ * the current migration boundary. Migration filenames begin with sortable
+ * timestamps, and TERMINAL_MIGRATIONS is recorded in that same order.
+ *
+ * R6-D originally had one terminal migration at the end of the baseline. H-5
+ * added a second terminal later in the chain. Comparing every terminal
+ * boundary against the union of all future grants would falsely require H-5's
+ * functions before their migration exists; comparing against no accumulated
+ * grants would reject the already-approved baseline grants after file 8.
+ */
+export function terminalMigrationsThroughFile(terminalMigrations, fileName) {
+  return terminalMigrations.filter(
+    (terminal) => terminal.file.localeCompare(fileName) <= 0,
+  );
 }
 
 function fail(message) {
@@ -403,13 +422,14 @@ export function assertStatementModeFile({
   statements,
   snapshots,
   baselineSnapshot,
-  isTerminal,
+  allowedTerminalMigrations = [],
   previousSnapshot,
 }) {
   const problems = [];
   const report = [];
   let pendingGrace = [];
   let previous = previousSnapshot;
+  const approvedKeys = browserReachableApprovedKeys(allowedTerminalMigrations);
 
   statements.forEach((statement, index) => {
     const snapshot = snapshots[index];
@@ -418,18 +438,17 @@ export function assertStatementModeFile({
     problems.push(...assertSnapshotUsable(snapshot, label));
     problems.push(...assertExaminedGrowth(previous, snapshot, label));
 
-    if (!isTerminal) {
-      const result = assertPreFinalStatementBoundary({
-        label,
-        baselineSnapshot,
-        previousSnapshot: previous,
-        snapshot,
-        pending: pendingGrace,
-        statement: classifyStatement(statement),
-      });
-      problems.push(...result.problems);
-      pendingGrace = result.pending;
-    }
+    const result = assertPreFinalStatementBoundary({
+      label,
+      baselineSnapshot,
+      previousSnapshot: previous,
+      snapshot,
+      pending: pendingGrace,
+      statement: classifyStatement(statement),
+      approvedKeys,
+    });
+    problems.push(...result.problems);
+    pendingGrace = result.pending;
 
     previous = snapshot;
     report.push({ boundary: label, snapshot });
@@ -442,7 +461,8 @@ function main() {
   assertR6dExecutionIsApproved(process.argv.slice(2), process.env);
   const mode = resolveMode(process.argv.slice(2));
 
-  // Applying migrations is exactly what the R6 freeze covers.
+  // The historical R6 freeze is lifted, but retain the shared fail-closed
+  // guard in case a future freeze file is introduced.
   for (const warning of assertMigrationFreezeAllows(
     "db-push",
     existsSync(migrationFreezeFile),
@@ -495,7 +515,6 @@ function main() {
     );
   }
 
-  const terminalFiles = new Set(TERMINAL_MIGRATIONS.map((terminal) => terminal.file));
   mkdirSync(workingDirectory, { recursive: true });
 
   const problems = [];
@@ -516,7 +535,10 @@ function main() {
   let previousSnapshot = platformBaseline;
 
   for (const file of files) {
-    const isTerminal = terminalFiles.has(file.name);
+    const terminalMigrationsThroughCurrentFile = terminalMigrationsThroughFile(
+      TERMINAL_MIGRATIONS,
+      file.name,
+    );
 
     if (mode === "statement") {
       // The interrupted-replay proof: a snapshot after every statement, so an
@@ -533,16 +555,17 @@ function main() {
         );
       }
 
-      // Inside the terminal file the privilege set is mid-flight, so only the
-      // pre-final assertion is meaningful until the file completes; the grace
-      // state itself always starts fresh for this file (see
-      // assertStatementModeFile).
+      // Inside any terminal file the approved privilege set is mid-flight.
+      // Statement boundaries may hold a subset of approvals accumulated
+      // through this file, but never an unapproved privilege; PostgreSQL's own
+      // CREATE defaults still receive only the one-statement adjacent-revoke
+      // grace. The grace state itself always starts fresh for this file.
       const result = assertStatementModeFile({
         file,
         statements,
         snapshots,
         baselineSnapshot: platformBaseline,
-        isTerminal,
+        allowedTerminalMigrations: terminalMigrationsThroughCurrentFile,
         previousSnapshot,
       });
 
@@ -561,19 +584,17 @@ function main() {
     problems.push(...assertSnapshotUsable(snapshot, label, expectedObjectCounts(applied)));
     problems.push(...assertExaminedGrowth(previousSnapshot, snapshot, label));
 
+    // Every file boundary must equal the platform baseline plus exactly the
+    // grants from terminal migrations reached so far. This generalizes the
+    // original single-final-terminal invariant to later grant-terminal files
+    // without expecting future grants early or forgetting prior approvals.
     problems.push(
-      ...(isTerminal
-        ? assertFinalBoundary({
-            label,
-            baselineSnapshot: platformBaseline,
-            snapshot,
-            terminalMigrations: TERMINAL_MIGRATIONS,
-          })
-        : assertPreFinalBoundary({
-            label,
-            baselineSnapshot: platformBaseline,
-            snapshot,
-          })),
+      ...assertFinalBoundary({
+        label,
+        baselineSnapshot: platformBaseline,
+        snapshot,
+        terminalMigrations: terminalMigrationsThroughCurrentFile,
+      }),
     );
 
     previousSnapshot = snapshot;

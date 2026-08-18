@@ -382,9 +382,7 @@ export function assertPgtapIsProvisioned(output) {
     "pgTAP is not installed on the linked project. live-authorization-probe.sql requires it and pgTAP is " +
       "deliberately not part of the canonical baseline (ADR-018), so it must be provisioned separately against " +
       "this exact disposable Cloud TEST project before R6-D runs:\n" +
-      "  $env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'\n" +
-      "  $env:MIGRATION_FREEZE_ACK_COMMAND='db-provision-test-tooling'\n" +
       "  npm run db:provision:test\n" +
-      "Then clear MIGRATION_FREEZE_ACK_COMMAND (or reset it to 'db-push') before running R6-D itself.",
+      "The historical R6 migration freeze was lifted at R6-F; no freeze acknowledgement is required.",
   );
 }
