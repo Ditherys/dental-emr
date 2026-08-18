@@ -1230,7 +1230,9 @@ select extensions.is(
   (
     select count(*)::integer
     from public.audit_events
-    where action = 'branch.created'
+    where organization_id = '21000000-0000-0000-0000-000000000001'
+      and actor_user_id = '11000000-0000-0000-0000-000000000001'
+      and action = 'branch.created'
   ),
   1,
   'failed AAL1 branch creation adds no audit event beyond the earlier successful branch'
@@ -1240,7 +1242,9 @@ select extensions.is(
   (
     select count(*)::integer
     from public.audit_events
-    where action = 'role.permission_granted'
+    where organization_id = '21000000-0000-0000-0000-000000000001'
+      and actor_user_id = '11000000-0000-0000-0000-000000000001'
+      and action = 'role.permission_granted'
       and entity_id = '51000000-0000-0000-0000-000000000001'
   ),
   0,
@@ -1251,7 +1255,9 @@ select extensions.is(
   (
     select count(*)::integer
     from public.audit_events
-    where action = 'member_role.assigned'
+    where organization_id = '21000000-0000-0000-0000-000000000001'
+      and actor_user_id = '11000000-0000-0000-0000-000000000001'
+      and action = 'member_role.assigned'
   ),
   1,
   'failed AAL1 high-role assignment adds no event beyond the earlier successful role assignment'
@@ -1261,7 +1267,9 @@ select extensions.is(
   (
     select count(*)::integer
     from public.audit_events
-    where action = 'membership.suspended'
+    where organization_id = '21000000-0000-0000-0000-000000000001'
+      and actor_user_id = '11000000-0000-0000-0000-000000000001'
+      and action = 'membership.suspended'
       and entity_id = '41000000-0000-0000-0000-000000000005'
   ),
   0,
