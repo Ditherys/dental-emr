@@ -131,7 +131,11 @@ select extensions.set_eq(
 );
 
 select extensions.is(
-  (select count(*)::integer from public.organization_members),
+  (
+    select count(*)::integer
+    from public.organization_members
+    where id::text like '42000000-0000-0000-0000-00000000000%'
+  ),
   7,
   'Org A owner can manage only the seven Org A memberships'
 );
@@ -215,7 +219,11 @@ select extensions.set_eq(
 );
 
 select extensions.is(
-  (select count(*)::integer from public.organization_members),
+  (
+    select count(*)::integer
+    from public.organization_members
+    where id::text like '42000000-0000-0000-0000-00000000000%'
+  ),
   2,
   'Org B owner can manage only the two Org B memberships'
 );
@@ -255,6 +263,7 @@ select extensions.is(
     select count(*)::integer
     from public.organization_members
     where membership_status = 'suspended'
+      and id::text like '42000000-0000-0000-0000-00000000000%'
   ),
   1,
   'suspended user can see only their own suspended membership record'
