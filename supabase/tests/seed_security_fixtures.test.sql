@@ -38,12 +38,34 @@ select extensions.is(
     from auth.users
     where id::text like '12000000-0000-0000-0000-00000000000%'
       and email like '%@p112.example.test'
-      and encrypted_password = ''
-      and email_confirmed_at is null
       and raw_user_meta_data ->> 'fixture' = 'p1-12-synthetic'
   ),
   9,
-  'all nine personas use synthetic non-login Auth placeholders'
+  'all nine Auth personas remain visibly synthetic fixtures'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from auth.users
+    where id::text like '12000000-0000-0000-0000-00000000000%'
+      and id <> '12000000-0000-0000-0000-000000000002'
+      and encrypted_password = ''
+      and email_confirmed_at is null
+  ),
+  8,
+  'the eight non-provisioned personas remain non-login Auth placeholders'
+);
+
+select extensions.ok(
+  (
+    select
+      (encrypted_password = '' and email_confirmed_at is null)
+      or (encrypted_password <> '' and email_confirmed_at is not null)
+    from auth.users
+    where id = '12000000-0000-0000-0000-000000000002'
+  ),
+  'the TEST-provisionable admin is either a complete placeholder or a complete login'
 );
 
 select extensions.is(
@@ -125,7 +147,11 @@ select extensions.set_eq(
 );
 
 select extensions.set_eq(
-  $$ select name from public.branches $$,
+  $$
+    select name
+    from public.branches
+    where id::text like '32000000-0000-0000-0000-00000000000%'
+  $$,
   array['Demo Main', 'Demo Second']::text[],
   'Org A owner sees both Org A branches and no Org B branch'
 );
@@ -147,7 +173,11 @@ select set_config(
 );
 
 select extensions.set_eq(
-  $$ select name from public.branches $$,
+  $$
+    select name
+    from public.branches
+    where id::text like '32000000-0000-0000-0000-00000000000%'
+  $$,
   array['Demo Main', 'Demo Second']::text[],
   'Org A admin has organization-wide branch visibility without cross-tenant access'
 );
