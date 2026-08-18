@@ -67,8 +67,9 @@ from (values
 on conflict (id) do update
 set
   email = excluded.email,
-  encrypted_password = excluded.encrypted_password,
-  email_confirmed_at = excluded.email_confirmed_at,
+  -- Preserve credentials and confirmation set by the TEST-only E2E identity
+  -- provisioner. Re-running this idempotent database seed must not turn an
+  -- already-provisioned synthetic login back into a non-login placeholder.
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,
   updated_at = excluded.updated_at,

@@ -93,10 +93,14 @@ test("invitation validation accepts the owner's database identifiers", async ({
   await expect(page.locator("#invite-branch-error")).toHaveCount(0);
 });
 
-test("owner creates Branch A3 and selects it", async ({ page }) => {
-  const branchName = `E2E Branch A3 ${environment.runId}`;
-  const branchCode = `A3-${environment.runId}`.toUpperCase();
-  const branchSlug = `e2e-branch-a3-${environment.runId}`;
+test("owner creates Branch A3 and selects it", async ({ page }, testInfo) => {
+  // A hosted action can commit just before Playwright times out and closes the
+  // response stream. Keep retries independent so they prove the complete UI
+  // flow instead of colliding with a branch committed by the prior attempt.
+  const attemptId = `${environment.runId}${testInfo.retry}`;
+  const branchName = `E2E Branch A3 ${attemptId}`;
+  const branchCode = `A3-${attemptId}`.toUpperCase();
+  const branchSlug = `e2e-branch-a3-${attemptId}`;
 
   await loginOwner(page);
   await page.goto("/settings/branches");
@@ -108,7 +112,10 @@ test("owner creates Branch A3 and selects it", async ({ page }) => {
   await page.getByLabel("Province").fill("Metro Manila");
   await page.getByRole("button", { name: "Add branch" }).click();
 
-  await expect(page.getByRole("status")).toContainText(`${branchName} was added`);
+  await expect(page.getByRole("status")).toContainText(
+    `${branchName} was added`,
+    { timeout: 30_000 },
+  );
   await expect(page.getByText(branchName).first()).toBeVisible();
 
   await page

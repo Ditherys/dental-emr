@@ -190,8 +190,8 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:advisors:test
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Create unique E2E run identifier
         shell: bash
