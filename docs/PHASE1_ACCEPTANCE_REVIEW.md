@@ -1,179 +1,115 @@
 # Phase 1 acceptance review
 
-**Reviewed at:** `21694ec` (H-5 implementation, current `HEAD` as of this re-review)
-**Reviewer:** Claude Code, acting as implementing agent. **This is still not an independent review** — see H-8 below, which is the one finding this re-review cannot resolve by itself.
-**Decision: PHASE 1 IS SUBSTANTIALLY COMPLETE. One process gate (H-8) and one verification gap (CI has not run against this work) remain open, both requiring the project owner, not further implementation.**
+**Reviewed code checkpoint:** `00077b0`
+**Reviewer:** Codex, independently reviewing Claude's Phase 1 implementation
+**Acceptance evidence:** GitHub Actions run
+[`32154009458`](https://github.com/Ditherys/dental-emr/actions/runs/32154009458)
+**Decision: PHASE 1 IS ACCEPTED.**
 
-This supersedes the prior review at `1c92e8a`, which found 8 High findings, almost
-all "evidence has never been produced." Every one of those is now produced. What
-remains is not a defect and not missing work — it is that this session's ~20
-commits (R6-D completion, R6-F execution, H-5 implementation) are still local
-only, and that the independent-review requirement was satisfied by a same-model
-fresh-context agent rather than a genuinely independent reviewer, at the project
-owner's explicit, recorded direction.
+This review supersedes the conditional review at `e267c7c`. The two remaining
+acceptance gates in that document are now closed: the accumulated Phase 1
+history is published and verified by CI, and the security-sensitive R6-D/H-5
+work has received a genuine independent Codex review.
 
 ## Method
 
-Same as the prior review: assessed against `docs/plans/001-foundation.md`,
-`docs/SECURITY_ARCHITECTURE.md`, `docs/DATABASE_DESIGN.md`,
-`docs/FRONTEND_ARCHITECTURE.md`, the ADRs, actual Git history, and actual test
-evidence — a command that ran and whose output was read, not a file that exists.
+The review used `docs/plans/001-foundation.md` as the scope authority and read
+the relevant security, database, frontend, ADR-017, handoff, migration, test,
+and implementation material. Handoff claims were checked against Git state and
+the composed code rather than accepted as evidence. The review specifically
+tested tenant derivation, RLS and grant boundaries, AAL2 enforcement,
+`SECURITY DEFINER` search paths, role escalation, branch lifecycle races,
+audit atomicity, migration replay safety, CI target separation, and negative
+authorization coverage.
 
-## Findings, re-assessed
+## Findings
 
-### Critical
+### Critical / High
 
-None, unchanged from the prior review.
+None.
 
-### High
+### Medium — resolved
 
-**H-1 — [Still resolved, unchanged.]** Catalog-level equivalence (DEV vs. TEST-01,
-byte-for-byte identical schema-only `pg_dump`) — `docs/evidence/R6E-catalog-comparison.md`.
-The project owner decided 2026-08-18 that this proof still covers the current
-baseline (no migration file changed since), so no fresh re-run against a later
-TEST project was required.
+**R6-D composed-state verifier mishandled multiple grant-terminal migrations.**
 
-**H-2 — [RESOLVED 2026-08-18.]** DEV's migration history is reconciled: the 13
-superseded versions marked `reverted`, the 8 baseline versions marked `applied`
-via `supabase migration repair`, `migration list --linked` against DEV clean
-(`local === remote` on every row). The migration freeze
-(`supabase/MIGRATION_FREEZE.md`) is deleted per its own instructions. See
-`docs/evidence/R6F-migration-history-reconciliation.md`. Migration 9 (H-5) was
-pushed to DEV afterward through the now-normal `db push` workflow, and DEV's
-history remains clean at 9/9.
+- **Affected:** `scripts/run-boundary-privilege-invariant.mjs` and its tests.
+- **Risk:** after H-5 added a second registered grant-terminal migration, the
+  verifier treated only the original terminal as authoritative. That could
+  compare a replay boundary against approvals from a migration not yet reached
+  and skip statement-level checks inside later terminal files.
+- **Fix:** `79f9a43` makes statement mode inspect terminal files and derives the
+  approved privilege set only from terminals reached at each boundary.
+- **Proof:** regression tests cover multiple terminals; the final local
+  migration privilege lint reports 9 files, 2 terminals, and no violation.
 
-**H-3 — [Still resolved at the database layer; R6-D adds the interrupted-replay
-proof this review previously listed as blocked.]** R6-D now proves both
-`--mode=file` and `--mode=statement`: the full statement-by-statement replay of
-all 8 baseline files against a fresh TEST-02 produced **zero boundary invariant
-violations**, and the live-authorization-probe (26/26 pgTAP assertions)
-independently confirms no browser-reachable role ever holds more than the
-approved privilege set, including mid-migration. Two real tooling bugs were
-found and fixed in the process (an IPv6 connectivity issue, a pooler
-multi-statement protocol limitation) — see `docs/AI_HANDOFF.md`'s R6-D
-checkpoints. The browser-half Playwright gap this review previously listed is
-unchanged from before (still resolved per the 2026-08-15 checkpoint, 54/54).
+### Low — resolved
 
-**H-4 — CI evidence is now stale relative to this session's work, not absent.**
-`CI / Application verification` was green on `main` as of the last pushed
-commit, but **this session's ~20 commits (all of R6-D's completion, R6-F,
-H-5) are still local only — `git status` shows `main` 20 commits ahead of
-`origin/main`.** CI has not executed against any of them. This is not a defect
-in the work; it is simply that nothing has been pushed yet. `CI / Cloud TEST
-database and E2E` no longer fails on the migration freeze (H-2 resolved it),
-but still fails on the unconfigured `cloud-test` GitHub environment
-(credentials/variables) — unchanged, a human action, not blocked on Phase 1
-work.
+**R6-D documentation retained stale migration-freeze instructions.** The stale
+operator text was removed with the independent-review remediation so it no
+longer conflicts with the completed R6-F reconciliation.
 
-**H-5 — [RESOLVED 2026-08-18.]** `update_branch`/`archive_branch` implemented:
-migration 9 live on DEV, full TypeScript/UI layer (schema, client functions,
-server actions, edit/archive dialogs), and a new pgTAP suite
-(`supabase/tests/branch_lifecycle.test.sql`, 18/18 assertions) proving the real
-authorization and business-rule behavior — cross-organization denial, missing-
-permission denial, AAL2 requirement, a successful update reflected in the row
-and an audit event, archiving setting `archived_at` and emitting an audit
-event, refusing to edit an archived branch, refusing to double-archive, and
-refusing to archive an organization's only remaining branch. Both declared
-audit actions (`branch.updated`, `branch.archived`) are now reachable. See
-`docs/evidence/H5-branch-lifecycle-verification.md`. Residual, non-blocking gap:
-no Playwright E2E coverage for the edit/archive UI flows yet.
+### CI findings discovered and resolved during acceptance execution
 
-**H-6 — [Still resolved, unchanged.]** Manual responsive/accessibility pass
-complete, `docs/evidence/TEST-01-responsive-accessibility-manual-qa-2026-08-15.md`.
+These were verification defects, not accepted exceptions:
 
-**H-7 — [Still resolved, unchanged.]** Hosted Auth posture verified on both
-projects, 14/14 passed.
+- Linux Supabase query results use a bare row array, while the earlier parser
+  expected the Windows envelope. `d4e5af3` accepts either exact one-row shape
+  and remains fail-closed.
+- Persistent TEST data contaminated fixture-wide pgTAP counts. `199aa55`,
+  `dcbf8c3`, and `00077b0` scope assertions to their deterministic synthetic
+  UUID namespaces and allow the deliberately provisioned TEST admin state.
+- Re-running `supabase/seed.sql` erased the provisioned fixed admin password and
+  confirmation. `b391a0c` preserves those credential fields and adds a static
+  regression test.
+- CI installed Chromium only although the approved iPad projects use WebKit.
+  `b391a0c` installs both engines.
+- The hosted branch-creation flow could commit just before the default
+  five-second assertion timeout, leaving a retry to collide with the committed
+  slug. `b391a0c` gives the action a hosted-safe bound and makes retry fixture
+  IDs independent.
 
-**H-8 — Independent review is still not genuinely independent.** The prior
-review named this "a process blocker that no amount of further implementation
-resolves," and that remains literally true: R6-D's two tooling-fix commits
-(`033754f`, `338c59c`) and their fixes (`afbb3a8`), and this session's H-5
-implementation commit, have been reviewed only by a fresh-context Claude agent
-(no shared conversation history with the implementing agent, but the same
-underlying model) — **at the project owner's explicit direction, recorded
-honestly in `docs/AI_HANDOFF.md`, as a deliberate substitute for the
-originally-required Codex review, not as equivalent to it.** A single Codex
-review did occur and pass cleanly on the *documentation* checkpoint `109646f`
-(one Low finding, fixed) — but not on the security-relevant tooling code
-itself, nor on the H-5 migration/RPC implementation. This finding stays open
-as a matter of record. Whether it blocks Phase 2 in practice is the project
-owner's call, already made once for R6-D/H-5; re-affirming it (or reversing it)
-for future security-sensitive work is a standing decision, not a one-time
-exception this review can retroactively grant.
+## Acceptance evidence
 
-### Medium
-
-**M-1 through M-6 — unchanged from the prior review**, except:
-
-**M-3 — Phase 1 now has one branch-scoped-adjacent write path.** `update_branch`/
-`archive_branch` are organization-wide-permission gated, same as every other
-Phase 1 mutation — this finding's underlying observation (no *branch-scoped*
-write RPC exists yet) is unchanged, since H-5 didn't introduce one. Still
-correct for what exists.
-
-**M-4 — unchanged.** Local link state currently points at DEV (relinked after
-H-5's TEST-02 work); `supabase/.temp/` was not removed as the documented
-operator precaution suggests. Low practical risk now that the freeze itself no
-longer exists to bypass.
-
-### Low
-
-**L-1 through L-4 — unchanged from the prior review.**
-
-**L-5 (new) — TEST-02 (ref `plkjajlfnhsklmdloaut`) is still live.** Used for
-both R6-D and H-5 verification; its evidence is fully captured in both cases.
-Disposing it (or keeping it) is an open, low-stakes decision for the project
-owner — see `docs/AI_HANDOFF.md`'s human actions list.
-
-## Acceptance criteria — passed
-
-All rows from the prior review, plus:
-
-| Criterion | Evidence |
+| Criterion | Result |
 |---|---|
-| Grant-last invariant holds under interrupted-replay (statement-level) | `docs/AI_HANDOFF.md` R6-D checkpoints — zero violations across the full 8-file statement-by-statement replay, two fresh TEST-02 cycles |
-| DEV migration history reconciled with Git | `docs/evidence/R6F-migration-history-reconciliation.md` — 9/9 versions `local === remote` |
-| Branch update/archive implemented and tested | `docs/evidence/H5-branch-lifecycle-verification.md` — 18/18 pgTAP assertions, full TS/UI layer, 290/290 unit tests |
-| Migration privilege lint scales to a second grant-terminal migration | `npm run security:migrations`: 9 files, 2 grant-terminal migrations, 0 violations |
+| Phase 1 scope | No later clinical, billing, scheduling, inventory, communications, analytics, or AI domain was implemented |
+| Tenant boundary | Negative RLS/authorization suites pass for Organization A vs. Organization B and forged organization/branch input |
+| Administrative mutations | Server authorization, AAL2, transactional audit events, direct-write revocation, and tenant derivation remain enforced |
+| Branch lifecycle | Create, update, archive, last-branch protection, archived-row protection, and cross-tenant denial are covered by pgTAP/unit tests |
+| Migration safety | DEV and TEST show the 9 committed migration versions; grant-last lint covers both registered terminals |
+| Hosted Auth | 14 required checks pass; the TEST-only leaked-password advisory remains plan-gated |
+| Application CI | Passed in 1m22s on `00077b0` |
+| Cloud TEST database and E2E | Passed in 18m06s on `00077b0`; migrations, pgTAP, types, schema lint, Auth posture, advisors, and Playwright all passed |
+| Browser matrix | 55/55 passed across desktop/phone Chromium and iPad WebKit projects |
+| Independent review | Completed by Codex; the one Medium and one Low finding were remediated before acceptance |
 
-## Acceptance criteria — still open
+## Residual risks and non-blocking gates
 
-| Criterion | Blocked by | Unblocked by |
-|---|---|---|
-| This session's work verified by CI | H-4 (stale, not absent) | Human: `git push` |
-| `CI / Cloud TEST database and E2E` passes | Human action 1 in `docs/AI_HANDOFF.md` | Human: configure the `cloud-test` GitHub environment |
-| Genuinely independent review of R6-D tooling and H-5 | H-8 | Human: run the CODEX REVIEW PROMPTs already printed in this session's transcript, or accept the fresh-agent review as sufficient (a decision, not a default) |
-| M-5/M-6 production gates | Plan-gated, unchanged | Supabase plan upgrade / GitHub Advanced Security, at production time, not Phase 1 |
-| TEST-02 disposition | L-5 | Human: dispose or keep, low stakes either way |
+- H-5 update/archive behavior has direct pgTAP and unit coverage but no dedicated
+  Playwright edit/archive scenario. This is a test-depth improvement, not a
+  Phase 1 acceptance blocker.
+- Supabase leaked-password protection requires the planned paid-tier upgrade
+  before production patient use (M-5).
+- CodeQL/dependency-review enforcement on this private repository remains gated
+  by GitHub Advanced Security (M-6). The ordinary Application and Cloud TEST
+  jobs are green.
+- GitHub's current plan rejected required-reviewer protection for the
+  `cloud-test` environment. The environment is restricted to `main`, contains
+  TEST-only synthetic credentials, and never targets DEV or production; add the
+  reviewer gate when the repository plan supports it.
+- TEST project `plkjajlfnhsklmdloaut` is intentionally retained as the dedicated
+  Cloud TEST target. The local Supabase link is restored to DEV.
+- Production patient use remains prohibited until the production gates in
+  `docs/SECURITY_ARCHITECTURE.md` are satisfied. Phase 1 acceptance is not a
+  production go-live approval.
 
 ## Decision
 
-**Phase 1's implementation and evidence are complete.** Every High finding from
-the prior review that was "evidence has never been produced" now has that
-evidence, produced and recorded. The two things left open are not
-implementation gaps:
+**Phase 1 Foundation is formally accepted as of 2026-08-18.** The approved
+Phase 1 scope is implemented, the independent security review is complete, all
+material findings are resolved, and both required CI jobs pass on the same
+published code checkpoint.
 
-1. **This session's work has not been pushed**, so CI has not run against it.
-   This is mechanical, not a defect — push, watch `CI / Application
-   verification` pass, and this closes.
-2. **H-8 (independent review) is satisfied only by a same-model fresh-context
-   agent, not a genuinely independent reviewer**, for the R6-D tooling commits
-   and the H-5 implementation. The project owner has already explicitly chosen
-   this substitution once, in writing, with the limitation stated up front. It
-   remains a standing choice to make consciously for future security-sensitive
-   work, not a box this review can check on the project owner's behalf.
-
-Whether that is sufficient to consider Phase 1 **accepted** — as opposed to
-substantially complete pending those two items — is the project owner's call,
-not this review's. This review's job is to state the facts precisely enough
-that the call is an informed one: no cross-tenant exploit, no known defect, no
-missing evidence anywhere else in the eight prior High findings; only the push
-and the review-provenance question remain.
-
-## Re-review trigger
-
-Re-run this review after: this session's commits are pushed and
-`CI / Application verification` has run against them; and, if the project
-owner decides genuine independent review is still wanted for `033754f` /
-`338c59c` / `afbb3a8` / the H-5 implementation commit, after that review
-completes and any findings are addressed.
+Phase 2 planning may now proceed. Implementation must remain planning-only
+until a Phase 2 plan is authored, reviewed, and explicitly approved; Phase 1
+acceptance does not authorize later patient/clinical domain work by itself.
