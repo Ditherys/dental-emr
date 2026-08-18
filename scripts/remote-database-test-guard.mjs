@@ -97,10 +97,21 @@ function required(environment, name) {
  * A guarded command that produced no rows, was silently skipped, or partially
  * applied must not read as success merely because the CLI exited zero.
  */
-const COMMAND_RESULT_SENTINELS = Object.freeze({
+const COMMAND_RESULT_VERIFICATIONS = Object.freeze({
   "db-provision-test-tooling": Object.freeze({
-    column: "p1_provision_result",
-    value: "P1_PROVISION_PASS",
+    command: Object.freeze([
+      "db",
+      "query",
+      "--linked",
+      "--output-format",
+      "json",
+      "--file",
+      "supabase/provisioning/nonproduction/002_verify_database_test_tooling.sql",
+    ]),
+    sentinel: Object.freeze({
+      column: "p1_provision_result",
+      value: "P1_PROVISION_PASS",
+    }),
   }),
 });
 
@@ -114,11 +125,19 @@ export function resolveCiDatabaseCommand(commandName) {
 }
 
 export function resolveCommandResultSentinel(commandName) {
-  if (!Object.hasOwn(COMMAND_RESULT_SENTINELS, commandName)) {
+  return resolveCommandResultVerification(commandName)?.sentinel ?? null;
+}
+
+export function resolveCommandResultVerification(commandName) {
+  if (!Object.hasOwn(COMMAND_RESULT_VERIFICATIONS, commandName)) {
     return null;
   }
 
-  return COMMAND_RESULT_SENTINELS[commandName];
+  const verification = COMMAND_RESULT_VERIFICATIONS[commandName];
+  return {
+    command: [...verification.command],
+    sentinel: { ...verification.sentinel },
+  };
 }
 
 function persistedAcknowledgementWarning(commandName) {

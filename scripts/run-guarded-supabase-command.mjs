@@ -8,7 +8,7 @@ import {
   parseSupabaseQueryResult,
   readLinkedProjectId,
   resolveCiDatabaseCommand,
-  resolveCommandResultSentinel,
+  resolveCommandResultVerification,
   validateRemoteDatabaseTestEnvironment,
 } from "./remote-database-test-guard.mjs";
 
@@ -67,15 +67,14 @@ try {
     readLinkedProjectId(linkedProjectFile),
   );
 
-  const sentinel = resolveCommandResultSentinel(commandName);
+  const verification = resolveCommandResultVerification(commandName);
 
   const result = spawnSync(process.execPath, [supabaseCli, ...command], {
     cwd: repositoryRoot,
     encoding: "utf8",
     env: process.env,
     maxBuffer: 16 * 1024 * 1024,
-    // A sentinel-checked command's stdout must be captured to be asserted on.
-    stdio: sentinel ? ["inherit", "pipe", "inherit"] : "inherit",
+    stdio: "inherit",
   });
 
   if (result.error) {
@@ -86,9 +85,33 @@ try {
     process.exit(result.status ?? 1);
   }
 
-  if (sentinel) {
-    parseSupabaseQueryResult(result.stdout ?? "", commandName, sentinel);
-    console.log(`PASS ${commandName} (${sentinel.value})`);
+  if (verification) {
+    const verificationResult = spawnSync(
+      process.execPath,
+      [supabaseCli, ...verification.command],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: process.env,
+        maxBuffer: 16 * 1024 * 1024,
+        stdio: ["inherit", "pipe", "inherit"],
+      },
+    );
+
+    if (verificationResult.error) {
+      throw new Error("The pinned Supabase CLI verification could not start.");
+    }
+
+    if (verificationResult.status !== 0) {
+      process.exit(verificationResult.status ?? 1);
+    }
+
+    parseSupabaseQueryResult(
+      verificationResult.stdout ?? "",
+      commandName,
+      verification.sentinel,
+    );
+    console.log(`PASS ${commandName} (${verification.sentinel.value})`);
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : "Unknown failure.");
