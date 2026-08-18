@@ -2371,9 +2371,12 @@ ADR-003 — Authorization defense in depth                        [reserved by P
 ADR-004 — Single Next.js repo for public website + private EMR [reserved by Phase 1]
 ADR-005 — Cloudflare R2 canonical storage + Workers/Images media pipeline [accepted]
 ADR-016 — Supabase Cloud-first development; no local Supabase runtime      [accepted]
+ADR-017 — Phase 1 secure migration baseline and grant-last invariant       [accepted]
+ADR-018 — Nonproduction database test tooling per environment              [accepted]
+ADR-019 — Bounded fixed patient-role delegation                            [accepted]
 ```
 
-`ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Because `ADR-016` already exists, prefer `ADR-017` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.
+`ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Prefer `ADR-020` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.
 
 ## 42.2 Future ADR topics — intentionally unnumbered
 

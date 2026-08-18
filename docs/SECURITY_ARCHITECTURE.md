@@ -1084,6 +1084,12 @@ Automated pgTAP/integration tests should include:
 
 ## 11.6 Foundation administrative mutation boundary
 
+**Phase 2 approval note (2026-08-19):** ADR-019 and the complete Phase 2 plan are
+independently reviewed and explicitly approved. The bounded exception below is
+authorized for P2-01 implementation but does not become active database behavior
+until its reviewed additive migration is applied. Until then, the accepted Phase
+1 full permission-superset rule continues unchanged.
+
 High-impact foundation administration must not be exposed as ordinary
 authenticated table writes. Direct authenticated writes are revoked for
 `organizations`, `branches`, `organization_members`, `roles`,
@@ -1098,7 +1104,10 @@ that:
   could invalidate a delegation decision;
 - reject self-role mutation/assignment and cross-tenant targets;
 - prevent a role manager from granting a permission the actor does not already
-  hold organization-wide;
+  hold organization-wide, except for ADR-019's AAL2-gated exact allowlist for
+  delegating the fixed global `DENTIST`/`RECEPTIONIST` system roles when the only
+  permissions missing from an organization-wide `security.manage` actor are
+  `patient.demographics.read/write`;
 - require `security.manage` in addition to `role.manage` when delegating
   `role.manage` or `security.manage`, or when changing a member who already has
   either sensitive permission through an organization-wide role assignment;
@@ -1117,25 +1126,40 @@ invitation provisioning remains a separate trusted workflow. Its untrusted
 Server Action entry point must verify a current AAL2 session before any
 service-role invitation operation begins. Service-role execution does not
 bypass delegation authorization: the workflow uses the recorded original
-inviter, validates tenant and role scope, requires the inviter to hold every
-permission in the invited role, and additionally requires `security.manage`
-when that role contains `role.manage` or `security.manage`. Before final
+inviter, validates tenant and role scope, and normally requires the inviter to
+hold every permission in the invited role. ADR-019 permits only a
+`security.manage` inviter to delegate the fixed global `DENTIST` or
+`RECEPTIONIST` role when every missing permission is exactly one of the two
+patient-demographics permissions; custom roles and any additional missing
+permission remain denied. Delegating a role containing `role.manage` or
+`security.manage` still additionally requires `security.manage`. Before final
 provisioning creates membership, branch-membership, or role-assignment rows,
 the function acquires the organization authorization lock and rechecks the
 inviter's current authority and the role's live permission set in the same
 transaction.
 
+The ADR-019 exception never grants patient access to the inviter. It retains
+AAL2 at the invitation Server Action and user-context assignment RPC,
+anti-self-assignment (including no invitation to the actor's verified email),
+tenant/branch validation, narrow fixed-role and missing-permission allowlists,
+and the existing atomic sanitized audit event. Invitation option listing,
+invitation validation, preparation/finalization, and direct role assignment use
+one shared database predicate so their authorization decisions cannot drift.
+
 Administrative operations without an operation-specific transactional function
 remain fail-closed until that boundary and its audit tests are implemented.
 
-Custom-role permission delegation is a subset operation. A caller cannot change
-any role currently assigned to themselves, cannot combine roles by assigning a
-new role to themselves, and cannot grant a role or permission containing
-authority they do not already possess. These invariants must be checked again
-inside the database transaction, not inferred from UI state. Workforce
-invitations follow the same permission-subset rule for built-in and custom
-roles, including `OWNER`; sensitive permissions are derived from the role's
-permission definitions rather than trusted role-name metadata.
+Custom-role permission delegation remains a subset operation, and every role
+outside ADR-019's exact fixed-role exception remains under the same rule. A
+caller cannot change any role currently assigned to themselves or combine roles
+by assigning a new role to themselves. Except for that exact exception, the
+caller cannot grant a role or permission containing authority they do not
+already possess. These invariants must be checked again inside the database
+transaction, not inferred from UI state. Workforce invitations normally follow
+the same permission-subset rule for built-in and custom roles, including
+`OWNER`; ADR-019 changes only the two fixed roles and two missing permissions
+listed above. Sensitive permissions are derived from the role's permission
+definitions rather than trusted role-name metadata.
 
 ---
 

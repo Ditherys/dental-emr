@@ -19,30 +19,32 @@ Read the smallest set of authoritative documents needed for the task:
 3. `docs/SECURITY_ARCHITECTURE.md` — security/privacy requirements and production gates
 4. `docs/DATABASE_DESIGN.md` — schema, tenancy, RLS, constraints, migration strategy
 5. `docs/FRONTEND_ARCHITECTURE.md` — frontend/UI/library decisions
-6. `docs/plans/001-foundation.md` — current implementation plan
+6. `docs/plans/002-patient-foundation.md` — accepted Phase 2 implementation plan
 7. Relevant ADRs in `docs/decisions/`
 
-For Phase 1, `docs/plans/001-foundation.md` is the implementation plan. Do not implement later product domains just because they appear in the architecture documents.
+`docs/plans/001-foundation.md` remains the accepted Phase 1 record. The complete
+Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
+2026-08-19. Execute only its ordered task/checkpoint currently authorized. Do not
+implement later product domains merely because they appear in architecture docs.
 
-## Current Phase: Phase 1 Foundation
+## Current Phase: Phase 2 Patient Foundation — P2-01
 
-Current scope is limited to the platform foundation, including:
+Phase 1 is formally accepted. Phase 2 planning approval is complete. Current
+implementation authority is limited to `P2-01 — Patient permission contract`.
+The accepted Phase 2 scope is limited to:
 
-- repository/application scaffold;
-- environment separation;
-- Supabase Cloud development setup using dedicated non-production projects;
-- authentication/session foundation;
-- organization and branch tenancy;
-- profiles and organization memberships;
-- branch memberships;
-- roles and permissions baseline;
-- RLS helpers and policies for implemented tables;
-- pgTAP/security test foundation;
-- audit-event foundation;
-- private EMR application shell and branch selector;
-- CI, linting, type checking, and test scaffolding.
+- organization-level patient identity and demographics;
+- patient contacts and guardian/family relationships;
+- patient list/search and bounded patient workspace;
+- duplicate warning using normalized name + birthday without a hard uniqueness
+  constraint;
+- patient permissions, RLS, audit events, synthetic fixtures, and concurrency
+  controls.
 
-Do NOT start patients, scheduling, Google Calendar, odontogram, treatment plans, files, billing, inventory, communications, analytics, or AI/MCP product features unless the user explicitly advances the implementation phase.
+Do NOT advance to `P2-02` until P2-01 is independently reviewed and accepted.
+Providers, scheduling, clinical history, Google Calendar, odontogram, treatment
+plans, files, billing, inventory, communications, analytics, and AI/MCP remain
+outside this phase.
 
 ## Approved Core Stack
 

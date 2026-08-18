@@ -57,7 +57,62 @@ synthetic data, and the local Supabase link is restored to DEV.
 
 ## Next Checkpoint
 
-Phase 2 planning may begin. Do not implement patients, clinical records, files,
-scheduling, billing, inventory, communications, analytics, or AI/MCP product
-features until a Phase 2 plan is authored, reviewed against the authoritative
-architecture/security/database documents, and explicitly approved.
+**Phase 2 planning has been authored; Phase 2 implementation has not begun.**
+The proposed implementation authority is
+`docs/plans/002-patient-foundation.md`, covering only organization-level patient
+identity/demographics, contacts/guardian relationships, duplicate warning,
+list/search/workspace, patient authorization/RLS/audit, synthetic fixtures, and
+concurrency-safe mutations.
+
+The plan reconciles the old master-roadmap labels with the accepted detailed
+Phase 1 plan: authentication, clinic/branch tenancy, authorization, invitations,
+audit, and basic administration are already complete in Phase 1, while
+`docs/plans/001-foundation.md` §48 explicitly selects patient foundation as the
+next bounded plan.
+
+The first independent review did not approve the plan. It found one High
+authorization blocker: the Phase 1 permission-superset rule would prevent an
+owner-only organization from provisioning its first `DENTIST` or
+`RECEPTIONIST` after those roles receive patient permissions. It also found
+Medium gaps in duplicate-update serialization, auditable detail-read enforcement,
+and preferred-branch PATCH semantics, plus trailing whitespace in the untracked
+plan.
+
+The current documentation revision proposes ADR-019 and updates the plan to:
+
+- allow an AAL2, `security.manage` actor to delegate only the fixed global
+  `DENTIST`/`RECEPTIONIST` roles when the only missing permissions are exactly
+  `patient.demographics.read/write`, without granting the actor patient access;
+- preserve full-superset delegation for custom roles and fail closed if either
+  fixed role later gains another permission the actor lacks;
+- use one organization duplicate lock and fixed lock order for create, name/DOB
+  updates, and active mobile/email mutations, with exact signals and bounded
+  candidate fields;
+- revoke all browser base-table patient reads and expose bounded search plus
+  atomic detail-and-view-audit RPCs; and
+- treat omitted preferred branch as preserve, explicit `null` as clear, and a
+  supplied UUID as a new access-validated preference.
+
+While preparing the mandatory re-review, Codex found and corrected four further
+planning defects: all affected Phase 1 functions must lose their preserved ACLs
+as one opening block *before* any helper/body replacement; the security
+architecture's general delegation paragraph must acknowledge ADR-019's exact
+exception; and the P2-11 edit UI must handle and test duplicate-review/cancel/
+confirm states from P2-06/P2-07. The plan also now revokes Supabase's default
+patient table/RPC privileges from `service_role`, because Phase 2 defines no
+elevated service patient workflow.
+
+A fresh-context read-only reviewer then reported no Critical or High finding and
+returned **APPROVED WITH NON-BLOCKING NOTES**. Its two Low notes requested an
+explicit tenant-scoped active-relationship index and one unambiguous email case-
+normalization operation. The plan now requires the relationship index/catalog
+and query-plan tests, and defines deterministic ASCII-only email validation and
+case normalization with shared PostgreSQL/TypeScript vectors.
+
+The project owner explicitly approved the complete Phase 2 plan and ADR-019 on
+2026-08-19. ADR-019 is accepted and `P2-00` is complete. `P2-01 — Patient
+permission contract` is the only authorized implementation task; implementation
+has not yet reached a code checkpoint. Do not advance to P2-02 until P2-01 is
+independently reviewed and accepted. Providers, scheduling, clinical history,
+files, odontogram, treatment planning, billing, inventory, communications,
+integrations, analytics, and AI/MCP remain deferred.
