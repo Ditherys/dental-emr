@@ -230,6 +230,14 @@ describe("non-production provisioning sentinel (R6-C1)", () => {
 
     expect(() =>
       parseSupabaseQueryResult(
+        JSON.stringify([{ p1_provision_result: "P1_PROVISION_PASS" }]),
+        "db-provision-test-tooling",
+        sentinel,
+      ),
+    ).not.toThrow();
+
+    expect(() =>
+      parseSupabaseQueryResult(
         JSON.stringify({ rows: [{ p1_provision_result: "P1_PROVISION_FAIL" }] }),
         "db-provision-test-tooling",
         sentinel,

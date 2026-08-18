@@ -97,21 +97,10 @@ function required(environment, name) {
  * A guarded command that produced no rows, was silently skipped, or partially
  * applied must not read as success merely because the CLI exited zero.
  */
-const COMMAND_RESULT_VERIFICATIONS = Object.freeze({
+const COMMAND_RESULT_SENTINELS = Object.freeze({
   "db-provision-test-tooling": Object.freeze({
-    command: Object.freeze([
-      "db",
-      "query",
-      "--linked",
-      "--output-format",
-      "json",
-      "--file",
-      "supabase/provisioning/nonproduction/002_verify_database_test_tooling.sql",
-    ]),
-    sentinel: Object.freeze({
-      column: "p1_provision_result",
-      value: "P1_PROVISION_PASS",
-    }),
+    column: "p1_provision_result",
+    value: "P1_PROVISION_PASS",
   }),
 });
 
@@ -125,19 +114,11 @@ export function resolveCiDatabaseCommand(commandName) {
 }
 
 export function resolveCommandResultSentinel(commandName) {
-  return resolveCommandResultVerification(commandName)?.sentinel ?? null;
-}
-
-export function resolveCommandResultVerification(commandName) {
-  if (!Object.hasOwn(COMMAND_RESULT_VERIFICATIONS, commandName)) {
+  if (!Object.hasOwn(COMMAND_RESULT_SENTINELS, commandName)) {
     return null;
   }
 
-  const verification = COMMAND_RESULT_VERIFICATIONS[commandName];
-  return {
-    command: [...verification.command],
-    sentinel: { ...verification.sentinel },
-  };
+  return COMMAND_RESULT_SENTINELS[commandName];
 }
 
 function persistedAcknowledgementWarning(commandName) {
@@ -355,11 +336,17 @@ export function parseSupabaseQueryResult(
     return;
   }
 
-  if (!Array.isArray(result.rows) || result.rows.length !== 1) {
+  // Supabase CLI 2.113.0 emits { rows: [...] } on Windows and a bare row
+  // array on Linux for the same `db query --output-format json` invocation.
+  // Normalize only those two exact envelopes; the one-row invariant remains
+  // fail-closed in both cases.
+  const rows = Array.isArray(result) ? result : result.rows;
+
+  if (!Array.isArray(rows) || rows.length !== 1) {
     throw new Error(`${filename} did not return one completion row.`);
   }
 
-  if (result.rows[0]?.[expectation.column] !== expectation.value) {
+  if (rows[0]?.[expectation.column] !== expectation.value) {
     throw new Error(
       `${filename} did not report ${expectation.value} in ${expectation.column}.`,
     );

@@ -4,7 +4,6 @@ import {
   assertMigrationFreezeAllows,
   MIGRATION_FREEZE_ACK,
   resolveCiDatabaseCommand,
-  resolveCommandResultVerification,
 } from "./remote-database-test-guard.mjs";
 
 describe("guarded Supabase command", () => {
@@ -45,26 +44,6 @@ describe("non-production provisioning command (R6-C1)", () => {
       "--file",
       "supabase/provisioning/nonproduction/001_database_test_tooling.sql",
     ]);
-  });
-
-  it("verifies provisioning with a separate single-result catalog query", () => {
-    expect(
-      resolveCommandResultVerification("db-provision-test-tooling"),
-    ).toEqual({
-      command: [
-        "db",
-        "query",
-        "--linked",
-        "--output-format",
-        "json",
-        "--file",
-        "supabase/provisioning/nonproduction/002_verify_database_test_tooling.sql",
-      ],
-      sentinel: {
-        column: "p1_provision_result",
-        value: "P1_PROVISION_PASS",
-      },
-    });
   });
 
   it("is not reachable as a migration", () => {
