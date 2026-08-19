@@ -5,6 +5,40 @@
 
 ## Current Checkpoint
 
+**P2-01 is implemented locally on `feat/p2-01-patient-permissions` and is
+waiting for hosted Cloud TEST verification plus independent authorization
+review.** This revision is the implementation checkpoint; do not advance to
+P2-02 from it.
+
+The additive P2-01 slice adds the two patient demographic permissions, grants
+them only to the fixed `DENTIST` and `RECEPTIONIST` system roles, and implements
+ADR-019 through one private live delegation predicate shared by invitation
+options/validation/finalization and direct role assignment. Invitation
+preparation now takes the organization advisory lock before authorization and
+rejects the inviter's verified email; finalization rechecks actor, Auth user,
+live email, tenant/branch scope, and role permissions under the same lock.
+Generic branch authorization is unchanged; separate typed application helpers
+recognize a branch-scoped patient permission only with matching active branch
+membership.
+
+The object migration opens with the five-signature pre-revoke block and grants
+nothing. Its paired registered terminal migration restores only authenticated
+`set_member_role` and the three existing service-only invitation functions.
+The new rollback-bounded pgTAP suite covers both fixed roles through invitation
+and direct assignment plus AAL1, self, custom-role, cross-tenant/branch,
+inactive-branch, live-email, extra-permission, revocation, ACL, mutation, and
+audit negatives.
+
+Fresh local verification passes: migration privilege lint (11 migrations, 268
+statements, 36 registered grant entries), ESLint, strict TypeScript, 301 Vitest
+tests, Next.js production build, secret scan, and dependency audit. Hosted
+database execution remains pending: this worktree was safely linked to the
+documented TEST project and the management API confirmed TEST and DEV are
+distinct, but the passwordless database connection cannot proceed from this
+IPv4-only machine. No migration was applied remotely. Run the guarded Cloud
+TEST migration/pgTAP/type/schema checks from the credentialed CI environment or
+a human PowerShell session before accepting P2-01.
+
 **Phase 1 Foundation is formally accepted.** Codex independently reviewed the
 security-sensitive R6-D tooling and H-5 branch lifecycle implementation through
 code checkpoint `00077b0`. The review found no Critical/High issue, one Medium
@@ -55,9 +89,9 @@ synthetic data, and the local Supabase link is restored to DEV.
 - Production use remains blocked by `docs/SECURITY_ARCHITECTURE.md`; Phase 1
   acceptance is not production approval.
 
-## Next Checkpoint
+## P2-01 Planning Authority
 
-**Phase 2 planning has been authored; Phase 2 implementation has not begun.**
+**Phase 2 planning was authored and approved before P2-01 implementation began.**
 The proposed implementation authority is
 `docs/plans/002-patient-foundation.md`, covering only organization-level patient
 identity/demographics, contacts/guardian relationships, duplicate warning,
@@ -111,8 +145,9 @@ case normalization with shared PostgreSQL/TypeScript vectors.
 
 The project owner explicitly approved the complete Phase 2 plan and ADR-019 on
 2026-08-19. ADR-019 is accepted and `P2-00` is complete. `P2-01 — Patient
-permission contract` is the only authorized implementation task; implementation
-has not yet reached a code checkpoint. Do not advance to P2-02 until P2-01 is
-independently reviewed and accepted. Providers, scheduling, clinical history,
-files, odontogram, treatment planning, billing, inventory, communications,
-integrations, analytics, and AI/MCP remain deferred.
+permission contract` is the only authorized implementation task and is now at
+the local checkpoint described above. Do not advance to P2-02 until P2-01 passes
+guarded Cloud TEST verification and is independently reviewed and accepted.
+Providers, scheduling, clinical history, files, odontogram, treatment planning,
+billing, inventory, communications, integrations, analytics, and AI/MCP remain
+deferred.

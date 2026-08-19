@@ -8,14 +8,16 @@ import {
 } from "./data";
 import {
   assertPermission,
+  assertSharedPatientPermission,
   findAuthorizedBranch,
   selectActiveOrganizationMembership,
+  type PatientPermissionCode,
   type PermissionCode,
 } from "./policy";
 
 export { AuthorizationError } from "./policy";
 export { requireAal2 };
-export type { PermissionCode } from "./policy";
+export type { PatientPermissionCode, PermissionCode } from "./policy";
 
 export async function requireUser() {
   return requireVerifiedIdentity();
@@ -81,4 +83,21 @@ export async function requirePermission({
   assertPermission(state, permission, branchId);
 
   return { ...context, branch, permission };
+}
+
+type SharedPatientPermissionRequest = {
+  permission: PatientPermissionCode;
+  organizationId?: string;
+};
+
+export async function requireSharedPatientPermission({
+  permission,
+  organizationId,
+}: SharedPatientPermissionRequest) {
+  const context = await requireActiveOrganizationMembership(organizationId);
+  const state = await loadOrganizationAuthorizationState(context);
+
+  assertSharedPatientPermission(state, permission);
+
+  return { ...context, permission };
 }

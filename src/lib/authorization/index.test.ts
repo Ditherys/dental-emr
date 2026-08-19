@@ -28,6 +28,7 @@ import {
   requireOrganizationAuthorizationState,
   requireOrganizationAccess,
   requirePermission,
+  requireSharedPatientPermission,
   requireUser,
 } from "./index";
 
@@ -142,6 +143,43 @@ describe("server authorization orchestration", () => {
         organizationId: "org-a",
         branchId: "branch-a1",
         permission: "branch.manage",
+      }),
+    ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
+  });
+
+  it("authorizes shared patient access from a matching live branch grant", async () => {
+    loadOrganizationAuthorizationState.mockResolvedValue({
+      ...authorizationState,
+      permissionGrants: [
+        { code: "patient.demographics.read", branchId: "branch-a1" },
+      ],
+    });
+
+    await expect(
+      requireSharedPatientPermission({
+        organizationId: "org-a",
+        permission: "patient.demographics.read",
+      }),
+    ).resolves.toMatchObject({
+      identity,
+      organization: { id: "org-a" },
+      permission: "patient.demographics.read",
+    });
+  });
+
+  it("denies shared patient access when branch membership was revoked", async () => {
+    loadOrganizationAuthorizationState.mockResolvedValue({
+      ...authorizationState,
+      explicitBranchIds: [],
+      permissionGrants: [
+        { code: "patient.demographics.write", branchId: "branch-a1" },
+      ],
+    });
+
+    await expect(
+      requireSharedPatientPermission({
+        organizationId: "org-a",
+        permission: "patient.demographics.write",
       }),
     ).rejects.toMatchObject({ code: "PERMISSION_DENIED" });
   });

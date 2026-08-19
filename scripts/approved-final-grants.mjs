@@ -1,5 +1,5 @@
 /**
- * THE APPROVED FINAL PRIVILEGE SET FOR THE PHASE 1 SECURE BASELINE.
+ * THE APPROVED FINAL PRIVILEGE SET FOR THE SECURE MIGRATION CHAIN.
  *
  * This file is the human-readable authority the R6-B static lint compares the
  * grant-terminal migration against. It is intentionally verbose: every entry
@@ -146,6 +146,34 @@ const branchLifecycleGrants = BRANCH_LIFECYCLE_RPCS.map((object) => ({
     "The sole branch update/archive mutation path (H-5). Derives organization_id from the target branch row (never accepted from the client), calls private.require_aal2() first, takes the organization-scoped advisory lock, re-derives authorization from the current user context, and emits an audit event in the same transaction.",
 }));
 
+const PATIENT_PERMISSION_CONTRACT_MIGRATION =
+  "20260819010100_patient_permission_contract_grants.sql";
+
+const patientPermissionContractGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.set_member_role(uuid, uuid, uuid, boolean)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Restores the existing browser-callable role-assignment boundary after its P2-01 authorization body is replaced. The RPC still requires AAL2, role.manage, tenant/branch validation, anti-self-assignment, a live bounded delegation predicate, organization locking, and atomic audit.",
+  },
+  ...[
+    "public.list_workforce_invitation_options(uuid)",
+    "public.prepare_workforce_invitation(uuid, uuid, uuid, text, uuid, uuid)",
+    "public.finalize_workforce_invitation(uuid, uuid, uuid)",
+  ].map((object) => ({
+    grantee: "service_role",
+    objectClass: "function",
+    object,
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Restores the existing server-only invitation boundary after P2-01 applies the shared bounded delegation predicate and invitation anti-self checks. No browser-reachable role receives this privilege.",
+  })),
+]);
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -161,6 +189,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: BRANCH_LIFECYCLE_MIGRATION,
     grants: Object.freeze(branchLifecycleGrants),
+  }),
+  Object.freeze({
+    file: PATIENT_PERMISSION_CONTRACT_MIGRATION,
+    grants: patientPermissionContractGrants,
   }),
 ]);
 
