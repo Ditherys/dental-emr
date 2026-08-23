@@ -708,7 +708,7 @@ select extensions.is(
 with test_failures as (
   select finish
   from extensions.finish()
-  where finish !~ '^1\\.\\.[0-9]+$'
+  where finish !~ '^1\.\.[0-9]+$'
 )
 select case
   when count(*) = 0 then 'P1_TEST_PASS'
