@@ -62,7 +62,8 @@ insert into public.branches (
   address_line1,
   city,
   province,
-  status
+  status,
+  archived_at
 )
 values
   (
@@ -74,7 +75,8 @@ values
     '1 Synthetic Street',
     'Test City',
     'Test Province',
-    'active'
+    'active',
+    null
   ),
   (
     '93000000-0000-0000-0000-000000000002',
@@ -85,7 +87,8 @@ values
     '2 Synthetic Street',
     'Test City',
     'Test Province',
-    'archived'
+    'archived',
+    statement_timestamp()
   ),
   (
     '93000000-0000-0000-0000-000000000003',
@@ -96,7 +99,8 @@ values
     '3 Synthetic Street',
     'Test City',
     'Test Province',
-    'active'
+    'active',
+    null
   );
 
 insert into public.organization_members (
