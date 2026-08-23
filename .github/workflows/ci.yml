@@ -167,6 +167,17 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
         run: npm run test:db
 
+      # The normal runner deliberately redacts CLI diagnostics. If a suite still
+      # cannot execute, reproduce only that failing P2-01 suite through psql so
+      # PostgreSQL reports the concrete statement error. This runs solely after
+      # a failed pgTAP step, against the disposable TEST project, and never
+      # echoes the protected connection URI.
+      - name: Diagnose failed P2-01 pgTAP suite
+        if: failure()
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/patient_authorization.test.sql
+
       - name: Check generated database types
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
