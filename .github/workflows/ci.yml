@@ -136,7 +136,7 @@ jobs:
         env:
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: |
-          node --input-type=module -e "import { appendFileSync } from 'node:fs'; const url = new URL(process.env.SUPABASE_TEST_DB_URL ?? ''); const password = decodeURIComponent(url.password); if (!password) throw new Error('SUPABASE_TEST_DB_URL must include a database password.'); appendFileSync(process.env.GITHUB_ENV, 'SUPABASE_DB_PASSWORD=' + password + '\n');"
+          node --input-type=module -e "import { appendFileSync } from 'node:fs'; const url = new URL(process.env.SUPABASE_TEST_DB_URL ?? ''); const password = decodeURIComponent(url.password); if (!password) throw new Error('SUPABASE_TEST_DB_URL must include a database password.'); process.stdout.write('::add-mask::' + password + '\n'); appendFileSync(process.env.GITHUB_ENV, 'SUPABASE_DB_PASSWORD=' + password + '\n');"
 
       - name: Link the designated Cloud TEST project
         env:
@@ -170,6 +170,12 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
         run: npm run test:db
+
+      - name: Diagnose failed P2-01 pgTAP suite
+        if: failure()
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/patient_authorization.test.sql
 
       - name: Check generated database types
         env:
