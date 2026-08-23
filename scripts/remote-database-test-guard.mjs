@@ -81,6 +81,12 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 ]);
 
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
+const ANSI_ESCAPE_SEQUENCE = /\x1B\[[0-?]*[ -/]*[@-~]/g;
+const DATABASE_URL = /\b(?:postgres|postgresql):\/\/[^\s]+/gi;
+const CREDENTIAL_ASSIGNMENT =
+  /\b(?:password|token|api[_-]?key|SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD|R6D_DB_URL_OVERRIDE)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s;]+)/gi;
+const BEARER_TOKEN = /\bBearer\s+[^\s]+/gi;
+const MAX_REMOTE_DATABASE_DIAGNOSTIC_LENGTH = 8_192;
 
 function required(environment, name) {
   const value = environment[name]?.trim();
@@ -90,6 +96,22 @@ function required(environment, name) {
   }
 
   return value;
+}
+
+/**
+ * Produces a bounded diagnostic from a failed Supabase CLI invocation without
+ * exposing connection credentials. Only stderr is accepted: stdout may contain
+ * database query rows and must never be surfaced by the remote test runner.
+ */
+export function formatRemoteDatabaseQueryFailure(stderr) {
+  return stderr
+    .replaceAll(ANSI_ESCAPE_SEQUENCE, "")
+    .replaceAll(DATABASE_URL, "[REDACTED_DATABASE_URL]")
+    .replaceAll(CREDENTIAL_ASSIGNMENT, "[REDACTED_CREDENTIAL]")
+    .replaceAll(BEARER_TOKEN, "Bearer [REDACTED_TOKEN]")
+    .replaceAll(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_REMOTE_DATABASE_DIAGNOSTIC_LENGTH);
 }
 
 /**

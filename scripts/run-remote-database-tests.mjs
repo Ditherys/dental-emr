@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   DATABASE_TEST_SUITES,
+  formatRemoteDatabaseQueryFailure,
   parseSupabaseQueryResult,
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
@@ -79,7 +80,11 @@ try {
     }
 
     if (result.status !== 0) {
-      throw new Error(`${suiteLabel} failed during remote SQL execution.`);
+      const diagnostic = formatRemoteDatabaseQueryFailure(result.stderr ?? "");
+      throw new Error(
+        `${suiteLabel} failed during remote SQL execution.` +
+          (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),
+      );
     }
 
     parseSupabaseQueryResult(result.stdout, suiteLabel);

@@ -8,11 +8,44 @@ import {
   assertPgtapIsProvisioned,
   DATABASE_TEST_CONFIRMATION,
   DATABASE_TEST_SUITES,
+  formatRemoteDatabaseQueryFailure,
   parseSupabaseQueryResult,
   resolveCommandResultSentinel,
   validateRemoteDatabaseTestEnvironment,
   validateTransactionalSuite,
 } from "./remote-database-test-guard.mjs";
+
+describe("remote database query failure diagnostics", () => {
+  it("keeps a database error while redacting credential-bearing values", () => {
+    const diagnostic = formatRemoteDatabaseQueryFailure(
+      'ERROR: relation "public.patients" does not exist password=secret SUPABASE_ACCESS_TOKEN=sbp_token-value postgresql://user:secret@db.example.test:5432/postgres',
+    );
+
+    expect(diagnostic).toContain('relation "public.patients" does not exist');
+    expect(diagnostic).not.toContain("secret");
+    expect(diagnostic).not.toContain("sbp_token-value");
+    expect(diagnostic).not.toContain("postgresql://");
+  });
+
+  it("removes terminal controls and bounds the emitted diagnostic", () => {
+    const diagnostic = formatRemoteDatabaseQueryFailure(
+      `\u001B[31mERROR: malformed patient test SQL\u001B[0m ${"x".repeat(9_000)}`,
+    );
+
+    expect(diagnostic).toContain("ERROR: malformed patient test SQL");
+    expect(diagnostic).not.toContain("\u001B");
+    expect(diagnostic.length).toBeLessThanOrEqual(8_192);
+  });
+
+  it("redacts quoted credentials and bearer tokens", () => {
+    const diagnostic = formatRemoteDatabaseQueryFailure(
+      "ERROR: connection failed password='quoted-secret' Authorization: Bearer bearer-secret",
+    );
+
+    expect(diagnostic).not.toContain("quoted-secret");
+    expect(diagnostic).not.toContain("bearer-secret");
+  });
+});
 
 const projectId = "testproject123";
 const devProjectId = "devproject123";
