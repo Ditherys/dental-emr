@@ -8,11 +8,12 @@ printing database credentials, access tokens, or unbounded command output.
 ## Design
 
 The remote database test runner will use a small pure formatter for a failed
-Supabase CLI query. The formatter receives the suite label and child-process
-stdout/stderr, removes credential-bearing connection-string components and
-token-like values, removes non-printing terminal-control characters, and caps
-the retained diagnostic to 8 KiB. The runner will include only that formatted
-diagnostic in its existing failure message when the CLI exits non-zero.
+Supabase CLI query. The formatter receives child-process stderr and failed
+stdout, suppresses valid JSON query-result envelopes, removes credential-bearing
+connection-string components and token-like values, removes non-printing
+terminal-control characters, and caps the retained diagnostic to 8 KiB. The
+runner will include only that formatted diagnostic in its existing failure
+message when the CLI exits non-zero.
 
 The formatter is intentionally diagnostic-only: it does not change test target
 validation, Supabase CLI arguments, SQL execution, migration behavior, or the

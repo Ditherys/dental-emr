@@ -103,8 +103,28 @@ function required(environment, name) {
  * exposing connection credentials. Only stderr is accepted: stdout may contain
  * database query rows and must never be surfaced by the remote test runner.
  */
-export function formatRemoteDatabaseQueryFailure(stderr) {
-  return stderr
+function stdoutFailureDiagnostic(stdout) {
+  const trimmed = stdout.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (Array.isArray(parsed) || Array.isArray(parsed?.rows)) {
+      return "";
+    }
+
+    return typeof parsed?.message === "string" ? parsed.message : "";
+  } catch {
+    return trimmed;
+  }
+}
+
+export function formatRemoteDatabaseQueryFailure(stderr, stdout = "") {
+  return `${stderr}\n${stdoutFailureDiagnostic(stdout)}`
     .replaceAll(ANSI_ESCAPE_SEQUENCE, "")
     .replaceAll(DATABASE_URL, "[REDACTED_DATABASE_URL]")
     .replaceAll(CREDENTIAL_ASSIGNMENT, "[REDACTED_CREDENTIAL]")

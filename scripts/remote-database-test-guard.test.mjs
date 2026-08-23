@@ -45,6 +45,21 @@ describe("remote database query failure diagnostics", () => {
     expect(diagnostic).not.toContain("quoted-secret");
     expect(diagnostic).not.toContain("bearer-secret");
   });
+
+  it("uses failed stdout error text without exposing query-result JSON", () => {
+    const failedDiagnostic = formatRemoteDatabaseQueryFailure(
+      "",
+      "Error: remote SQL failed password=stdout-secret",
+    );
+    const queryResultDiagnostic = formatRemoteDatabaseQueryFailure(
+      "",
+      JSON.stringify({ rows: [{ email: "synthetic-patient@example.test" }] }),
+    );
+
+    expect(failedDiagnostic).toContain("Error: remote SQL failed");
+    expect(failedDiagnostic).not.toContain("stdout-secret");
+    expect(queryResultDiagnostic).toBe("");
+  });
 });
 
 const projectId = "testproject123";

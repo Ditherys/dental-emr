@@ -80,7 +80,10 @@ try {
     }
 
     if (result.status !== 0) {
-      const diagnostic = formatRemoteDatabaseQueryFailure(result.stderr ?? "");
+      const diagnostic = formatRemoteDatabaseQueryFailure(
+        result.stderr ?? "",
+        result.stdout ?? "",
+      );
       throw new Error(
         `${suiteLabel} failed during remote SQL execution.` +
           (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),

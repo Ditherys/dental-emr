@@ -4,7 +4,7 @@
 
 **Goal:** Surface a bounded, redacted Supabase CLI error when a remote pgTAP suite cannot execute.
 
-**Architecture:** A pure formatter in the existing remote-database guard module will normalize CLI stderr, redact token and connection-string credential values, and cap diagnostics at 8 KiB. The runner will call it only for a non-zero child-process exit, leaving its successful execution and target-validation paths unchanged. It deliberately ignores stdout because it can contain query rows.
+**Architecture:** A pure formatter in the existing remote-database guard module will normalize CLI stderr and failed stdout, suppress valid JSON query-result envelopes, redact token and connection-string credential values, and cap diagnostics at 8 KiB. The runner will call it only for a non-zero child-process exit, leaving its successful execution and target-validation paths unchanged.
 
 **Tech Stack:** Node.js ESM, Vitest, Supabase CLI wrapper.
 
@@ -25,8 +25,8 @@
 - Modify: `scripts/run-remote-database-tests.mjs`
 
 **Interfaces:**
-- Produces: `formatRemoteDatabaseQueryFailure(stderr: string): string`
-- Consumes: Supabase CLI child-process `stderr` only after a non-zero exit.
+- Produces: `formatRemoteDatabaseQueryFailure(stderr: string, stdout: string): string`
+- Consumes: Supabase CLI child-process stderr and non-query-result stdout only after a non-zero exit.
 
 - [ ] **Step 1: Write the failing tests**
 
