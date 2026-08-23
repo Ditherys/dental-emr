@@ -130,13 +130,13 @@ jobs:
         run: npm run ci:test-target
 
       # Keep one canonical TEST database credential. The URI stays a protected
-      # environment secret; the raw password is derived only inside this job so
+      # environment secret; its encoded password component is derived only inside this job so
       # the Supabase CLI cannot drift from the session-pooler connection.
       - name: Derive Cloud TEST database password
         env:
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: |
-          node --input-type=module -e "import { appendFileSync } from 'node:fs'; const url = new URL(process.env.SUPABASE_TEST_DB_URL ?? ''); const password = decodeURIComponent(url.password); if (!password) throw new Error('SUPABASE_TEST_DB_URL must include a database password.'); process.stdout.write('::add-mask::' + password + '\n'); appendFileSync(process.env.GITHUB_ENV, 'SUPABASE_DB_PASSWORD=' + password + '\n');"
+          node --input-type=module -e "import { appendFileSync } from 'node:fs'; const url = new URL(process.env.SUPABASE_TEST_DB_URL ?? ''); const password = url.password; if (!password) throw new Error('SUPABASE_TEST_DB_URL must include a database password.'); process.stdout.write('::add-mask::' + password + '\n'); appendFileSync(process.env.GITHUB_ENV, 'SUPABASE_DB_PASSWORD=' + password + '\n');"
 
       - name: Link the designated Cloud TEST project
         env:
