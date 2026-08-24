@@ -3,14 +3,18 @@
 **Authority:** [ADR-016](../decisions/ADR-016-supabase-cloud-first-development.md), [ADR-017](../decisions/ADR-017-phase1-secure-migration-baseline.md), [ADR-018](../decisions/ADR-018-nonproduction-database-test-tooling.md), [ADR-020](../decisions/ADR-020-local-supabase-hybrid-development.md)
 
 ADR-020 adds an optional local feedback path but does not relax this runbook.
-Cloud TEST remains the required hosted acceptance environment, and every remote
-command below retains its target guard.
+Cloud TEST remains the required hosted acceptance environment. Every
+repository-wrapped database mutation or acceptance command below retains its
+target guard. The direct CLI commands in Step 3 are manual human-verified setup
+or read-only inspection steps and are not covered by the repository wrappers.
 
 This runbook covers building a **disposable** Supabase Cloud TEST project from the
 committed baseline and nothing else. It is the mechanism R6-C, R6-D, and R6-E use.
 
-It never targets DEV. It never targets production. Every command below refuses to
-run unless the linked project equals the explicitly designated TEST reference.
+The repository-wrapped database mutation and acceptance commands never target
+DEV or production: they refuse to run unless the linked project equals the
+explicitly designated TEST reference. The operator must separately verify the
+direct CLI setup and inspection commands in Step 3.
 
 ## One slot at a time
 
@@ -78,6 +82,11 @@ npm run ci:test-target
 
 ## Step 3 — Link the CLI to the TEST project (human)
 
+These direct CLI commands are not repository-wrapped. `login` and `link` are
+manual setup actions; `projects list` and `migration list --linked` are read-only
+inspection. The human operator must compare the selected and linked project to
+`SUPABASE_TEST_PROJECT_ID` before proceeding to any wrapped database command.
+
 ```powershell
 npx supabase login
 npx supabase projects list
@@ -139,6 +148,6 @@ complete.
 
 ## What this runbook must never do
 
-- Target DEV or production. Every guarded command refuses a target that is not the designated TEST reference.
+- Target DEV or production. Every repository-wrapped database mutation or acceptance command refuses a target that is not the designated TEST reference.
 - Load real patient or workforce data.
 - Print, log, or commit a key, password, or token.

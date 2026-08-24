@@ -2159,13 +2159,15 @@ PRODUCTION
 
 Rules:
 
-- Next.js may run locally, but persistent structured application data is hosted in the Supabase Cloud DEV project;
+- Next.js and an optional disposable local Supabase stack may run on the developer workstation; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
+- canonical persistent structured data for DEV, TEST/staging, and production is hosted in separate Supabase Cloud projects;
 - development uses synthetic patient data only;
-- automated destructive database tests should target a dedicated disposable cloud TEST project/environment rather than the interactive DEV database when practical;
+- Git migrations remain authoritative across local and hosted targets, and guarded Cloud TEST verification is mandatory before database-bearing work is accepted;
+- automated destructive database tests use the dedicated disposable Cloud TEST project for acceptance rather than the interactive DEV database;
 - staging never uses copied production PHI unless a formally approved anonymization process exists;
 - production uses a separate Supabase Cloud project;
 - future file/media environments use separate R2 buckets/prefix boundaries/credentials;
-- no persistent patient/application data is stored on the developer workstation;
+- no real, copied-production, or canonical patient/application data is stored on the developer workstation; ADR-020 permits only disposable synthetic local data;
 - separate OAuth redirect configurations;
 - separate SMS/email test behavior;
 - production secrets are not available to development agents by default.
