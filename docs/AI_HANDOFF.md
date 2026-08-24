@@ -5,12 +5,24 @@
 
 ## Current Checkpoint
 
-**P2-02 is implemented and waiting for independent migration/RLS review.** The
-checkpoint adds the organization-owned `patients` root, bounded database-owned
-normalization, tenant-safe preferred-branch and audit links, fail-closed RLS,
-and no patient-table grants. Its sole new browser-role privilege is execution of
-the private RLS helper required to evaluate the stored policy; private schema
-usage remains revoked.
+**P2-02 implementation and final-review remediation are complete; project-owner
+acceptance is pending.** The checkpoint adds the organization-owned `patients`
+root, bounded database-owned normalization, tenant-safe preferred-branch and
+audit links, fail-closed RLS, and no patient-table grants. Its sole new browser-
+role privilege is execution of the private RLS helper required to evaluate the
+stored policy; private schema usage remains revoked.
+
+The final independently reviewed code head is `e887f19`, following test-only
+hardening commits `ce31817` and `e887f19`. They pin the exact helper security
+attributes and empty search path, require one total authenticated patient
+`SELECT` policy with the intended qualifier, and exercise direct allowed and
+denied helper behavior including cross-tenant, revoked/archived-branch, owner,
+visitor, suspended, forged-user, and unsupported-permission cases. Fresh focused
+verification passed 29/29 unit guard tests, and the guarded designated Cloud
+TEST runner passed all 9/9 rollback-bounded pgTAP suites after each remediation.
+No migration, grant, generated type, application, route/UI, dependency, or P2-03
+file changed. The independent re-review cleared both commits with **Ready to
+merge: Yes** and no remaining finding.
 
 The implementation checkpoint is `c521ba6`; GitHub Actions run
 [`32682664779`](https://github.com/Ditherys/dental-emr/actions/runs/32682664779)
@@ -33,15 +45,13 @@ passed migration privilege lint over 13 migrations and 285 SQL statements,
 ESLint, strict TypeScript, 305 Vitest tests, the production build, secret scan,
 and the high-severity dependency audit with zero vulnerabilities. All TEST
 patient data is synthetic; Git migrations remain authoritative. P2-03 remains
-blocked until this checkpoint passes required GitHub checks and independent
-migration/RLS review, all findings are resolved, and the project owner records
-acceptance.
+blocked until the exact final head passes required GitHub checks and the project
+owner records acceptance.
 
-The Task 2 reviewer found no Critical, High, or Medium issue and recorded one
-Low final-review strengthening item: pgTAP should later pin the helper as
-`SECURITY DEFINER`, `STABLE`, and `search_path = ''`; require exactly one
-authenticated `SELECT` policy; and exercise direct allowed/denied helper
-behavior. This does not widen the accepted P2-02 implementation scope.
+The Task 2 reviewer originally found no Critical, High, or Medium issue and one
+Low final-review test-strengthening item. The final reviewer required that item
+before merge; `ce31817` and `e887f19` resolve it without changing production
+behavior.
 
 **P2-01 is accepted.** Its independently reviewed checkpoint is
 `411acd8`; GitHub Actions run
@@ -184,10 +194,9 @@ case normalization with shared PostgreSQL/TypeScript vectors.
 The project owner explicitly approved the complete Phase 2 plan and ADR-019 on
 2026-08-19. ADR-019 is accepted and `P2-00` is complete. `P2-01 — Patient
 permission contract` was independently reviewed and accepted on 2026-08-24.
-`P2-02 — Patient identity schema, RLS, and audit linkage` is the current,
-strictly bounded implementation task. Do not advance to P2-03 until P2-02
-passes guarded Cloud TEST verification and is independently reviewed and
-accepted.
+`P2-02 — Patient identity schema, RLS, and audit linkage` is at its final
+integration and project-owner acceptance gate. Do not advance to P2-03 until
+the exact final head passes guarded verification and P2-02 is accepted.
 Providers, scheduling, clinical history, files, odontogram, treatment planning,
 billing, inventory, communications, integrations, analytics, and AI/MCP remain
 deferred.
