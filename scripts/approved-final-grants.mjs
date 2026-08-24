@@ -189,6 +189,30 @@ const patientIdentityGrants = Object.freeze([
   },
 ]);
 
+const PATIENT_CREATE_GRANTS_MIGRATION =
+  "20260825010200_patient_create_grants.sql";
+
+const patientCreateGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.find_duplicate_candidates(uuid, text, text, date, text, text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The bounded duplicate-review RPC derives tenant and actor from the authenticated acting-branch context, requires live patient write permission, and returns only the approved minimal candidate projection.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.create_patient(uuid, text, text, text, text, text, date, text, text, text, text, text, text, uuid, text, text, boolean)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only patient creation mutation path. It derives actor and tenant from the authenticated acting branch, locks duplicate/counter state, validates and rechecks duplicates, creates contacts and patient atomically, and appends one patient-linked audit event.",
+  },
+]);
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -212,6 +236,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: PATIENT_IDENTITY_GRANTS_MIGRATION,
     grants: patientIdentityGrants,
+  }),
+  Object.freeze({
+    file: PATIENT_CREATE_GRANTS_MIGRATION,
+    grants: patientCreateGrants,
   }),
 ]);
 

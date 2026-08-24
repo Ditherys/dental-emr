@@ -628,9 +628,45 @@ export type Database = {
         }
         Returns: string
       }
+      create_patient: {
+        Args: {
+          p_acting_branch_id: string
+          p_address_line1: string | null
+          p_address_line2: string | null
+          p_birth_date: string
+          p_city: string | null
+          p_duplicate_confirmed: boolean
+          p_first_name: string
+          p_initial_email: string | null
+          p_initial_mobile: string | null
+          p_last_name: string
+          p_middle_name: string | null
+          p_postal_code: string | null
+          p_preferred_branch_id: string | null
+          p_preferred_name: string | null
+          p_province: string | null
+          p_sex_at_registration: string | null
+          p_suffix: string | null
+        }
+        Returns: {
+          patient_id: string
+          version: number
+        }[]
+      }
       fail_workforce_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
+      }
+      find_duplicate_candidates: {
+        Args: {
+          p_acting_branch_id: string
+          p_birth_date: string
+          p_first_name: string
+          p_initial_email?: string
+          p_initial_mobile?: string
+          p_last_name: string
+        }
+        Returns: Json
       }
       finalize_workforce_invitation: {
         Args: {

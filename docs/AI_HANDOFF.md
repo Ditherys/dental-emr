@@ -1,4 +1,4 @@
-# AI Handoff — P2-03 accepted; P2-04 patient creation authorized
+# AI Handoff — P2-04 patient creation ready for review
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -7,8 +7,9 @@
 
 - P2-03 is accepted by the project owner following local verification and a
   follow-up schema/RLS review with no material findings.
-- Next authorized work: `P2-04 — Transactional patient creation and duplicate
-  warning` on
+- P2-04 implementation is ready for its mandatory independent security and
+  concurrency review. Do not begin the create UI until the review is accepted.
+- Active work: `P2-04 — Transactional patient creation and duplicate warning` on
   branch `feat/p2-03-patient-contacts` in
   `.worktrees/p2-03-patient-contacts`, based on merged `main` `875695b`.
 - Implementation is ready for the required independent schema/RLS review. Do
@@ -17,7 +18,20 @@
   is the checkpoint database; guarded Cloud TEST remains deferred to P2-12
   closeout and before production.
 
-## Implementation summary
+## P2-04 implementation summary
+
+- Added a private organization-scoped patient-number counter and narrow
+  `find_duplicate_candidates` and `create_patient` SECURITY DEFINER RPCs.
+  The RPCs derive the actor from `auth.uid()` and tenant from an authorized
+  acting branch, acquire an organization-scoped transaction advisory lock, rerun
+  exact duplicate signals, allocate the counter, create initial contacts, and
+  append an opaque audit event atomically.
+- Added an exact authenticated-only grant terminal. Patient tables, counters,
+  helpers, and the RPCs remain inaccessible to `service_role`.
+- Added shared patient creation schemas, DTOs, RPC adapter/error mapping,
+  generated RPC declarations, pgTAP workflow coverage, and focused Vitest tests.
+
+## P2-03 implementation summary
 
 - Added `20260825010000_patient_contacts_relationships.sql` only. It creates
   `patient_contacts` and `patient_relationships`, with composite patient FKs,

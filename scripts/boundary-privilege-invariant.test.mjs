@@ -100,6 +100,8 @@ const APPROVED_FINAL_PRIVILEGES = [
     "private.has_branch_permission(uuid, text)",
     "private.is_own_organization_member(uuid)",
     "private.has_shared_patient_permission(uuid, text)",
+    "public.find_duplicate_candidates(uuid, text, text, date, text, text)",
+    "public.create_patient(uuid, text, text, text, text, text, date, text, text, text, text, text, text, uuid, text, text, boolean)",
     "public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)",
     "public.set_role_permission(uuid, text, boolean)",
     "public.set_member_role(uuid, uuid, uuid, boolean)",
@@ -1171,7 +1173,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(25);
+    expect(approved.size).toBe(27);
   });
 });
 
