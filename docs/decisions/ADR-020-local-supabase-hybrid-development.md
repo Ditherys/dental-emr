@@ -1,9 +1,13 @@
 # ADR-020 — Optional local Supabase with mandatory Cloud TEST acceptance
 
-**Status:** Proposed  
-**Date:** 2026-08-24  
-**Decision owner:** Project owner  
-**Supersedes in part:** [ADR-016](ADR-016-supabase-cloud-first-development.md)  
+**Status:** Accepted
+
+**Date:** 2026-08-24
+
+**Decision owner:** Project owner
+
+**Supersedes in part:** [ADR-016](ADR-016-supabase-cloud-first-development.md)
+
 **Related:** [ADR-017](ADR-017-phase1-secure-migration-baseline.md), [ADR-018](ADR-018-nonproduction-database-test-tooling.md), `TECHNICAL_ARCHITECTURE.md`, `DATABASE_DESIGN.md`, `SECURITY_ARCHITECTURE.md`, `plans/002-patient-foundation.md`
 
 ## Context
