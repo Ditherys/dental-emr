@@ -115,16 +115,19 @@ export function assertLocalDockerRuntime({ context, endpoint, project }) {
 }
 
 export function resolveLocalDockerEnvironment(environment) {
-  const sanitized = { ...environment };
-
-  for (const name of [
+  const blocked = new Set([
     "DOCKER_HOST",
     "DOCKER_TLS",
     "DOCKER_TLS_VERIFY",
     "DOCKER_CERT_PATH",
     "DOCKER_CONFIG",
-  ]) {
-    delete sanitized[name];
+  ]);
+  const sanitized = {};
+
+  for (const [name, value] of Object.entries(environment)) {
+    if (!blocked.has(name.toUpperCase())) {
+      sanitized[name] = value;
+    }
   }
 
   sanitized.DOCKER_CONTEXT = "desktop-linux";

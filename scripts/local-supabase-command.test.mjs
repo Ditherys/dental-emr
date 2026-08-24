@@ -126,6 +126,8 @@ describe("local Supabase command allowlist", () => {
       DOCKER_TLS_VERIFY: "1",
       DOCKER_CERT_PATH: "C:/certs",
       DOCKER_CONFIG: "C:/untrusted-config",
+      docker_host: "tcp://lowercase.example.test:2376",
+      Docker_Tls_Verify: "1",
     });
 
     expect(environment).toMatchObject({ PATH: "C:/tools", DOCKER_CONTEXT: "desktop-linux" });
@@ -133,6 +135,8 @@ describe("local Supabase command allowlist", () => {
     expect(environment).not.toHaveProperty("DOCKER_TLS_VERIFY");
     expect(environment).not.toHaveProperty("DOCKER_CERT_PATH");
     expect(environment).not.toHaveProperty("DOCKER_CONFIG");
+    expect(environment).not.toHaveProperty("docker_host");
+    expect(environment).not.toHaveProperty("Docker_Tls_Verify");
   });
 
   it("requires the provisioning success sentinel", () => {
