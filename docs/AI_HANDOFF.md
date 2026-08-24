@@ -12,6 +12,20 @@ and no patient-table grants. Its sole new browser-role privilege is execution of
 the private RLS helper required to evaluate the stored policy; private schema
 usage remains revoked.
 
+The implementation checkpoint is `c521ba6`; GitHub Actions run
+[`32682664779`](https://github.com/Ditherys/dental-emr/actions/runs/32682664779)
+passed application verification and guarded Cloud TEST database/E2E verification
+on that commit. CodeQL run
+[`32682664831`](https://github.com/Ditherys/dental-emr/actions/runs/32682664831)
+and dependency-review run
+[`32682664873`](https://github.com/Ditherys/dental-emr/actions/runs/32682664873)
+also passed. Cloud TEST reconciled the authoritative 13-migration history, ran
+all nine pgTAP suites including `patient_identity.test.sql`, confirmed generated
+types, schema lint, hosted Auth posture, and security advisors, then passed
+Playwright **55/55** across Chromium and WebKit. The temporary exact PR merge-ref
+environment policy was removed immediately after the run; `cloud-test` again
+allows only `main`.
+
 The designated Cloud TEST schema generated the committed TypeScript database
 declarations for every patient column, nullable `audit_events.patient_id`, and
 the tenant-safe patient/branch/audit relationships. Fresh local verification
