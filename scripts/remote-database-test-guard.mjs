@@ -62,6 +62,16 @@ const CI_DATABASE_COMMANDS = Object.freeze({
   ],
 });
 
+const PROVISIONING_SENTINEL_COMMAND = Object.freeze([
+  "db",
+  "query",
+  "--linked",
+  "--output-format",
+  "json",
+  "--file",
+  "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
+]);
+
 /**
  * The pgTAP suites the remote runner executes, in execution order.
  *
@@ -155,6 +165,16 @@ export function resolveCiDatabaseCommand(commandName) {
 
   const command = CI_DATABASE_COMMANDS[commandName];
   return [...command];
+}
+
+export function resolveCiDatabaseCommands(commandName) {
+  const command = resolveCiDatabaseCommand(commandName);
+
+  if (commandName !== "db-provision-test-tooling") {
+    return [command];
+  }
+
+  return [command, [...PROVISIONING_SENTINEL_COMMAND]];
 }
 
 export function resolveCommandResultSentinel(commandName) {

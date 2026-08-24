@@ -1,28 +1,36 @@
 # Environment Separation Runbook
 
-This runbook implements P1-16. It preserves three distinct cloud data
-boundaries and does not authorize a local Supabase runtime:
+This runbook implements P1-16 and ADR-020. It preserves distinct hosted data
+boundaries while permitting an optional disposable local Supabase feedback
+environment:
 
 ```text
-developer workstation + Supabase Cloud DEV
-Vercel Preview/Staging + Supabase Cloud TEST
+developer workstation + optional local Supabase feedback
+Supabase Cloud DEV
+Vercel Preview/test target + Supabase Cloud TEST
+future separately approved staging + separate Supabase staging project
 Vercel Production + Supabase Cloud PRODUCTION (created later)
 ```
 
-Development and test/staging contain synthetic or formally de-identified data
-only. Production may contain real patient data only after the production gates
-in `docs/SECURITY_ARCHITECTURE.md` are satisfied. File/media work must later use
+Local Supabase and Cloud TEST contain deterministic synthetic data only. Never
+load production-derived or de-identified patient, clinical, financial, or
+workforce data into either target. Cloud DEV also uses synthetic data only. A
+future staging environment may use formally de-identified data only in a
+separate project after documented approval and validation of the anonymization
+controls; it must not share Cloud TEST data or credentials. Production may
+contain real patient data only after the production gates in
+`docs/SECURITY_ARCHITECTURE.md` are satisfied. File/media work must later use
 separate non-production and production R2 boundaries under ADR-005.
 
 ## Required application variables
 
-| Variable | Browser-visible | Development | Preview / staging | Production |
+| Variable | Browser-visible | Development | Preview / Cloud TEST | Production |
 | --- | --- | --- | --- | --- |
 | `APP_ENVIRONMENT` | No | `development` | `test` | `production` |
 | `SUPABASE_PROJECT_ID` | No | Cloud DEV project ref | Cloud TEST project ref | Cloud PRODUCTION project ref |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Cloud DEV URL | Cloud TEST URL | Cloud PRODUCTION URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Cloud DEV key | Cloud TEST key | Cloud PRODUCTION key |
-| `APP_URL` | No | local origin | stable test/staging origin | production origin |
+| `APP_URL` | No | local origin | stable test origin | production origin |
 | `SUPABASE_SECRET_KEY` | No | Cloud DEV secret, only when required | Cloud TEST secret, only when required | production-only secret, configured later |
 
 `SUPABASE_PROJECT_ID` must match the project reference in
@@ -37,13 +45,16 @@ bypasses RLS and must remain server-only.
 2. Create each variable at project scope for exactly one Vercel environment at
    a time. Do not select both Preview and Production for any Supabase credential
    or project identifier.
-3. Assign only Cloud TEST values to Preview or a custom staging environment.
+3. Assign only Cloud TEST values to Preview or a custom test environment.
    Custom Vercel targets are treated as `test` by the application guard.
-4. Mark `SUPABASE_SECRET_KEY` sensitive in Preview and Production. Omit it from
+4. A future staging deployment that is approved to use formally de-identified
+   data must use its own Vercel target, Supabase project, credentials, and
+   documented anonymization controls. It must not reuse Cloud TEST.
+5. Mark `SUPABASE_SECRET_KEY` sensitive in Preview and Production. Omit it from
    Preview unless a server-only workflow that needs it is being validated.
-5. Do not create or configure production Supabase/R2 credentials during Phase 1.
+6. Do not create or configure production Supabase/R2 credentials during Phase 1.
    When production hardening begins, add them to Vercel Production only.
-6. Redeploy after changing variables; existing deployments retain their prior
+7. Redeploy after changing variables; existing deployments retain their prior
    environment values.
 
 Vercel documents environment-specific variables and the system target values in
@@ -55,7 +66,7 @@ and [system environment variable reference](https://vercel.com/docs/environment-
 `next.config.ts` validates the environment before a Next.js build can complete:
 
 - local/development configuration must identify itself as `development`;
-- a Vercel Preview or custom target must use `APP_ENVIRONMENT=test`;
+- a Vercel Preview or custom test target must use `APP_ENVIRONMENT=test`;
 - Vercel Production must use `APP_ENVIRONMENT=production`;
 - production configuration is rejected outside verified Vercel Production;
 - the Supabase URL must be the exact HTTPS Cloud origin for

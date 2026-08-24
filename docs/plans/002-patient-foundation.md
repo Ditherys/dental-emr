@@ -1032,7 +1032,7 @@ duplicating contact sources.
 
 ### Preconditions
 
-`P2-02` approved and applied to Cloud TEST.
+`P2-02` approved with required local verification and dedicated review.
 
 ### Scope
 
@@ -1773,14 +1773,17 @@ P2-01 through P2-11 ───────────── P2-12 integrated clo
 3. The final migration of each set contains only reviewed grants and is added to
    `scripts/approved-final-grants.mjs` with exact signatures and reasons.
 4. Run static migration privilege lint before any remote write.
-5. Preview and apply only to verified Cloud TEST first. DEV application follows
-   the existing guarded workflow after review; Git remains authoritative.
-6. Regenerate `src/types/database.generated.ts` from the hosted schema and check
-   the committed result in CI.
-7. Schema lint, advisors, pgTAP, and app tests must pass on the same composed
-   migration state.
-8. Never use Dashboard-first SQL, direct MCP-only schema changes, local Docker
-   Supabase, linked reset/reseed, or a production target.
+5. During P2-01 through P2-11, apply and verify each migration only in the
+   guarded disposable local stack. At P2-12 closeout, preview and apply the
+   composed chain to verified Cloud TEST; Git remains authoritative.
+6. Regenerate `src/types/database.generated.ts` from the hosted schema at P2-12
+   and check the committed result in CI.
+7. Local schema lint, pgTAP, and app tests must pass for every checkpoint; at
+   P2-12, Cloud TEST advisors and E2E must pass on the same composed state.
+8. Never use Dashboard-first SQL, direct MCP-only schema changes, an unguarded
+   local database target, linked reset/reseed, or a production target. Local
+   Supabase verification must follow ADR-020; it does not replace the required
+   Cloud TEST run at P2-12 closeout or before production.
 
 # 9. Test strategy
 
@@ -1931,7 +1934,7 @@ their roadmap phases. Do not assume all are part of the next phase.
   `node_modules/next/dist/docs/` before code.
 - Use test-first implementation for every feature/bugfix task.
 - Apply database/RLS changes and their negative tests together.
-- Verify Cloud TEST identity before any remote write; never use real data.
+- Verify Cloud TEST identity before any deferred remote write; never use real data.
 - Update `docs/AI_HANDOFF.md` after each checkpoint with exact commit, tests,
   remaining risks, and next approved task.
 - Stop for conflicts, weakened isolation, destructive migrations, production
@@ -1942,7 +1945,7 @@ their roadmap phases. Do not assume all are part of the next phase.
 # 16. Phase 2 completion criteria
 
 Phase 2 is complete only when `P2-00` through `P2-12` are accepted, all required
-local and Cloud TEST checks pass on the same published checkpoint, migrations and
+local checks and the final Cloud TEST checks pass on the same published checkpoint, migrations and
 generated types match, independent review has no unresolved material finding,
 manual responsive/accessibility/security QA is recorded, the handoff is current,
 and a separate human acceptance decision is recorded. It must still be described

@@ -320,9 +320,14 @@ If error monitoring is added, implement scrubbing/redaction before production.
 
 ## 3.5 No real patient data in development
 
-Development, tests, screenshots, demo videos, prompts, and agent sessions use synthetic data only.
+Local Supabase, Cloud DEV, Cloud TEST, tests, screenshots, demo videos,
+prompts, and agent sessions use deterministic synthetic data only. Never load
+production-derived or de-identified patient, clinical, financial, or workforce
+data into local Supabase or Cloud TEST.
 
-Staging should use synthetic or properly de-identified data unless a formally approved exception exists.
+A future staging environment may use formally de-identified data only in a
+separate project after documented approval and validation of the anonymization
+controls. It must not share Cloud TEST data or credentials.
 
 ---
 
@@ -1725,13 +1730,16 @@ Forbidden:
 
 ## 18.2 Environment separation
 
-Production, preview/staging, and development use separate credentials.
+Production, Preview/Cloud TEST, any future separately approved staging, and
+development use separate credentials.
 
 Strong recommendation:
 
-- separate Supabase Cloud projects for development/test/staging and production;
-- no local Supabase database is part of the approved workflow; persistent application data must not be stored on the developer workstation;
-- cloud development/test projects use synthetic or formally de-identified data only;
+- separate Supabase Cloud projects for development, Cloud TEST, any future separately approved staging, and production;
+- an optional disposable local Supabase stack may contain deterministic synthetic fixtures only; it is never a backup, staging, or production-data environment;
+- guarded Supabase Cloud TEST verification remains mandatory before database-bearing work is accepted;
+- Cloud DEV and Cloud TEST use deterministic synthetic data only and never receive production-derived or de-identified patient, clinical, financial, or workforce data;
+- any future staging environment that uses formally de-identified data must be a separate project with documented approval and validated anonymization controls, and must not share Cloud TEST data or credentials;
 - separate R2 buckets/credentials;
 - separate OAuth callback/environment registrations where practical;
 - test SMS/email provider keys in non-prod;
@@ -2883,7 +2891,7 @@ The following are now architecture decisions unless superseded by an approved AD
 18. Application logs must be redacted and must not become a secondary clinical-record store.
 19. Backups are layered; ordinary clinic staff do not manually download raw production backups as the primary strategy.
 20. Restore tests are required.
-21. Development/staging use synthetic/de-identified data and separate credentials from production.
+21. Local Supabase, Cloud DEV, and Cloud TEST use deterministic synthetic data only; any future staging use of formally de-identified data requires a separate project, documented approval, and validated anonymization controls.
 22. AI coding agents receive no real patient data or production secrets.
 23. OWASP ASVS 5.0 is the secure-development verification baseline.
 24. A formal PIA/security/privacy review is required before real-patient production deployment.
@@ -2964,7 +2972,7 @@ Do not create all of these before coding if they are empty boilerplate. Create t
 
 The project is **not ready for real patient records** unless all of the following are true:
 
-- [ ] production Supabase Cloud project separated from cloud dev/test/staging;
+- [ ] production Supabase Cloud project separated from Cloud DEV, Cloud TEST, and any future separately approved staging project;
 - [ ] production R2 clinical bucket private;
 - [ ] RLS enabled and tested on every exposed tenant table;
 - [ ] cross-tenant automated tests pass;

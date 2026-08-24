@@ -4,7 +4,7 @@
 **Date:** 2026-08-13
 **Decision owner:** Project owner
 **Resolves:** the pgTAP open decision recorded in [ADR-017](ADR-017-phase1-secure-migration-baseline.md) § "pgTAP: recorded, not silently decided"
-**Related:** [ADR-016](ADR-016-supabase-cloud-first-development.md), `supabase/MIGRATION_FREEZE.md`, `docs/deployment/CLOUD_TEST_PROVISIONING.md`
+**Related:** [ADR-016](ADR-016-supabase-cloud-first-development.md), [ADR-020](ADR-020-local-supabase-hybrid-development.md), `docs/deployment/CLOUD_TEST_PROVISIONING.md`
 
 ## Context
 
@@ -31,17 +31,40 @@ ADR-017 recommended (c) and deferred it to the production-bootstrap gate. Two th
 
 `supabase/provisioning/nonproduction/001_database_test_tooling.sql` installs pgTAP. It is deliberately outside the migrations directory, so `supabase db push` cannot apply it and it can never enter a production replay by accident.
 
-### 3. Applying it is guarded exactly like every other remote write
+ADR-020 does not move pgTAP into the canonical baseline. Local Supabase and
+Cloud TEST both install the same file through two exclusive guarded paths:
 
-It is reachable only through `npm run db:provision:test`, which routes to the existing guarded runner and therefore inherits every Cloud TEST target check: `APP_ENVIRONMENT=test`, `SUPABASE_PROJECT_ID` equal to `SUPABASE_TEST_PROJECT_ID`, the linked project equal to that reference, the TEST reference distinct from both `SUPABASE_DEV_PROJECT_ID` and `SUPABASE_PRODUCTION_PROJECT_ID`, and `DATABASE_TEST_CONFIRMATION`.
+- local provisioning is supported only through `npm run db:provision:local`;
+  its local-only command adapter constructs `db query --local` and does not read
+  a linked project reference or hosted credential;
+- Cloud TEST provisioning is supported only through
+  `npm run db:provision:test`; it retains the remote target guard described
+  below.
 
-It is additionally registered as a **migration-applying** command, so while the R6 freeze is active it also requires the scoped `MIGRATION_FREEZE_ACK` / `MIGRATION_FREEZE_ACK_COMMAND` acknowledgement. It changes database state; it is treated as such.
+Neither command may substitute for the other, and there is no supported direct
+provisioning path.
+
+### 3. Remote application retains the Cloud TEST guard
+
+For Cloud TEST, the provisioning file is reachable only through `npm run db:provision:test`, which routes to the existing guarded runner and therefore inherits every Cloud TEST target check: `APP_ENVIRONMENT=test`, `SUPABASE_PROJECT_ID` equal to `SUPABASE_TEST_PROJECT_ID`, the linked project equal to that reference, the TEST reference distinct from both `SUPABASE_DEV_PROJECT_ID` and `SUPABASE_PRODUCTION_PROJECT_ID`, and `DATABASE_TEST_CONFIRMATION`.
+
+At R6-C1, this remote command was also classified as
+**migration-applying** under the then-active R6 migration freeze and required a
+scoped acknowledgement. That requirement is historical and ended through the
+approved R6-F procedure; the current remote command contract relies on the
+Cloud TEST target guard.
 
 The step asserts a `P1_PROVISION_PASS` sentinel over the live catalog, so a skipped or partially applied run cannot pass merely because the CLI exited zero.
 
 ### 4. DEV is not modified
 
-DEV already carries pgTAP from the superseded chain. Removing it from DEV would be a schema change to a non-disposable project for cosmetic parity, and the freeze forbids exactly that. DEV keeps it. A newly provisioned TEST project receives it through the provisioning step, so DEV and TEST remain equivalent in the property R6-E compares.
+At R6-C1, DEV already carried pgTAP from the superseded chain. Removing it from
+DEV would have been a schema change to a non-disposable project for cosmetic
+parity, which the then-active migration freeze forbade. DEV therefore kept it.
+A newly provisioned TEST project received it through the provisioning step, so
+DEV and TEST remained equivalent in the property R6-E compared. This paragraph
+records that historical checkpoint; it does not define the current local or
+Cloud TEST command paths.
 
 ### 5. The rule is enforced, not documented
 
@@ -71,7 +94,7 @@ Previously the "the TEST project must differ from DEV" check was skipped when th
 ## Verification
 
 - `npm run security:migrations` — passes with the empty extension list; the baseline parses to 0 extensions, 11 tables, 27 functions, 11 policies.
-- Unit tests assert the empty list, the rejection of a reintroduced pgTAP migration, the provisioning command's exact argument vector, its inclusion in the freeze-refused set, its success sentinel, and the mandatory `SUPABASE_DEV_PROJECT_ID`.
+- At R6-C1, unit tests asserted the empty list, the rejection of a reintroduced pgTAP migration, the provisioning command's exact argument vector, its inclusion in the then-active freeze-refused set, its success sentinel, and the mandatory `SUPABASE_DEV_PROJECT_ID`.
 - **Verified against a database.** The provisioning SQL executed successfully as part of R6-C against TEST-01 (2026-08-14, `P1_PROVISION_PASS`; see `docs/evidence/R6C-R6E-test01.md`) and again during the R6-D checkpoints against TEST-02 (see `docs/AI_HANDOFF.md`).
 
 ## Independent review
@@ -80,5 +103,5 @@ Codex was unavailable at this checkpoint. No independent review has occurred. A 
 
 1. that no path can apply `supabase/provisioning/` content to a production-shaped project;
 2. that removing pgTAP from the baseline does not break any suite that assumed the extension was created by a migration;
-3. that treating the provisioning step as migration-applying is the correct freeze classification;
+3. that treating the provisioning step as migration-applying was the correct R6-C1 freeze classification;
 4. that the mandatory `SUPABASE_DEV_PROJECT_ID` did not break a legitimate CI path.

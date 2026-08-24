@@ -180,8 +180,8 @@ Frontend libraries are interaction/rendering adapters, not domain models. Schedu
 ## 2.3 Database and backend platform
 
 - **PostgreSQL** managed by **Supabase Cloud**
-- development, test/staging, and production use separate hosted Supabase project boundaries as required by the environment strategy
-- the project intentionally does **not** run a local Supabase database; Next.js may run on the developer workstation while persistent application data remains cloud-hosted
+- developers may optionally run a disposable, synthetic-only local Supabase stack for fast migration, RLS, and pgTAP feedback; guarded Cloud TEST remains the mandatory acceptance environment under ADR-020
+- hosted development, Cloud TEST, any future separately approved staging, and production continue to use separate Supabase project boundaries; local success never substitutes for hosted acceptance
 - PostgreSQL constraints and transactions are used for data integrity
 - Supabase managed platform is used where appropriate for Auth, database operations, realtime capabilities if justified, and platform tooling
 - schema changes remain Git-managed migrations even though runtime databases are hosted
@@ -272,7 +272,7 @@ Keep a small application media adapter between domain/UI code and Cloudflare-spe
 ## 2.8 Hosting
 
 - **Vercel** for Next.js deployment
-- production, preview/staging, and developer/cloud-development environments must be distinct
+- production, Preview/Cloud TEST, any future separately approved staging, and developer/cloud-development environments must be distinct
 - secrets/environment variables must be environment-scoped
 
 ## 2.9 External integrations
@@ -2152,20 +2152,24 @@ Never send full clinical notes, patient file contents, OAuth tokens, passwords, 
 At minimum:
 
 ```text
-DEVELOPER WORKSTATION + SUPABASE CLOUD DEV
-CLOUD TEST / STAGING / PREVIEW
+DEVELOPER WORKSTATION + OPTIONAL LOCAL SUPABASE FEEDBACK
+SUPABASE CLOUD DEV
+CLOUD TEST / PREVIEW
+FUTURE SEPARATE STAGING (ONLY AFTER FORMAL APPROVAL)
 PRODUCTION
 ```
 
 Rules:
 
-- Next.js may run locally, but persistent structured application data is hosted in the Supabase Cloud DEV project;
-- development uses synthetic patient data only;
-- automated destructive database tests should target a dedicated disposable cloud TEST project/environment rather than the interactive DEV database when practical;
-- staging never uses copied production PHI unless a formally approved anonymization process exists;
+- Next.js and an optional disposable local Supabase stack may run on the developer workstation; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
+- canonical persistent structured data for DEV, Cloud TEST, any future separately approved staging, and production is hosted in separate Supabase Cloud projects;
+- Cloud DEV and Cloud TEST use deterministic synthetic data only; neither accepts production-derived or de-identified patient, clinical, financial, or workforce data;
+- Git migrations remain authoritative across local and hosted targets, and guarded Cloud TEST verification is mandatory before database-bearing work is accepted;
+- automated destructive database tests use the dedicated disposable Cloud TEST project for acceptance rather than the interactive DEV database;
+- a future staging environment may use formally de-identified data only in a separate project after documented approval and validation of the anonymization controls; it must not share Cloud TEST data or credentials;
 - production uses a separate Supabase Cloud project;
 - future file/media environments use separate R2 buckets/prefix boundaries/credentials;
-- no persistent patient/application data is stored on the developer workstation;
+- no real, copied-production, or canonical patient/application data is stored on the developer workstation; ADR-020 permits only disposable synthetic local data;
 - separate OAuth redirect configurations;
 - separate SMS/email test behavior;
 - production secrets are not available to development agents by default.
@@ -2370,10 +2374,11 @@ ADR-002 — Organization/branch tenancy                           [reserved by P
 ADR-003 — Authorization defense in depth                        [reserved by Phase 1]
 ADR-004 — Single Next.js repo for public website + private EMR [reserved by Phase 1]
 ADR-005 — Cloudflare R2 canonical storage + Workers/Images media pipeline [accepted]
-ADR-016 — Supabase Cloud-first development; no local Supabase runtime      [accepted]
+ADR-016 — Supabase Cloud-first development; local prohibition superseded      [superseded in part]
 ADR-017 — Phase 1 secure migration baseline and grant-last invariant       [accepted]
 ADR-018 — Nonproduction database test tooling per environment              [accepted]
 ADR-019 — Bounded fixed patient-role delegation                            [accepted]
+ADR-020 — Optional local Supabase; mandatory Cloud TEST acceptance            [accepted]
 ```
 
 `ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Prefer `ADR-020` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.

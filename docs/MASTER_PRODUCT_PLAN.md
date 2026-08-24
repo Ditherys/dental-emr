@@ -3300,13 +3300,18 @@ Before production:
 
 ## 41.1 Environments
 
-Use separate cloud data environments:
+Use separate hosted canonical data environments, with optional local feedback:
 
-- **developer workstation + Supabase Cloud DEV** — Next.js may run locally, but persistent application data remains cloud-hosted and synthetic only;
-- **Supabase Cloud TEST / staging** — separate non-production environment for destructive database/security tests and pre-production validation when needed;
+- **developer workstation + optional local Supabase** — Next.js and a disposable local stack may run locally for fast feedback using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup;
+- **Supabase Cloud DEV** — hosted shared development environment with synthetic data only;
+- **Supabase Cloud TEST / preview** — separate hosted non-production environment with deterministic synthetic data only for destructive database/security tests and mandatory database-bearing checkpoint acceptance;
+- **future staging** — if separately approved, uses its own Supabase project and may use formally de-identified data only after documented approval and validation of anonymization controls; it must not share Cloud TEST data or credentials;
 - **production** — separate Supabase Cloud project and separate Cloudflare R2 production boundary, created/hardened only before real-patient deployment.
 
-The project intentionally does not use a local Supabase database. Do not develop directly against production patient data, and do not persist patient/application data on the developer workstation.
+Git migrations remain authoritative across local and hosted targets. Optional
+local success is feedback only and never replaces guarded Cloud TEST acceptance.
+Do not develop directly against production patient data or copy real patient or
+application data to a developer workstation.
 
 ## 41.2 Synthetic data only for agents
 
@@ -3578,7 +3583,7 @@ the repository's checkpoint IDs one-for-one.
 - clean clone can be set up from README;
 - CI runs lint/typecheck/tests;
 - no secrets in repository;
-- cloud dev/test/staging environment boundaries documented;
+- Cloud DEV, Cloud TEST, any future separately approved staging, and production environment boundaries documented;
 - agent instructions point to master plan.
 
 ---
@@ -4966,10 +4971,11 @@ ADR-002: Organization/branch tenancy                           [reserved by Phas
 ADR-003: Authorization defense in depth                        [reserved by Phase 1]
 ADR-004: Single Next.js repo for public website + private EMR [reserved by Phase 1]
 ADR-005: Cloudflare R2 canonical storage + Workers/Images media pipeline [accepted]
-ADR-016: Supabase Cloud-first development; no local Supabase runtime      [accepted]
+ADR-016: Supabase Cloud-first development; local prohibition superseded      [superseded in part]
 ADR-017: Phase 1 secure migration baseline and grant-last invariant       [accepted]
 ADR-018: Nonproduction database test tooling per environment              [accepted]
 ADR-019: Bounded fixed patient-role delegation                            [accepted]
+ADR-020: Optional local Supabase; mandatory Cloud TEST acceptance            [accepted]
 ```
 
 Numbers `ADR-006` through `ADR-015` are intentionally unassigned in the current repository. Future ADRs should be assigned **when the ADR file is actually created**, not pre-numbered here. Prefer `ADR-020` and above for new decisions unless a deliberate reconciliation explicitly fills an earlier gap.

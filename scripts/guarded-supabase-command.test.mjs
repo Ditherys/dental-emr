@@ -4,7 +4,10 @@ import {
   assertMigrationFreezeAllows,
   MIGRATION_FREEZE_ACK,
   resolveCiDatabaseCommand,
+  resolveCiDatabaseCommands,
+  resolveCommandResultSentinel,
 } from "./remote-database-test-guard.mjs";
+import { runGuardedSupabaseCommands } from "./guarded-supabase-command-runner.mjs";
 
 describe("guarded Supabase command", () => {
   it("rejects commands outside the explicit CI allowlist", () => {
@@ -34,6 +37,65 @@ describe("guarded Supabase command", () => {
 });
 
 describe("non-production provisioning command (R6-C1)", () => {
+  it("runs extension installation then parses only the separate completion query", () => {
+    const commands = resolveCiDatabaseCommands("db-provision-test-tooling");
+    const executed = [];
+    const parsed = [];
+
+    runGuardedSupabaseCommands({
+      commandName: "db-provision-test-tooling",
+      commands,
+      sentinel: resolveCommandResultSentinel("db-provision-test-tooling"),
+      execute(command, capturesSentinel) {
+        executed.push({ command, capturesSentinel });
+        return {
+          error: null,
+          status: 0,
+          stdout: capturesSentinel
+            ? JSON.stringify({
+                rows: [{ p1_provision_result: "P1_PROVISION_PASS" }],
+              })
+            : JSON.stringify({ rows: [] }),
+        };
+      },
+      parse(output) {
+        parsed.push(output);
+      },
+    });
+
+    expect(executed).toEqual([
+      {
+        command: [
+          "db",
+          "query",
+          "--linked",
+          "--output-format",
+          "json",
+          "--file",
+          "supabase/provisioning/nonproduction/001_database_test_tooling.sql",
+        ],
+        capturesSentinel: false,
+      },
+      {
+        command: [
+          "db",
+          "query",
+          "--linked",
+          "--output-format",
+          "json",
+          "--file",
+          "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
+        ],
+        capturesSentinel: true,
+      },
+    ]);
+    expect(parsed).toEqual([
+      JSON.stringify({
+        rows: [{ p1_provision_result: "P1_PROVISION_PASS" }],
+      }),
+    ]);
+  });
+
   it("targets only the non-migration provisioning file, through the linked project", () => {
     expect(resolveCiDatabaseCommand("db-provision-test-tooling")).toEqual([
       "db",

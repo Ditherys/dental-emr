@@ -5,12 +5,12 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertMigrationFreezeAllows,
-  parseSupabaseQueryResult,
   readLinkedProjectId,
-  resolveCiDatabaseCommand,
+  resolveCiDatabaseCommands,
   resolveCommandResultSentinel,
   validateRemoteDatabaseTestEnvironment,
 } from "./remote-database-test-guard.mjs";
+import { runGuardedSupabaseCommands } from "./guarded-supabase-command-runner.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -40,7 +40,7 @@ function fail(message) {
 
 try {
   const commandName = process.argv[2];
-  const command = resolveCiDatabaseCommand(commandName);
+  const commands = resolveCiDatabaseCommands(commandName);
 
   const freezeWarnings = assertMigrationFreezeAllows(
     commandName,
@@ -69,25 +69,30 @@ try {
 
   const sentinel = resolveCommandResultSentinel(commandName);
 
-  const result = spawnSync(process.execPath, [supabaseCli, ...command], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    env: process.env,
-    maxBuffer: 16 * 1024 * 1024,
-    // A sentinel-checked command's stdout must be captured to be asserted on.
-    stdio: sentinel ? ["inherit", "pipe", "inherit"] : "inherit",
+  const outcome = runGuardedSupabaseCommands({
+    commandName,
+    commands,
+    sentinel,
+    execute(command, capturesSentinel) {
+      return spawnSync(process.execPath, [supabaseCli, ...command], {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+        env: process.env,
+        maxBuffer: 16 * 1024 * 1024,
+        stdio: capturesSentinel ? ["inherit", "pipe", "inherit"] : "inherit",
+      });
+    },
   });
 
-  if (result.error) {
-    throw new Error("The pinned Supabase CLI could not start.");
+  if (outcome.error) {
+    throw new Error(outcome.error);
   }
 
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+  if (outcome.exitCode !== 0) {
+    process.exit(outcome.exitCode);
   }
 
   if (sentinel) {
-    parseSupabaseQueryResult(result.stdout ?? "", commandName, sentinel);
     console.log(`PASS ${commandName} (${sentinel.value})`);
   }
 } catch (error) {

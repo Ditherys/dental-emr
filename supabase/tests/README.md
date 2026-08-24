@@ -17,18 +17,37 @@ suspended mid-session, the invitation revocation lifecycle including cross-tenan
 revocation, and stale, downgraded, or absent AAL claims.
 
 These suites require pgTAP, which the canonical baseline deliberately does not
-install. Run `npm run db:provision:test` against the TEST project first — see
-[ADR-018](../../docs/decisions/ADR-018-nonproduction-database-test-tooling.md).
+install. Provision it separately in each non-production target under ADR-018.
 
-Remote tests must target an explicitly designated, disposable Supabase Cloud TEST
-project. Confirm the linked project before running them:
+## Optional local feedback
 
 ```powershell
-npx supabase projects list
-npx supabase migration list --linked
+npm run db:start:local
+npm run db:reset:local
+npm run db:provision:local
+npm run test:db:local
 ```
 
-The approved cloud-only workflow does not start a local Supabase/Docker stack.
+The local runner constructs only `db query --local` invocations. It never reads
+a linked project reference or hosted credential. Reset loads the committed
+synthetic seed and removes pgTAP, so provisioning must follow every reset.
+
+## Mandatory Cloud TEST acceptance
+
+Remote tests must target the explicitly designated disposable Cloud TEST
+project. Set the documented environment variables from the secret store, verify
+the link, and run:
+
+```powershell
+npm run ci:test-target
+npm run test:db:cloud
+```
+
+`test:db` remains the same Cloud TEST runner; `test:db:cloud` is only an explicit
+alias. The remote guard still verifies TEST identity, exact cloud URL, linked
+project reference, DEV/production exclusion, confirmation text, suite rollback
+boundaries, CLI status, and the completion sentinel.
+
 Set the following values in the current process from the environment's secret
 store; do not commit them or paste credential values into shell history:
 
@@ -42,18 +61,7 @@ DATABASE_TEST_CONFIRMATION=I_UNDERSTAND_THIS_IS_A_DISPOSABLE_CLOUD_TEST_PROJECT
 ```
 
 `SUPABASE_ACCESS_TOKEN` is also required when the CLI session is not already
-authenticated. The runner verifies the TEST identity, exact cloud URL, linked
-project reference, the mandatory DEV exclusion and optional production
-exclusion, transaction/rollback
-suite boundaries, CLI exit status, and an explicit pgTAP completion sentinel
-before accepting a suite:
-
-```powershell
-npm run test:db
-```
-
-Do not replace this command with `supabase test db`; that CLI path is for local
-Supabase containers and violates ADR-016 for this project.
+authenticated.
 
 The P1-12 seed fixture suite expects `supabase/seed.sql` to have been loaded
 first. The seed is idempotent, but loading it is an explicit remote write and
