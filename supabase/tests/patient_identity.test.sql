@@ -224,15 +224,115 @@ select extensions.throws_ok(
   'overlong patient names fail the named bounded-text invariant'
 );
 select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, preferred_name)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-PREFERRED-BLANK', 'Preferred', 'Bound', date '2000-01-01', ' ')$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_preferred_name_bounded_check"',
+  'blank preferred names fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, preferred_name)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-PREFERRED-LONG', 'Preferred', 'Bound', date '2000-01-01', repeat('x', 121))$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_preferred_name_bounded_check"',
+  'overlong preferred names fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, suffix)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SUFFIX-BLANK', 'Suffix', 'Bound', date '2000-01-01', ' ')$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_suffix_bounded_check"',
+  'blank suffixes fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, suffix)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SUFFIX-LONG', 'Suffix', 'Bound', date '2000-01-01', repeat('x', 41))$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_suffix_bounded_check"',
+  'overlong suffixes fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, address_line1)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-ADDRESS1-BLANK', 'Address', 'Bound', date '2000-01-01', ' ')$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_address_line1_bounded_check"',
+  'blank first address lines fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, address_line2)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-ADDRESS2-LONG', 'Address', 'Bound', date '2000-01-01', repeat('x', 161))$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_address_line2_bounded_check"',
+  'overlong second address lines fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, city)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-CITY-BLANK', 'City', 'Bound', date '2000-01-01', ' ')$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_city_bounded_check"',
+  'blank cities fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, province)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-PROVINCE-LONG', 'Province', 'Bound', date '2000-01-01', repeat('x', 101))$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_province_bounded_check"',
+  'overlong provinces fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, postal_code)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-POSTAL-BLANK', 'Postal', 'Bound', date '2000-01-01', ' ')$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_postal_code_bounded_check"',
+  'blank postal codes fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, postal_code)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-POSTAL-LONG', 'Postal', 'Bound', date '2000-01-01', repeat('x', 21))$$,
+  '23514',
+  'new row for relation "patients" violates check constraint "patients_postal_code_bounded_check"',
+  'overlong postal codes fail the named bounded-text invariant'
+);
+select extensions.throws_ok(
   $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date)
     values ('a2020000-0000-0000-0000-000000000001', 'P202-OLD', 'Old', 'Bound', date '1899-12-31')$$,
   '23514',
   'new row for relation "patients" violates check constraint "patients_birth_date_minimum_check"',
   'birth dates before 1900 fail the named lower-bound invariant'
 );
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-FEMALE', 'Sex', 'Female', date '2000-01-01', 'female')$$,
+  'female is an allowed registration sex'
+);
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-MALE', 'Sex', 'Male', date '2000-01-01', 'male')$$,
+  'male is an allowed registration sex'
+);
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-INTERSEX', 'Sex', 'Intersex', date '2000-01-01', 'intersex')$$,
+  'intersex is an allowed registration sex'
+);
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-UNKNOWN', 'Sex', 'Unknown', date '2000-01-01', 'unknown')$$,
+  'unknown is an allowed registration sex'
+);
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-NOT-RECORDED', 'Sex', 'Not Recorded', date '2000-01-01', 'not_recorded')$$,
+  'not_recorded is an allowed registration sex'
+);
+select extensions.lives_ok(
+  $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-NULL', 'Sex', 'Null', date '2000-01-01', null)$$,
+  'a null registration sex is allowed'
+);
 select extensions.throws_ok(
   $$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date, sex_at_registration)
-    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX', 'Sex', 'Bound', date '2000-01-01', 'invalid')$$,
+    values ('a2020000-0000-0000-0000-000000000001', 'P202-SEX-OTHER', 'Sex', 'Bound', date '2000-01-01', 'other')$$,
   '23514',
   'new row for relation "patients" violates check constraint "patients_sex_at_registration_check"',
   'registration sex is limited to the approved allowlist'
@@ -315,6 +415,13 @@ select extensions.throws_ok($$update public.patients set status = 'inactive' whe
 select extensions.throws_ok($$delete from public.patients where id = 'a2050000-0000-0000-0000-000000000001'$$, '42501', null, 'direct patient DELETE is privilege-denied');
 reset role;
 
+set local role anon;
+select extensions.throws_ok($$select * from public.patients$$, '42501', null, 'anon patient SELECT is privilege-denied before the test-only grant');
+select extensions.throws_ok($$insert into public.patients (organization_id, patient_number, first_name, last_name, birth_date) values ('a2020000-0000-0000-0000-000000000001', 'P202-ANON-I', 'Denied', 'Insert', date '2000-01-01')$$, '42501', null, 'anon patient INSERT is privilege-denied');
+select extensions.throws_ok($$update public.patients set status = 'inactive' where id = 'a2050000-0000-0000-0000-000000000001'$$, '42501', null, 'anon patient UPDATE is privilege-denied');
+select extensions.throws_ok($$delete from public.patients where id = 'a2050000-0000-0000-0000-000000000001'$$, '42501', null, 'anon patient DELETE is privilege-denied');
+reset role;
+
 -- This SELECT grant exists only to make the RLS policy independently testable.
 -- rollback removes it, so no committed browser table privilege is introduced.
 grant select on public.patients to authenticated;
@@ -364,10 +471,15 @@ select extensions.is((select count(*)::integer from public.patients), 0, 'archiv
 
 reset role;
 
+with test_failures as (
+  select finish
+  from extensions.finish()
+  where finish !~ '^1\.\.[0-9]+$'
+)
 select case
   when count(*) = 0 then 'P1_TEST_PASS'
   else 'P1_TEST_FAIL'
 end as p1_test_result
-from extensions.finish();
+from test_failures;
 
 rollback;
