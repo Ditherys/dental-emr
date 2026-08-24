@@ -4,7 +4,7 @@
 
 This is a disposable, synthetic-only feedback environment. It is not DEV,
 Cloud TEST, staging, production, or a backup. Git migrations are authoritative,
-and Cloud TEST remains mandatory before acceptance.
+and Cloud TEST remains mandatory at Phase 2 closeout and before production.
 
 ## Prerequisites on Windows
 
@@ -52,10 +52,12 @@ needed local URL and publishable key into the ignored `.env.local`; never commit
 the output. Do not copy a hosted secret key, database password, or project
 reference into the local workflow.
 
-## Mandatory hosted acceptance
+## Phase 2 closeout hosted acceptance
 
-Local success is not checkpoint acceptance. Against the explicitly designated
-Cloud TEST project, run the guarded commands documented in
+For P2-01 through P2-11, local verification plus dedicated review is the
+checkpoint gate. At P2-12 closeout and before production, run the guarded
+Cloud TEST workflow manually from GitHub Actions against the final branch
+commit, then use the guarded commands documented in
 [`supabase/tests/README.md`](../../supabase/tests/README.md):
 
 ```powershell

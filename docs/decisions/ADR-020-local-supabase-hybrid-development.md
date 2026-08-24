@@ -1,4 +1,4 @@
-# ADR-020 — Optional local Supabase with mandatory Cloud TEST acceptance
+# ADR-020 — Optional local Supabase with Phase 2 closeout Cloud TEST acceptance
 
 **Status:** Accepted
 
@@ -54,10 +54,12 @@ be explicit.
 
 Adopt **option C**.
 
-Local Supabase is an optional developer feedback environment. Cloud TEST remains
-the mandatory database acceptance environment. A task may be developed without
-the local stack, but it may not be accepted without the required guarded Cloud
-TEST checks.
+Local Supabase is the required database/RLS verification environment for each
+bounded Phase 2 checkpoint. Guarded Cloud TEST remains mandatory at Phase 2
+closeout (P2-12) and before production deployment, but is not a per-checkpoint
+acceptance requirement during Phase 2. A local pass is accepted only with the
+required review and all relevant local verification; it never authorizes
+production use.
 
 This decision supersedes only ADR-016's prohibition on a local Supabase runtime
 and local Docker requirement. ADR-016's Git-authoritative migrations, hosted
@@ -76,7 +78,7 @@ Developer workstation (optional fast loop)
                  │
                  │ same Git checkpoint
                  ▼
-Dedicated Supabase Cloud TEST (mandatory acceptance gate)
+Dedicated Supabase Cloud TEST (mandatory Phase 2 closeout/production gate)
 ├── guarded migration preview/apply
 ├── non-production pgTAP provisioning
 ├── database/RLS/concurrency tests
@@ -127,9 +129,10 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
 2. `test:db` remains the existing Cloud TEST runner for compatibility with CI.
    A `test:db:cloud` alias may be added for clarity, but it must invoke the same
    guarded path.
-3. Every database-bearing checkpoint must run its required migration, pgTAP,
-   RLS/authorization, concurrency, and schema checks against the dedicated Cloud
-   TEST project before acceptance.
+3. At P2-12 phase closeout and before production deployment, run the required
+   migration, pgTAP, RLS/authorization, concurrency, schema, Auth, security,
+   and E2E checks against the dedicated Cloud TEST project. During P2-01 through
+   P2-11, run the equivalent relevant local verification and dedicated review.
 4. Committed generated database types are produced or checked against the
    accepted hosted schema. Local type generation may be used as preview only and
    must not be the sole evidence for committed type changes.
@@ -142,8 +145,9 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
 - Git migration files remain the only authoritative application-schema history.
 - Dashboard SQL, local-only migration edits, MCP-only changes, and direct remote
   SQL side effects must not become sources of truth.
-- A change that passes locally but fails on Cloud TEST is not accepted; the
-  discrepancy must be diagnosed rather than bypassed.
+- A Phase 2 closeout or production candidate that passes locally but fails on
+  Cloud TEST is not accepted; the discrepancy must be diagnosed rather than
+  bypassed.
 - Local and Cloud TEST run the same committed migrations and database suites.
   Expected non-production differences, such as pgTAP, remain explicit.
 - Local reset is permitted because the target is disposable and guarded as
@@ -201,15 +205,15 @@ hosted acceptance environment are authoritative.
 
 1. Update the authoritative architecture, database, security, Phase 2, agent, and
    database-test documentation to reflect this decision without removing the
-   mandatory Cloud TEST gate.
+   Phase 2 closeout Cloud TEST gate.
 2. Replace the prohibition comment in `supabase/config.toml` with the local
    safety contract and verify its settings against the installed CLI version.
 3. Implement the explicit local commands and fail-closed local-target guard with
    unit tests.
 4. Reuse the existing non-production provisioning SQL and database suites.
 5. Validate a fresh local start/reset/provision/test cycle using synthetic data.
-6. Re-run the existing application verification and Cloud TEST workflow to prove
-   the new path did not weaken remote safety.
+6. Re-run the existing application verification and Cloud TEST workflow once to
+   prove the new path did not weaken remote safety.
 7. Record exact verification evidence in `docs/AI_HANDOFF.md` and obtain
    independent review before accepting the architecture/tooling checkpoint.
 8. Only after this checkpoint is accepted should the P2-03 plan be rebased or
@@ -222,8 +226,8 @@ hosted acceptance environment are authoritative.
   stronger.
 - A fresh local database reconstructs from committed migrations, explicit
   non-production provisioning, and synthetic seed data.
-- The same database suites pass locally and against Cloud TEST at the same Git
-  checkpoint.
+- At Phase 2 closeout, the same database suites pass locally and against Cloud
+  TEST at the same Git checkpoint.
 - Production-shaped migrations remain free of pgTAP and other test-only schema.
 - No real data, hosted secrets, or production identifiers are introduced.
 - Authoritative documents agree on the hybrid boundary.

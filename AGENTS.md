@@ -33,10 +33,12 @@ accepted. Current implementation authority is limited to the local Supabase
 hybrid tooling and documentation checkpoint described by ADR-020 and its
 implementation plan.
 
-Do NOT advance to P2-03 implementation until this architecture/tooling checkpoint
-is independently reviewed and accepted. P2-03 planning may be reconciled only
-after this checkpoint; all later Phase 2 scope remains ordered by
-`docs/plans/002-patient-foundation.md`.
+P2-03 implementation may begin after this architecture/tooling checkpoint has
+passed required local verification, dedicated review, and project-owner
+acceptance. During Phase 2, each bounded database/RLS checkpoint requires local
+verification and review; the guarded Cloud TEST run is required at P2-12 phase
+closeout and again before production deployment. All later scope remains ordered
+by `docs/plans/002-patient-foundation.md`.
 
 ## Codex Review Role
 
@@ -155,7 +157,8 @@ When clinical/media work begins, verify:
 Supabase MCP is acceptable only against explicitly designated hosted development/test projects for inspection and assisted implementation.
 
 - Optional local Supabase is permitted only through ADR-020's explicit local commands, with deterministic synthetic data and no hosted credentials.
-- Cloud TEST remains the mandatory database acceptance gate; local success is feedback only.
+- Cloud TEST remains mandatory at P2-12 closeout and before production; local
+  verification plus dedicated review is the P2-01 through P2-11 checkpoint gate.
 - Migration files in Git remain authoritative.
 - Do not leave schema changes existing only as MCP/direct SQL side effects.
 - Hosted development/test MCP access must be project-scoped; prefer read-only mode for inspection.

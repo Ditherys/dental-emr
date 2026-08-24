@@ -10,9 +10,9 @@
 - Implementation review target: `6459f15ff60c72a9140d96dee3878a70ce70ace1`.
   This handoff is committed after that target; reviewers should inspect the
   implementation target and this documentation commit together.
-- Scope: optional, disposable, synthetic-only local Supabase feedback with
-  Cloud TEST retained as the mandatory acceptance gate. No application schema
-  migration, application route/UI, dependency, or P2-03 implementation changed.
+- Scope: optional, disposable, synthetic-only local Supabase feedback. Cloud
+  TEST is deferred to P2-12 closeout and production deployment. No application
+  schema migration, application route/UI, dependency, or P2-03 implementation changed.
 
 ## ADR-020 implementation summary
 
@@ -82,6 +82,7 @@
 - Git migrations remain authoritative. pgTAP provisioning remains external to
   migrations and non-production only.
 - The local Docker stack started for this verification was stopped afterward.
-- Remaining gate: independent review and project-owner acceptance of this
-  architecture/tooling checkpoint before P2-03 implementation. Do not begin
-  P2-03 from this branch.
+- Project-owner decision (2026-08-25): local verification and dedicated review
+  accept each P2 checkpoint; one guarded Cloud TEST run is deferred to P2-12
+  closeout and production deployment. The hybrid checkpoint is approved for
+  merge and P2-03 may begin from updated `main`.
