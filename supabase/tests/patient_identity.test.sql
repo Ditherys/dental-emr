@@ -428,7 +428,7 @@ select extensions.lives_ok(
 );
 
 select extensions.ok(
-  not has_table_privilege('PUBLIC', 'public.patients', 'SELECT')
+  not has_table_privilege(0::oid, 'public.patients', 'SELECT')
   and not has_table_privilege('anon', 'public.patients', 'SELECT')
   and not has_table_privilege('authenticated', 'public.patients', 'SELECT')
   and not has_table_privilege('service_role', 'public.patients', 'SELECT'),
