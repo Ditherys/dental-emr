@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -72,5 +76,28 @@ describe("local Supabase command allowlist", () => {
       value: "P1_PROVISION_PASS",
     });
     expect(resolveLocalCommandResultSentinel("reset")).toBeNull();
+  });
+});
+
+describe("local Supabase package interface", () => {
+  const repositoryRoot = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+  );
+  const packageJson = JSON.parse(
+    readFileSync(resolve(repositoryRoot, "package.json"), "utf8"),
+  );
+
+  it("exposes explicit local commands without replacing the Cloud TEST runner", () => {
+    expect(packageJson.scripts).toMatchObject({
+      "db:start:local": "node scripts/run-local-supabase-command.mjs start",
+      "db:stop:local": "node scripts/run-local-supabase-command.mjs stop",
+      "db:reset:local": "node scripts/run-local-supabase-command.mjs reset",
+      "db:provision:local":
+        "node scripts/run-local-supabase-command.mjs provision-test-tooling",
+      "test:db:local": "node scripts/run-local-database-tests.mjs",
+      "test:db:cloud": "npm run test:db",
+      "test:db": "node scripts/run-remote-database-tests.mjs",
+    });
   });
 });
