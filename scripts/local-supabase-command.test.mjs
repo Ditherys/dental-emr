@@ -39,6 +39,8 @@ describe("local Supabase command allowlist", () => {
 
   it.each([
     ["db", "query", "--linked"],
+    ["db", "query", "--local", "--linked=true"],
+    ["db", "query", "--local", "--linked=false"],
     ["db", "reset", "--db-url", "postgresql://example.invalid/postgres"],
     ["db", "query", "--db-url=postgresql://example.invalid/postgres"],
     ["db", "query", "--file", "supabase/tests/schema.test.sql"],

@@ -24,6 +24,7 @@ export function assertLocalSupabaseCommand(command) {
   const containsRemoteSelector = command.some(
     (argument) =>
       argument === "--linked" ||
+      argument.startsWith("--linked=") ||
       argument === "--db-url" ||
       argument.startsWith("--db-url="),
   );
