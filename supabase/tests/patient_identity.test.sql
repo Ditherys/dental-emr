@@ -499,10 +499,9 @@ select extensions.is(
     select count(*)::integer
     from pg_policy as policy
     where policy.polrelid = 'public.patients'::regclass
-      and policy.polname = 'patients_select_shared_directory'
   ),
   1,
-  'patients has exactly one shared-directory policy row'
+  'patients has exactly one policy row in total'
 );
 select extensions.is(
   (
