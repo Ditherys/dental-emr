@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertLocalSupabaseCommand,
+  assertLocalDockerDatabaseCommand,
+  assertLocalDockerContext,
+  assertLocalDockerProject,
   resolveLocalCommandResultSentinel,
   resolveLocalDatabaseTestCommand,
   resolveLocalSupabaseCommands,
@@ -53,22 +56,39 @@ describe("local Supabase command allowlist", () => {
     expect(() => assertLocalSupabaseCommand(command)).toThrow(/local target/);
   });
 
-  it("constructs every database suite invocation with --local and no remote selector", () => {
+  it("constructs every database suite invocation for the known local Postgres container", () => {
     const command = resolveLocalDatabaseTestCommand(
       "C:/repo/supabase/tests/schema.test.sql",
     );
 
     expect(command).toEqual([
-      "db",
-      "query",
-      "--local",
-      "--output-format",
-      "json",
-      "--file",
-      "C:/repo/supabase/tests/schema.test.sql",
+      "docker",
+      "exec",
+      "-i",
+      "supabase_db_dental-emr",
+      "psql",
+      "-U",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
     ]);
     expect(command).not.toContain("--linked");
     expect(command.some((argument) => argument.startsWith("--db-url"))).toBe(false);
+  });
+
+  it.each([
+    ["docker", "exec", "-i", "other-postgres", "psql", "-U", "postgres"],
+    ["docker", "exec", "-i", "supabase_db_dental-emr", "psql", "-U", "app_user"],
+    ["docker", "run", "supabase_db_dental-emr", "psql"],
+  ])("rejects a database suite command that is not the known local target", (...command) => {
+    expect(() => assertLocalDockerDatabaseCommand(command)).toThrow(/known local Postgres container/);
+  });
+
+  it("requires Docker Desktop's local context and the repository local project", () => {
+    expect(() => assertLocalDockerContext("desktop-linux\n")).not.toThrow();
+    expect(() => assertLocalDockerProject("dental-emr\n")).not.toThrow();
+    expect(() => assertLocalDockerContext("remote-production")).toThrow(/desktop-linux context/);
+    expect(() => assertLocalDockerProject("other-project")).toThrow(/local Supabase project/);
   });
 
   it("requires the provisioning success sentinel", () => {

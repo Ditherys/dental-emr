@@ -30,6 +30,18 @@ const LOCAL_PROVISIONING_SENTINEL_COMMAND = Object.freeze([
   "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
 ]);
 
+const LOCAL_DATABASE_TEST_COMMAND = Object.freeze([
+  "docker",
+  "exec",
+  "-i",
+  "supabase_db_dental-emr",
+  "psql",
+  "-U",
+  "postgres",
+  "-v",
+  "ON_ERROR_STOP=1",
+]);
+
 export function assertLocalSupabaseCommand(command) {
   const containsRemoteSelector = command.some(
     (argument) =>
@@ -51,6 +63,34 @@ export function assertLocalSupabaseCommand(command) {
 
   if (!["start", "stop", "db"].includes(command[0])) {
     throw new Error("The command does not select a supported local target.");
+  }
+}
+
+export function assertLocalDockerDatabaseCommand(command) {
+  if (
+    !Array.isArray(command) ||
+    command.length !== LOCAL_DATABASE_TEST_COMMAND.length ||
+    command.some((argument, index) => argument !== LOCAL_DATABASE_TEST_COMMAND[index])
+  ) {
+    throw new Error(
+      "A local database suite must execute only in the known local Postgres container.",
+    );
+  }
+}
+
+export function assertLocalDockerContext(context) {
+  if (context.trim() !== "desktop-linux") {
+    throw new Error(
+      "Local database suites require Docker Desktop's desktop-linux context.",
+    );
+  }
+}
+
+export function assertLocalDockerProject(project) {
+  if (project.trim() !== "dental-emr") {
+    throw new Error(
+      "Local database suites require the dental-emr local Supabase project.",
+    );
   }
 }
 
@@ -81,16 +121,8 @@ export function resolveLocalDatabaseTestCommand(suitePath) {
     throw new Error("A local database test suite path is required.");
   }
 
-  const command = [
-    "db",
-    "query",
-    "--local",
-    "--output-format",
-    "json",
-    "--file",
-    suitePath,
-  ];
-  assertLocalSupabaseCommand(command);
+  const command = [...LOCAL_DATABASE_TEST_COMMAND];
+  assertLocalDockerDatabaseCommand(command);
   return command;
 }
 

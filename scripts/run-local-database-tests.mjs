@@ -1,9 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { resolveLocalDatabaseTestCommand } from "./local-supabase-command.mjs";
+import {
+  assertLocalDockerContext,
+  assertLocalDockerProject,
+  resolveLocalDatabaseTestCommand,
+} from "./local-supabase-command.mjs";
 import {
   DATABASE_TEST_SUITES,
   formatRemoteDatabaseQueryFailure as formatDatabaseQueryFailure,
@@ -13,13 +17,6 @@ import {
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const supabaseCli = join(
-  repositoryRoot,
-  "node_modules",
-  "supabase",
-  "dist",
-  "supabase.js",
-);
 const suites = DATABASE_TEST_SUITES.map((filename) =>
   join(repositoryRoot, "supabase", "tests", filename),
 );
@@ -29,29 +26,54 @@ function fail(message) {
   process.exit(1);
 }
 
-try {
-  if (!existsSync(supabaseCli)) {
-    throw new Error("The pinned Supabase CLI is missing. Run npm ci first.");
+function assertLocalDockerRuntime() {
+  const context = spawnSync("docker", ["context", "show"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
+
+  if (context.error || context.status !== 0) {
+    throw new Error("Docker Desktop's local context could not be inspected.");
   }
+
+  assertLocalDockerContext(context.stdout ?? "");
+
+  const project = spawnSync(
+    "docker",
+    [
+      "inspect",
+      "--format",
+      '{{ index .Config.Labels "com.supabase.cli.project" }}',
+      "supabase_db_dental-emr",
+    ],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+
+  if (project.error || project.status !== 0) {
+    throw new Error("The known local Supabase Postgres container could not be inspected.");
+  }
+
+  assertLocalDockerProject(project.stdout ?? "");
+}
+
+try {
+  assertLocalDockerRuntime();
 
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
     const source = readFileSync(suite, "utf8");
     validateTransactionalSuite(source, suiteLabel);
 
-    const result = spawnSync(
-      process.execPath,
-      [supabaseCli, ...resolveLocalDatabaseTestCommand(suite)],
-      {
-        cwd: repositoryRoot,
-        encoding: "utf8",
-        env: process.env,
-        maxBuffer: 16 * 1024 * 1024,
-      },
-    );
+    const command = resolveLocalDatabaseTestCommand(suite);
+    const result = spawnSync(command[0], command.slice(1), {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      input: source,
+      maxBuffer: 16 * 1024 * 1024,
+    });
 
     if (result.error) {
-      throw new Error(`${suiteLabel} could not start the Supabase CLI.`);
+      throw new Error(`${suiteLabel} could not start local Postgres execution.`);
     }
 
     if (result.status !== 0) {
