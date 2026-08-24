@@ -31,6 +31,7 @@ export type Database = {
           metadata: Json
           occurred_at: string
           organization_id: string
+          patient_id: string | null
           request_id: string | null
           result: string
         }
@@ -47,6 +48,7 @@ export type Database = {
           metadata?: Json
           occurred_at?: string
           organization_id: string
+          patient_id?: string | null
           request_id?: string | null
           result: string
         }
@@ -63,6 +65,7 @@ export type Database = {
           metadata?: Json
           occurred_at?: string
           organization_id?: string
+          patient_id?: string | null
           request_id?: string | null
           result?: string
         }
@@ -80,6 +83,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_events_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -355,6 +365,108 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      patients: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          archived_at: string | null
+          birth_date: string
+          city: string | null
+          created_at: string
+          created_by_user_id: string | null
+          first_name: string
+          id: string
+          last_name: string
+          middle_name: string | null
+          normalized_first_name: string | null
+          normalized_full_name: string | null
+          normalized_last_name: string | null
+          normalized_middle_name: string | null
+          organization_id: string
+          patient_number: string
+          postal_code: string | null
+          preferred_branch_id: string | null
+          preferred_name: string | null
+          province: string | null
+          sex_at_registration: string | null
+          status: string
+          suffix: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          archived_at?: string | null
+          birth_date: string
+          city?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          middle_name?: string | null
+          normalized_first_name?: string | null
+          normalized_full_name?: string | null
+          normalized_last_name?: string | null
+          normalized_middle_name?: string | null
+          organization_id: string
+          patient_number: string
+          postal_code?: string | null
+          preferred_branch_id?: string | null
+          preferred_name?: string | null
+          province?: string | null
+          sex_at_registration?: string | null
+          status?: string
+          suffix?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          archived_at?: string | null
+          birth_date?: string
+          city?: string | null
+          created_at?: string
+          created_by_user_id?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          middle_name?: string | null
+          normalized_first_name?: string | null
+          normalized_full_name?: string | null
+          normalized_last_name?: string | null
+          normalized_middle_name?: string | null
+          organization_id?: string
+          patient_number?: string
+          postal_code?: string | null
+          preferred_branch_id?: string | null
+          preferred_name?: string | null
+          province?: string | null
+          sex_at_registration?: string | null
+          status?: string
+          suffix?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_organization_preferred_branch_fk"
+            columns: ["organization_id", "preferred_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
       }
       permissions: {
         Row: {

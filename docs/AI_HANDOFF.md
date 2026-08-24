@@ -5,18 +5,37 @@
 
 ## Current Checkpoint
 
+**P2-02 is implemented and waiting for independent migration/RLS review.** The
+checkpoint adds the organization-owned `patients` root, bounded database-owned
+normalization, tenant-safe preferred-branch and audit links, fail-closed RLS,
+and no patient-table grants. Its sole new browser-role privilege is execution of
+the private RLS helper required to evaluate the stored policy; private schema
+usage remains revoked.
+
+The designated Cloud TEST schema generated the committed TypeScript database
+declarations for every patient column, nullable `audit_events.patient_id`, and
+the tenant-safe patient/branch/audit relationships. Fresh local verification
+passed migration privilege lint over 13 migrations and 285 SQL statements,
+ESLint, strict TypeScript, 305 Vitest tests, the production build, secret scan,
+and the high-severity dependency audit with zero vulnerabilities. All TEST
+patient data is synthetic; Git migrations remain authoritative. P2-03 remains
+blocked until this checkpoint passes required GitHub checks and independent
+migration/RLS review, all findings are resolved, and the project owner records
+acceptance.
+
+The Task 2 reviewer found no Critical, High, or Medium issue and recorded one
+Low final-review strengthening item: pgTAP should later pin the helper as
+`SECURITY DEFINER`, `STABLE`, and `search_path = ''`; require exactly one
+authenticated `SELECT` policy; and exercise direct allowed/denied helper
+behavior. This does not widen the accepted P2-02 implementation scope.
+
 **P2-01 is accepted.** Its independently reviewed checkpoint is
 `411acd8`; GitHub Actions run
 [`32668365007`](https://github.com/Ditherys/dental-emr/actions/runs/32668365007)
 passed application verification and guarded Cloud TEST database/E2E verification
-on that commit. The independent review found no material findings. The project
-owner authorized P2-02 planning on 2026-08-24. P2-02 implementation must remain
-within `docs/plans/002-patient-foundation.md` and the recorded design
+on that commit. The independent review found no material findings. P2-02 remains
+bounded by `docs/plans/002-patient-foundation.md` and the recorded design
 `docs/superpowers/specs/2026-08-24-p2-02-patient-identity-design.md`.
-The owner also approved the narrow two-migration correction required for
-PostgreSQL RLS evaluation: the object migration revokes everything, and the
-registered terminal grants only `authenticated` execution of the private
-shared-patient helper. No patient-table grant is authorized.
 
 The additive P2-01 slice adds the two patient demographic permissions, grants
 them only to the fixed `DENTIST` and `RECEPTIONIST` system roles, and implements
