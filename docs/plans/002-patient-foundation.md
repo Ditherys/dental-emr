@@ -970,12 +970,17 @@ merge, or hard delete.
 
 ### Database impact
 
-One object migration; no browser grant-terminal migration is needed for this
-table-only checkpoint. Enable RLS in the create statement sequence; immediately
-revoke table/function defaults; add composite keys/FKs and the patient/audit
-  indexes. Keep all patient-table privileges revoked from `PUBLIC`, `anon`,
-  `authenticated`, and `service_role`; supported reads arrive in P2-05 through
-  exact user-context RPC grants.
+One fail-closed object migration plus one registered grant-terminal migration.
+The terminal grants only `EXECUTE` on the private shared-patient RLS helper to
+`authenticated`, because PostgreSQL evaluates stored policy expressions with
+the querying user's privileges. `private` schema usage remains revoked, so the
+helper is not a Data API RPC. Enable RLS in the create statement sequence;
+immediately revoke table/function defaults; add composite keys/FKs and the
+patient/audit indexes. Keep all patient-table privileges revoked from `PUBLIC`,
+`anon`, `authenticated`, and `service_role`; supported reads arrive in P2-05
+through exact user-context RPC grants. This correction was explicitly approved
+by the project owner on 2026-08-24 after independent planning identified the
+otherwise unevaluable-policy conflict.
 
 ### Authorization impact
 

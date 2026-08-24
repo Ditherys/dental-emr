@@ -13,6 +13,10 @@ on that commit. The independent review found no material findings. The project
 owner authorized P2-02 planning on 2026-08-24. P2-02 implementation must remain
 within `docs/plans/002-patient-foundation.md` and the recorded design
 `docs/superpowers/specs/2026-08-24-p2-02-patient-identity-design.md`.
+The owner also approved the narrow two-migration correction required for
+PostgreSQL RLS evaluation: the object migration revokes everything, and the
+registered terminal grants only `authenticated` execution of the private
+shared-patient helper. No patient-table grant is authorized.
 
 The additive P2-01 slice adds the two patient demographic permissions, grants
 them only to the fixed `DENTIST` and `RECEPTIONIST` system roles, and implements

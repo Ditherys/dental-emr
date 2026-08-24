@@ -8,17 +8,22 @@ the browser yet.
 
 ## Chosen approach
 
-P2-02 is one additive database migration plus pgTAP coverage and generated
-database types. It creates the `public.patients` table and links
+P2-02 uses one additive fail-closed object migration, one exact grant-terminal
+migration, pgTAP coverage, and generated database types. It creates the
+`public.patients` table and links
 `public.audit_events.patient_id` to it. It does not create a route, RPC,
 contact/relationship table, patient write workflow, search workflow, merge
 workflow, or any browser table grants.
 
 The migration enables RLS during table creation, immediately revokes every
 patient-table and new helper privilege from `PUBLIC`, `anon`, `authenticated`,
-and `service_role`, and then adds RLS policies using the P2-01 patient-specific
-shared-directory predicate. The policies are defence in depth only: no browser
-role receives a table privilege at this checkpoint.
+and `service_role`, and then adds RLS policies using the patient-specific
+shared-directory predicate. The terminal migration grants only `EXECUTE` on
+that private helper to `authenticated`, which PostgreSQL requires to evaluate
+the stored policy expression. `private` schema usage remains revoked, so the
+helper is not a Data API RPC. The policies are defence in depth only: no browser
+role receives a patient-table privilege at this checkpoint. The project owner
+explicitly approved this narrow correction on 2026-08-24.
 
 ## Data model
 
