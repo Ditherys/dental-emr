@@ -104,7 +104,10 @@ npm run db:push:dry
 npm run db:push:test
 ```
 
-The dry run must list exactly the eight baseline versions and nothing else.
+The dry run must list the complete committed migration history — currently 13
+versions — and nothing else. Update the stated count whenever a committed
+migration is added; do not proceed if the preview omits, adds, or reorders a
+committed version.
 
 ## Step 5 — Provision non-production test tooling
 
