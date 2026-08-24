@@ -5,8 +5,8 @@
 **Decision owner:** Project owner  
 **Related:** `MASTER_PRODUCT_PLAN.md`, `TECHNICAL_ARCHITECTURE.md`, `DATABASE_DESIGN.md`, `SECURITY_ARCHITECTURE.md`, `plans/001-foundation.md`
 
-> **Current rule:** ADR-020 permits an optional, disposable, synthetic-only local
-> Supabase feedback loop. This ADR remains authoritative for Git-managed
+> **Current rule:** ADR-020 requires a disposable, synthetic-only local Supabase
+> verification loop for P2-01 through P2-11. This ADR remains authoritative for Git-managed
 > migrations, hosted environment separation, guarded remote writes, MCP limits,
 > and production protection.
 

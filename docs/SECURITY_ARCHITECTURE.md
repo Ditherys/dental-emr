@@ -1736,8 +1736,8 @@ development use separate credentials.
 Strong recommendation:
 
 - separate Supabase Cloud projects for development, Cloud TEST, any future separately approved staging, and production;
-- an optional disposable local Supabase stack may contain deterministic synthetic fixtures only; it is never a backup, staging, or production-data environment;
-- guarded Supabase Cloud TEST verification remains mandatory before database-bearing work is accepted;
+- a disposable local Supabase stack contains deterministic synthetic fixtures only and is required for P2-01 through P2-11 database/RLS verification; it is never a backup, staging, or production-data environment;
+- guarded Supabase Cloud TEST verification remains mandatory at P2-12 closeout and before production deployment;
 - Cloud DEV and Cloud TEST use deterministic synthetic data only and never receive production-derived or de-identified patient, clinical, financial, or workforce data;
 - any future staging environment that uses formally de-identified data must be a separate project with documented approval and validated anonymization controls, and must not share Cloud TEST data or credentials;
 - separate R2 buckets/credentials;

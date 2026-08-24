@@ -1,11 +1,11 @@
 # Environment Separation Runbook
 
 This runbook implements P1-16 and ADR-020. It preserves distinct hosted data
-boundaries while permitting an optional disposable local Supabase feedback
-environment:
+boundaries while requiring a disposable local Supabase verification environment
+for P2-01 through P2-11:
 
 ```text
-developer workstation + optional local Supabase feedback
+developer workstation + local Supabase verification
 Supabase Cloud DEV
 Vercel Preview/test target + Supabase Cloud TEST
 future separately approved staging + separate Supabase staging project

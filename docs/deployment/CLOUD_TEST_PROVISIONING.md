@@ -2,8 +2,8 @@
 
 **Authority:** [ADR-016](../decisions/ADR-016-supabase-cloud-first-development.md), [ADR-017](../decisions/ADR-017-phase1-secure-migration-baseline.md), [ADR-018](../decisions/ADR-018-nonproduction-database-test-tooling.md), [ADR-020](../decisions/ADR-020-local-supabase-hybrid-development.md)
 
-ADR-020 adds an optional local feedback path but does not relax this runbook.
-Cloud TEST remains the required hosted acceptance environment. Every
+ADR-020 requires local verification plus review for P2-01 through P2-11 and
+reserves this runbook for P2-12 closeout and before production. Every
 repository-wrapped database mutation or acceptance command below retains its
 target guard. The direct CLI commands in Step 3 are manual human-verified setup
 or read-only inspection steps and are not covered by the repository wrappers.

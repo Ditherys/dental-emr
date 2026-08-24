@@ -156,7 +156,9 @@ When clinical/media work begins, verify:
 
 Supabase MCP is acceptable only against explicitly designated hosted development/test projects for inspection and assisted implementation.
 
-- Optional local Supabase is permitted only through ADR-020's explicit local commands, with deterministic synthetic data and no hosted credentials.
+- Local Supabase verification for P2-01 through P2-11 is permitted only through
+  ADR-020's explicit local commands, with deterministic synthetic data and no
+  hosted credentials.
 - Cloud TEST remains mandatory at P2-12 closeout and before production; local
   verification plus dedicated review is the P2-01 through P2-11 checkpoint gate.
 - Migration files in Git remain authoritative.

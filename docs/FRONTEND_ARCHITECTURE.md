@@ -5,7 +5,7 @@
 **Date:** 2026-08-12  
 **Companion documents:** `MASTER_PRODUCT_PLAN.md`, `TECHNICAL_ARCHITECTURE.md`, `DATABASE_DESIGN.md`
 
-**Development environment note:** the frontend may run locally and may connect to ADR-020's optional local Supabase development endpoint for disposable synthetic-only feedback or to designated hosted Supabase non-production services. Guarded hosted Cloud TEST acceptance remains mandatory. Persistent file/media storage remains cloud-hosted in Cloudflare R2 when those features are implemented.
+**Development environment note:** the frontend may run locally and may connect to ADR-020's disposable synthetic-only local Supabase endpoint for P2-01 through P2-11 verification or to designated hosted Supabase non-production services. Guarded hosted Cloud TEST is mandatory at P2-12 closeout and before production. Persistent file/media storage remains cloud-hosted in Cloudflare R2 when those features are implemented.
 
 ---
 

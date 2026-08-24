@@ -43,7 +43,7 @@ that migrations, RLS behavior, generated types, and platform configuration work
 on the managed Supabase environment that will host the application. It would
 also discard the existing Cloud TEST safety and evidence model.
 
-### C. Use local Supabase for optional feedback and Cloud TEST for acceptance
+### C. Use local Supabase for Phase 2 verification and Cloud TEST for closeout
 
 This gives developers a disposable, isolated fast loop while retaining the
 managed environment as the authoritative non-production acceptance gate. It
@@ -118,8 +118,10 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
    It is installed from
    `supabase/provisioning/nonproduction/001_database_test_tooling.sql`, outside
    `supabase/migrations/`, preserving ADR-018's production-shaped baseline.
-8. Local success is feedback, not acceptance evidence. A local pass cannot
-   replace guarded Cloud TEST verification.
+8. For P2-01 through P2-11, local success is checkpoint acceptance evidence
+   only when paired with the required dedicated review and all relevant local
+   verification. It never replaces the guarded Cloud TEST verification required
+   at P2-12 closeout or before production deployment.
 
 ## Cloud acceptance contract
 
@@ -222,8 +224,8 @@ hosted acceptance environment are authoritative.
 ## Acceptance criteria
 
 - Local start/reset/provision/test commands cannot target a hosted database.
-- Cloud TEST target guards and mandatory acceptance checks remain unchanged or
-  stronger.
+- Cloud TEST target guards and Phase 2 closeout/production acceptance checks
+  remain unchanged or stronger.
 - A fresh local database reconstructs from committed migrations, explicit
   non-production provisioning, and synthetic seed data.
 - At Phase 2 closeout, the same database suites pass locally and against Cloud

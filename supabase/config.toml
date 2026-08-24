@@ -1,7 +1,8 @@
-# Local services are optional developer feedback under ADR-020. Git migrations
-# remain authoritative, local data must be synthetic, and Cloud TEST remains the
-# mandatory acceptance gate. Use the guarded npm commands; never add --linked or
-# a hosted database URL to a local command.
+# Local services provide required P2-01 through P2-11 database/RLS verification
+# under ADR-020. Git migrations remain authoritative, local data must be
+# synthetic, and Cloud TEST remains mandatory at P2-12 closeout and before
+# production. Use the guarded npm commands; never add --linked or a hosted
+# database URL to a local command.
 #
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config

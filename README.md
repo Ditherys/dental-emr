@@ -35,9 +35,10 @@ The CI workflow, protected Cloud TEST environment, dependency/static analysis,
 secret scanning, and required branch-protection checks are documented in
 [`docs/deployment/CI_FOUNDATION.md`](docs/deployment/CI_FOUNDATION.md).
 
-Database tests support two paths. The optional local Supabase path gives fast,
-disposable feedback through Docker Desktop; the guarded synthetic Cloud TEST
-project remains mandatory for checkpoint acceptance. Commands and safety
+Database tests use local Supabase for required P2-01 through P2-11 checkpoint
+verification, with disposable synthetic data through Docker Desktop. The guarded
+synthetic Cloud TEST project remains mandatory at P2-12 closeout and before
+production. Commands and safety
 boundaries are documented in
 [`docs/deployment/LOCAL_SUPABASE_DEVELOPMENT.md`](docs/deployment/LOCAL_SUPABASE_DEVELOPMENT.md)
 and [`supabase/tests/README.md`](supabase/tests/README.md).

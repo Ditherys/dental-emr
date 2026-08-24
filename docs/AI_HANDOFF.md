@@ -5,6 +5,13 @@
 
 ## Current checkpoint
 
+- Active work: `P2-03 — Patient contacts and guardian relationships schema` on
+  branch `feat/p2-03-patient-contacts` in
+  `.worktrees/p2-03-patient-contacts`, based on merged `main` `875695b`.
+- Current branch has a documentation-only consistency correction for the
+  approved P2-01 through P2-11 local verification / P2-12 closeout Cloud TEST
+  policy. No P2-03 migration, application code, generated types, or tests have
+  been changed yet.
 - Decision: ADR-020 was accepted by the project owner on 2026-08-24.
 - Base: accepted P2-02 merge `9103e9e`.
 - Implementation review target: `6459f15ff60c72a9140d96dee3878a70ce70ace1`.

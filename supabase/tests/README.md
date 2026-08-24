@@ -19,7 +19,7 @@ revocation, and stale, downgraded, or absent AAL claims.
 These suites require pgTAP, which the canonical baseline deliberately does not
 install. Provision it separately in each non-production target under ADR-018.
 
-## Optional local feedback
+## Required local verification for P2-01 through P2-11
 
 ```powershell
 npm run db:start:local
@@ -32,10 +32,10 @@ The local runner constructs only `db query --local` invocations. It never reads
 a linked project reference or hosted credential. Reset loads the committed
 synthetic seed and removes pgTAP, so provisioning must follow every reset.
 
-## Mandatory Cloud TEST acceptance
+## Mandatory Cloud TEST at Phase 2 closeout and before production
 
-Remote tests must target the explicitly designated disposable Cloud TEST
-project. Set the documented environment variables from the secret store, verify
+At P2-12 closeout and before production, remote tests must target the explicitly
+designated disposable Cloud TEST project. Set the documented environment variables from the secret store, verify
 the link, and run:
 
 ```powershell
