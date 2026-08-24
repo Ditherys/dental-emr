@@ -3304,7 +3304,8 @@ Use separate hosted canonical data environments, with optional local feedback:
 
 - **developer workstation + optional local Supabase** — Next.js and a disposable local stack may run locally for fast feedback using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup;
 - **Supabase Cloud DEV** — hosted shared development environment with synthetic data only;
-- **Supabase Cloud TEST / staging** — separate hosted non-production environment for destructive database/security tests and pre-production validation; guarded Cloud TEST acceptance is mandatory for database-bearing checkpoints;
+- **Supabase Cloud TEST / preview** — separate hosted non-production environment with deterministic synthetic data only for destructive database/security tests and mandatory database-bearing checkpoint acceptance;
+- **future staging** — if separately approved, uses its own Supabase project and may use formally de-identified data only after documented approval and validation of anonymization controls; it must not share Cloud TEST data or credentials;
 - **production** — separate Supabase Cloud project and separate Cloudflare R2 production boundary, created/hardened only before real-patient deployment.
 
 Git migrations remain authoritative across local and hosted targets. Optional
@@ -3582,7 +3583,7 @@ the repository's checkpoint IDs one-for-one.
 - clean clone can be set up from README;
 - CI runs lint/typecheck/tests;
 - no secrets in repository;
-- cloud dev/test/staging environment boundaries documented;
+- Cloud DEV, Cloud TEST, any future separately approved staging, and production environment boundaries documented;
 - agent instructions point to master plan.
 
 ---

@@ -103,7 +103,8 @@ Do not generate the entire database in one migration.
 
 - Never use real patient data in development, tests, fixtures, screenshots, logs, demos, prompts, or tickets.
 - Never expose production credentials, OAuth refresh tokens, service keys, database passwords, recovery codes, or patient records to coding agents or Git.
-- Development/staging use synthetic or formally de-identified data.
+- Local Supabase, Cloud DEV, and Cloud TEST use deterministic synthetic data only. Never import production-derived or de-identified patient, clinical, financial, or workforce data into them.
+- A future staging environment may use formally de-identified data only in a separate project with documented approval and validated anonymization controls; it must never share Cloud TEST data or credentials.
 - Do not connect Codex/Supabase MCP with unrestricted write access to production patient data.
 - Public routes must not expose patient-directory or clinical-table access.
 - Do not log tokens, clinical text, presigned URLs, passwords, or secrets.

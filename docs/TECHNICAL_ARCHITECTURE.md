@@ -181,7 +181,7 @@ Frontend libraries are interaction/rendering adapters, not domain models. Schedu
 
 - **PostgreSQL** managed by **Supabase Cloud**
 - developers may optionally run a disposable, synthetic-only local Supabase stack for fast migration, RLS, and pgTAP feedback; guarded Cloud TEST remains the mandatory acceptance environment under ADR-020
-- hosted development, test/staging, and production continue to use separate Supabase project boundaries; local success never substitutes for hosted acceptance
+- hosted development, Cloud TEST, any future separately approved staging, and production continue to use separate Supabase project boundaries; local success never substitutes for hosted acceptance
 - PostgreSQL constraints and transactions are used for data integrity
 - Supabase managed platform is used where appropriate for Auth, database operations, realtime capabilities if justified, and platform tooling
 - schema changes remain Git-managed migrations even though runtime databases are hosted
@@ -272,7 +272,7 @@ Keep a small application media adapter between domain/UI code and Cloudflare-spe
 ## 2.8 Hosting
 
 - **Vercel** for Next.js deployment
-- production, preview/staging, and developer/cloud-development environments must be distinct
+- production, Preview/Cloud TEST, any future separately approved staging, and developer/cloud-development environments must be distinct
 - secrets/environment variables must be environment-scoped
 
 ## 2.9 External integrations
@@ -2152,19 +2152,21 @@ Never send full clinical notes, patient file contents, OAuth tokens, passwords, 
 At minimum:
 
 ```text
-DEVELOPER WORKSTATION + SUPABASE CLOUD DEV
-CLOUD TEST / STAGING / PREVIEW
+DEVELOPER WORKSTATION + OPTIONAL LOCAL SUPABASE FEEDBACK
+SUPABASE CLOUD DEV
+CLOUD TEST / PREVIEW
+FUTURE SEPARATE STAGING (ONLY AFTER FORMAL APPROVAL)
 PRODUCTION
 ```
 
 Rules:
 
 - Next.js and an optional disposable local Supabase stack may run on the developer workstation; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
-- canonical persistent structured data for DEV, TEST/staging, and production is hosted in separate Supabase Cloud projects;
-- development uses synthetic patient data only;
+- canonical persistent structured data for DEV, Cloud TEST, any future separately approved staging, and production is hosted in separate Supabase Cloud projects;
+- Cloud DEV and Cloud TEST use deterministic synthetic data only; neither accepts production-derived or de-identified patient, clinical, financial, or workforce data;
 - Git migrations remain authoritative across local and hosted targets, and guarded Cloud TEST verification is mandatory before database-bearing work is accepted;
 - automated destructive database tests use the dedicated disposable Cloud TEST project for acceptance rather than the interactive DEV database;
-- staging never uses copied production PHI unless a formally approved anonymization process exists;
+- a future staging environment may use formally de-identified data only in a separate project after documented approval and validation of the anonymization controls; it must not share Cloud TEST data or credentials;
 - production uses a separate Supabase Cloud project;
 - future file/media environments use separate R2 buckets/prefix boundaries/credentials;
 - no real, copied-production, or canonical patient/application data is stored on the developer workstation; ADR-020 permits only disposable synthetic local data;
