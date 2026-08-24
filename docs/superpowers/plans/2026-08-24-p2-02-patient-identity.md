@@ -336,7 +336,17 @@ npm run test:db
 
 Expected: FAIL only when `patient_identity.test.sql` reaches the missing
 `public.patients`/helper contract. Preserve this red output without including
-credentials or fixture values in logs. Do not commit yet.
+credentials or fixture values in logs.
+
+- [ ] **Step 8: Commit the intentionally red contract locally**
+
+This commit is the Task 1 reviewable artifact. Do not push it or open a PR until
+Task 2 supplies the migrations that make the suite green.
+
+```powershell
+git add -- supabase/tests/patient_identity.test.sql scripts/remote-database-test-guard.mjs
+git commit -m "test: define patient identity database contract"
+```
 
 ---
 
