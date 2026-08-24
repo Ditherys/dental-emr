@@ -461,6 +461,194 @@ select extensions.ok(
   ),
   'only authenticated may execute the private RLS helper'
 );
+select extensions.ok(
+  (
+    select procedure.prosecdef
+    from pg_proc as procedure
+    where procedure.oid = to_regprocedure(
+      'private.has_shared_patient_permission(uuid,text)'
+    )
+  ),
+  'the exact shared-patient helper is SECURITY DEFINER'
+);
+select extensions.is(
+  (
+    select procedure.provolatile::text
+    from pg_proc as procedure
+    where procedure.oid = to_regprocedure(
+      'private.has_shared_patient_permission(uuid,text)'
+    )
+  ),
+  's',
+  'the exact shared-patient helper is STABLE'
+);
+select extensions.is(
+  (
+    select procedure.proconfig
+    from pg_proc as procedure
+    where procedure.oid = to_regprocedure(
+      'private.has_shared_patient_permission(uuid,text)'
+    )
+  ),
+  array['search_path=""']::text[],
+  'the exact shared-patient helper has only an empty search_path configuration'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_policy as policy
+    where policy.polrelid = 'public.patients'::regclass
+      and policy.polname = 'patients_select_shared_directory'
+  ),
+  1,
+  'patients has exactly one shared-directory policy row'
+);
+select extensions.is(
+  (
+    select policy.polcmd::text
+    from pg_policy as policy
+    where policy.polrelid = 'public.patients'::regclass
+      and policy.polname = 'patients_select_shared_directory'
+  ),
+  'r',
+  'the shared-directory policy applies to SELECT only'
+);
+select extensions.is(
+  (
+    select policy.polroles
+    from pg_policy as policy
+    where policy.polrelid = 'public.patients'::regclass
+      and policy.polname = 'patients_select_shared_directory'
+  ),
+  array[(select oid from pg_roles where rolname = 'authenticated')]::oid[],
+  'the shared-directory policy applies only to authenticated'
+);
+select extensions.ok(
+  (
+    select policy.polwithcheck is null
+    from pg_policy as policy
+    where policy.polrelid = 'public.patients'::regclass
+      and policy.polname = 'patients_select_shared_directory'
+  ),
+  'the SELECT-only shared-directory policy has no WITH CHECK expression'
+);
+select extensions.is(
+  (
+    select translate(
+      pg_get_expr(policy.polqual, policy.polrelid),
+      E' \n\r\t',
+      ''
+    )
+    from pg_policy as policy
+    where policy.polrelid = 'public.patients'::regclass
+      and policy.polname = 'patients_select_shared_directory'
+  ),
+  '(SELECTprivate.has_shared_patient_permission(patients.organization_id,''patient.demographics.read''::text)AShas_shared_patient_permission)',
+  'the shared-directory policy uses only the intended helper and read permission qualifier'
+);
+
+-- Exercise the helper itself under synthetic JWT subjects. These calls run as
+-- the test owner so private schema USAGE remains revoked from authenticated.
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000002', true);
+select extensions.ok(
+  private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  ),
+  'an organization dentist directly satisfies shared-patient read permission'
+);
+select extensions.ok(
+  private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'an organization dentist directly satisfies shared-patient write permission'
+);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000002',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000002',
+    'patient.demographics.write'
+  ),
+  'an eligible Org A actor is directly denied both patient permissions in Org B'
+);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.export'
+  ),
+  'the helper directly rejects unsupported patient permission codes'
+);
+
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000003', true);
+select extensions.ok(
+  private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  ),
+  'an active branch receptionist directly satisfies shared-patient read permission'
+);
+select extensions.ok(
+  private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'an active branch receptionist directly satisfies shared-patient write permission'
+);
+
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000001', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'an owner is directly denied both shared-patient permissions'
+);
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000004', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'a visiting specialist is directly denied both shared-patient permissions'
+);
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000005', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'a suspended dentist is directly denied both shared-patient permissions'
+);
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000099', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'a forged user is directly denied both shared-patient permissions'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000002', true);
@@ -530,6 +718,19 @@ reset role;
 update public.branch_memberships
 set access_status = 'revoked', revoked_at = statement_timestamp()
 where organization_member_id = 'a2040000-0000-0000-0000-000000000003';
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000003', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'a receptionist with revoked branch membership is directly denied both patient permissions'
+);
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000003', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -542,6 +743,19 @@ where organization_member_id = 'a2040000-0000-0000-0000-000000000003';
 update public.branches
 set status = 'archived', archived_at = statement_timestamp()
 where id = 'a2030000-0000-0000-0000-000000000001';
+select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000003', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select extensions.ok(
+  not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and not private.has_shared_patient_permission(
+    'a2020000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  ),
+  'a receptionist at an archived branch is directly denied both patient permissions'
+);
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000003', true);
 select set_config('request.jwt.claim.role', 'authenticated', true);
