@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   assertLocalDockerRuntime,
+  resolveLocalDockerEnvironment,
   resolveLocalDatabaseTestCommand,
 } from "./local-supabase-command.mjs";
 import {
@@ -26,9 +27,11 @@ function fail(message) {
 }
 
 function assertVerifiedLocalDockerRuntime() {
+  const dockerEnvironment = resolveLocalDockerEnvironment(process.env);
   const context = spawnSync("docker", ["context", "show"], {
     cwd: repositoryRoot,
     encoding: "utf8",
+    env: dockerEnvironment,
   });
 
   if (context.error || context.status !== 0) {
@@ -44,7 +47,7 @@ function assertVerifiedLocalDockerRuntime() {
       "--format",
       "{{.Endpoints.docker.Host}}",
     ],
-    { cwd: repositoryRoot, encoding: "utf8" },
+    { cwd: repositoryRoot, encoding: "utf8", env: dockerEnvironment },
   );
 
   if (endpoint.error || endpoint.status !== 0) {
@@ -61,7 +64,7 @@ function assertVerifiedLocalDockerRuntime() {
       '{{ index .Config.Labels "com.supabase.cli.project" }}',
       "supabase_db_dental-emr",
     ],
-    { cwd: repositoryRoot, encoding: "utf8" },
+    { cwd: repositoryRoot, encoding: "utf8", env: dockerEnvironment },
   );
 
   if (project.error || project.status !== 0) {
@@ -73,10 +76,11 @@ function assertVerifiedLocalDockerRuntime() {
     endpoint: endpoint.stdout ?? "",
     project: project.stdout ?? "",
   });
+  return dockerEnvironment;
 }
 
 try {
-  assertVerifiedLocalDockerRuntime();
+  const dockerEnvironment = assertVerifiedLocalDockerRuntime();
 
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
@@ -88,6 +92,7 @@ try {
       cwd: repositoryRoot,
       encoding: "utf8",
       input: source,
+      env: dockerEnvironment,
       maxBuffer: 16 * 1024 * 1024,
     });
 

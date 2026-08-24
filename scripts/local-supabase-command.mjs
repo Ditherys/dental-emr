@@ -114,6 +114,23 @@ export function assertLocalDockerRuntime({ context, endpoint, project }) {
   assertLocalDockerProject(project);
 }
 
+export function resolveLocalDockerEnvironment(environment) {
+  const sanitized = { ...environment };
+
+  for (const name of [
+    "DOCKER_HOST",
+    "DOCKER_TLS",
+    "DOCKER_TLS_VERIFY",
+    "DOCKER_CERT_PATH",
+    "DOCKER_CONFIG",
+  ]) {
+    delete sanitized[name];
+  }
+
+  sanitized.DOCKER_CONTEXT = "desktop-linux";
+  return sanitized;
+}
+
 export function resolveLocalSupabaseCommand(commandName) {
   if (!Object.hasOwn(LOCAL_SUPABASE_COMMANDS, commandName)) {
     throw new Error("Select one of the allowlisted local Supabase commands.");

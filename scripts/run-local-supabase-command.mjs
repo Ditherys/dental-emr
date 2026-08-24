@@ -4,6 +4,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  assertLocalDockerContext,
+  assertLocalDockerEndpoint,
+  resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
   resolveLocalSupabaseCommands,
 } from "./local-supabase-command.mjs";
@@ -24,9 +27,31 @@ function fail(message) {
   process.exit(1);
 }
 
+function assertLocalDockerEndpointIsSafe(environment) {
+  const context = spawnSync("docker", ["context", "show"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    env: environment,
+  });
+  const endpoint = spawnSync(
+    "docker",
+    ["context", "inspect", "desktop-linux", "--format", "{{.Endpoints.docker.Host}}"],
+    { cwd: repositoryRoot, encoding: "utf8", env: environment },
+  );
+
+  if (context.error || context.status !== 0 || endpoint.error || endpoint.status !== 0) {
+    throw new Error("Docker Desktop's local endpoint could not be inspected.");
+  }
+
+  assertLocalDockerContext(context.stdout ?? "");
+  assertLocalDockerEndpoint(endpoint.stdout ?? "");
+}
+
 try {
   const commandName = process.argv[2];
   const commands = resolveLocalSupabaseCommands(commandName);
+  const dockerEnvironment = resolveLocalDockerEnvironment(process.env);
+  assertLocalDockerEndpointIsSafe(dockerEnvironment);
 
   if (!existsSync(supabaseCli)) {
     throw new Error("The pinned Supabase CLI is missing. Run npm ci first.");
@@ -40,7 +65,7 @@ try {
     const result = spawnSync(process.execPath, [supabaseCli, ...command], {
       cwd: repositoryRoot,
       encoding: "utf8",
-      env: process.env,
+      env: dockerEnvironment,
       maxBuffer: 16 * 1024 * 1024,
       stdio: capturesSentinel ? ["inherit", "pipe", "inherit"] : "inherit",
     });

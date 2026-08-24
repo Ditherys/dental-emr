@@ -11,6 +11,7 @@ import {
   assertLocalDockerEndpoint,
   assertLocalDockerProject,
   assertLocalDockerRuntime,
+  resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
   resolveLocalDatabaseTestCommand,
   resolveLocalSupabaseCommands,
@@ -115,6 +116,23 @@ describe("local Supabase command allowlist", () => {
         project: "dental-emr",
       }),
     ).toThrow(/local engine endpoint/);
+  });
+
+  it("removes hostile Docker routing variables and pins the local context", () => {
+    const environment = resolveLocalDockerEnvironment({
+      PATH: "C:/tools",
+      DOCKER_HOST: "tcp://remote.example.test:2376",
+      DOCKER_CONTEXT: "remote",
+      DOCKER_TLS_VERIFY: "1",
+      DOCKER_CERT_PATH: "C:/certs",
+      DOCKER_CONFIG: "C:/untrusted-config",
+    });
+
+    expect(environment).toMatchObject({ PATH: "C:/tools", DOCKER_CONTEXT: "desktop-linux" });
+    expect(environment).not.toHaveProperty("DOCKER_HOST");
+    expect(environment).not.toHaveProperty("DOCKER_TLS_VERIFY");
+    expect(environment).not.toHaveProperty("DOCKER_CERT_PATH");
+    expect(environment).not.toHaveProperty("DOCKER_CONFIG");
   });
 
   it("requires the provisioning success sentinel", () => {
