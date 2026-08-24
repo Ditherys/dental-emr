@@ -35,10 +35,11 @@ The CI workflow, protected Cloud TEST environment, dependency/static analysis,
 secret scanning, and required branch-protection checks are documented in
 [`docs/deployment/CI_FOUNDATION.md`](docs/deployment/CI_FOUNDATION.md).
 
-Database and authenticated browser tests require a dedicated synthetic
-Supabase Cloud TEST project. Their strict target guards, fixture contract, and
-commands are documented in [`supabase/tests/README.md`](supabase/tests/README.md)
-and [`e2e/README.md`](e2e/README.md). Neither workflow starts Docker or a local
-Supabase runtime.
+Database tests support two paths. The optional local Supabase path gives fast,
+disposable feedback through Docker Desktop; the guarded synthetic Cloud TEST
+project remains mandatory for checkpoint acceptance. Commands and safety
+boundaries are documented in
+[`docs/deployment/LOCAL_SUPABASE_DEVELOPMENT.md`](docs/deployment/LOCAL_SUPABASE_DEVELOPMENT.md)
+and [`supabase/tests/README.md`](supabase/tests/README.md).
 
 The current implementation scope is controlled by [`docs/plans/001-foundation.md`](docs/plans/001-foundation.md).

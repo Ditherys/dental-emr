@@ -4,7 +4,7 @@
 **Status:** Architecture-to-schema design baseline  
 **Audience:** Claude Code, Codex CLI, human developer/reviewer  
 **Primary database:** PostgreSQL via Supabase Cloud  
-**Development data location:** hosted Supabase Cloud non-production project; no local Supabase database  
+**Development data location:** optional disposable local Supabase plus hosted non-production Supabase projects; synthetic data only; Git migrations authoritative
 **Authentication:** Supabase Auth  
 **Primary application framework:** Next.js + TypeScript  
 **Initial tenant:** One dental organization with two branches  

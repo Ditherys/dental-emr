@@ -1730,7 +1730,8 @@ Production, preview/staging, and development use separate credentials.
 Strong recommendation:
 
 - separate Supabase Cloud projects for development/test/staging and production;
-- no local Supabase database is part of the approved workflow; persistent application data must not be stored on the developer workstation;
+- an optional disposable local Supabase stack may contain deterministic synthetic fixtures only; it is never a backup, staging, or production-data environment;
+- guarded Supabase Cloud TEST verification remains mandatory before database-bearing work is accepted;
 - cloud development/test projects use synthetic or formally de-identified data only;
 - separate R2 buckets/credentials;
 - separate OAuth callback/environment registrations where practical;

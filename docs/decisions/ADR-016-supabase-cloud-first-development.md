@@ -1,9 +1,14 @@
 # ADR-016 — Supabase Cloud-First Development; No Local Supabase Runtime
 
-**Status:** Accepted  
+**Status:** Accepted historically; local-runtime prohibition superseded by [ADR-020](ADR-020-local-supabase-hybrid-development.md)
 **Date:** 2026-08-12  
 **Decision owner:** Project owner  
 **Related:** `MASTER_PRODUCT_PLAN.md`, `TECHNICAL_ARCHITECTURE.md`, `DATABASE_DESIGN.md`, `SECURITY_ARCHITECTURE.md`, `plans/001-foundation.md`
+
+> **Current rule:** ADR-020 permits an optional, disposable, synthetic-only local
+> Supabase feedback loop. This ADR remains authoritative for Git-managed
+> migrations, hosted environment separation, guarded remote writes, MCP limits,
+> and production protection.
 
 ## Context
 

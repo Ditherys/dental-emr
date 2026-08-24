@@ -1779,8 +1779,9 @@ P2-01 through P2-11 ───────────── P2-12 integrated clo
    the committed result in CI.
 7. Schema lint, advisors, pgTAP, and app tests must pass on the same composed
    migration state.
-8. Never use Dashboard-first SQL, direct MCP-only schema changes, local Docker
-   Supabase, linked reset/reseed, or a production target.
+8. Never use Dashboard-first SQL, direct MCP-only schema changes, an unguarded
+   local database target, linked reset/reseed, or a production target. Optional
+   local Supabase feedback must follow ADR-020 and cannot replace Cloud TEST.
 
 # 9. Test strategy
 

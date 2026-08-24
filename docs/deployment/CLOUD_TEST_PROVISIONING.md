@@ -1,6 +1,10 @@
 # Disposable Cloud TEST project — provisioning runbook
 
-**Authority:** [ADR-016](../decisions/ADR-016-supabase-cloud-first-development.md), [ADR-017](../decisions/ADR-017-phase1-secure-migration-baseline.md), [ADR-018](../decisions/ADR-018-nonproduction-database-test-tooling.md), [`supabase/MIGRATION_FREEZE.md`](../../supabase/MIGRATION_FREEZE.md)
+**Authority:** [ADR-016](../decisions/ADR-016-supabase-cloud-first-development.md), [ADR-017](../decisions/ADR-017-phase1-secure-migration-baseline.md), [ADR-018](../decisions/ADR-018-nonproduction-database-test-tooling.md), [ADR-020](../decisions/ADR-020-local-supabase-hybrid-development.md)
+
+ADR-020 adds an optional local feedback path but does not relax this runbook.
+Cloud TEST remains the required hosted acceptance environment, and every remote
+command below retains its target guard.
 
 This runbook covers building a **disposable** Supabase Cloud TEST project from the
 committed baseline and nothing else. It is the mechanism R6-C, R6-D, and R6-E use.
@@ -86,19 +90,9 @@ any, the target is not a fresh disposable project — stop.
 
 ## Step 4 — Apply the baseline
 
-The R6 freeze is active, so each migration-applying step needs its own scoped
-acknowledgement. Set it immediately before the step and clear it immediately
-after; a token left exported does not authorize the next command.
-
 ```powershell
-$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-push-dry'
 npm run db:push:dry
-
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-push'
 npm run db:push:test
-
-Remove-Item Env:\MIGRATION_FREEZE_ACK, Env:\MIGRATION_FREEZE_ACK_COMMAND
 ```
 
 The dry run must list exactly the eight baseline versions and nothing else.
@@ -109,10 +103,7 @@ The baseline is production-shaped and installs no extension (ADR-018). pgTAP is 
 separate step, and the pgTAP suites cannot run without it.
 
 ```powershell
-$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-provision-test-tooling'
 npm run db:provision:test
-Remove-Item Env:\MIGRATION_FREEZE_ACK, Env:\MIGRATION_FREEZE_ACK_COMMAND
 ```
 
 It must print `PASS db-provision-test-tooling (P1_PROVISION_PASS)`. That sentinel
@@ -121,10 +112,7 @@ is read from the live catalog, so a skipped run cannot read as success.
 ## Step 6 — Synthetic fixtures
 
 ```powershell
-$env:MIGRATION_FREEZE_ACK='I_ACKNOWLEDGE_THE_R6_MIGRATION_FREEZE'
-$env:MIGRATION_FREEZE_ACK_COMMAND='db-seed'
 npm run db:seed:test
-Remove-Item Env:\MIGRATION_FREEZE_ACK, Env:\MIGRATION_FREEZE_ACK_COMMAND
 ```
 
 `supabase/seed.sql` is the deterministic two-tenant synthetic security graph.
@@ -154,4 +142,3 @@ complete.
 - Target DEV or production. Every guarded command refuses a target that is not the designated TEST reference.
 - Load real patient or workforce data.
 - Print, log, or commit a key, password, or token.
-- Remove the migration freeze. The freeze lifts only through the approved R6-F procedure.

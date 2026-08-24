@@ -4,7 +4,7 @@
 **Date:** 2026-08-13
 **Decision owner:** Project owner
 **Resolves:** the pgTAP open decision recorded in [ADR-017](ADR-017-phase1-secure-migration-baseline.md) § "pgTAP: recorded, not silently decided"
-**Related:** [ADR-016](ADR-016-supabase-cloud-first-development.md), `supabase/MIGRATION_FREEZE.md`, `docs/deployment/CLOUD_TEST_PROVISIONING.md`
+**Related:** [ADR-016](ADR-016-supabase-cloud-first-development.md), [ADR-020](ADR-020-local-supabase-hybrid-development.md), `supabase/MIGRATION_FREEZE.md`, `docs/deployment/CLOUD_TEST_PROVISIONING.md`
 
 ## Context
 
@@ -30,6 +30,11 @@ ADR-017 recommended (c) and deferred it to the production-bootstrap gate. Two th
 ### 2. Test tooling lives outside `supabase/migrations/`
 
 `supabase/provisioning/nonproduction/001_database_test_tooling.sql` installs pgTAP. It is deliberately outside the migrations directory, so `supabase db push` cannot apply it and it can never enter a production replay by accident.
+
+ADR-020 does not move pgTAP into the canonical baseline. Local Supabase and
+Cloud TEST both install the same file as an explicit non-production step. Local
+installation uses the local-only command adapter; Cloud TEST retains the remote
+target guard described below.
 
 ### 3. Applying it is guarded exactly like every other remote write
 

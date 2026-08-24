@@ -180,8 +180,8 @@ Frontend libraries are interaction/rendering adapters, not domain models. Schedu
 ## 2.3 Database and backend platform
 
 - **PostgreSQL** managed by **Supabase Cloud**
-- development, test/staging, and production use separate hosted Supabase project boundaries as required by the environment strategy
-- the project intentionally does **not** run a local Supabase database; Next.js may run on the developer workstation while persistent application data remains cloud-hosted
+- developers may optionally run a disposable, synthetic-only local Supabase stack for fast migration, RLS, and pgTAP feedback; guarded Cloud TEST remains the mandatory acceptance environment under ADR-020
+- hosted development, test/staging, and production continue to use separate Supabase project boundaries; local success never substitutes for hosted acceptance
 - PostgreSQL constraints and transactions are used for data integrity
 - Supabase managed platform is used where appropriate for Auth, database operations, realtime capabilities if justified, and platform tooling
 - schema changes remain Git-managed migrations even though runtime databases are hosted
@@ -2370,10 +2370,11 @@ ADR-002 — Organization/branch tenancy                           [reserved by P
 ADR-003 — Authorization defense in depth                        [reserved by Phase 1]
 ADR-004 — Single Next.js repo for public website + private EMR [reserved by Phase 1]
 ADR-005 — Cloudflare R2 canonical storage + Workers/Images media pipeline [accepted]
-ADR-016 — Supabase Cloud-first development; no local Supabase runtime      [accepted]
+ADR-016 — Supabase Cloud-first development; local prohibition superseded      [superseded in part]
 ADR-017 — Phase 1 secure migration baseline and grant-last invariant       [accepted]
 ADR-018 — Nonproduction database test tooling per environment              [accepted]
 ADR-019 — Bounded fixed patient-role delegation                            [accepted]
+ADR-020 — Optional local Supabase; mandatory Cloud TEST acceptance            [accepted]
 ```
 
 `ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Prefer `ADR-020` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.

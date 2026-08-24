@@ -26,24 +26,17 @@ Read the smallest relevant set before reviewing or implementing:
 Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 2026-08-19. Execute only its ordered task/checkpoint currently authorized.
 
-## Current Phase: Phase 2 Patient Foundation — P2-01
+## Current Phase: Phase 2 Patient Foundation — Hybrid database tooling checkpoint
 
-Phase 1 is formally accepted. Phase 2 planning approval is complete. Current
-implementation authority is limited to `P2-01 — Patient permission contract`.
-The accepted Phase 2 scope includes:
+P2-01 and P2-02 are accepted, and P2-02 is merged into `main`. ADR-020 is
+accepted. Current implementation authority is limited to the local Supabase
+hybrid tooling and documentation checkpoint described by ADR-020 and its
+implementation plan.
 
-- organization-level patient identity and demographics;
-- patient contacts and guardian/family relationships;
-- patient list/search and bounded patient workspace;
-- duplicate warning using normalized name + birthday without a hard uniqueness
-  constraint;
-- patient permissions, RLS, audit events, synthetic fixtures, and concurrency
-  controls.
-
-Do NOT advance to `P2-02` until P2-01 is independently reviewed and accepted.
-Do not implement providers, scheduling, clinical history, Google Calendar,
-odontogram, treatment planning, files, billing, inventory, communications,
-analytics, or AI/MCP features under the patient-foundation plan.
+Do NOT advance to P2-03 implementation until this architecture/tooling checkpoint
+is independently reviewed and accepted. P2-03 planning may be reconciled only
+after this checkpoint; all later Phase 2 scope remains ordered by
+`docs/plans/002-patient-foundation.md`.
 
 ## Codex Review Role
 
@@ -160,7 +153,8 @@ When clinical/media work begins, verify:
 
 Supabase MCP is acceptable only against explicitly designated hosted development/test projects for inspection and assisted implementation.
 
-- This project does not use a local Supabase Docker stack unless the user explicitly changes that architecture decision.
+- Optional local Supabase is permitted only through ADR-020's explicit local commands, with deterministic synthetic data and no hosted credentials.
+- Cloud TEST remains the mandatory database acceptance gate; local success is feedback only.
 - Migration files in Git remain authoritative.
 - Do not leave schema changes existing only as MCP/direct SQL side effects.
 - Hosted development/test MCP access must be project-scoped; prefer read-only mode for inspection.
