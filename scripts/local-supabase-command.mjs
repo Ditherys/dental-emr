@@ -32,6 +32,8 @@ const LOCAL_PROVISIONING_SENTINEL_COMMAND = Object.freeze([
 
 const LOCAL_DATABASE_TEST_COMMAND = Object.freeze([
   "docker",
+  "--context",
+  "desktop-linux",
   "exec",
   "-i",
   "supabase_db_dental-emr",
@@ -42,13 +44,17 @@ const LOCAL_DATABASE_TEST_COMMAND = Object.freeze([
   "ON_ERROR_STOP=1",
 ]);
 
+const LOCAL_DOCKER_ENDPOINT = "npipe:////./pipe/dockerDesktopLinuxEngine";
+
 export function assertLocalSupabaseCommand(command) {
   const containsRemoteSelector = command.some(
     (argument) =>
       argument === "--linked" ||
       argument.startsWith("--linked=") ||
       argument === "--db-url" ||
-      argument.startsWith("--db-url="),
+      argument.startsWith("--db-url=") ||
+      argument === "--project-ref" ||
+      argument.startsWith("--project-ref="),
   );
 
   if (containsRemoteSelector) {
@@ -92,6 +98,20 @@ export function assertLocalDockerProject(project) {
       "Local database suites require the dental-emr local Supabase project.",
     );
   }
+}
+
+export function assertLocalDockerEndpoint(endpoint) {
+  if (endpoint.trim() !== LOCAL_DOCKER_ENDPOINT) {
+    throw new Error(
+      "Local database suites require Docker Desktop's local engine endpoint.",
+    );
+  }
+}
+
+export function assertLocalDockerRuntime({ context, endpoint, project }) {
+  assertLocalDockerContext(context);
+  assertLocalDockerEndpoint(endpoint);
+  assertLocalDockerProject(project);
 }
 
 export function resolveLocalSupabaseCommand(commandName) {

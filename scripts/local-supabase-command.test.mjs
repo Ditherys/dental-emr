@@ -8,7 +8,9 @@ import {
   assertLocalSupabaseCommand,
   assertLocalDockerDatabaseCommand,
   assertLocalDockerContext,
+  assertLocalDockerEndpoint,
   assertLocalDockerProject,
+  assertLocalDockerRuntime,
   resolveLocalCommandResultSentinel,
   resolveLocalDatabaseTestCommand,
   resolveLocalSupabaseCommands,
@@ -49,6 +51,8 @@ describe("local Supabase command allowlist", () => {
     ["db", "query", "--linked"],
     ["db", "query", "--local", "--linked=true"],
     ["db", "query", "--local", "--linked=false"],
+    ["db", "query", "--local", "--project-ref", "remoteproject"],
+    ["db", "query", "--local", "--project-ref=remoteproject"],
     ["db", "reset", "--db-url", "postgresql://example.invalid/postgres"],
     ["db", "query", "--db-url=postgresql://example.invalid/postgres"],
     ["db", "query", "--file", "supabase/tests/schema.test.sql"],
@@ -63,6 +67,8 @@ describe("local Supabase command allowlist", () => {
 
     expect(command).toEqual([
       "docker",
+      "--context",
+      "desktop-linux",
       "exec",
       "-i",
       "supabase_db_dental-emr",
@@ -89,6 +95,26 @@ describe("local Supabase command allowlist", () => {
     expect(() => assertLocalDockerProject("dental-emr\n")).not.toThrow();
     expect(() => assertLocalDockerContext("remote-production")).toThrow(/desktop-linux context/);
     expect(() => assertLocalDockerProject("other-project")).toThrow(/local Supabase project/);
+  });
+
+  it("accepts only Docker Desktop's Windows local engine endpoint", () => {
+    expect(() =>
+      assertLocalDockerRuntime({
+        context: "desktop-linux\n",
+        endpoint: "npipe:////./pipe/dockerDesktopLinuxEngine\n",
+        project: "dental-emr\n",
+      }),
+    ).not.toThrow();
+
+    expect(() => assertLocalDockerEndpoint("tcp://127.0.0.1:2375")).toThrow(/local engine endpoint/);
+    expect(() => assertLocalDockerEndpoint("ssh://docker.example.test")).toThrow(/local engine endpoint/);
+    expect(() =>
+      assertLocalDockerRuntime({
+        context: "desktop-linux",
+        endpoint: "tcp://remote.example.test:2376",
+        project: "dental-emr",
+      }),
+    ).toThrow(/local engine endpoint/);
   });
 
   it("requires the provisioning success sentinel", () => {

@@ -4,8 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  assertLocalDockerContext,
-  assertLocalDockerProject,
+  assertLocalDockerRuntime,
   resolveLocalDatabaseTestCommand,
 } from "./local-supabase-command.mjs";
 import {
@@ -26,7 +25,7 @@ function fail(message) {
   process.exit(1);
 }
 
-function assertLocalDockerRuntime() {
+function assertVerifiedLocalDockerRuntime() {
   const context = spawnSync("docker", ["context", "show"], {
     cwd: repositoryRoot,
     encoding: "utf8",
@@ -36,11 +35,27 @@ function assertLocalDockerRuntime() {
     throw new Error("Docker Desktop's local context could not be inspected.");
   }
 
-  assertLocalDockerContext(context.stdout ?? "");
+  const endpoint = spawnSync(
+    "docker",
+    [
+      "context",
+      "inspect",
+      "desktop-linux",
+      "--format",
+      "{{.Endpoints.docker.Host}}",
+    ],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+
+  if (endpoint.error || endpoint.status !== 0) {
+    throw new Error("Docker Desktop's local engine endpoint could not be inspected.");
+  }
 
   const project = spawnSync(
     "docker",
     [
+      "--context",
+      "desktop-linux",
       "inspect",
       "--format",
       '{{ index .Config.Labels "com.supabase.cli.project" }}',
@@ -53,11 +68,15 @@ function assertLocalDockerRuntime() {
     throw new Error("The known local Supabase Postgres container could not be inspected.");
   }
 
-  assertLocalDockerProject(project.stdout ?? "");
+  assertLocalDockerRuntime({
+    context: context.stdout ?? "",
+    endpoint: endpoint.stdout ?? "",
+    project: project.stdout ?? "",
+  });
 }
 
 try {
-  assertLocalDockerRuntime();
+  assertVerifiedLocalDockerRuntime();
 
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
