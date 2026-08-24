@@ -121,6 +121,7 @@ export function resolveLocalDockerEnvironment(environment) {
     "DOCKER_TLS_VERIFY",
     "DOCKER_CERT_PATH",
     "DOCKER_CONFIG",
+    "DOCKER_CONTEXT",
   ]);
   const sanitized = {};
 

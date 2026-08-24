@@ -123,6 +123,8 @@ describe("local Supabase command allowlist", () => {
       PATH: "C:/tools",
       DOCKER_HOST: "tcp://remote.example.test:2376",
       DOCKER_CONTEXT: "remote",
+      docker_context: "lowercase-remote",
+      Docker_Context: "mixed-remote",
       DOCKER_TLS_VERIFY: "1",
       DOCKER_CERT_PATH: "C:/certs",
       DOCKER_CONFIG: "C:/untrusted-config",
@@ -137,6 +139,8 @@ describe("local Supabase command allowlist", () => {
     expect(environment).not.toHaveProperty("DOCKER_CONFIG");
     expect(environment).not.toHaveProperty("docker_host");
     expect(environment).not.toHaveProperty("Docker_Tls_Verify");
+    expect(environment).not.toHaveProperty("docker_context");
+    expect(environment).not.toHaveProperty("Docker_Context");
   });
 
   it("requires the provisioning success sentinel", () => {
