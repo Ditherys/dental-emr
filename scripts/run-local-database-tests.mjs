@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertLocalDockerRuntime,
   resolveLocalDockerEnvironment,
+  resolveLocalDockerDatabaseContainer,
   resolveLocalDatabaseTestCommand,
 } from "./local-supabase-command.mjs";
 import {
@@ -54,40 +55,44 @@ function assertVerifiedLocalDockerRuntime() {
     throw new Error("Docker Desktop's local engine endpoint could not be inspected.");
   }
 
-  const project = spawnSync(
+  const containers = spawnSync(
     "docker",
     [
       "--context",
       "desktop-linux",
-      "inspect",
+      "ps",
+      "--filter",
+      `label=com.supabase.cli.workdir=${repositoryRoot}`,
       "--format",
-      '{{ index .Config.Labels "com.supabase.cli.project" }}',
-      "supabase_db_dental-emr",
+      "{{.Names}}",
     ],
     { cwd: repositoryRoot, encoding: "utf8", env: dockerEnvironment },
   );
 
-  if (project.error || project.status !== 0) {
-    throw new Error("The known local Supabase Postgres container could not be inspected.");
+  if (containers.error || containers.status !== 0) {
+    throw new Error("The local Supabase Postgres container could not be listed.");
   }
+
+  const containerName = resolveLocalDockerDatabaseContainer(
+    containers.stdout ?? "",
+  );
 
   assertLocalDockerRuntime({
     context: context.stdout ?? "",
     endpoint: endpoint.stdout ?? "",
-    project: project.stdout ?? "",
   });
-  return dockerEnvironment;
+  return { dockerEnvironment, containerName };
 }
 
 try {
-  const dockerEnvironment = assertVerifiedLocalDockerRuntime();
+  const { dockerEnvironment, containerName } = assertVerifiedLocalDockerRuntime();
 
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
     const source = readFileSync(suite, "utf8");
     validateTransactionalSuite(source, suiteLabel);
 
-    const command = resolveLocalDatabaseTestCommand(suite);
+    const command = resolveLocalDatabaseTestCommand(suite, containerName);
     const result = spawnSync(command[0], command.slice(1), {
       cwd: repositoryRoot,
       encoding: "utf8",

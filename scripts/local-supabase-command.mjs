@@ -30,13 +30,13 @@ const LOCAL_PROVISIONING_SENTINEL_COMMAND = Object.freeze([
   "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
 ]);
 
-const LOCAL_DATABASE_TEST_COMMAND = Object.freeze([
+const LOCAL_DATABASE_TEST_COMMAND_TEMPLATE = Object.freeze([
   "docker",
   "--context",
   "desktop-linux",
   "exec",
   "-i",
-  "supabase_db_dental-emr",
+  "<resolved-local-container>",
   "psql",
   "-U",
   "postgres",
@@ -75,8 +75,18 @@ export function assertLocalSupabaseCommand(command) {
 export function assertLocalDockerDatabaseCommand(command) {
   if (
     !Array.isArray(command) ||
-    command.length !== LOCAL_DATABASE_TEST_COMMAND.length ||
-    command.some((argument, index) => argument !== LOCAL_DATABASE_TEST_COMMAND[index])
+    command.length !== LOCAL_DATABASE_TEST_COMMAND_TEMPLATE.length ||
+    command[0] !== "docker" ||
+    command[1] !== "--context" ||
+    command[2] !== "desktop-linux" ||
+    command[3] !== "exec" ||
+    command[4] !== "-i" ||
+    !/^supabase_db_[a-z0-9_-]+$/.test(command[5]) ||
+    command[6] !== "psql" ||
+    command[7] !== "-U" ||
+    command[8] !== "postgres" ||
+    command[9] !== "-v" ||
+    command[10] !== "ON_ERROR_STOP=1"
   ) {
     throw new Error(
       "A local database suite must execute only in the known local Postgres container.",
@@ -92,14 +102,6 @@ export function assertLocalDockerContext(context) {
   }
 }
 
-export function assertLocalDockerProject(project) {
-  if (project.trim() !== "dental-emr") {
-    throw new Error(
-      "Local database suites require the dental-emr local Supabase project.",
-    );
-  }
-}
-
 export function assertLocalDockerEndpoint(endpoint) {
   if (endpoint.trim() !== LOCAL_DOCKER_ENDPOINT) {
     throw new Error(
@@ -108,10 +110,9 @@ export function assertLocalDockerEndpoint(endpoint) {
   }
 }
 
-export function assertLocalDockerRuntime({ context, endpoint, project }) {
+export function assertLocalDockerRuntime({ context, endpoint }) {
   assertLocalDockerContext(context);
   assertLocalDockerEndpoint(endpoint);
-  assertLocalDockerProject(project);
 }
 
 export function resolveLocalDockerEnvironment(environment) {
@@ -157,12 +158,28 @@ export function resolveLocalSupabaseCommands(commandName) {
   return [command, sentinelCommand];
 }
 
-export function resolveLocalDatabaseTestCommand(suitePath) {
+export function resolveLocalDockerDatabaseContainer(output) {
+  const containers = output
+    .split(/\r?\n/)
+    .map((name) => name.trim())
+    .filter((name) => /^supabase_db_[a-z0-9_-]+$/.test(name));
+
+  if (containers.length !== 1) {
+    throw new Error(
+      "Expected exactly one local Supabase Postgres container for this worktree.",
+    );
+  }
+
+  return containers[0];
+}
+
+export function resolveLocalDatabaseTestCommand(suitePath, containerName) {
   if (typeof suitePath !== "string" || suitePath.trim() === "") {
     throw new Error("A local database test suite path is required.");
   }
 
-  const command = [...LOCAL_DATABASE_TEST_COMMAND];
+  const command = [...LOCAL_DATABASE_TEST_COMMAND_TEMPLATE];
+  command[5] = resolveLocalDockerDatabaseContainer(containerName);
   assertLocalDockerDatabaseCommand(command);
   return command;
 }

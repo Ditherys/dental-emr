@@ -18,7 +18,8 @@
 
 - Local lifecycle and pgTAP commands are explicit PowerShell-compatible npm
   scripts. They fail closed against remote selectors and use only the verified
-  local Docker Desktop endpoint and local Supabase project.
+  local Docker Desktop endpoint and current worktree's local Supabase
+  container.
 - Local provisioning invokes the idempotent pgTAP extension setup and its
   separate completion sentinel as individual local queries, preserving the
   production-shaped migration baseline.
@@ -51,6 +52,25 @@
   after that repair passed: 27 Vitest files / 327 tests, ESLint, strict
   TypeScript, migration privilege lint, and whitespace check.
 
+## Review correction — local container discovery
+
+- **Finding:** The local pgTAP runner assumed the container name
+  `supabase_db_dental-emr`. With a normal `supabase link`, CLI 2.113.0 labels
+  the worktree's local container from linked-project metadata instead, so
+  `test:db:local` refused before running any suite.
+- **Resolution:** The runner now lists Docker containers only through the
+  verified `desktop-linux` endpoint and an exact current-worktree label, then
+  requires exactly one `supabase_db_*` match. It never derives a target from a
+  hosted URL, credential, or command selector.
+- **Regression coverage:** Added linked-project, zero-match, multiple-match,
+  and unrelated-container cases. The focused test failed before the fix and
+  passes after it.
+- **Fresh local evidence:** Start → reset (13 migrations + synthetic seed) →
+  provision sentinel → all nine pgTAP suites → stop passed after the fix.
+- **Final non-cloud verification:** migration privilege lint, ESLint, strict
+  TypeScript, 332 Vitest tests, production build, secret scan, and
+  high-severity dependency audit passed.
+
 ## Security and review notes
 
 - Local entrypoints have no linked, project-reference, or database-URL
@@ -61,6 +81,7 @@
   or recorded for this checkpoint.
 - Git migrations remain authoritative. pgTAP provisioning remains external to
   migrations and non-production only.
+- The local Docker stack started for this verification was stopped afterward.
 - Remaining gate: independent review and project-owner acceptance of this
   architecture/tooling checkpoint before P2-03 implementation. Do not begin
   P2-03 from this branch.

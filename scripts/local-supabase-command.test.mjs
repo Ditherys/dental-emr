@@ -9,10 +9,10 @@ import {
   assertLocalDockerDatabaseCommand,
   assertLocalDockerContext,
   assertLocalDockerEndpoint,
-  assertLocalDockerProject,
   assertLocalDockerRuntime,
   resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
+  resolveLocalDockerDatabaseContainer,
   resolveLocalDatabaseTestCommand,
   resolveLocalSupabaseCommands,
   resolveLocalSupabaseCommand,
@@ -61,9 +61,10 @@ describe("local Supabase command allowlist", () => {
     expect(() => assertLocalSupabaseCommand(command)).toThrow(/local target/);
   });
 
-  it("constructs every database suite invocation for the known local Postgres container", () => {
+  it("constructs every database suite invocation for the discovered local Postgres container", () => {
     const command = resolveLocalDatabaseTestCommand(
       "C:/repo/supabase/tests/schema.test.sql",
+      "supabase_db_linkedtestproject",
     );
 
     expect(command).toEqual([
@@ -72,7 +73,7 @@ describe("local Supabase command allowlist", () => {
       "desktop-linux",
       "exec",
       "-i",
-      "supabase_db_dental-emr",
+      "supabase_db_linkedtestproject",
       "psql",
       "-U",
       "postgres",
@@ -83,6 +84,25 @@ describe("local Supabase command allowlist", () => {
     expect(command.some((argument) => argument.startsWith("--db-url"))).toBe(false);
   });
 
+  it("accepts the single worktree-scoped local Postgres container reported by Docker", () => {
+    expect(
+      resolveLocalDockerDatabaseContainer("supabase_db_linkedtestproject\n"),
+    ).toBe("supabase_db_linkedtestproject");
+  });
+
+  it.each([
+    ["", "no container"],
+    [
+      "supabase_db_firstlocal\nsupabase_db_secondlocal\n",
+      "multiple containers",
+    ],
+    ["unrelated_postgres\n", "unrecognized container"],
+  ])("refuses %s from the worktree-scoped Docker lookup", (output) => {
+    expect(() => resolveLocalDockerDatabaseContainer(output)).toThrow(
+      /exactly one local Supabase Postgres container/,
+    );
+  });
+
   it.each([
     ["docker", "exec", "-i", "other-postgres", "psql", "-U", "postgres"],
     ["docker", "exec", "-i", "supabase_db_dental-emr", "psql", "-U", "app_user"],
@@ -91,11 +111,19 @@ describe("local Supabase command allowlist", () => {
     expect(() => assertLocalDockerDatabaseCommand(command)).toThrow(/known local Postgres container/);
   });
 
-  it("requires Docker Desktop's local context and the repository local project", () => {
+  it("requires Docker Desktop's local context", () => {
     expect(() => assertLocalDockerContext("desktop-linux\n")).not.toThrow();
-    expect(() => assertLocalDockerProject("dental-emr\n")).not.toThrow();
     expect(() => assertLocalDockerContext("remote-production")).toThrow(/desktop-linux context/);
-    expect(() => assertLocalDockerProject("other-project")).toThrow(/local Supabase project/);
+  });
+
+  it("accepts a Supabase CLI project label derived from linked-project metadata", () => {
+    expect(() =>
+      assertLocalDockerRuntime({
+        context: "desktop-linux\n",
+        endpoint: "npipe:////./pipe/dockerDesktopLinuxEngine\n",
+        project: "linkedtestproject\n",
+      }),
+    ).not.toThrow();
   });
 
   it("accepts only Docker Desktop's Windows local engine endpoint", () => {
