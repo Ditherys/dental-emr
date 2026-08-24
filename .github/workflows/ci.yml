@@ -129,22 +129,28 @@ jobs:
       - name: Verify Cloud TEST target separation
         run: npm run ci:test-target
 
+      # Keep one canonical TEST database credential. The URI stays a protected
+      # environment secret; its encoded password component is derived only inside this job so
+      # the Supabase CLI cannot drift from the session-pooler connection.
+      - name: Derive Cloud TEST database password
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: |
+          node --input-type=module -e "import { appendFileSync } from 'node:fs'; const url = new URL(process.env.SUPABASE_TEST_DB_URL ?? ''); const password = url.password; if (!password) throw new Error('SUPABASE_TEST_DB_URL must include a database password.'); process.stdout.write('::add-mask::' + password + '\n'); appendFileSync(process.env.GITHUB_ENV, 'SUPABASE_DB_PASSWORD=' + password + '\n');"
+
       - name: Link the designated Cloud TEST project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npx supabase link --project-ref "$SUPABASE_TEST_PROJECT_ID"
 
       - name: Preview pending migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:push:dry
 
       - name: Apply pending migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:push:test
 
       # ADR-018: the canonical baseline is production-shaped and installs no
@@ -153,19 +159,23 @@ jobs:
       - name: Provision non-production database test tooling
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:provision:test
 
       - name: Load idempotent synthetic fixtures
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:seed:test
 
       - name: Run pgTAP authorization suites
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
         run: npm run test:db
+
+      - name: Diagnose failed P2-01 pgTAP suite
+        if: failure()
+        env:
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        run: psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/patient_authorization.test.sql
 
       - name: Check generated database types
         env:
@@ -175,7 +185,6 @@ jobs:
       - name: Lint public database schema
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:lint:test
 
       # Read-only. Asserts the hosted Auth posture; it never pushes config.
@@ -187,7 +196,6 @@ jobs:
       - name: Run database security advisors
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_TEST_DB_PASSWORD }}
         run: npm run db:advisors:test
 
       - name: Install Playwright browsers

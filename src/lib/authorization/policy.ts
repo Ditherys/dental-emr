@@ -8,9 +8,15 @@ export const foundationPermissionCodes = [
   "role.manage",
   "security.manage",
   "audit.read",
+  "patient.demographics.read",
+  "patient.demographics.write",
 ] as const;
 
 export type PermissionCode = (typeof foundationPermissionCodes)[number];
+export type PatientPermissionCode = Extract<
+  PermissionCode,
+  "patient.demographics.read" | "patient.demographics.write"
+>;
 
 export type ActiveOrganizationMembership = {
   membershipId: string;
@@ -151,5 +157,30 @@ export function hasPermission(
     (grant) =>
       grant.code === permission &&
       (grant.branchId === null || grant.branchId === branchId),
+  );
+}
+
+export function assertSharedPatientPermission(
+  state: OrganizationAuthorizationState,
+  permission: PatientPermissionCode,
+) {
+  if (!hasSharedPatientPermission(state, permission)) {
+    throw new AuthorizationError("PERMISSION_DENIED");
+  }
+}
+
+export function hasSharedPatientPermission(
+  state: OrganizationAuthorizationState,
+  permission: PatientPermissionCode,
+) {
+  const activeBranchIds = new Set(state.activeBranches.map(({ id }) => id));
+  const explicitBranchIds = new Set(state.explicitBranchIds);
+
+  return state.permissionGrants.some(
+    (grant) =>
+      grant.code === permission &&
+      (grant.branchId === null ||
+        (activeBranchIds.has(grant.branchId) &&
+          explicitBranchIds.has(grant.branchId))),
   );
 }

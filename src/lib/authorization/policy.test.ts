@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertSharedPatientPermission,
   assertPermission,
   AuthorizationError,
   createBranchContextModel,
   findAuthorizedBranch,
+  hasSharedPatientPermission,
   hasPermission,
   selectActiveOrganizationMembership,
   type ActiveOrganizationMembership,
@@ -268,5 +270,73 @@ describe("permission scope", () => {
       () => assertPermission(state, "branch.read", "branch-a1"),
       "BRANCH_ACCESS_DENIED",
     );
+  });
+});
+
+describe("shared patient permission scope", () => {
+  it("accepts an organization-wide patient grant", () => {
+    const state = createState({
+      permissionGrants: [
+        { code: "patient.demographics.read", branchId: null },
+      ],
+    });
+
+    expect(
+      hasSharedPatientPermission(state, "patient.demographics.read"),
+    ).toBe(true);
+  });
+
+  it("accepts a branch-scoped patient grant with matching active branch access", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-a1"],
+      permissionGrants: [
+        { code: "patient.demographics.write", branchId: "branch-a1" },
+      ],
+    });
+
+    expect(
+      hasSharedPatientPermission(state, "patient.demographics.write"),
+    ).toBe(true);
+  });
+
+  it("denies a branch-scoped patient grant without matching branch membership", () => {
+    const state = createState({
+      permissionGrants: [
+        { code: "patient.demographics.read", branchId: "branch-a1" },
+      ],
+    });
+
+    expectAuthorizationCode(
+      () =>
+        assertSharedPatientPermission(
+          state,
+          "patient.demographics.read",
+        ),
+      "PERMISSION_DENIED",
+    );
+  });
+
+  it("denies a branch-scoped patient grant for an inactive or foreign branch", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-b1"],
+      permissionGrants: [
+        { code: "patient.demographics.read", branchId: "branch-b1" },
+      ],
+    });
+
+    expect(
+      hasSharedPatientPermission(state, "patient.demographics.read"),
+    ).toBe(false);
+  });
+
+  it("does not promote a branch-scoped patient grant through the generic helper", () => {
+    const state = createState({
+      explicitBranchIds: ["branch-a1"],
+      permissionGrants: [
+        { code: "patient.demographics.read", branchId: "branch-a1" },
+      ],
+    });
+
+    expect(hasPermission(state, "patient.demographics.read")).toBe(false);
   });
 });

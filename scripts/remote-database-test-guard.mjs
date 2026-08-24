@@ -73,6 +73,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "schema.test.sql",
   "foundation_rls.test.sql",
   "workforce_invitations.test.sql",
+  "patient_authorization.test.sql",
   "audit_foundation.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
@@ -80,6 +81,12 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 ]);
 
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
+const ANSI_ESCAPE_SEQUENCE = /\x1B\[[0-?]*[ -/]*[@-~]/g;
+const DATABASE_URL = /\b(?:postgres|postgresql):\/\/[^\s]+/gi;
+const CREDENTIAL_ASSIGNMENT =
+  /\b(?:password|token|api[_-]?key|SUPABASE_ACCESS_TOKEN|SUPABASE_DB_PASSWORD|R6D_DB_URL_OVERRIDE)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s;]+)/gi;
+const BEARER_TOKEN = /\bBearer\s+[^\s]+/gi;
+const MAX_REMOTE_DATABASE_DIAGNOSTIC_LENGTH = 8_192;
 
 function required(environment, name) {
   const value = environment[name]?.trim();
@@ -89,6 +96,42 @@ function required(environment, name) {
   }
 
   return value;
+}
+
+/**
+ * Produces a bounded diagnostic from a failed Supabase CLI invocation without
+ * exposing connection credentials. Only stderr is accepted: stdout may contain
+ * database query rows and must never be surfaced by the remote test runner.
+ */
+function stdoutFailureDiagnostic(stdout) {
+  const trimmed = stdout.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (Array.isArray(parsed) || Array.isArray(parsed?.rows)) {
+      return "";
+    }
+
+    return typeof parsed?.message === "string" ? parsed.message : "";
+  } catch {
+    return trimmed;
+  }
+}
+
+export function formatRemoteDatabaseQueryFailure(stderr, stdout = "") {
+  return `${stderr}\n${stdoutFailureDiagnostic(stdout)}`
+    .replaceAll(ANSI_ESCAPE_SEQUENCE, "")
+    .replaceAll(DATABASE_URL, "[REDACTED_DATABASE_URL]")
+    .replaceAll(CREDENTIAL_ASSIGNMENT, "[REDACTED_CREDENTIAL]")
+    .replaceAll(BEARER_TOKEN, "Bearer [REDACTED_TOKEN]")
+    .replaceAll(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_REMOTE_DATABASE_DIAGNOSTIC_LENGTH);
 }
 
 /**

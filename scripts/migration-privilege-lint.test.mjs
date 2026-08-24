@@ -31,6 +31,8 @@ const fixtureDirectory = join(
 );
 
 const FIXTURE_MARKER = "FIXTURE_NOT_A_MIGRATION";
+const PATIENT_PERMISSION_OBJECT_MIGRATION =
+  "20260819010000_patient_permission_contract.sql";
 
 function readFixture(name) {
   return readFileSync(join(fixtureDirectory, name), "utf8");
@@ -304,7 +306,7 @@ describe("grant canonicalization", () => {
 /* Requirement 1 — the current baseline passes                                 */
 /* -------------------------------------------------------------------------- */
 
-describe("the active Phase 1 baseline", () => {
+describe("the active migration chain", () => {
   const files = readActiveMigrations();
 
   it("satisfies the grant-last invariant", () => {
@@ -324,9 +326,9 @@ describe("the active Phase 1 baseline", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(9);
-    expect(result.checked.statements).toBeGreaterThan(200);
-    expect(result.checked.privilegeStatements).toBeGreaterThan(80);
+    expect(result.checked.files).toBe(11);
+    expect(result.checked.statements).toBeGreaterThan(250);
+    expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
 
   it("parses every object the baseline is documented to contain", () => {
@@ -339,14 +341,14 @@ describe("the active Phase 1 baseline", () => {
       created.filter((statement) => statement.objectClass === objectClass).length;
 
     expect(count("table")).toBe(11);
-    expect(count("function")).toBe(29);
+    expect(count("function")).toBe(35);
     expect(count("policy")).toBe(11);
     // R6-C1 / ADR-018: the canonical baseline is production-shaped and creates
     // no extension. pgTAP is provisioned only into non-production projects.
     expect(count("extension")).toBe(0);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(23);
+    ).toBe(29);
     expect(
       created.filter(
         (statement) =>
@@ -365,6 +367,37 @@ describe("the active Phase 1 baseline", () => {
         FIXTURE_MARKER,
       );
     }
+  });
+
+  it("opens P2-01 with the complete contiguous pre-revoke block", () => {
+    const migration = files.find(
+      ({ name }) => name === PATIENT_PERMISSION_OBJECT_MIGRATION,
+    );
+    expect(migration).toBeDefined();
+
+    const firstStatements = splitSqlStatements(
+      migration.source,
+      migration.name,
+    ).slice(0, 5);
+    const expectedObjects = [
+      "private.validate_workforce_invitation_scope(uuid,uuid,uuid,uuid)",
+      "public.list_workforce_invitation_options(uuid)",
+      "public.prepare_workforce_invitation(uuid,uuid,uuid,text,uuid,uuid)",
+      "public.finalize_workforce_invitation(uuid,uuid,uuid)",
+      "public.set_member_role(uuid,uuid,uuid,boolean)",
+    ];
+
+    expect(firstStatements).toHaveLength(expectedObjects.length);
+    firstStatements.forEach((statement, index) => {
+      expect(parsePrivilegeStatement(statement.sanitized)).toMatchObject({
+        ok: true,
+        kind: "revoke",
+        objectClass: "function",
+        objects: [expectedObjects[index]],
+        privileges: [{ privilege: "all", columns: [] }],
+        grantees: ["public", "anon", "authenticated", "service_role"],
+      });
+    });
   });
 });
 

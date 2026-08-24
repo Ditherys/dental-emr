@@ -5,6 +5,45 @@
 
 ## Current Checkpoint
 
+**P2-01 is accepted.** Its independently reviewed checkpoint is
+`411acd8`; GitHub Actions run
+[`32668365007`](https://github.com/Ditherys/dental-emr/actions/runs/32668365007)
+passed application verification and guarded Cloud TEST database/E2E verification
+on that commit. The independent review found no material findings. The project
+owner authorized P2-02 planning on 2026-08-24. P2-02 implementation must remain
+within `docs/plans/002-patient-foundation.md` and the recorded design
+`docs/superpowers/specs/2026-08-24-p2-02-patient-identity-design.md`.
+The owner also approved the narrow two-migration correction required for
+PostgreSQL RLS evaluation: the object migration revokes everything, and the
+registered terminal grants only `authenticated` execution of the private
+shared-patient helper. No patient-table grant is authorized.
+
+The additive P2-01 slice adds the two patient demographic permissions, grants
+them only to the fixed `DENTIST` and `RECEPTIONIST` system roles, and implements
+ADR-019 through one private live delegation predicate shared by invitation
+options/validation/finalization and direct role assignment. Invitation
+preparation now takes the organization advisory lock before authorization and
+rejects the inviter's verified email; finalization rechecks actor, Auth user,
+live email, tenant/branch scope, and role permissions under the same lock.
+Generic branch authorization is unchanged; separate typed application helpers
+recognize a branch-scoped patient permission only with matching active branch
+membership.
+
+The object migration opens with the five-signature pre-revoke block and grants
+nothing. Its paired registered terminal migration restores only authenticated
+`set_member_role` and the three existing service-only invitation functions.
+The new rollback-bounded pgTAP suite covers both fixed roles through invitation
+and direct assignment plus AAL1, self, custom-role, cross-tenant/branch,
+inactive-branch, live-email, extra-permission, revocation, ACL, mutation, and
+audit negatives.
+
+The independently verified CI result includes migration privilege lint, ESLint,
+strict TypeScript, 305 Vitest tests, production build, secret scan, dependency
+audit, hosted pending-migration application, pgTAP including patient
+authorization, generated database types, schema lint/advisors/auth posture, and
+55 Playwright tests. TEST remains synthetic-only and distinct from DEV; Git
+migrations remain authoritative.
+
 **Phase 1 Foundation is formally accepted.** Codex independently reviewed the
 security-sensitive R6-D tooling and H-5 branch lifecycle implementation through
 code checkpoint `00077b0`. The review found no Critical/High issue, one Medium
@@ -55,9 +94,67 @@ synthetic data, and the local Supabase link is restored to DEV.
 - Production use remains blocked by `docs/SECURITY_ARCHITECTURE.md`; Phase 1
   acceptance is not production approval.
 
-## Next Checkpoint
+## P2-01 Planning Authority
 
-Phase 2 planning may begin. Do not implement patients, clinical records, files,
-scheduling, billing, inventory, communications, analytics, or AI/MCP product
-features until a Phase 2 plan is authored, reviewed against the authoritative
-architecture/security/database documents, and explicitly approved.
+**Phase 2 planning was authored and approved before P2-01 implementation began.**
+The proposed implementation authority is
+`docs/plans/002-patient-foundation.md`, covering only organization-level patient
+identity/demographics, contacts/guardian relationships, duplicate warning,
+list/search/workspace, patient authorization/RLS/audit, synthetic fixtures, and
+concurrency-safe mutations.
+
+The plan reconciles the old master-roadmap labels with the accepted detailed
+Phase 1 plan: authentication, clinic/branch tenancy, authorization, invitations,
+audit, and basic administration are already complete in Phase 1, while
+`docs/plans/001-foundation.md` §48 explicitly selects patient foundation as the
+next bounded plan.
+
+The first independent review did not approve the plan. It found one High
+authorization blocker: the Phase 1 permission-superset rule would prevent an
+owner-only organization from provisioning its first `DENTIST` or
+`RECEPTIONIST` after those roles receive patient permissions. It also found
+Medium gaps in duplicate-update serialization, auditable detail-read enforcement,
+and preferred-branch PATCH semantics, plus trailing whitespace in the untracked
+plan.
+
+The current documentation revision proposes ADR-019 and updates the plan to:
+
+- allow an AAL2, `security.manage` actor to delegate only the fixed global
+  `DENTIST`/`RECEPTIONIST` roles when the only missing permissions are exactly
+  `patient.demographics.read/write`, without granting the actor patient access;
+- preserve full-superset delegation for custom roles and fail closed if either
+  fixed role later gains another permission the actor lacks;
+- use one organization duplicate lock and fixed lock order for create, name/DOB
+  updates, and active mobile/email mutations, with exact signals and bounded
+  candidate fields;
+- revoke all browser base-table patient reads and expose bounded search plus
+  atomic detail-and-view-audit RPCs; and
+- treat omitted preferred branch as preserve, explicit `null` as clear, and a
+  supplied UUID as a new access-validated preference.
+
+While preparing the mandatory re-review, Codex found and corrected four further
+planning defects: all affected Phase 1 functions must lose their preserved ACLs
+as one opening block *before* any helper/body replacement; the security
+architecture's general delegation paragraph must acknowledge ADR-019's exact
+exception; and the P2-11 edit UI must handle and test duplicate-review/cancel/
+confirm states from P2-06/P2-07. The plan also now revokes Supabase's default
+patient table/RPC privileges from `service_role`, because Phase 2 defines no
+elevated service patient workflow.
+
+A fresh-context read-only reviewer then reported no Critical or High finding and
+returned **APPROVED WITH NON-BLOCKING NOTES**. Its two Low notes requested an
+explicit tenant-scoped active-relationship index and one unambiguous email case-
+normalization operation. The plan now requires the relationship index/catalog
+and query-plan tests, and defines deterministic ASCII-only email validation and
+case normalization with shared PostgreSQL/TypeScript vectors.
+
+The project owner explicitly approved the complete Phase 2 plan and ADR-019 on
+2026-08-19. ADR-019 is accepted and `P2-00` is complete. `P2-01 — Patient
+permission contract` was independently reviewed and accepted on 2026-08-24.
+`P2-02 — Patient identity schema, RLS, and audit linkage` is the current,
+strictly bounded implementation task. Do not advance to P2-03 until P2-02
+passes guarded Cloud TEST verification and is independently reviewed and
+accepted.
+Providers, scheduling, clinical history, files, odontogram, treatment planning,
+billing, inventory, communications, integrations, analytics, and AI/MCP remain
+deferred.

@@ -23,6 +23,9 @@
 # production
 /build
 
+# isolated local feature worktrees
+/.worktrees/
+
 # misc
 .DS_Store
 *.pem

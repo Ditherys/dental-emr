@@ -3544,6 +3544,17 @@ docs/discovery/mvp-validation.md
 
 The phases below are deliberately ordered to reduce architectural rework.
 
+**Execution-phase mapping after Phase 1 acceptance (2026-08-18):** the detailed
+`docs/plans/001-foundation.md` consolidated the roadmap's repository foundation
+and authentication/clinic/authorization foundation into the accepted repository
+Phase 1. Its §48 explicitly selects patient foundation as the next bounded plan.
+Accordingly, repository execution ID `P2` means
+`docs/plans/002-patient-foundation.md`; it does not repeat the historical roadmap
+Phase 2 work already completed. Provider/specialty/procedure work remains a
+separate later bounded plan. The numbered roadmap below remains the long-term
+product sequence/inventory rather than a claim that its original labels match
+the repository's checkpoint IDs one-for-one.
+
 ## Phase 1 — Repository & Engineering Foundation
 
 ### Scope
@@ -4956,9 +4967,12 @@ ADR-003: Authorization defense in depth                        [reserved by Phas
 ADR-004: Single Next.js repo for public website + private EMR [reserved by Phase 1]
 ADR-005: Cloudflare R2 canonical storage + Workers/Images media pipeline [accepted]
 ADR-016: Supabase Cloud-first development; no local Supabase runtime      [accepted]
+ADR-017: Phase 1 secure migration baseline and grant-last invariant       [accepted]
+ADR-018: Nonproduction database test tooling per environment              [accepted]
+ADR-019: Bounded fixed patient-role delegation                            [accepted]
 ```
 
-Numbers `ADR-006` through `ADR-015` are intentionally unassigned in the current repository. Future ADRs should be assigned **when the ADR file is actually created**, not pre-numbered here. Because `ADR-016` already exists, prefer `ADR-017` and above for new decisions unless a deliberate reconciliation explicitly fills an earlier gap.
+Numbers `ADR-006` through `ADR-015` are intentionally unassigned in the current repository. Future ADRs should be assigned **when the ADR file is actually created**, not pre-numbered here. Prefer `ADR-020` and above for new decisions unless a deliberate reconciliation explicitly fills an earlier gap.
 
 Future ADR topics, intentionally **unnumbered**:
 
