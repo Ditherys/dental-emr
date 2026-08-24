@@ -1,95 +1,66 @@
-# AI Handoff — ADR-020 local Supabase hybrid tooling checkpoint
+# AI Handoff — P2-03 accepted; P2-04 patient creation authorized
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
 
-- Active work: `P2-03 — Patient contacts and guardian relationships schema` on
+- P2-03 is accepted by the project owner following local verification and a
+  follow-up schema/RLS review with no material findings.
+- Next authorized work: `P2-04 — Transactional patient creation and duplicate
+  warning` on
   branch `feat/p2-03-patient-contacts` in
   `.worktrees/p2-03-patient-contacts`, based on merged `main` `875695b`.
-- Current branch has a documentation-only consistency correction for the
-  approved P2-01 through P2-11 local verification / P2-12 closeout Cloud TEST
-  policy. No P2-03 migration, application code, generated types, or tests have
-  been changed yet.
-- Decision: ADR-020 was accepted by the project owner on 2026-08-24.
-- Base: accepted P2-02 merge `9103e9e`.
-- Implementation review target: `6459f15ff60c72a9140d96dee3878a70ce70ace1`.
-  This handoff is committed after that target; reviewers should inspect the
-  implementation target and this documentation commit together.
-- Scope: optional, disposable, synthetic-only local Supabase feedback. Cloud
-  TEST is deferred to P2-12 closeout and production deployment. No application
-  schema migration, application route/UI, dependency, or P2-03 implementation changed.
+- Implementation is ready for the required independent schema/RLS review. Do
+  not begin P2-04 until the review is accepted.
+- P2-03 follows the accepted ADR-020 hybrid verification model: local Supabase
+  is the checkpoint database; guarded Cloud TEST remains deferred to P2-12
+  closeout and before production.
 
-## ADR-020 implementation summary
+## Implementation summary
 
-- Local lifecycle and pgTAP commands are explicit PowerShell-compatible npm
-  scripts. They fail closed against remote selectors and use only the verified
-  local Docker Desktop endpoint and current worktree's local Supabase
-  container.
-- Local provisioning invokes the idempotent pgTAP extension setup and its
-  separate completion sentinel as individual local queries, preserving the
-  production-shaped migration baseline.
-- Local rollback-bounded pgTAP suites execute as whole scripts in the verified
-  local Postgres container; all registered suites are required.
-- Cloud TEST provisioning now invokes the same extension setup followed by the
-  separate completion-sentinel query, capturing and validating only the second
-  result. The existing Cloud TEST environment/linked-project guard is unchanged.
-- Active architecture, security, database, runbook, plan, and repository
-  guidance documents now state the hybrid contract. Local Supabase, Cloud DEV,
-  and Cloud TEST are deterministic synthetic-data-only environments.
+- Added `20260825010000_patient_contacts_relationships.sql` only. It creates
+  `patient_contacts` and `patient_relationships`, with composite patient FKs,
+  archive/version/timestamp conventions, bounded values, allowed type/status
+  checks, tenant-scoped indexes, and a partial unique index enforcing one active
+  primary contact per patient/contact type.
+- Added private, immutable mobile and email normalization helpers. Mobile values
+  canonicalize approved Philippine forms to E.164; email values require
+  NFKC-normalized ASCII and use only ASCII case mapping. The helpers and both
+  tables explicitly revoke `PUBLIC`, `anon`, `authenticated`, and `service_role`
+  privileges.
+- Both child tables have RLS enabled with SELECT-only policies using the existing
+  shared-patient demographics helper. No table or RPC grant was introduced.
+- Added the rollback-bounded `patient_contacts_relationships.test.sql` pgTAP
+  suite and registered it in both local and guarded-cloud runner paths. Coverage
+  includes tenant-safe FKs, self/exactly-one relationship constraints, primary
+  contact uniqueness, required relationship index order, direct privilege denial,
+  and isolated RLS behavior for an authorized dentist versus an owner.
+- Updated migration-lint inventory assertions for the two tables, two private
+  functions, and two policies added by this checkpoint.
 
 ## Verification evidence
 
-- Local environment: WSL default version 2; Docker Desktop Linux engine
-  reachable; pinned Supabase CLI 2.113.0; PostgreSQL major 17.
-- Local runtime: project-scoped start, reset from all 13 committed migrations
-  plus synthetic seed, non-production pgTAP provisioning sentinel, all nine
-  registered database suites, and project-scoped stop passed.
-- Local full verification: migration privilege lint, ESLint, strict TypeScript,
-  327 Vitest tests, production build, secret scan, and high-severity dependency
-  audit passed.
-- Cloud TEST: GitHub Actions CI run `32767418410` passed application
-  verification and Cloud TEST database/E2E verification for the implementation
-  target. The guarded target check, migration inspection, pgTAP suites,
-  generated-type check, schema lint, hosted Auth posture, security advisors,
-  and selected Playwright flows passed.
-- Focused regression coverage for the Cloud provisioning repair was written
-  first, failed before the repair, then passed. The full non-cloud verification
-  after that repair passed: 27 Vitest files / 327 tests, ESLint, strict
-  TypeScript, migration privilege lint, and whitespace check.
+- Fresh local Supabase reset applied all 14 committed migrations and the
+  synthetic seed successfully.
+- Local non-production pgTAP provisioning passed.
+- `npm run test:db:local` passed all 10 registered suites, including the new
+  P2-03 suite.
+- `npm run security:migrations` passed (14 migrations, 304 parsed statements,
+  121 privilege statements, and no unapproved grants).
+- `npm run test:unit` passed: 27 files, 332 tests.
+- `npm run lint`, `npm run typecheck`, `npm run security:secrets`, and
+  `npm run security:audit` passed.
+- `npm run build` passed with the documented synthetic development environment
+  values; a build with no environment values correctly fails the existing
+  deployment-separation guard.
+- The local Supabase stack was stopped after verification. No Cloud TEST target,
+  production credential, or real data was used.
 
-## Review correction — local container discovery
+## Review focus
 
-- **Finding:** The local pgTAP runner assumed the container name
-  `supabase_db_dental-emr`. With a normal `supabase link`, CLI 2.113.0 labels
-  the worktree's local container from linked-project metadata instead, so
-  `test:db:local` refused before running any suite.
-- **Resolution:** The runner now lists Docker containers only through the
-  verified `desktop-linux` endpoint and an exact current-worktree label, then
-  requires exactly one `supabase_db_*` match. It never derives a target from a
-  hosted URL, credential, or command selector.
-- **Regression coverage:** Added linked-project, zero-match, multiple-match,
-  and unrelated-container cases. The focused test failed before the fix and
-  passes after it.
-- **Fresh local evidence:** Start → reset (13 migrations + synthetic seed) →
-  provision sentinel → all nine pgTAP suites → stop passed after the fix.
-- **Final non-cloud verification:** migration privilege lint, ESLint, strict
-  TypeScript, 332 Vitest tests, production build, secret scan, and
-  high-severity dependency audit passed.
-
-## Security and review notes
-
-- Local entrypoints have no linked, project-reference, or database-URL
-  selector; inherited Docker routing variables are removed before local CLI
-  execution.
-- Cloud TEST target guards remain fail-closed and unchanged. No production
-  target, credential, real patient data, or raw credential-bearing log was used
-  or recorded for this checkpoint.
-- Git migrations remain authoritative. pgTAP provisioning remains external to
-  migrations and non-production only.
-- The local Docker stack started for this verification was stopped afterward.
-- Project-owner decision (2026-08-25): local verification and dedicated review
-  accept each P2 checkpoint; one guarded Cloud TEST run is deferred to P2-12
-  closeout and production deployment. The hybrid checkpoint is approved for
-  merge and P2-03 may begin from updated `main`.
+- Confirm the mobile/email normalization contracts precisely match P2-03 scope.
+- Confirm all child-table access remains privilege-denied without test-only
+  rollback grants and that RLS cannot reveal an otherwise denied patient.
+- Confirm relationship FKs and checks prevent cross-tenant, self, and dual-party
+  records, while preserving external and related-patient guardian paths.
