@@ -5,10 +5,14 @@
 
 ## Current Checkpoint
 
-**P2-01 is implemented locally on `feat/p2-01-patient-permissions` and is
-waiting for hosted Cloud TEST verification plus independent authorization
-review.** This revision is the implementation checkpoint; do not advance to
-P2-02 from it.
+**P2-01 is accepted.** Its independently reviewed checkpoint is
+`411acd8`; GitHub Actions run
+[`32668365007`](https://github.com/Ditherys/dental-emr/actions/runs/32668365007)
+passed application verification and guarded Cloud TEST database/E2E verification
+on that commit. The independent review found no material findings. The project
+owner authorized P2-02 planning on 2026-08-24. P2-02 implementation must remain
+within `docs/plans/002-patient-foundation.md` and the recorded design
+`docs/superpowers/specs/2026-08-24-p2-02-patient-identity-design.md`.
 
 The additive P2-01 slice adds the two patient demographic permissions, grants
 them only to the fixed `DENTIST` and `RECEPTIONIST` system roles, and implements
@@ -29,15 +33,12 @@ and direct assignment plus AAL1, self, custom-role, cross-tenant/branch,
 inactive-branch, live-email, extra-permission, revocation, ACL, mutation, and
 audit negatives.
 
-Fresh local verification passes: migration privilege lint (11 migrations, 268
-statements, 36 registered grant entries), ESLint, strict TypeScript, 301 Vitest
-tests, Next.js production build, secret scan, and dependency audit. Hosted
-database execution remains pending: this worktree was safely linked to the
-documented TEST project and the management API confirmed TEST and DEV are
-distinct, but the passwordless database connection cannot proceed from this
-IPv4-only machine. No migration was applied remotely. Run the guarded Cloud
-TEST migration/pgTAP/type/schema checks from the credentialed CI environment or
-a human PowerShell session before accepting P2-01.
+The independently verified CI result includes migration privilege lint, ESLint,
+strict TypeScript, 305 Vitest tests, production build, secret scan, dependency
+audit, hosted pending-migration application, pgTAP including patient
+authorization, generated database types, schema lint/advisors/auth posture, and
+55 Playwright tests. TEST remains synthetic-only and distinct from DEV; Git
+migrations remain authoritative.
 
 **Phase 1 Foundation is formally accepted.** Codex independently reviewed the
 security-sensitive R6-D tooling and H-5 branch lifecycle implementation through
@@ -145,9 +146,11 @@ case normalization with shared PostgreSQL/TypeScript vectors.
 
 The project owner explicitly approved the complete Phase 2 plan and ADR-019 on
 2026-08-19. ADR-019 is accepted and `P2-00` is complete. `P2-01 — Patient
-permission contract` is the only authorized implementation task and is now at
-the local checkpoint described above. Do not advance to P2-02 until P2-01 passes
-guarded Cloud TEST verification and is independently reviewed and accepted.
+permission contract` was independently reviewed and accepted on 2026-08-24.
+`P2-02 — Patient identity schema, RLS, and audit linkage` is the current,
+strictly bounded implementation task. Do not advance to P2-03 until P2-02
+passes guarded Cloud TEST verification and is independently reviewed and
+accepted.
 Providers, scheduling, clinical history, files, odontogram, treatment planning,
 billing, inventory, communications, integrations, analytics, and AI/MCP remain
 deferred.
