@@ -32,19 +32,3 @@
 -- to PUBLIC, anon, or authenticated on any application object.
 
 create extension if not exists pgtap with schema extensions;
-
--- Evidence row. The guarded runner asserts this exact sentinel so a silently
--- skipped or partially applied provisioning step cannot read as success.
-select
-  case
-    when exists (
-      select 1
-      from pg_catalog.pg_extension as installed
-      join pg_catalog.pg_namespace as schema_of
-        on schema_of.oid = installed.extnamespace
-      where installed.extname = 'pgtap'
-        and schema_of.nspname = 'extensions'
-    )
-    then 'P1_PROVISION_PASS'
-    else 'P1_PROVISION_FAIL'
-  end as p1_provision_result;

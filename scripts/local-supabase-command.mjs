@@ -20,6 +20,16 @@ const LOCAL_COMMAND_RESULT_SENTINELS = Object.freeze({
   }),
 });
 
+const LOCAL_PROVISIONING_SENTINEL_COMMAND = Object.freeze([
+  "db",
+  "query",
+  "--local",
+  "--output-format",
+  "json",
+  "--file",
+  "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
+]);
+
 export function assertLocalSupabaseCommand(command) {
   const containsRemoteSelector = command.some(
     (argument) =>
@@ -52,6 +62,18 @@ export function resolveLocalSupabaseCommand(commandName) {
   const command = [...LOCAL_SUPABASE_COMMANDS[commandName]];
   assertLocalSupabaseCommand(command);
   return command;
+}
+
+export function resolveLocalSupabaseCommands(commandName) {
+  const command = resolveLocalSupabaseCommand(commandName);
+
+  if (commandName !== "provision-test-tooling") {
+    return [command];
+  }
+
+  const sentinelCommand = [...LOCAL_PROVISIONING_SENTINEL_COMMAND];
+  assertLocalSupabaseCommand(sentinelCommand);
+  return [command, sentinelCommand];
 }
 
 export function resolveLocalDatabaseTestCommand(suitePath) {

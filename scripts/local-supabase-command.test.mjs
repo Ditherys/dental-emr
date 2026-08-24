@@ -8,6 +8,7 @@ import {
   assertLocalSupabaseCommand,
   resolveLocalCommandResultSentinel,
   resolveLocalDatabaseTestCommand,
+  resolveLocalSupabaseCommands,
   resolveLocalSupabaseCommand,
 } from "./local-supabase-command.mjs";
 
@@ -76,6 +77,37 @@ describe("local Supabase command allowlist", () => {
       value: "P1_PROVISION_PASS",
     });
     expect(resolveLocalCommandResultSentinel("reset")).toBeNull();
+  });
+
+  it("splits local pgTAP provisioning into compatible local-only queries", () => {
+    const commands = resolveLocalSupabaseCommands("provision-test-tooling");
+
+    expect(commands).toEqual([
+      [
+        "db",
+        "query",
+        "--local",
+        "--output-format",
+        "json",
+        "--file",
+        "supabase/provisioning/nonproduction/001_database_test_tooling.sql",
+      ],
+      [
+        "db",
+        "query",
+        "--local",
+        "--output-format",
+        "json",
+        "--file",
+        "supabase/provisioning/nonproduction/002_database_test_tooling_sentinel.sql",
+      ],
+    ]);
+
+    for (const command of commands) {
+      expect(command).toContain("--local");
+      expect(command).not.toContain("--linked");
+      expect(command.some((argument) => argument.startsWith("--db-url"))).toBe(false);
+    }
   });
 });
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   resolveLocalCommandResultSentinel,
-  resolveLocalSupabaseCommand,
+  resolveLocalSupabaseCommands,
 } from "./local-supabase-command.mjs";
 import { parseSupabaseQueryResult } from "./remote-database-test-guard.mjs";
 
@@ -26,31 +26,40 @@ function fail(message) {
 
 try {
   const commandName = process.argv[2];
-  const command = resolveLocalSupabaseCommand(commandName);
+  const commands = resolveLocalSupabaseCommands(commandName);
 
   if (!existsSync(supabaseCli)) {
     throw new Error("The pinned Supabase CLI is missing. Run npm ci first.");
   }
 
   const sentinel = resolveLocalCommandResultSentinel(commandName);
-  const result = spawnSync(process.execPath, [supabaseCli, ...command], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    env: process.env,
-    maxBuffer: 16 * 1024 * 1024,
-    stdio: sentinel ? ["inherit", "pipe", "inherit"] : "inherit",
-  });
+  let sentinelOutput = "";
 
-  if (result.error) {
-    throw new Error("The pinned Supabase CLI could not start.");
-  }
+  for (const [index, command] of commands.entries()) {
+    const capturesSentinel = sentinel && index === commands.length - 1;
+    const result = spawnSync(process.execPath, [supabaseCli, ...command], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      env: process.env,
+      maxBuffer: 16 * 1024 * 1024,
+      stdio: capturesSentinel ? ["inherit", "pipe", "inherit"] : "inherit",
+    });
 
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+    if (result.error) {
+      throw new Error("The pinned Supabase CLI could not start.");
+    }
+
+    if (result.status !== 0) {
+      process.exit(result.status ?? 1);
+    }
+
+    if (capturesSentinel) {
+      sentinelOutput = result.stdout ?? "";
+    }
   }
 
   if (sentinel) {
-    parseSupabaseQueryResult(result.stdout ?? "", commandName, sentinel);
+    parseSupabaseQueryResult(sentinelOutput, commandName, sentinel);
     console.log(`PASS ${commandName} (${sentinel.value})`);
   }
 } catch (error) {
