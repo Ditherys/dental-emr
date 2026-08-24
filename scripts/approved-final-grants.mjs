@@ -174,6 +174,21 @@ const patientPermissionContractGrants = Object.freeze([
   })),
 ]);
 
+const PATIENT_IDENTITY_GRANTS_MIGRATION =
+  "20260824010100_patient_identity_grants.sql";
+
+const patientIdentityGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "private.has_shared_patient_permission(uuid, text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Required only so the stored patients_select_shared_directory RLS expression can evaluate live organization-wide or active exact-branch patient permission. USAGE on private remains revoked, and no patient-table privilege or Data API RPC is granted.",
+  },
+]);
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -193,6 +208,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: PATIENT_PERMISSION_CONTRACT_MIGRATION,
     grants: patientPermissionContractGrants,
+  }),
+  Object.freeze({
+    file: PATIENT_IDENTITY_GRANTS_MIGRATION,
+    grants: patientIdentityGrants,
   }),
 ]);
 
