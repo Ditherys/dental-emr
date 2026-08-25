@@ -26,19 +26,15 @@ Read the smallest relevant set before reviewing or implementing:
 Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 2026-08-19. Execute only its ordered task/checkpoint currently authorized.
 
-## Current Phase: Phase 2 Patient Foundation — Hybrid database tooling checkpoint
+## Current Phase: Phase 2 Patient Foundation — Accepted
 
-P2-01 and P2-02 are accepted, and P2-02 is merged into `main`. ADR-020 is
-accepted. Current implementation authority is limited to the local Supabase
-hybrid tooling and documentation checkpoint described by ADR-020 and its
-implementation plan.
+Phase 2 is accepted by the project owner as recorded in
+`docs/PHASE2_ACCEPTANCE_REVIEW.md`. ADR-020 requires guarded Cloud TEST
+verification before production deployment; Phase 2's local acceptance does not
+authorize production patient use.
 
-P2-03 implementation may begin after this architecture/tooling checkpoint has
-passed required local verification, dedicated review, and project-owner
-acceptance. During Phase 2, each bounded database/RLS checkpoint, including
-P2-12 closeout, requires local verification and review; the guarded Cloud TEST
-run is required before production deployment. All later scope remains ordered by
-`docs/plans/002-patient-foundation.md`.
+Do not begin a later product phase until its bounded plan has been independently
+reviewed and explicitly approved.
 
 ## Codex Review Role
 

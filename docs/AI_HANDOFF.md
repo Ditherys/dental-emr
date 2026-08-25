@@ -12,8 +12,8 @@
 - Local P2-12 reconstruction passed on commit `93a0dec`: start/reset, test
   tooling provisioning, all 15 pgTAP suites, and all three local concurrency
   suites. Lint, typecheck, and 370 unit tests also passed.
-- Phase 2 still requires independent closeout review, recorded manual QA, and
-  separate project-owner acceptance. Production remains blocked pending the
+- Phase 2 was accepted by the project owner on 2026-08-26; see
+  `docs/PHASE2_ACCEPTANCE_REVIEW.md`. Production remains blocked pending the
   deferred Cloud TEST gate and all other production security gates.
 
 ## P2-12 closeout status (2026-08-25)

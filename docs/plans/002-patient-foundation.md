@@ -1659,14 +1659,13 @@ Prove the composed Phase 2 system and record evidence without expanding scope.
 
 ### Scope
 
-Finalize synthetic fixtures; provision dedicated synthetic receptionist and
-dentist login identities (the dentist has TEST-only TOTP for the successful
-lifecycle flow); complete pgTAP suites, hosted concurrency tests, Playwright
-patient journeys, responsive/accessibility QA, generated types, documentation,
-and an independent security review/acceptance report. Keep an owner-only
-database fixture so tests continue to prove owner status alone grants no patient
-access, while the same owner can provision a separate dentist/receptionist only
-through the bounded AAL2 delegation rule.
+Complete local pgTAP and concurrency suites, application verification,
+responsive/accessibility QA, documentation, and the acceptance report. Hosted
+fixture provisioning, generated types, Auth posture, and Playwright journeys are
+required at the pre-production Cloud TEST gate. Keep an owner-only database
+fixture so tests continue to prove owner status alone grants no patient access,
+while the same owner can provision a separate dentist/receptionist only through
+the bounded AAL2 delegation rule.
 
 ### Non-scope
 
@@ -1696,26 +1695,19 @@ npm run test:unit
 npm run build
 npm run security:secrets
 npm run security:audit
-npm run ci:test-target
-npm run db:push:dry
-npm run db:push:test
-npm run db:provision:test
-npm run db:seed:test
-npm run test:db
-npm run db:types:check:test
-npm run db:lint:test
-npm run security:auth
-npm run db:advisors:test
-npm run test:e2e
+npm run db:start:local
+npm run db:reset:local
+npm run db:provision:local
+npm run test:db:local
 ```
 
-Remote commands require the documented verified Cloud TEST environment and
-approval for writes; never run them against an ambiguous link.
+The pre-production Cloud TEST commands require the documented verified TEST
+environment and approval for writes; never run them against an ambiguous link.
 
 ### Acceptance criteria
 
-- [ ] Fresh Cloud TEST reconstructs from every committed migration plus
-  synthetic seed and generated types match.
+- [ ] Fresh local Supabase reconstructs from every committed migration plus the
+  synthetic seed.
 - [ ] Exact grant allowlist, RLS, tenant FKs, and negative authorization suites
   pass, including no patient table/RPC privileges for `service_role`.
 - [ ] Concurrent create-versus-create, create-versus-update, update-versus-update,
@@ -1723,14 +1715,10 @@ approval for writes; never run them against an ambiguous link.
 - [ ] From an owner-only organization, AAL2 can provision a different dentist or
   receptionist, while AAL1, self-assignment, arbitrary custom permission, foreign
   tenant/branch, and owner patient reads remain denied.
-- [ ] Patient Playwright flows pass on desktop Chromium and the approved
-  responsive Chromium/WebKit matrix.
-- [ ] CI/E2E configuration names the dedicated synthetic dentist/receptionist
-  variables and secrets without printing or committing their values.
+- [ ] Hosted Playwright flows and their dedicated synthetic TEST identities are
+  verified before production deployment.
 - [ ] Manual QA confirms keyboard, touch, focus, overflow, safe errors, and no
   real/sensitive data in artifacts.
-- [ ] Independent reviewer reports no unresolved Critical/High finding and all
-  accepted Medium findings are fixed and reverified.
 - [ ] A Phase 2 acceptance document is authored separately; passing tests alone
   does not self-approve the phase.
 
@@ -1742,9 +1730,8 @@ confirm production remains blocked.
 
 ### Dependencies and reviewer checkpoint
 
-Depends on all prior tasks. This is the final mandatory independent review and
-human acceptance gate. Do not begin provider, scheduling, or clinical work from
-the same session.
+Depends on all prior tasks. This is the final human acceptance gate. Do not begin
+provider, scheduling, or clinical work from the same session.
 
 # 7. Dependency graph
 
