@@ -213,6 +213,62 @@ const patientCreateGrants = Object.freeze([
   },
 ]);
 
+const PATIENT_READS_GRANTS_MIGRATION =
+  "20260825010400_patient_reads_grants.sql";
+
+const patientReadsGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.search_patients(uuid, text, date, text, text, integer, integer)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The bounded patient-directory RPC derives tenant and actor from an authenticated acting branch, requires live demographics-read permission, and returns only the approved paginated list projection.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_patient_detail(uuid, uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The bounded patient-detail RPC derives tenant from the target plus authenticated acting branch, requires live demographics-read permission, and records one opaque patient.viewed audit event atomically before returning.",
+  },
+]);
+
+const PATIENT_DEMOGRAPHICS_WRITE_GRANTS_MIGRATION =
+  "20260825010600_patient_demographics_write_grants.sql";
+
+const patientDemographicsWriteGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.update_patient(uuid, uuid, integer, jsonb, boolean)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only patient demographics update path. It derives the target tenant and actor from trusted rows and authenticated context, validates PATCH semantics and preferred-branch access, locks duplicate state and the patient version, and appends one opaque audit event atomically.",
+  },
+]);
+
+const PATIENT_CHILDREN_WRITE_GRANTS_MIGRATION = "20260825010800_patient_children_write_grants.sql";
+const patientChildrenWriteGrants = Object.freeze([
+  "public.create_patient_contact(uuid,uuid,text,text,text,boolean,boolean)",
+  "public.update_patient_contact(uuid,uuid,uuid,integer,text,text,text,boolean,boolean)",
+  "public.archive_patient_contact(uuid,uuid,uuid,integer)",
+  "public.create_patient_relationship(uuid,uuid,uuid,text,text,text,text,boolean,boolean,boolean)",
+  "public.update_patient_relationship(uuid,uuid,uuid,integer,uuid,text,text,text,text,boolean,boolean,boolean)",
+  "public.archive_patient_relationship(uuid,uuid,uuid,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient child mutation path. It derives the tenant, parent, and actor from trusted authenticated context, rechecks live write permission, applies row/advisory locking and optimistic versions, and appends one opaque patient-linked audit event atomically." })));
+
+const PATIENT_LIFECYCLE_GRANTS_MIGRATION = "20260825011000_patient_lifecycle_grants.sql";
+const patientLifecycleGrants = Object.freeze([
+  "public.archive_patient(uuid, uuid, integer)",
+  "public.reactivate_patient(uuid, uuid, integer)",
+  "public.search_patients(uuid, text, date, text, text, integer, integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient lifecycle mutation path. It requires AAL2, derives tenant and actor from trusted authenticated target/branch context, rechecks live write permission, locks the patient version, and appends one opaque patient-linked audit event atomically." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -241,6 +297,16 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
     file: PATIENT_CREATE_GRANTS_MIGRATION,
     grants: patientCreateGrants,
   }),
+  Object.freeze({
+    file: PATIENT_READS_GRANTS_MIGRATION,
+    grants: patientReadsGrants,
+  }),
+  Object.freeze({
+    file: PATIENT_DEMOGRAPHICS_WRITE_GRANTS_MIGRATION,
+    grants: patientDemographicsWriteGrants,
+  }),
+  Object.freeze({ file: PATIENT_CHILDREN_WRITE_GRANTS_MIGRATION, grants: patientChildrenWriteGrants }),
+  Object.freeze({ file: PATIENT_LIFECYCLE_GRANTS_MIGRATION, grants: patientLifecycleGrants }),
 ]);
 
 /**

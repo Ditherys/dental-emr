@@ -102,6 +102,17 @@ const APPROVED_FINAL_PRIVILEGES = [
     "private.has_shared_patient_permission(uuid, text)",
     "public.find_duplicate_candidates(uuid, text, text, date, text, text)",
     "public.create_patient(uuid, text, text, text, text, text, date, text, text, text, text, text, text, uuid, text, text, boolean)",
+    "public.search_patients(uuid, text, date, text, text, integer, integer)",
+    "public.get_patient_detail(uuid, uuid)",
+    "public.update_patient(uuid, uuid, integer, jsonb, boolean)",
+    "public.create_patient_contact(uuid, uuid, text, text, text, boolean, boolean)",
+    "public.update_patient_contact(uuid, uuid, uuid, integer, text, text, text, boolean, boolean)",
+    "public.archive_patient_contact(uuid, uuid, uuid, integer)",
+    "public.create_patient_relationship(uuid, uuid, uuid, text, text, text, text, boolean, boolean, boolean)",
+    "public.update_patient_relationship(uuid, uuid, uuid, integer, uuid, text, text, text, text, boolean, boolean, boolean)",
+    "public.archive_patient_relationship(uuid, uuid, uuid, integer)",
+    "public.archive_patient(uuid, uuid, integer)",
+    "public.reactivate_patient(uuid, uuid, integer)",
     "public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)",
     "public.set_role_permission(uuid, text, boolean)",
     "public.set_member_role(uuid, uuid, uuid, boolean)",
@@ -1173,7 +1184,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(27);
+    expect(approved.size).toBe(38);
   });
 });
 

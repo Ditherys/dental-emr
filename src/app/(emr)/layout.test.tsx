@@ -114,4 +114,29 @@ describe("EMR authorization UX", () => {
       "/settings/branches",
     );
   });
+
+  it("shows Patients only when the current server state has patient read access", async () => {
+    requireOrganizationAuthorizationState.mockResolvedValueOnce({
+      ...authorizationState,
+      permissionGrants: [{ code: "patient.demographics.read", branchId: null }],
+    });
+
+    render(await EmrLayout({ children: <p>Private route content</p> }));
+
+    expect(screen.getByTestId("navigation")).toHaveTextContent("/patients");
+  });
+
+  it("shows Patients for a branch-scoped patient reader with active branch access", async () => {
+    requireOrganizationAuthorizationState.mockResolvedValueOnce({
+      ...authorizationState,
+      activeBranches: [{ id: "branch-a", name: "Main", slug: "main" }],
+      explicitBranchIds: ["branch-a"],
+      roleScopes: ["branch-a"],
+      permissionGrants: [{ code: "patient.demographics.read", branchId: "branch-a" }],
+    });
+
+    render(await EmrLayout({ children: <p>Private route content</p> }));
+
+    expect(screen.getByTestId("navigation")).toHaveTextContent("/patients");
+  });
 });

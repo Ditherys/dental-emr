@@ -45,6 +45,15 @@ const LOCAL_DATABASE_TEST_COMMAND_TEMPLATE = Object.freeze([
 ]);
 
 const LOCAL_DOCKER_ENDPOINT = "npipe:////./pipe/dockerDesktopLinuxEngine";
+const LOCAL_CREDENTIAL_TABLE_ROW =
+  /(│\s*(?:publishable|secret(?: key)?|access key|jwt secret|anon key|service_role key)\s*│)\s*[^│\r\n]+/gi;
+const DATABASE_URL = /\b(?:postgres|postgresql):\/\/[^\s]+/gi;
+
+export function redactLocalSupabaseOutput(output) {
+  return output
+    .replaceAll(DATABASE_URL, "[REDACTED_DATABASE_URL]")
+    .replace(LOCAL_CREDENTIAL_TABLE_ROW, "$1 [REDACTED]");
+}
 
 export function assertLocalSupabaseCommand(command) {
   const containsRemoteSelector = command.some(

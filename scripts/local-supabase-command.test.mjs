@@ -10,6 +10,7 @@ import {
   assertLocalDockerContext,
   assertLocalDockerEndpoint,
   assertLocalDockerRuntime,
+  redactLocalSupabaseOutput,
   resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
   resolveLocalDockerDatabaseContainer,
@@ -19,6 +20,21 @@ import {
 } from "./local-supabase-command.mjs";
 
 describe("local Supabase command allowlist", () => {
+  it("redacts local CLI credentials before command output is forwarded", () => {
+    const output = redactLocalSupabaseOutput(
+      "│ URL │ postgresql://postgres:password@127.0.0.1:54322/postgres │\n" +
+        "│ Publishable │ publishable-token │\n" +
+        "│ Secret │ secret-token │",
+    );
+
+    expect(output).not.toContain("password");
+    expect(output).not.toContain("publishable-token");
+    expect(output).not.toContain("secret-token");
+    expect(output).toContain("[REDACTED_DATABASE_URL]");
+    expect(output).toContain("│ Publishable │ [REDACTED]");
+    expect(output).toContain("│ Secret │ [REDACTED]");
+  });
+
   it("returns only the exact reviewed local lifecycle commands", () => {
     expect(resolveLocalSupabaseCommand("start")).toEqual(["start"]);
     expect(resolveLocalSupabaseCommand("stop")).toEqual(["stop"]);

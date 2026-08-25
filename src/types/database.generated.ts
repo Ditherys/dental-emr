@@ -653,6 +653,14 @@ export type Database = {
           version: number
         }[]
       }
+      create_patient_contact: { Args: { p_acting_branch_id: string; p_patient_id: string; p_contact_type: string; p_label: string | null; p_value: string; p_is_primary: boolean; p_duplicate_confirmed: boolean }; Returns: { contact_id: string; version: number }[] }
+      update_patient_contact: { Args: { p_acting_branch_id: string; p_contact_id: string; p_patient_id: string; p_expected_version: number; p_contact_type: string; p_label: string | null; p_value: string; p_is_primary: boolean; p_duplicate_confirmed: boolean }; Returns: { contact_id: string; version: number }[] }
+      archive_patient_contact: { Args: { p_acting_branch_id: string; p_contact_id: string; p_patient_id: string; p_expected_version: number }; Returns: { contact_id: string; version: number }[] }
+      archive_patient: { Args: { p_acting_branch_id: string; p_patient_id: string; p_expected_version: number }; Returns: { patient_id: string; version: number }[] }
+      create_patient_relationship: { Args: { p_acting_branch_id: string; p_patient_id: string; p_related_patient_id: string | null; p_external_contact_name: string | null; p_external_mobile: string | null; p_external_email: string | null; p_relationship_type: string; p_is_legal_guardian: boolean; p_can_receive_communications: boolean; p_can_consent: boolean }; Returns: { relationship_id: string; version: number }[] }
+      update_patient_relationship: { Args: { p_acting_branch_id: string; p_relationship_id: string; p_patient_id: string; p_expected_version: number; p_related_patient_id: string | null; p_external_contact_name: string | null; p_external_mobile: string | null; p_external_email: string | null; p_relationship_type: string; p_is_legal_guardian: boolean; p_can_receive_communications: boolean; p_can_consent: boolean }; Returns: { relationship_id: string; version: number }[] }
+      archive_patient_relationship: { Args: { p_acting_branch_id: string; p_relationship_id: string; p_patient_id: string; p_expected_version: number }; Returns: { relationship_id: string; version: number }[] }
+      reactivate_patient: { Args: { p_acting_branch_id: string; p_patient_id: string; p_expected_version: number }; Returns: { patient_id: string; version: number }[] }
       fail_workforce_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
@@ -666,6 +674,10 @@ export type Database = {
           p_initial_mobile?: string
           p_last_name: string
         }
+        Returns: Json
+      }
+      get_patient_detail: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
         Returns: Json
       }
       finalize_workforce_invitation: {
@@ -716,6 +728,18 @@ export type Database = {
         }
         Returns: string
       }
+      search_patients: {
+        Args: {
+          p_acting_branch_id: string
+          p_birth_date?: string | null
+          p_page?: number
+          p_page_size?: number
+          p_query?: string | null
+          p_sort?: string
+          p_status?: string | null
+        }
+        Returns: Json
+      }
       set_member_role: {
         Args: {
           grant_role: boolean
@@ -755,6 +779,19 @@ export type Database = {
           target_organization_member_id: string
         }
         Returns: string
+      }
+      update_patient: {
+        Args: {
+          p_acting_branch_id: string
+          p_duplicate_confirmed: boolean
+          p_expected_version: number
+          p_patch: Json
+          p_patient_id: string
+        }
+        Returns: {
+          patient_id: string
+          version: number
+        }[]
       }
     }
     Enums: {

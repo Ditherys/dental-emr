@@ -31,4 +31,10 @@ describe("permission-aware navigation", () => {
       navigationItems.find(({ href }) => href === "/settings/branches"),
     ).toMatchObject({ requiredPermission: "branch.manage" });
   });
+
+  it("declares patient demographics read as the capability for the Patients link", () => {
+    expect(navigationItems.find(({ href }) => href === "/patients")).toMatchObject({
+      requiredPermission: "patient.demographics.read",
+    });
+  });
 });

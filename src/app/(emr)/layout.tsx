@@ -15,6 +15,7 @@ import {
 import {
   createBranchContextModel,
   hasPermission,
+  hasSharedPatientPermission,
 } from "@/lib/authorization/policy";
 import { Toaster } from "sonner";
 
@@ -38,7 +39,9 @@ export default async function EmrLayout({ children }: { children: ReactNode }) {
   const branchContext = createBranchContextModel(authorizationState);
   const visibleNavigationHrefs = navigationItems.flatMap((item) =>
     !("requiredPermission" in item) ||
-    hasPermission(authorizationState, item.requiredPermission)
+    (item.requiredPermission === "patient.demographics.read"
+      ? hasSharedPatientPermission(authorizationState, item.requiredPermission)
+      : hasPermission(authorizationState, item.requiredPermission))
       ? [item.href as NavigationHref]
       : [],
   );

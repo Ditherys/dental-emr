@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertLocalDockerContext,
   assertLocalDockerEndpoint,
+  redactLocalSupabaseOutput,
   resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
   resolveLocalSupabaseCommands,
@@ -67,11 +68,19 @@ try {
       encoding: "utf8",
       env: dockerEnvironment,
       maxBuffer: 16 * 1024 * 1024,
-      stdio: capturesSentinel ? ["inherit", "pipe", "inherit"] : "inherit",
+      stdio: "pipe",
     });
 
     if (result.error) {
       throw new Error("The pinned Supabase CLI could not start.");
+    }
+
+    if (result.stdout) {
+      process.stdout.write(redactLocalSupabaseOutput(result.stdout));
+    }
+
+    if (result.stderr) {
+      process.stderr.write(redactLocalSupabaseOutput(result.stderr));
     }
 
     if (result.status !== 0) {
