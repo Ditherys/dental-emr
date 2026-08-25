@@ -18,7 +18,7 @@ const providerDetailSchema = z.object({
   providerId: databaseUuid, firstName: z.string(), middleName: z.string().nullable(), lastName: z.string(),
   suffix: z.string().nullable(), professionalTitle: z.string().nullable(), licenseNumber: z.string().nullable(),
   contactPhone: z.string().nullable(), contactEmail: z.string().nullable(), providerType: providerTypeSchema,
-  status: providerStatusSchema, websiteVisible: z.boolean(), bio: z.string().nullable(), linkedUserId: databaseUuid.nullable(),
+  status: providerStatusSchema, websiteVisible: z.boolean(), bio: z.string().nullable(),
   version: z.number().int().positive(), branchIds: z.array(databaseUuid),
   specialties: z.array(z.object({ specialtyId: databaseUuid, isPrimary: z.boolean() })),
 });

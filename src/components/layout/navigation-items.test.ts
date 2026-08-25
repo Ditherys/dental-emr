@@ -37,4 +37,9 @@ describe("permission-aware navigation", () => {
       requiredPermission: "patient.demographics.read",
     });
   });
+
+  it("declares provider read for the provider and specialty links", () => {
+    expect(navigationItems.find(({ href }) => href === "/providers")).toMatchObject({ requiredPermission: "provider.read" });
+    expect(navigationItems.find(({ href }) => href === "/settings/specialties")).toMatchObject({ requiredPermission: "provider.read" });
+  });
 });

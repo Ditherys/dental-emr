@@ -25,7 +25,6 @@ export type ProviderDetail = {
   status: ProviderStatus;
   websiteVisible: boolean;
   bio: string | null;
-  linkedUserId: string | null;
   version: number;
   branchIds: string[];
   specialties: { specialtyId: string; isPrimary: boolean }[];

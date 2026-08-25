@@ -1,4 +1,4 @@
-# AI Handoff - P3-06 procedure configuration services
+# AI Handoff - P3-07 provider and specialty administration
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -109,6 +109,34 @@
 - P3-07 remains the next ordered implementation task after P3-06 is accepted;
   do not add procedure UI, scheduling, availability, public, price, or clinical
   scope before it is authorized.
+- P3-07 adds only private `/providers` and `/settings/specialties` administration
+  routes, loading state, Server Actions, responsive provider/specialty lists,
+  and `provider.read` navigation entries. Both pages recheck live
+  `provider.read`, derive a concrete active branch server-side, and use only the
+  existing bounded provider/specialty adapters. Authorization failures render
+  `PermissionDenied`; adapter failures render safe `PageError` content.
+- Every mutation action validates untrusted `FormData`, binds the submitted
+  acting branch to an immediate live `provider.manage` check before calling the
+  service, and revalidates only affected private paths. Provider archive alone
+  invokes `requireAal2`; no linked-user operation or UI control was added. The
+  user explicitly deferred linked-user controls, so this checkpoint does not
+  query Auth/member sources, exposes no link identifier to the browser, and
+  does not call the reserved P3-03 linked-user capability.
+- Provider UI is a semantic dense desktop/tablet table with a compact phone
+  list, 44px action/form controls, editable identity/type/status/stored website
+  profile fields, branch associations, and specialties. It contains no
+  scheduling, availability, calendar, appointment, public-projection, price,
+  or clinical controls. Global specialties are visibly read-only; only tenant
+  custom specialties have mutation forms.
+- P3-07 verification passed: `npm run test:unit` (42 files, 401 tests),
+  `npm run test:db:local` (18 pgTAP suites and three local concurrency probes),
+  `npm run lint`, `npm run typecheck`, `npm run security:migrations`,
+  `npm run security:secrets`, `npm run security:audit` (0 vulnerabilities), and
+  `git diff --check`. Next.js 16.3 installed guides for Server Actions, Route
+  Handlers, and caching were read before implementation. Responsive Playwright
+  coverage remains deferred because no guarded E2E target is configured.
+- P3-08 procedure administration remains explicitly out of scope. Cloud TEST
+  remains mandatory before any production provider or patient use.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

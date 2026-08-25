@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, ShieldCheck, UsersRound } from "lucide-react";
+import { Building2, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -19,6 +19,18 @@ export const navigationItems = [
     href: "/patients",
     icon: UsersRound,
     requiredPermission: "patient.demographics.read",
+  },
+  {
+    label: "Providers",
+    href: "/providers",
+    icon: Stethoscope,
+    requiredPermission: "provider.read",
+  },
+  {
+    label: "Specialties",
+    href: "/settings/specialties",
+    icon: Tags,
+    requiredPermission: "provider.read",
   },
   {
     label: "Account & security",
