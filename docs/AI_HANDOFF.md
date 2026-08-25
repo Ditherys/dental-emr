@@ -5,6 +5,10 @@
 
 ## Current checkpoint
 
+- Project-owner workflow decision: for the remaining Phase 2 checkpoints, the
+  implementing agent performs and records the required security/schema/concurrency
+  self-review. Do not pause for a separate reviewer unless the owner requests one
+  or a stop condition applies.
 - P2-03 is accepted by the project owner following local verification and a
   follow-up schema/RLS review with no material findings.
 - P2-04 implementation is ready for its mandatory independent security and
