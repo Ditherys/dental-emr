@@ -172,11 +172,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
         run: npm run test:db
 
-      - name: Diagnose failed P2-01 pgTAP suite
+      - name: Diagnose failed patient creation pgTAP suite
         if: failure()
         env:
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
-        run: psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/patient_authorization.test.sql
+        run: psql "$SUPABASE_TEST_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/patient_create.test.sql
 
       - name: Check generated database types
         env:
