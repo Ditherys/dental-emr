@@ -385,4 +385,31 @@ set
   version = 1,
   archived_at = null;
 
+-- P3-05 synthetic catalog fixture. It is configuration only: no prices,
+-- availability, appointment, or public projection data is seeded.
+insert into public.procedures (
+  id, organization_id, code, name, description, default_duration_minutes,
+  pre_buffer_minutes, post_buffer_minutes, status, website_visible,
+  online_booking_enabled, booking_mode
+)
+values (
+  '73000000-0000-0000-0000-000000000001',
+  '22000000-0000-0000-0000-000000000001',
+  'SYNTHETIC_EXAM', 'Synthetic Examination', null, 30, 0, 0, 'active', false,
+  false, 'REQUIRES_REVIEW'
+)
+on conflict (organization_id, code) do update
+set
+  name = excluded.name,
+  description = excluded.description,
+  default_duration_minutes = excluded.default_duration_minutes,
+  pre_buffer_minutes = excluded.pre_buffer_minutes,
+  post_buffer_minutes = excluded.post_buffer_minutes,
+  status = excluded.status,
+  website_visible = excluded.website_visible,
+  online_booking_enabled = excluded.online_booking_enabled,
+  booking_mode = excluded.booking_mode,
+  version = 1,
+  archived_at = null;
+
 commit;

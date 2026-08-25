@@ -287,6 +287,17 @@ const providerReadGrants = Object.freeze([
   "public.list_specialties(uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The bounded provider configuration read path derives the tenant from an active authenticated acting branch, requires live organization-wide provider.read, and returns no membership, Auth, scheduling, patient, or audit data." })));
 
+const PROCEDURE_RPCS_GRANTS_MIGRATION = "20260826010501_procedure_rpcs_grants.sql";
+const procedureRpcGrants = Object.freeze([
+  "public.create_procedure(uuid, jsonb)",
+  "public.update_procedure(uuid, uuid, integer, jsonb)",
+  "public.archive_procedure(uuid, uuid, integer)",
+  "public.set_procedure_specialties(uuid, uuid, integer, jsonb)",
+  "public.set_procedure_eligible_providers(uuid, uuid, integer, uuid[])",
+  "public.list_procedures(uuid)",
+  "public.get_procedure_configuration(uuid, uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only procedure catalog and qualification path derives tenant and actor from an active authenticated acting branch, requires live organization-wide provider.manage for mutations or provider.read for bounded projections, uses optimistic versions, and writes opaque audit events atomically; archive requires AAL2." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -327,6 +338,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ file: PATIENT_LIFECYCLE_GRANTS_MIGRATION, grants: patientLifecycleGrants }),
   Object.freeze({ file: PROVIDER_MUTATIONS_GRANTS_MIGRATION, grants: providerMutationGrants }),
   Object.freeze({ file: PROVIDER_READS_GRANTS_MIGRATION, grants: providerReadGrants }),
+  Object.freeze({ file: PROCEDURE_RPCS_GRANTS_MIGRATION, grants: procedureRpcGrants }),
 ]);
 
 /**

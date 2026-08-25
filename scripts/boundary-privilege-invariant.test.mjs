@@ -131,6 +131,13 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_provider_directory(uuid)",
     "public.get_provider_configuration(uuid, uuid)",
     "public.list_specialties(uuid)",
+    "public.create_procedure(uuid, jsonb)",
+    "public.update_procedure(uuid, uuid, integer, jsonb)",
+    "public.archive_procedure(uuid, uuid, integer)",
+    "public.set_procedure_specialties(uuid, uuid, integer, jsonb)",
+    "public.set_procedure_eligible_providers(uuid, uuid, integer, uuid[])",
+    "public.list_procedures(uuid)",
+    "public.get_procedure_configuration(uuid, uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1194,7 +1201,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(48);
+    expect(approved.size).toBe(55);
   });
 });
 

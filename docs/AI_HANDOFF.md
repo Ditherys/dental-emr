@@ -1,4 +1,4 @@
-# AI Handoff - P3-04 provider configuration reads and services
+# AI Handoff - P3-05 procedure qualification foundation
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -68,9 +68,30 @@
   checkpoint. The new typed adapter contains a narrow local RPC boundary while
   validating all parameters/results; Cloud TEST type generation remains required
   before production.
-- P3-04 is the completed checkpoint pending final verification/commit. P3-05 is
-  the next ordered task; no procedure, UI, scheduling, availability, patient,
-  public, price, or clinical scope was added.
+- P3-05 adds only tenant-owned procedures, procedure-specialty requirements, and
+  optional eligible-provider allow-lists, plus seven authenticated database RPCs
+  and their terminal grants. Each RPC derives its organization from an active
+  acting branch and rechecks the live organization-wide provider permission;
+  mutations require provider.manage, reads require provider.read, and archive
+  additionally requires AAL2. Association replacements lock/version the target,
+  validate active same-tenant relations, and atomically write one `{}` metadata
+  PROVIDER_CONFIGURATION audit event. No price, availability, scheduling, public
+  projection, patient, clinical, or UI scope was added.
+- P3-05 registers `procedure_foundation.test.sql` in the mandatory local/Cloud
+  TEST suite list, adds deterministic synthetic procedure seed data, and records
+  all seven exact authenticated-only RPC grants. The suite covers table shape and
+  no-price contract, RLS/ACL denial, tenant FKs, global/own/foreign specialty
+  behavior, duration/buffer/mode constraints, versioned mutation, AAL2 archive,
+  bounded reads, and audit rollback atomicity.
+- Fresh local reconstruction applied all 33 migrations and synthetic seed;
+  provisioning and all 18 registered pgTAP suites plus three concurrency probes
+  passed. `npm run security:migrations`, `npm run lint`, `npm run typecheck`,
+  `npm run test:unit` (37 files, 386 tests), `npm run security:secrets`, and
+  `npm run security:audit` passed. Cloud TEST remains mandatory before
+  production; no hosted or production target was used.
+- P3-05 is the completed checkpoint pending final verification/commit. P3-06 is
+  the next ordered task; do not add procedure adapters, UI, scheduling,
+  availability, public, price, or clinical scope before it is authorized.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to
