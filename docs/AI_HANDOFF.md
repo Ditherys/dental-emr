@@ -1,10 +1,33 @@
-# AI Handoff - P2-12 local closeout
+# AI Handoff - P3-01 provider permission contract
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
 
+- P3-00 is accepted. The independently reviewed Phase 3 plan is
+  `docs/plans/003-provider-specialty-procedure-foundation.md`; ADR-021 extends
+  the guarded, synthetic-only local verification boundary to its accepted
+  checkpoints while preserving the mandatory Cloud TEST pre-production gate.
+- P3-01 is independently reviewed and accepted on commits `46bb24b` and
+  `1a52149`. It adds only `provider.read` and `provider.manage` to the stable
+  permission catalog and grants them only to global OWNER and ADMIN roles.
+  DENTIST, RECEPTIONIST, DENTAL_ASSISTANT, VISITING_SPECIALIST, and BILLING
+  receive neither, so ADR-019's exact patient-only delegation exception is
+  unchanged. No provider tables, RLS/RPC surfaces, browser grants, patient
+  permissions, delegation functions, seeds, or hosted database writes were
+  added.
+- P3-01 registered `provider_permission_contract.test.sql` in the mandatory
+  database-runner allowlist in the same checkpoint. A 16-suite local pgTAP run
+  plus all three local concurrency suites passed after local reconstruction.
+- P3-01 also fixed an existing verification blocker: the explicit ESLint global
+  ignore set omitted the repository's git-ignored `.worktrees/` directory and
+  full lint traversed nested dependency trees. The new minimal ignore is covered
+  by a focused test; independent re-review ran `npm run lint` successfully.
+- P3-02 is the next ordered task. It must add only the approved provider,
+  specialty, provider-branch, and provider-specialty schema/RLS constraints and
+  its registered synthetic pgTAP suite. No RPC/UI/scheduling/public scope is
+  authorized yet.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

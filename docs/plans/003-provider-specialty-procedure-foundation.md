@@ -121,25 +121,25 @@ editing application or migration files.
   permissions organization-wide; DENTIST, RECEPTIONIST, DENTAL_ASSISTANT,
   VISITING_SPECIALIST, and BILLING receive neither in Phase 3.
 
-- [ ] Write pgTAP assertions that the two permission rows exist exactly once,
+- [x] Write pgTAP assertions that the two permission rows exist exactly once,
   OWNER and ADMIN receive both, and every other baseline role receives neither.
-- [ ] Run the new suite before the migration; expected result: it fails because
+- [x] Run the new suite before the migration; expected result: it fails because
   the permission rows do not exist.
-- [ ] Add the two permission rows with stable descriptions and idempotent
+- [x] Add the two permission rows with stable descriptions and idempotent
   `on conflict (code) do nothing` behavior. Add only the two exact role grants;
   do not change membership, branch, patient, or delegation functions.
-- [ ] Register `provider_permission_contract.test.sql` in
+- [x] Register `provider_permission_contract.test.sql` in
   `DATABASE_TEST_SUITES` in `scripts/remote-database-test-guard.mjs` and extend
   its focused unit test to assert the complete on-disk suite list includes the
   new file. The same checkpoint that creates a suite must register it.
-- [ ] Extend `foundationPermissionCodes` and unit tests so unknown provider
+- [x] Extend `foundationPermissionCodes` and unit tests so unknown provider
   permission strings are rejected by TypeScript/authorization policy callers.
-- [ ] Run `npm run db:start:local`, `npm run db:reset:local`,
+- [x] Run `npm run db:start:local`, `npm run db:reset:local`,
   `npm run db:provision:local`, and `npm run test:db:local`; expected result:
   every existing suite plus `provider_permission_contract.test.sql` passes.
-- [ ] Run `npm run lint`, `npm run typecheck`, and `npm run test:unit`; expected
+- [x] Run `npm run lint`, `npm run typecheck`, and `npm run test:unit`; expected
   result: all pass.
-- [ ] Independently review role escalation and Phase 2 delegation effects, then
+- [x] Independently review role escalation and Phase 2 delegation effects, then
   commit only this checkpoint with message `feat: add provider permissions`.
 
 ### P3-02 — Provider, specialty, and association schema
