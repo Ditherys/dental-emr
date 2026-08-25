@@ -38,8 +38,9 @@ describe("permission-aware navigation", () => {
     });
   });
 
-  it("declares provider read for the provider and specialty links", () => {
+  it("declares provider read for provider configuration links", () => {
     expect(navigationItems.find(({ href }) => href === "/providers")).toMatchObject({ requiredPermission: "provider.read" });
     expect(navigationItems.find(({ href }) => href === "/settings/specialties")).toMatchObject({ requiredPermission: "provider.read" });
+    expect(navigationItems.find(({ href }) => href === "/settings/procedures")).toMatchObject({ requiredPermission: "provider.read" });
   });
 });

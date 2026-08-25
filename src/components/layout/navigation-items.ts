@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
+import { Building2, ClipboardList, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -30,6 +30,12 @@ export const navigationItems = [
     label: "Specialties",
     href: "/settings/specialties",
     icon: Tags,
+    requiredPermission: "provider.read",
+  },
+  {
+    label: "Procedures",
+    href: "/settings/procedures",
+    icon: ClipboardList,
     requiredPermission: "provider.read",
   },
   {

@@ -1,4 +1,4 @@
-# AI Handoff - P3-07 provider and specialty administration
+# AI Handoff - P3-08 procedure administration
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -135,8 +135,33 @@
   `git diff --check`. Next.js 16.3 installed guides for Server Actions, Route
   Handlers, and caching were read before implementation. Responsive Playwright
   coverage remains deferred because no guarded E2E target is configured.
-- P3-08 procedure administration remains explicitly out of scope. Cloud TEST
-  remains mandatory before any production provider or patient use.
+- P3-08 adds only the private `/settings/procedures` administration route,
+  loading state, Server Actions, responsive procedure catalog, and a
+  `provider.read` navigation entry. The page requires live `provider.read`,
+  chooses a server-authorized active branch, and uses only bounded procedure,
+  provider, and specialty read adapters.
+- Procedure actions validate untrusted `FormData` before rechecking live
+  `provider.manage` against the submitted branch immediately before calling the
+  existing procedure services. They accept only code, name, description,
+  duration/buffers, status, website/online-booking flags, the two approved
+  request modes, specialty requirement levels, and explicit eligible provider
+  IDs. They do not invoke provider/specialty mutation services, accept tenant
+  values, or expose price, auto-confirm, resource, availability, or public-link
+  controls. Archive actions require AAL2 and all failures use one safe generic
+  message.
+- The catalog is a semantic dense table on desktop/tablet and a compact phone
+  list. Forms use a single phone column and 44px controls. Archive requires an
+  explicit native-dialog confirmation and returns focus to its trigger on
+  cancellation or successful action.
+- P3-08 application verification passed: focused procedure/navigation Vitest
+  (3 files, 10 tests), `npm run test:unit` (45 files, 409 tests), `npm run
+  lint`, `npm run typecheck`, `npm run security:migrations`, `npm run
+  security:secrets`, `npm run security:audit` (0 vulnerabilities), and `git
+  diff --check`. The required local reconstruction could not start because the
+  separate `supabase_db_hjcmnmigvzufhvamlnmy` container already owns port 54322;
+  it was not stopped or modified. No Cloud or production target was used.
+- P3-09 remains out of scope. Cloud TEST remains mandatory before any production
+  provider or patient use.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to
