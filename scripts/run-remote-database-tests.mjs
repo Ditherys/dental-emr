@@ -20,13 +20,6 @@ const linkedProjectFile = join(
   ".temp",
   "project-ref",
 );
-const supabaseCli = join(
-  repositoryRoot,
-  "node_modules",
-  "supabase",
-  "dist",
-  "supabase.js",
-);
 const suites = DATABASE_TEST_SUITES.map((filename) =>
   join(repositoryRoot, "supabase", "tests", filename),
 );
@@ -43,12 +36,13 @@ try {
     );
   }
 
-  if (!existsSync(supabaseCli)) {
-    throw new Error("The pinned Supabase CLI is missing. Run npm ci first.");
-  }
-
   const linkedProjectId = readLinkedProjectId(linkedProjectFile);
   validateRemoteDatabaseTestEnvironment(process.env, linkedProjectId);
+  const databaseUrl = process.env.SUPABASE_TEST_DB_URL?.trim();
+
+  if (!databaseUrl) {
+    throw new Error("SUPABASE_TEST_DB_URL is required for remote database tests.");
+  }
 
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
@@ -56,17 +50,8 @@ try {
     validateTransactionalSuite(source, suiteLabel);
 
     const result = spawnSync(
-      process.execPath,
-      [
-        supabaseCli,
-        "db",
-        "query",
-        "--linked",
-        "--output-format",
-        "json",
-        "--file",
-        suite,
-      ],
+      "psql",
+      [databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", suite],
       {
         cwd: repositoryRoot,
         encoding: "utf8",
@@ -80,10 +65,8 @@ try {
     }
 
     if (result.status !== 0) {
-      const diagnostic = formatRemoteDatabaseQueryFailure(
-        result.stderr ?? "",
-        result.stdout ?? "",
-      );
+      // psql stdout can contain query rows; only surface sanitized stderr.
+      const diagnostic = formatRemoteDatabaseQueryFailure(result.stderr ?? "");
       throw new Error(
         `${suiteLabel} failed during remote SQL execution.` +
           (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),

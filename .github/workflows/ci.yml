@@ -170,6 +170,7 @@ jobs:
       - name: Run pgTAP authorization suites
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
+          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: npm run test:db
 
       - name: Diagnose failed patient creation pgTAP suite
