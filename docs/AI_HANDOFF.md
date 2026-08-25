@@ -24,9 +24,20 @@
   ignore set omitted the repository's git-ignored `.worktrees/` directory and
   full lint traversed nested dependency trees. The new minimal ignore is covered
   by a focused test; independent re-review ran `npm run lint` successfully.
-- P3-02 is the next ordered task. It must add only the approved provider,
-  specialty, provider-branch, and provider-specialty schema/RLS constraints and
-  its registered synthetic pgTAP suite. No RPC/UI/scheduling/public scope is
+- P3-02 is independently reviewed and accepted on commits `49f5867` and
+  `5bde9a8`. It adds only provider, specialty, provider-branch, and
+  provider-specialty tables, RLS, private predicates, synthetic fixtures, and
+  registered pgTAP coverage. All browser/service-role table access remains
+  denied. Composite FKs protect tenant-owned relations; the fixed-search-path
+  specialty trigger allows global or same-tenant custom specialties only.
+- The P3-02 review required and verified a `specialties.version` contract for
+  the next checkpoint's optimistic writes, plus an exact partial-primary index
+  proof. Fresh local reconstruction passed 17 pgTAP suites and three concurrency
+  probes; `npm run verify` passed lint, typecheck, 372 unit tests, build, secret
+  scan, migration lint, and dependency audit. Cloud TEST remains deferred and
+  mandatory before production.
+- P3-03 is the next ordered task. It may add only the reviewed provider/specialty
+  mutation RPCs and registered terminal grants; no reads/UI/procedure scope is
   authorized yet.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
