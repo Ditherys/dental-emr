@@ -1,4 +1,4 @@
-# AI Handoff - P3-05 procedure qualification foundation
+# AI Handoff - P3-06 procedure configuration services
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -89,9 +89,26 @@
   `npm run test:unit` (37 files, 386 tests), `npm run security:secrets`, and
   `npm run security:audit` passed. Cloud TEST remains mandatory before
   production; no hosted or production target was used.
-- P3-05 is the completed checkpoint pending final verification/commit. P3-06 is
-  the next ordered task; do not add procedure adapters, UI, scheduling,
-  availability, public, price, or clinical scope before it is authorized.
+- P3-05 is committed in `6d6abd6`, with its numeric-input correction in
+  `53f0953`. P3-06 adds only server-only procedure schemas, typed bounded read
+  adapters, mutation wrappers, safe error mapping, and focused unit coverage.
+  Inputs and RPC rows are Zod-validated; form schemas normalize procedure codes
+  to uppercase, reject price/untrusted fields, require acting branch context,
+  enforce duration/buffer invariants and relation uniqueness, and permit only
+  `REQUIRES_REVIEW` or `REQUEST_ONLY`. Archive calls `requireAal2()` before its
+  RPC while the database retains the authoritative AAL2 gate.
+- P3-06 focused Vitest (7 tests), TypeScript, and procedure lint passed. The
+  local synthetic database suite passed all 18 registered pgTAP suites and all
+  three concurrency probes; no local port failure occurred. Full lint passed.
+  Full unit verification is currently blocked by two pre-existing assertions in
+  `scripts/migration-privilege-lint.test.mjs`: they expect 33 migration files
+  and 79 functions, but the committed P3-05 chain contains 34 and 80. This
+  checkpoint does not change migrations or that prior-checkpoint baseline, so
+  no corrective edit was made. Do not commit P3-06 until the baseline issue is
+  separately resolved or explicitly accepted.
+- P3-07 remains the next ordered implementation task after P3-06 is accepted;
+  do not add procedure UI, scheduling, availability, public, price, or clinical
+  scope before it is authorized.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to
