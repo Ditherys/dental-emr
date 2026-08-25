@@ -23,7 +23,10 @@ const procedureDetailSchema = z.object({
   specialties: z.array(z.object({ specialtyId: databaseUuid, requirementLevel: specialtyRequirementLevelSchema }).strict()),
   eligibleProviderIds: z.array(databaseUuid),
 }).strict();
-const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() }).strict();
+// Supabase adds transport metadata (for example status and count) to its
+// response envelope. Validate the boundary fields while leaving that metadata
+// outside the domain DTO contract.
+const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() });
 type Rpc = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 
 export async function listProcedures(input: unknown): Promise<ProcedureListItem[]> {

@@ -47,7 +47,7 @@ describe("procedure service boundary", () => {
   });
 
   it("maps reads and validates their bounded DTOs", async () => {
-    rpc.mockResolvedValueOnce({ data: [{ procedure_id: procedureId, code: "CLEANING", name: "Cleaning", status: "active", default_duration_minutes: 30, pre_buffer_minutes: 0, post_buffer_minutes: 0, website_visible: false, online_booking_enabled: false, booking_mode: "REQUIRES_REVIEW", specialty_count: 1, eligible_provider_count: 0 }], error: null });
+    rpc.mockResolvedValueOnce({ data: [{ procedure_id: procedureId, code: "CLEANING", name: "Cleaning", status: "active", default_duration_minutes: 30, pre_buffer_minutes: 0, post_buffer_minutes: 0, website_visible: false, online_booking_enabled: false, booking_mode: "REQUIRES_REVIEW", specialty_count: 1, eligible_provider_count: 0 }], error: null, success: true, count: null, status: 200, statusText: "OK" });
     await expect(listProcedures({ actingBranchId: branchId })).resolves.toMatchObject([{ procedureId, specialtyCount: 1 }]);
     expect(rpc).toHaveBeenLastCalledWith("list_procedures", { p_acting_branch_id: branchId });
     rpc.mockResolvedValueOnce({ data: { procedureId, code: "CLEANING", name: "Cleaning", description: null, defaultDurationMinutes: 30, preBufferMinutes: 0, postBufferMinutes: 0, status: "active", websiteVisible: false, onlineBookingEnabled: false, bookingMode: "REQUIRES_REVIEW", version: 1, specialties: [], eligibleProviderIds: [] }, error: null });

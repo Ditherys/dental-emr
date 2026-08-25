@@ -11,7 +11,7 @@ import { archiveProcedureSchema, createProcedureSchema, setProcedureEligibleProv
 import type { ProcedureMutationResult } from "./types";
 
 const procedureResultSchema = z.object({ procedure_id: databaseUuid, version: z.number().int().positive() }).strict();
-const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() }).strict();
+const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() });
 type Rpc = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 
 async function procedureMutation(
