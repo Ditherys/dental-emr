@@ -185,21 +185,6 @@ jobs:
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: npm run db:types:check:test
 
-      - name: Show generated database type drift
-        if: failure()
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
-          SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
-        run: npm run db:types -- --require-test-target && git diff --no-ext-diff -- src/types/database.generated.ts
-
-      - name: Upload generated database type drift
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: cloud-test-database-types
-          path: src/types/database.generated.ts
-          retention-days: 1
-
       - name: Lint public database schema
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}

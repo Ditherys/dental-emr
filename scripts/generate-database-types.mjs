@@ -72,6 +72,49 @@ const projectArguments =
     : projectId
       ? ["--project-id", projectId]
       : ["--linked"];
+
+const nullablePatientRpcArguments = [
+  "p_address_line1",
+  "p_address_line2",
+  "p_city",
+  "p_initial_email",
+  "p_initial_mobile",
+  "p_middle_name",
+  "p_postal_code",
+  "p_preferred_branch_id",
+  "p_preferred_name",
+  "p_province",
+  "p_sex_at_registration",
+  "p_suffix",
+  "p_label",
+  "p_related_patient_id",
+  "p_external_contact_name",
+  "p_external_mobile",
+  "p_external_email",
+];
+
+function normalizeGeneratedTypes(value) {
+  let normalized = value;
+
+  // PostgreSQL function signatures do not retain nullable input metadata.
+  // These patient RPCs deliberately accept SQL NULL for optional fields.
+  for (const argument of nullablePatientRpcArguments) {
+    normalized = normalized.replaceAll(
+      `${argument}: string`,
+      `${argument}: string | null`,
+    );
+  }
+
+  for (const argument of ["p_birth_date", "p_query", "p_status"]) {
+    normalized = normalized.replaceAll(
+      `${argument}?: string`,
+      `${argument}?: string | null`,
+    );
+  }
+
+  return normalized;
+}
+
 const generated = execFileSync(
   process.execPath,
   [
@@ -98,7 +141,9 @@ const notice = [
   "",
   "",
 ].join("\n");
-const expected = `${notice}${normalizeLineEndings(generated).trimEnd()}\n`;
+const expected = `${notice}${normalizeGeneratedTypes(
+  normalizeLineEndings(generated),
+).trimEnd()}\n`;
 
 if (checkOnly) {
   if (!existsSync(generatedTypesPath)) {

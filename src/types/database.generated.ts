@@ -10,11 +10,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.15"
-  }
   public: {
     Tables: {
       audit_events: {
@@ -298,7 +293,7 @@ export type Database = {
           created_at?: string
           id?: string
           joined_at?: string | null
-          membership_status?: string
+          membership_status?: string | null
           organization_id: string
           suspended_at?: string | null
           updated_at?: string
@@ -308,7 +303,7 @@ export type Database = {
           created_at?: string
           id?: string
           joined_at?: string | null
-          membership_status?: string
+          membership_status?: string | null
           organization_id?: string
           suspended_at?: string | null
           updated_at?: string
@@ -365,6 +360,148 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      patient_contacts: {
+        Row: {
+          archived_at: string | null
+          contact_type: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          label: string | null
+          normalized_value: string | null
+          organization_id: string
+          patient_id: string
+          status: string
+          updated_at: string
+          value: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          contact_type: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          normalized_value?: string | null
+          organization_id: string
+          patient_id: string
+          status?: string
+          updated_at?: string
+          value: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          contact_type?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
+          normalized_value?: string | null
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          updated_at?: string
+          value?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_contacts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_contacts_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      patient_relationships: {
+        Row: {
+          archived_at: string | null
+          can_consent: boolean
+          can_receive_communications: boolean
+          created_at: string
+          external_contact_name: string | null
+          external_email: string | null
+          external_mobile: string | null
+          id: string
+          is_legal_guardian: boolean
+          organization_id: string
+          patient_id: string
+          related_patient_id: string | null
+          relationship_type: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          can_consent?: boolean
+          can_receive_communications?: boolean
+          created_at?: string
+          external_contact_name?: string | null
+          external_email?: string | null
+          external_mobile?: string | null
+          id?: string
+          is_legal_guardian?: boolean
+          organization_id: string
+          patient_id: string
+          related_patient_id?: string | null
+          relationship_type: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          can_consent?: boolean
+          can_receive_communications?: boolean
+          created_at?: string
+          external_contact_name?: string | null
+          external_email?: string | null
+          external_mobile?: string | null
+          id?: string
+          is_legal_guardian?: boolean
+          organization_id?: string
+          patient_id?: string
+          related_patient_id?: string | null
+          relationship_type?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_relationships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_relationships_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "patient_relationships_organization_related_patient_fk"
+            columns: ["organization_id", "related_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
       }
       patients: {
         Row: {
@@ -607,6 +744,41 @@ export type Database = {
         Returns: string
       }
       archive_branch: { Args: { target_branch_id: string }; Returns: string }
+      archive_patient: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patient_id: string
+        }
+        Returns: {
+          patient_id: string
+          version: number
+        }[]
+      }
+      archive_patient_contact: {
+        Args: {
+          p_acting_branch_id: string
+          p_contact_id: string
+          p_expected_version: number
+          p_patient_id: string
+        }
+        Returns: {
+          contact_id: string
+          version: number
+        }[]
+      }
+      archive_patient_relationship: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patient_id: string
+          p_relationship_id: string
+        }
+        Returns: {
+          relationship_id: string
+          version: number
+        }[]
+      }
       create_branch: {
         Args: {
           branch_address_line1: string
@@ -653,17 +825,50 @@ export type Database = {
           version: number
         }[]
       }
-      create_patient_contact: { Args: { p_acting_branch_id: string; p_patient_id: string; p_contact_type: string; p_label: string | null; p_value: string; p_is_primary: boolean; p_duplicate_confirmed: boolean }; Returns: { contact_id: string; version: number }[] }
-      update_patient_contact: { Args: { p_acting_branch_id: string; p_contact_id: string; p_patient_id: string; p_expected_version: number; p_contact_type: string; p_label: string | null; p_value: string; p_is_primary: boolean; p_duplicate_confirmed: boolean }; Returns: { contact_id: string; version: number }[] }
-      archive_patient_contact: { Args: { p_acting_branch_id: string; p_contact_id: string; p_patient_id: string; p_expected_version: number }; Returns: { contact_id: string; version: number }[] }
-      archive_patient: { Args: { p_acting_branch_id: string; p_patient_id: string; p_expected_version: number }; Returns: { patient_id: string; version: number }[] }
-      create_patient_relationship: { Args: { p_acting_branch_id: string; p_patient_id: string; p_related_patient_id: string | null; p_external_contact_name: string | null; p_external_mobile: string | null; p_external_email: string | null; p_relationship_type: string; p_is_legal_guardian: boolean; p_can_receive_communications: boolean; p_can_consent: boolean }; Returns: { relationship_id: string; version: number }[] }
-      update_patient_relationship: { Args: { p_acting_branch_id: string; p_relationship_id: string; p_patient_id: string; p_expected_version: number; p_related_patient_id: string | null; p_external_contact_name: string | null; p_external_mobile: string | null; p_external_email: string | null; p_relationship_type: string; p_is_legal_guardian: boolean; p_can_receive_communications: boolean; p_can_consent: boolean }; Returns: { relationship_id: string; version: number }[] }
-      archive_patient_relationship: { Args: { p_acting_branch_id: string; p_relationship_id: string; p_patient_id: string; p_expected_version: number }; Returns: { relationship_id: string; version: number }[] }
-      reactivate_patient: { Args: { p_acting_branch_id: string; p_patient_id: string; p_expected_version: number }; Returns: { patient_id: string; version: number }[] }
+      create_patient_contact: {
+        Args: {
+          p_acting_branch_id: string
+          p_contact_type: string
+          p_duplicate_confirmed: boolean
+          p_is_primary: boolean
+          p_label: string | null
+          p_patient_id: string
+          p_value: string
+        }
+        Returns: {
+          contact_id: string
+          version: number
+        }[]
+      }
+      create_patient_relationship: {
+        Args: {
+          p_acting_branch_id: string
+          p_can_consent: boolean
+          p_can_receive_communications: boolean
+          p_external_contact_name: string | null
+          p_external_email: string | null
+          p_external_mobile: string | null
+          p_is_legal_guardian: boolean
+          p_patient_id: string
+          p_related_patient_id: string | null
+          p_relationship_type: string
+        }
+        Returns: {
+          relationship_id: string
+          version: number
+        }[]
+      }
       fail_workforce_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
+      }
+      finalize_workforce_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_auth_user_id: string
+          p_invitation_id: string
+        }
+        Returns: string
       }
       find_duplicate_candidates: {
         Args: {
@@ -679,14 +884,6 @@ export type Database = {
       get_patient_detail: {
         Args: { p_acting_branch_id: string; p_patient_id: string }
         Returns: Json
-      }
-      finalize_workforce_invitation: {
-        Args: {
-          p_actor_user_id: string
-          p_auth_user_id: string
-          p_invitation_id: string
-        }
-        Returns: string
       }
       get_workforce_invitation_summary: {
         Args: { p_auth_user_id: string }
@@ -715,18 +912,21 @@ export type Database = {
         }
         Returns: string
       }
+      reactivate_patient: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patient_id: string
+        }
+        Returns: {
+          patient_id: string
+          version: number
+        }[]
+      }
       record_mfa_enrollment: { Args: { p_factor_id: string }; Returns: number }
       revoke_workforce_invitation: {
         Args: { p_actor_user_id: string; p_invitation_id: string }
         Returns: boolean
-      }
-      set_branch_membership: {
-        Args: {
-          target_access_status: string
-          target_branch_id: string
-          target_organization_member_id: string
-        }
-        Returns: string
       }
       search_patients: {
         Args: {
@@ -739,6 +939,14 @@ export type Database = {
           p_status?: string | null
         }
         Returns: Json
+      }
+      set_branch_membership: {
+        Args: {
+          target_access_status: string
+          target_branch_id: string
+          target_organization_member_id: string
+        }
+        Returns: string
       }
       set_member_role: {
         Args: {
@@ -790,6 +998,43 @@ export type Database = {
         }
         Returns: {
           patient_id: string
+          version: number
+        }[]
+      }
+      update_patient_contact: {
+        Args: {
+          p_acting_branch_id: string
+          p_contact_id: string
+          p_contact_type: string
+          p_duplicate_confirmed: boolean
+          p_expected_version: number
+          p_is_primary: boolean
+          p_label: string | null
+          p_patient_id: string
+          p_value: string
+        }
+        Returns: {
+          contact_id: string
+          version: number
+        }[]
+      }
+      update_patient_relationship: {
+        Args: {
+          p_acting_branch_id: string
+          p_can_consent: boolean
+          p_can_receive_communications: boolean
+          p_expected_version: number
+          p_external_contact_name: string | null
+          p_external_email: string | null
+          p_external_mobile: string | null
+          p_is_legal_guardian: boolean
+          p_patient_id: string
+          p_related_patient_id: string | null
+          p_relationship_id: string
+          p_relationship_type: string
+        }
+        Returns: {
+          relationship_id: string
           version: number
         }[]
       }
