@@ -244,11 +244,30 @@ describe("registered database suites", () => {
 
   // An authored-but-unregistered suite reads as coverage while proving nothing.
   it("runs every suite that exists, and every registered suite exists", () => {
+    const expectedSuites = [
+      "audit_foundation.test.sql",
+      "branch_lifecycle.test.sql",
+      "foundation_rls.test.sql",
+      "patient_authorization.test.sql",
+      "patient_children_write.test.sql",
+      "patient_contacts_relationships.test.sql",
+      "patient_create.test.sql",
+      "patient_demographics_write.test.sql",
+      "patient_identity.test.sql",
+      "patient_lifecycle.test.sql",
+      "patient_reads.test.sql",
+      "provider_permission_contract.test.sql",
+      "schema.test.sql",
+      "seed_security_fixtures.test.sql",
+      "session_authorization_boundaries.test.sql",
+      "workforce_invitations.test.sql",
+    ];
     const onDisk = readdirSync(testsDirectory)
       .filter((name) => name.endsWith(".test.sql"))
       .sort();
 
-    expect([...DATABASE_TEST_SUITES].sort()).toEqual(onDisk);
+    expect([...DATABASE_TEST_SUITES].sort()).toEqual(expectedSuites);
+    expect(onDisk).toEqual(expectedSuites);
   });
 
   it("requires every suite to be transaction-bounded", () => {

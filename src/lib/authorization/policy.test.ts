@@ -6,11 +6,13 @@ import {
   AuthorizationError,
   createBranchContextModel,
   findAuthorizedBranch,
+  foundationPermissionCodes,
   hasSharedPatientPermission,
   hasPermission,
   selectActiveOrganizationMembership,
   type ActiveOrganizationMembership,
   type OrganizationAuthorizationState,
+  type PermissionCode,
 } from "./policy";
 
 const orgA: ActiveOrganizationMembership = {
@@ -61,6 +63,21 @@ function expectAuthorizationCode(
 
   throw new Error(`Expected authorization error ${code}.`);
 }
+
+describe("provider permission vocabulary", () => {
+  it("exposes the two bounded provider permission codes", () => {
+    const providerRead: PermissionCode = "provider.read";
+    const providerManage: PermissionCode = "provider.manage";
+
+    // @ts-expect-error provider permissions are a closed contract.
+    const unknownProviderPermission: PermissionCode = "provider.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([providerRead, providerManage]),
+    );
+    expect(unknownProviderPermission).toBe("provider.delete");
+  });
+});
 
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
