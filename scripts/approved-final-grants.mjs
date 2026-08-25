@@ -339,6 +339,19 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ file: PROVIDER_MUTATIONS_GRANTS_MIGRATION, grants: providerMutationGrants }),
   Object.freeze({ file: PROVIDER_READS_GRANTS_MIGRATION, grants: providerReadGrants }),
   Object.freeze({ file: PROCEDURE_RPCS_GRANTS_MIGRATION, grants: procedureRpcGrants }),
+  Object.freeze({
+    file: "20260826010503_procedure_input_hardening_grants.sql",
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.create_procedure(uuid, jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason: "Restores the exact 20260826010501 terminal EXECUTE grant that the 20260826010502 numeric-input hardening migration cancelled when it recreated the function definition; authorization remains entirely inside the SECURITY DEFINER body.",
+      },
+    ]),
+  }),
 ]);
 
 /**
