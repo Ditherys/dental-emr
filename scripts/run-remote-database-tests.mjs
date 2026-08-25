@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   DATABASE_TEST_SUITES,
   formatRemoteDatabaseQueryFailure,
+  hasPsqlPlainTextCompletion,
   parseSupabaseQueryResult,
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
@@ -49,31 +50,43 @@ try {
     const source = readFileSync(suite, "utf8");
     validateTransactionalSuite(source, suiteLabel);
 
-    const result = spawnSync(
-      "psql",
-      [databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", suite],
-      {
-        cwd: repositoryRoot,
-        encoding: "utf8",
-        env: process.env,
-        maxBuffer: 16 * 1024 * 1024,
-      },
-    );
+    let result;
 
-    if (result.error) {
-      throw new Error(`${suiteLabel} could not start the Supabase CLI.`);
-    }
-
-    if (result.status !== 0) {
-      // psql stdout can contain query rows; only surface sanitized stderr.
-      const diagnostic = formatRemoteDatabaseQueryFailure(result.stderr ?? "");
-      throw new Error(
-        `${suiteLabel} failed during remote SQL execution.` +
-          (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      result = spawnSync(
+        "psql",
+        [databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", suite],
+        {
+          cwd: repositoryRoot,
+          encoding: "utf8",
+          env: process.env,
+          maxBuffer: 16 * 1024 * 1024,
+        },
       );
+
+      if (result.error) {
+        throw new Error(`${suiteLabel} could not start psql.`);
+      }
+
+      if (result.status !== 0) {
+        // psql stdout can contain query rows; only surface sanitized stderr.
+        const diagnostic = formatRemoteDatabaseQueryFailure(result.stderr ?? "");
+        throw new Error(
+          `${suiteLabel} failed during remote SQL execution.` +
+            (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),
+        );
+      }
+
+      if (hasPsqlPlainTextCompletion(result.stdout ?? "")) {
+        break;
+      }
+
+      if (attempt === 1) {
+        parseSupabaseQueryResult(result.stdout ?? "", suiteLabel);
+      }
     }
 
-    parseSupabaseQueryResult(result.stdout, suiteLabel);
+    parseSupabaseQueryResult(result.stdout ?? "", suiteLabel);
     console.log(`PASS ${suiteLabel}`);
   }
 

@@ -9,6 +9,7 @@ import {
   DATABASE_TEST_CONFIRMATION,
   DATABASE_TEST_SUITES,
   formatRemoteDatabaseQueryFailure,
+  hasPsqlPlainTextCompletion,
   parseSupabaseQueryResult,
   resolveCommandResultSentinel,
   validateRemoteDatabaseTestEnvironment,
@@ -198,6 +199,9 @@ describe("remote database test suite contract", () => {
     expect(() =>
       parseSupabaseQueryResult("ok 1 - unrelated output\n", "no-completion.test.sql"),
     ).toThrow(/P1_TEST_PASS/);
+
+    expect(hasPsqlPlainTextCompletion(failingPsqlOutput)).toBe(true);
+    expect(hasPsqlPlainTextCompletion("ok 1 - unrelated output\n")).toBe(false);
   });
 
   it("evaluates only the LAST plain-text completion block, not an earlier one", () => {

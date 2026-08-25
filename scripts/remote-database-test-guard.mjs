@@ -371,6 +371,25 @@ function escapeRegExp(text) {
  * `select ... as p1_test_result`) must never be mistaken for the script's
  * actual, final completion row.
  */
+export function hasPsqlPlainTextCompletion(
+  output,
+  expectation = { column: "p1_test_result", value: "P1_TEST_PASS" },
+) {
+  const blockPattern = new RegExp(
+    `^\\s*${escapeRegExp(expectation.column)}\\s*$\\r?\\n-+\\r?\\n\\s*(.*?)\\s*$\\r?\\n\\(1 row\\)`,
+    "gm",
+  );
+
+  let lastValue = null;
+  let match;
+
+  while ((match = blockPattern.exec(output)) !== null) {
+    lastValue = match[1];
+  }
+
+  return lastValue !== null;
+}
+
 function matchesPsqlPlainTextCompletion(output, expectation) {
   const blockPattern = new RegExp(
     `^\\s*${escapeRegExp(expectation.column)}\\s*$\\r?\\n-+\\r?\\n\\s*(.*?)\\s*$\\r?\\n\\(1 row\\)`,
