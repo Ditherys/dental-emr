@@ -1,4 +1,4 @@
-# AI Handoff - P2-12 Cloud TEST type-generation blocker
+# AI Handoff - P2-12 local closeout
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -6,12 +6,15 @@
 ## Current checkpoint
 
 - P2-04 through P2-11 are accepted by the project owner.
-- P2-12 Phase 2 closeout is authorized but blocked at generated database type
-  verification. The guarded GitHub Actions Cloud TEST workflow reached the
-  approved disposable TEST project only; it applied migrations, provisioned
-  pgTAP, loaded synthetic fixtures, and passed all 15 pgTAP suites.
-- The local Supabase workflow follows accepted ADR-020. Guarded Cloud TEST remains
-  mandatory at P2-12 closeout and before production.
+- The project owner amended ADR-020 on 2026-08-26: local verification is the
+  Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to
+  the mandatory pre-production gate.
+- Local P2-12 reconstruction passed on commit `93a0dec`: start/reset, test
+  tooling provisioning, all 15 pgTAP suites, and all three local concurrency
+  suites. Lint, typecheck, and 370 unit tests also passed.
+- Phase 2 still requires independent closeout review, recorded manual QA, and
+  separate project-owner acceptance. Production remains blocked pending the
+  deferred Cloud TEST gate and all other production security gates.
 
 ## P2-12 closeout status (2026-08-25)
 

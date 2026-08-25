@@ -177,7 +177,8 @@ it is not a production-patient launch approval.
 - Server-side paginated patient list/search and a bounded patient workspace.
 - Responsive create/edit/list/detail UI with error/loading/empty/stale states.
 - Synthetic two-organization fixtures and negative authorization tests.
-- Cloud TEST migration/type/schema/security/E2E verification.
+- Local migration/schema/security verification, with hosted type, Auth, and E2E
+  verification deferred to the pre-production Cloud TEST gate.
 
 ## Explicit non-scope
 
@@ -1773,17 +1774,17 @@ P2-01 through P2-11 ───────────── P2-12 integrated clo
 3. The final migration of each set contains only reviewed grants and is added to
    `scripts/approved-final-grants.mjs` with exact signatures and reasons.
 4. Run static migration privilege lint before any remote write.
-5. During P2-01 through P2-11, apply and verify each migration only in the
-   guarded disposable local stack. At P2-12 closeout, preview and apply the
-   composed chain to verified Cloud TEST; Git remains authoritative.
-6. Regenerate `src/types/database.generated.ts` from the hosted schema at P2-12
-   and check the committed result in CI.
-7. Local schema lint, pgTAP, and app tests must pass for every checkpoint; at
-   P2-12, Cloud TEST advisors and E2E must pass on the same composed state.
+5. During Phase 2, apply and verify each migration only in the guarded
+   disposable local stack; Git remains authoritative.
+6. Regenerate `src/types/database.generated.ts` from the hosted schema before
+   production deployment and check the committed result in CI.
+7. Local schema lint, pgTAP, and app tests must pass for every checkpoint,
+   including P2-12. Cloud TEST advisors and E2E must pass before production
+   deployment on the same composed state.
 8. Never use Dashboard-first SQL, direct MCP-only schema changes, an unguarded
    local database target, linked reset/reseed, or a production target. Local
    Supabase verification must follow ADR-020; it does not replace the required
-   Cloud TEST run at P2-12 closeout or before production.
+   Cloud TEST run before production.
 
 # 9. Test strategy
 
@@ -1945,8 +1946,9 @@ their roadmap phases. Do not assume all are part of the next phase.
 # 16. Phase 2 completion criteria
 
 Phase 2 is complete only when `P2-00` through `P2-12` are accepted, all required
-local checks and the final Cloud TEST checks pass on the same published checkpoint, migrations and
-generated types match, independent review has no unresolved material finding,
-manual responsive/accessibility/security QA is recorded, the handoff is current,
-and a separate human acceptance decision is recorded. It must still be described
-as a synthetic-data patient foundation—not approval for production patient use.
+local checks pass on the same published checkpoint, migrations and generated
+types match, independent review has no unresolved material finding, manual
+responsive/accessibility/security QA is recorded, the handoff is current, and a
+separate human acceptance decision is recorded. Cloud TEST checks remain
+mandatory before production deployment. Phase 2 must still be described as a
+synthetic-data patient foundation—not approval for production patient use.

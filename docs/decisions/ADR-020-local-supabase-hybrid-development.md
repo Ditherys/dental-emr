@@ -1,10 +1,14 @@
-# ADR-020 — Optional local Supabase with Phase 2 closeout Cloud TEST acceptance
+# ADR-020 — Optional local Supabase with pre-production Cloud TEST acceptance
 
-**Status:** Accepted
+**Status:** Accepted, amended 2026-08-26
 
 **Date:** 2026-08-24
 
 **Decision owner:** Project owner
+
+**Amendment:** The project owner approved local verification as the Phase 2
+closeout gate. Guarded Cloud TEST remains mandatory immediately before any
+production deployment.
 
 **Supersedes in part:** [ADR-016](ADR-016-supabase-cloud-first-development.md)
 
@@ -54,12 +58,11 @@ be explicit.
 
 Adopt **option C**.
 
-Local Supabase is the required database/RLS verification environment for each
-bounded Phase 2 checkpoint. Guarded Cloud TEST remains mandatory at Phase 2
-closeout (P2-12) and before production deployment, but is not a per-checkpoint
-acceptance requirement during Phase 2. A local pass is accepted only with the
-required review and all relevant local verification; it never authorizes
-production use.
+Local Supabase is the required database/RLS verification environment for every
+Phase 2 checkpoint, including P2-12 closeout. Guarded Cloud TEST is mandatory
+immediately before production deployment, but is not a Phase 2 acceptance
+requirement. A local pass is accepted only with the required review and all
+relevant local verification; it never authorizes production use.
 
 This decision supersedes only ADR-016's prohibition on a local Supabase runtime
 and local Docker requirement. ADR-016's Git-authoritative migrations, hosted
@@ -78,7 +81,7 @@ Developer workstation (optional fast loop)
                  │
                  │ same Git checkpoint
                  ▼
-Dedicated Supabase Cloud TEST (mandatory Phase 2 closeout/production gate)
+Dedicated Supabase Cloud TEST (mandatory pre-production gate)
 ├── guarded migration preview/apply
 ├── non-production pgTAP provisioning
 ├── database/RLS/concurrency tests
@@ -118,10 +121,10 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
    It is installed from
    `supabase/provisioning/nonproduction/001_database_test_tooling.sql`, outside
    `supabase/migrations/`, preserving ADR-018's production-shaped baseline.
-8. For P2-01 through P2-11, local success is checkpoint acceptance evidence
-   only when paired with the required dedicated review and all relevant local
+8. Local success is Phase 2 checkpoint and closeout acceptance evidence only
+   when paired with the required dedicated review and all relevant local
    verification. It never replaces the guarded Cloud TEST verification required
-   at P2-12 closeout or before production deployment.
+   before production deployment.
 
 ## Cloud acceptance contract
 
@@ -131,10 +134,10 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
 2. `test:db` remains the existing Cloud TEST runner for compatibility with CI.
    A `test:db:cloud` alias may be added for clarity, but it must invoke the same
    guarded path.
-3. At P2-12 phase closeout and before production deployment, run the required
-   migration, pgTAP, RLS/authorization, concurrency, schema, Auth, security,
-   and E2E checks against the dedicated Cloud TEST project. During P2-01 through
-   P2-11, run the equivalent relevant local verification and dedicated review.
+3. Before production deployment, run the required migration, pgTAP,
+   RLS/authorization, concurrency, schema, Auth, security, and E2E checks
+   against the dedicated Cloud TEST project. During Phase 2, run the equivalent
+   relevant local verification and dedicated review.
 4. Committed generated database types are produced or checked against the
    accepted hosted schema. Local type generation may be used as preview only and
    must not be the sole evidence for committed type changes.
@@ -147,9 +150,8 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
 - Git migration files remain the only authoritative application-schema history.
 - Dashboard SQL, local-only migration edits, MCP-only changes, and direct remote
   SQL side effects must not become sources of truth.
-- A Phase 2 closeout or production candidate that passes locally but fails on
-  Cloud TEST is not accepted; the discrepancy must be diagnosed rather than
-  bypassed.
+- A production candidate that passes locally but fails on Cloud TEST is not
+  accepted; the discrepancy must be diagnosed rather than bypassed.
 - Local and Cloud TEST run the same committed migrations and database suites.
   Expected non-production differences, such as pgTAP, remain explicit.
 - Local reset is permitted because the target is disposable and guarded as
@@ -228,8 +230,8 @@ hosted acceptance environment are authoritative.
   remain unchanged or stronger.
 - A fresh local database reconstructs from committed migrations, explicit
   non-production provisioning, and synthetic seed data.
-- At Phase 2 closeout, the same database suites pass locally and against Cloud
-  TEST at the same Git checkpoint.
+- Before production deployment, the same database suites pass locally and
+  against Cloud TEST at the same Git checkpoint.
 - Production-shaped migrations remain free of pgTAP and other test-only schema.
 - No real data, hosted secrets, or production identifiers are introduced.
 - Authoritative documents agree on the hybrid boundary.
