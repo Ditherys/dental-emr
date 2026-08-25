@@ -1,4 +1,4 @@
-# AI Handoff - P3-03 provider configuration mutations
+# AI Handoff - P3-04 provider configuration reads and services
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -51,6 +51,26 @@
   three local concurrency probes. P3-04 is the next ordered task; no provider
   reads, application adapter, UI, procedure, scheduling, or public scope was
   added.
+- P3-04 adds only three authenticated bounded reads: provider directory,
+  provider configuration detail, and global-plus-own-tenant specialty catalog.
+  Each derives tenant context from the active acting branch, requires `auth.uid()`
+  and live organization-wide `provider.read`, uses an empty SECURITY DEFINER
+  search path, and records no audit event. The directory excludes archived
+  providers; no projection includes organization, membership, Auth, scheduling,
+  patient, or calendar data.
+- P3-04 adds server-only provider schemas, read adapters, safe error mapping,
+  and wrappers for the P3-03 mutations. Inputs and RPC results are Zod-validated;
+  mutation patches and association replacements reject arbitrary fields and
+  duplicate IDs. The authenticated request client is used exclusively.
+- The linked-project generated-type command remains unsuitable as local-preview
+  evidence: it reproduced the documented hosted metadata omission and removed
+  the patient contract. Its output was restored and is not part of this
+  checkpoint. The new typed adapter contains a narrow local RPC boundary while
+  validating all parameters/results; Cloud TEST type generation remains required
+  before production.
+- P3-04 is the completed checkpoint pending final verification/commit. P3-05 is
+  the next ordered task; no procedure, UI, scheduling, availability, patient,
+  public, price, or clinical scope was added.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

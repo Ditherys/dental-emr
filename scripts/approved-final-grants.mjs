@@ -280,6 +280,13 @@ const providerMutationGrants = Object.freeze([
   "public.set_provider_specialties(uuid, uuid, integer, jsonb)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only provider configuration mutation path. It derives the tenant and actor from an active authenticated acting branch, requires live organization-wide provider.manage, locks versioned targets, and appends one opaque audit event atomically; archive and linked-user changes also require AAL2." })));
 
+const PROVIDER_READS_GRANTS_MIGRATION = "20260826010301_provider_reads_grants.sql";
+const providerReadGrants = Object.freeze([
+  "public.list_provider_directory(uuid)",
+  "public.get_provider_configuration(uuid, uuid)",
+  "public.list_specialties(uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The bounded provider configuration read path derives the tenant from an active authenticated acting branch, requires live organization-wide provider.read, and returns no membership, Auth, scheduling, patient, or audit data." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -319,6 +326,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ file: PATIENT_CHILDREN_WRITE_GRANTS_MIGRATION, grants: patientChildrenWriteGrants }),
   Object.freeze({ file: PATIENT_LIFECYCLE_GRANTS_MIGRATION, grants: patientLifecycleGrants }),
   Object.freeze({ file: PROVIDER_MUTATIONS_GRANTS_MIGRATION, grants: providerMutationGrants }),
+  Object.freeze({ file: PROVIDER_READS_GRANTS_MIGRATION, grants: providerReadGrants }),
 ]);
 
 /**

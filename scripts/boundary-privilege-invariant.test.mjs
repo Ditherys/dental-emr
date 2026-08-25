@@ -128,6 +128,9 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.update_specialty(uuid, uuid, integer, jsonb)",
     "public.set_provider_branches(uuid, uuid, integer, uuid[])",
     "public.set_provider_specialties(uuid, uuid, integer, jsonb)",
+    "public.list_provider_directory(uuid)",
+    "public.get_provider_configuration(uuid, uuid)",
+    "public.list_specialties(uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1191,7 +1194,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(45);
+    expect(approved.size).toBe(48);
   });
 });
 

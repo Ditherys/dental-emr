@@ -966,6 +966,81 @@ select extensions.throws_ok(
 );
 reset role;
 
+-- P3-04 bounded reads: no audit event is produced and no auth/member fields are projected.
+select extensions.ok(
+  (select count(*) from (values
+    ('public.list_provider_directory(uuid)'),
+    ('public.get_provider_configuration(uuid,uuid)'),
+    ('public.list_specialties(uuid)')
+  ) as rpc(function_name) where has_function_privilege('authenticated', rpc.function_name, 'EXECUTE')) = 3
+  and not exists (select 1 from (values
+    ('public.list_provider_directory(uuid)'), ('public.get_provider_configuration(uuid,uuid)'), ('public.list_specialties(uuid)')
+  ) as rpc(function_name) where has_function_privilege('service_role', rpc.function_name, 'EXECUTE')),
+  'only authenticated receives every provider read RPC grant'
+);
+select extensions.is(
+  (select count(*)::integer from pg_proc as procedure where procedure.oid in (
+    'public.list_provider_directory(uuid)'::regprocedure,
+    'public.get_provider_configuration(uuid,uuid)'::regprocedure,
+    'public.list_specialties(uuid)'::regprocedure
+  ) and procedure.prosecdef and procedure.proconfig = array['search_path=""']::text[]),
+  3,
+  'every provider read RPC is SECURITY DEFINER with an empty search path'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000001', true);
+select extensions.is(
+  (select count(*)::integer from public.list_provider_directory('b3030000-0000-0000-0000-000000000001')),
+  3,
+  'provider directory returns only non-archived same-tenant providers'
+);
+select extensions.ok(
+  not exists (
+    select 1 from public.list_provider_directory('b3030000-0000-0000-0000-000000000001') as row
+    where to_jsonb(row) - array['provider_id', 'display_name', 'provider_type', 'status', 'website_visible', 'primary_specialty_label', 'branch_count'] <> '{}'::jsonb
+  ),
+  'provider directory projection contains only its bounded fields'
+);
+select extensions.ok(
+  (select public.get_provider_configuration('b3030000-0000-0000-0000-000000000001', 'b3050000-0000-0000-0000-000000000001') ?& array[
+    'providerId', 'firstName', 'middleName', 'lastName', 'suffix', 'professionalTitle', 'licenseNumber', 'contactPhone', 'contactEmail', 'providerType', 'status', 'websiteVisible', 'bio', 'linkedUserId', 'version', 'branchIds', 'specialties'
+  ]),
+  'provider detail contains the editable fields, association IDs, and version'
+);
+select extensions.ok(
+  not ((select public.get_provider_configuration('b3030000-0000-0000-0000-000000000001', 'b3050000-0000-0000-0000-000000000001')) ?| array['organizationId', 'organization_id', 'authUserId', 'memberId', 'actorUserId']),
+  'provider detail excludes tenant and authentication internals'
+);
+select extensions.is(
+  (select count(*)::integer from public.list_specialties('b3030000-0000-0000-0000-000000000001')),
+  9,
+  'specialty list returns global and same-tenant specialties only'
+);
+select extensions.ok(
+  not exists (
+    select 1 from public.list_specialties('b3030000-0000-0000-0000-000000000001') as row
+    where to_jsonb(row) - array['specialty_id', 'code', 'name', 'is_active', 'is_global', 'version'] <> '{}'::jsonb
+  ),
+  'specialty list excludes organization and membership internals'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events where category = 'PROVIDER_CONFIGURATION'),
+  4,
+  'provider reads add no configuration audit event'
+);
+select extensions.throws_ok(
+  $$select * from public.list_provider_directory('b3030000-0000-0000-0000-000000000002')$$,
+  '42501', 'not authorized', 'a foreign acting branch cannot read another tenant provider directory'
+);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000002', true);
+select extensions.throws_ok(
+  $$select * from public.list_specialties('b3030000-0000-0000-0000-000000000001')$$,
+  '42501', 'not authorized', 'staff without provider.read cannot read specialties'
+);
+reset role;
+
 with test_failures as (
   select finish
   from extensions.finish()
