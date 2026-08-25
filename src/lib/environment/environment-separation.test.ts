@@ -9,6 +9,42 @@ const developmentEnvironment = {
 };
 
 describe("environment separation", () => {
+  it("accepts a local Supabase runtime only for a developer workstation", () => {
+    expect(
+      validateEnvironmentSeparation({
+        APP_ENVIRONMENT: "development",
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_PROJECT_ID: "local",
+      }),
+    ).toEqual({
+      appEnvironment: "development",
+      supabaseProjectId: "local",
+      supabaseUrl: "http://127.0.0.1:54321",
+    });
+  });
+
+  it("rejects a local Supabase runtime outside a developer workstation", () => {
+    expect(() =>
+      validateEnvironmentSeparation({
+        APP_ENVIRONMENT: "test",
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_PROJECT_ID: "local",
+      }),
+    ).toThrow("local Supabase is allowed only for a non-Vercel development workstation");
+  });
+
+  it("rejects a local Supabase runtime in Vercel", () => {
+    expect(() =>
+      validateEnvironmentSeparation({
+        APP_ENVIRONMENT: "development",
+        NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_PROJECT_ID: "local",
+        VERCEL: "1",
+        VERCEL_ENV: "development",
+      }),
+    ).toThrow("local Supabase is allowed only for a non-Vercel development workstation");
+  });
+
   it("accepts a developer workstation connected to its Cloud DEV project", () => {
     expect(validateEnvironmentSeparation(developmentEnvironment)).toEqual({
       appEnvironment: "development",

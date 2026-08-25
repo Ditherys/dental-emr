@@ -383,7 +383,7 @@ set
   website_visible = excluded.website_visible,
   bio = excluded.bio,
   version = 1,
-  archived_at = null;
+   archived_at = null;
 
 -- P3-05 synthetic catalog fixture. It is configuration only: no prices,
 -- availability, appointment, or public projection data is seeded.

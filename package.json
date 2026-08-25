@@ -30,7 +30,7 @@
     "security:auth": "node scripts/verify-hosted-auth-config.mjs",
     "security:migrations": "node scripts/run-migration-privilege-lint.mjs",
     "security:secrets": "secretlint \"**/*\"",
-    "auth:bootstrap-owner": "node scripts/bootstrap-first-owner.mjs",
+    "auth:bootstrap-owner": "node --env-file-if-exists=.env.local scripts/bootstrap-first-owner.mjs",
     "ci:test-target": "node scripts/validate-cloud-test-environment.mjs",
     "db:provision:test": "node scripts/run-guarded-supabase-command.mjs db-provision-test-tooling",
     "db:push:dry": "node scripts/run-guarded-supabase-command.mjs db-push-dry",

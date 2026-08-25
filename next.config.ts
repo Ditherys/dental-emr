@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
     }
 
     return createBrowserHeaderRules({
+      allowInsecureLocalSupabase:
+        environmentConfig.appEnvironment === "development" &&
+        environmentConfig.supabaseProjectId === "local",
       isHttpsDeployment: isHttpsDeploymentUrl(appUrl),
       isProduction: process.env.NODE_ENV === "production",
       supabaseUrl: environmentConfig.supabaseUrl,

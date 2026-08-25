@@ -9,6 +9,7 @@ type HeaderRule = Readonly<{
 }>;
 
 type BrowserPolicyOptions = Readonly<{
+  allowInsecureLocalSupabase?: boolean;
   isHttpsDeployment: boolean;
   isProduction: boolean;
   supabaseUrl: string;
@@ -90,6 +91,7 @@ export function isHttpsDeploymentUrl(appUrl: string) {
 function getSupabaseConnectSources(
   supabaseUrl: string,
   isProduction: boolean,
+  allowInsecureLocalSupabase: boolean,
 ) {
   let parsedUrl: URL;
 
@@ -117,7 +119,20 @@ function getSupabaseConnectSources(
     );
   }
 
-  if (isProduction && parsedUrl.protocol !== "https:") {
+  const isExactLocalSupabaseOrigin =
+    parsedUrl.origin === "http://127.0.0.1:54321";
+
+  if (allowInsecureLocalSupabase && !isExactLocalSupabaseOrigin) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL must exactly match the local Supabase API origin.",
+    );
+  }
+
+  if (
+    isProduction &&
+    parsedUrl.protocol !== "https:" &&
+    !allowInsecureLocalSupabase
+  ) {
     throw new Error("Production Supabase browser connections must use HTTPS.");
   }
 
@@ -128,6 +143,7 @@ function getSupabaseConnectSources(
 }
 
 export function createContentSecurityPolicy({
+  allowInsecureLocalSupabase = false,
   isHttpsDeployment,
   isProduction,
   supabaseUrl,
@@ -135,6 +151,7 @@ export function createContentSecurityPolicy({
   const connectSources = getSupabaseConnectSources(
     supabaseUrl,
     isProduction,
+    allowInsecureLocalSupabase,
   ).join(" ");
   const scriptSources = ["'self'", "'unsafe-inline'"];
 

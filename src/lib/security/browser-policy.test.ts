@@ -82,6 +82,28 @@ describe("browser security policy", () => {
     ).toThrow("must use HTTP or HTTPS");
   });
 
+  it("allows only the exact local Supabase origin for a local development build", () => {
+    const policy = createContentSecurityPolicy({
+      isHttpsDeployment: false,
+      isProduction: true,
+      allowInsecureLocalSupabase: true,
+      supabaseUrl: "http://127.0.0.1:54321",
+    });
+
+    expect(policy).toContain(
+      "connect-src 'self' http://127.0.0.1:54321 ws://127.0.0.1:54321",
+    );
+    expect(policy).not.toContain("'unsafe-eval'");
+    expect(() =>
+      createContentSecurityPolicy({
+        isHttpsDeployment: false,
+        isProduction: true,
+        allowInsecureLocalSupabase: true,
+        supabaseUrl: "http://localhost:54321",
+      }),
+    ).toThrow("exactly match the local Supabase API origin");
+  });
+
   it("adds HSTS only to production responses", () => {
     const productionHeaders = toHeaderMap(
       createBrowserSecurityHeaders({

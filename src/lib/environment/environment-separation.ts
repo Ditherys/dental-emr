@@ -127,6 +127,43 @@ function validateSupabaseCloudProject(
   return expectedOrigin;
 }
 
+function validateLocalSupabaseRuntime(
+  rawUrl: string,
+  appEnvironment: AppEnvironment,
+  isVercel: boolean,
+) {
+  if (appEnvironment !== "development" || isVercel) {
+    throw new Error(
+      "local Supabase is allowed only for a non-Vercel development workstation.",
+    );
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL must be a valid local Supabase URL.");
+  }
+
+  const expectedOrigin = "http://127.0.0.1:54321";
+
+  if (
+    url.origin !== expectedOrigin ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      "NEXT_PUBLIC_SUPABASE_URL must exactly match the local Supabase API origin.",
+    );
+  }
+
+  return expectedOrigin;
+}
+
 export function validateEnvironmentSeparation(
   environment: EnvironmentSource,
 ): EnvironmentSeparationConfig {
@@ -137,9 +174,9 @@ export function validateEnvironmentSeparation(
     environment,
     "SUPABASE_PROJECT_ID",
   );
-  const supabaseUrl = validateSupabaseCloudProject(
-    requireEnvironmentValue(environment, "NEXT_PUBLIC_SUPABASE_URL"),
-    supabaseProjectId,
+  const rawSupabaseUrl = requireEnvironmentValue(
+    environment,
+    "NEXT_PUBLIC_SUPABASE_URL",
   );
   const expectedVercelAppEnvironment =
     getExpectedVercelAppEnvironment(environment);
@@ -161,6 +198,15 @@ export function validateEnvironmentSeparation(
       "Production Supabase configuration is allowed only in a verified Vercel production deployment.",
     );
   }
+
+  const supabaseUrl =
+    supabaseProjectId === "local"
+      ? validateLocalSupabaseRuntime(
+          rawSupabaseUrl,
+          appEnvironment,
+          environment.VERCEL === "1",
+        )
+      : validateSupabaseCloudProject(rawSupabaseUrl, supabaseProjectId);
 
   return Object.freeze({
     appEnvironment,

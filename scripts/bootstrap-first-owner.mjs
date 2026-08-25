@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
+import { validateBootstrapTarget } from "./bootstrap-first-owner-config.mjs";
+
 const bootstrapSchema = z.object({
   APP_ENVIRONMENT: z.enum(["development", "test", "production"]),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
@@ -39,19 +41,17 @@ const {
   BOOTSTRAP_ORGANIZATION_ID: organizationId,
   BOOTSTRAP_OWNER_EMAIL: ownerEmail,
 } = parsed.data;
-const parsedSupabaseUrl = new URL(url);
-const expectedSupabaseOrigin = `https://${projectId}.supabase.co`;
-
-if (
-  parsedSupabaseUrl.origin !== expectedSupabaseOrigin ||
-  parsedSupabaseUrl.username ||
-  parsedSupabaseUrl.password ||
-  parsedSupabaseUrl.pathname !== "/" ||
-  parsedSupabaseUrl.search ||
-  parsedSupabaseUrl.hash
-) {
+try {
+  validateBootstrapTarget({
+    appEnvironment,
+    projectId,
+    url,
+  });
+} catch (error) {
   console.error(
-    "First-owner bootstrap refused: NEXT_PUBLIC_SUPABASE_URL does not match SUPABASE_PROJECT_ID.",
+    error instanceof Error
+      ? error.message
+      : "First-owner bootstrap refused: invalid Supabase target.",
   );
   process.exit(1);
 }

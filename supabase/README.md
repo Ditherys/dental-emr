@@ -1,8 +1,13 @@
-# Supabase Cloud development workflow
+# Supabase development workflow
 
-This directory is the Git source of truth for the database. The runtime database must be a dedicated, disposable Supabase Cloud development project containing synthetic data only.
+This directory is the Git source of truth for the database. Runtime databases
+are either the optional disposable local Supabase stack or a dedicated Supabase
+Cloud non-production project; both contain synthetic data only.
 
-The local-service sections in `config.toml` are generated Supabase CLI metadata. They do not change [ADR-016](../docs/decisions/ADR-016-supabase-cloud-first-development.md): do not run `supabase start`, do not require Docker, and do not store persistent application data on the workstation.
+The local-service sections in `config.toml` implement the optional local loop
+under [ADR-020](../docs/decisions/ADR-020-local-supabase-hybrid-development.md).
+Use only the guarded `npm run db:*:local` commands for it; Git migrations remain
+authoritative and Cloud TEST remains the mandatory pre-production gate.
 
 ## One-time project setup
 
