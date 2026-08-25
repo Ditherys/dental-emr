@@ -8,7 +8,6 @@ import { AuthorizationError, requireOrganizationAuthorizationState, requirePermi
 import { listSpecialties } from "@/lib/providers/data";
 import { ProviderServiceError } from "@/lib/providers/service";
 
-import { SpecialtyForm } from "./specialty-form";
 import { SpecialtyList } from "./specialty-list";
 
 export const metadata: Metadata = { title: "Specialties" };
@@ -38,5 +37,5 @@ export default async function SpecialtiesPage() {
 
   if (denied) return <PermissionDenied description={actingBranchId ? undefined : "An active branch is required to manage specialty configuration."} />;
   if (failed) return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Specialties" description="Internal specialty configuration." /><Separator className="my-6" /><PageError description="Specialty configuration could not be loaded. Refresh to try again." /></div>;
-  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Specialties" description="Global specialties are read-only. Add and maintain only custom specialties for this organization." /><Separator className="my-6" /><SpecialtyList specialties={specialties} actingBranchId={actingBranchId} /><SpecialtyForm actingBranchId={actingBranchId} /></div>;
+  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Specialties" description="Global specialties are read-only. Add and maintain only custom specialties for this organization." /><Separator className="my-6" /><SpecialtyList specialties={specialties} actingBranchId={actingBranchId} /></div>;
 }

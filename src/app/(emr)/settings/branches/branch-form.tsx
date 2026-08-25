@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect } from "react";
+import { startTransition, useActionState, useEffect, useEffectEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
@@ -36,7 +36,7 @@ const defaultValues: BranchFormValues = {
 const controlClasses =
   "mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20";
 
-export function BranchForm() {
+export function BranchForm({ inDialog = false, onSuccess }: { inDialog?: boolean; onSuccess?: () => void }) {
   const [state, formAction, pending] = useActionState(
     createBranchAction,
     initialState,
@@ -54,6 +54,7 @@ export function BranchForm() {
   });
   const branchName = useWatch({ control, name: "name" });
   const hydrated = useHydrated();
+  const closeAfterSuccess = useEffectEvent(() => onSuccess?.());
 
   useEffect(() => {
     if (!dirtyFields.slug) {
@@ -66,6 +67,7 @@ export function BranchForm() {
   useEffect(() => {
     if (state.success && state.branchId) {
       reset(defaultValues);
+      closeAfterSuccess();
     }
   }, [reset, state.branchId, state.success]);
 
@@ -88,8 +90,8 @@ export function BranchForm() {
   }
 
   return (
-    <section aria-labelledby="add-branch-title" className="mt-10 border-t pt-8">
-      <div className="max-w-2xl">
+    <section aria-labelledby={inDialog ? undefined : "add-branch-title"} className={inDialog ? "space-y-5" : "mt-10 border-t pt-8"}>
+      {!inDialog && <div className="max-w-2xl">
         <h2 id="add-branch-title" className="text-lg font-semibold">
           Add branch
         </h2>
@@ -101,12 +103,12 @@ export function BranchForm() {
           Fields labeled optional may be left blank; all other fields are
           required.
         </p>
-      </div>
+      </div>}
 
       <form
         method="post"
         onSubmit={submit}
-        className="mt-6 max-w-3xl space-y-6"
+        className={inDialog ? "max-w-3xl space-y-6" : "mt-6 max-w-3xl space-y-6"}
         noValidate
       >
         <fieldset disabled={pending} className="space-y-6 disabled:opacity-70">

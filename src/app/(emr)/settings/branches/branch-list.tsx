@@ -1,7 +1,9 @@
-import { Building2, Globe2 } from "lucide-react";
+import { Building2, Globe2, Plus } from "lucide-react";
 
 import { BranchArchiveDialog } from "./branch-archive-dialog";
+import { BranchDialog } from "./branch-dialog";
 import { BranchEditDialog } from "./branch-edit-dialog";
+import { Button } from "@/components/ui/button";
 import type { BranchSummary } from "@/lib/branches";
 
 function contactLabel(branch: BranchSummary) {
@@ -28,6 +30,12 @@ export function BranchList({ branches }: { branches: BranchSummary[] }) {
             {branches.length} {branches.length === 1 ? "location" : "locations"}
           </p>
         </div>
+        <BranchDialog>
+          <Button type="button" size="lg" className="h-11">
+            <Plus aria-hidden="true" />
+            Add branch
+          </Button>
+        </BranchDialog>
       </div>
 
       {branches.length === 0 ? (

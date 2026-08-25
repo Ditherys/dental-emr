@@ -13,7 +13,6 @@ import {
   requirePermission,
 } from "@/lib/authorization";
 
-import { BranchForm } from "./branch-form";
 import { BranchList } from "./branch-list";
 
 export const metadata: Metadata = {
@@ -68,7 +67,6 @@ export default async function BranchesPage() {
       />
       <Separator className="my-6" />
       <BranchList branches={branches} />
-      <BranchForm />
     </div>
   );
 }
