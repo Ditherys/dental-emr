@@ -1,4 +1,4 @@
-# AI Handoff - P3-01 provider permission contract
+# AI Handoff - P3-03 provider configuration mutations
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -36,9 +36,21 @@
   probes; `npm run verify` passed lint, typecheck, 372 unit tests, build, secret
   scan, migration lint, and dependency audit. Cloud TEST remains deferred and
   mandatory before production.
-- P3-03 is the next ordered task. It may add only the reviewed provider/specialty
-  mutation RPCs and registered terminal grants; no reads/UI/procedure scope is
-  authorized yet.
+- P3-03 adds only the seven authenticated provider/specialty mutation RPCs and
+  registered terminal grants. Each derives tenant context from an active acting
+  branch, requires live organization-wide `provider.manage`, returns opaque
+  IDs/versions, and writes exactly one `{}`-metadata
+  `PROVIDER_CONFIGURATION` audit event atomically. Archive and linked-user
+  mutations call `private.require_aal2()`.
+- P3-03 pgTAP coverage proves exact RPC ACLs, empty SECURITY DEFINER search
+  paths, owner positive flow, staff/anonymous/foreign denial, AAL1 denial for
+  archive/linking, patch allowlisting, stale versions, duplicate/foreign
+  relation rejection, immutable global specialties, and audit rollback.
+- Fresh local reconstruction applied 28 migrations and synthetic seed;
+  provisioning passed; `npm run test:db:local` passed all 17 pgTAP suites and
+  three local concurrency probes. P3-04 is the next ordered task; no provider
+  reads, application adapter, UI, procedure, scheduling, or public scope was
+  added.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

@@ -818,6 +818,154 @@ select extensions.is(
 );
 reset role;
 
+-- P3-03 mutation boundary: only authenticated receives the seven exact RPCs.
+select extensions.ok(
+  (select count(*) from (values
+    ('public.create_provider(uuid,jsonb)'),
+    ('public.update_provider(uuid,uuid,integer,jsonb)'),
+    ('public.archive_provider(uuid,uuid,integer)'),
+    ('public.create_specialty(uuid,text,text)'),
+    ('public.update_specialty(uuid,uuid,integer,jsonb)'),
+    ('public.set_provider_branches(uuid,uuid,integer,uuid[])'),
+    ('public.set_provider_specialties(uuid,uuid,integer,jsonb)')
+  ) as rpc(function_name)
+  where has_function_privilege('authenticated', rpc.function_name, 'EXECUTE')) = 7
+  and not exists (select 1 from (values
+    ('public.create_provider(uuid,jsonb)'), ('public.update_provider(uuid,uuid,integer,jsonb)'),
+    ('public.archive_provider(uuid,uuid,integer)'), ('public.create_specialty(uuid,text,text)'),
+    ('public.update_specialty(uuid,uuid,integer,jsonb)'), ('public.set_provider_branches(uuid,uuid,integer,uuid[])'),
+    ('public.set_provider_specialties(uuid,uuid,integer,jsonb)')
+  ) as rpc(function_name) where has_function_privilege('service_role', rpc.function_name, 'EXECUTE')),
+  'only authenticated receives every provider mutation RPC grant'
+);
+select extensions.is(
+  (select count(*)::integer from pg_proc as procedure where procedure.oid in (
+    'public.create_provider(uuid,jsonb)'::regprocedure,
+    'public.update_provider(uuid,uuid,integer,jsonb)'::regprocedure,
+    'public.archive_provider(uuid,uuid,integer)'::regprocedure,
+    'public.create_specialty(uuid,text,text)'::regprocedure,
+    'public.update_specialty(uuid,uuid,integer,jsonb)'::regprocedure,
+    'public.set_provider_branches(uuid,uuid,integer,uuid[])'::regprocedure,
+    'public.set_provider_specialties(uuid,uuid,integer,jsonb)'::regprocedure
+  ) and procedure.prosecdef and procedure.proconfig = array['search_path=""']::text[]),
+  7,
+  'every provider mutation RPC is SECURITY DEFINER with an empty search path'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000001', true);
+select set_config('request.jwt.claims', '{"aal":"aal1"}', true);
+select extensions.is(
+  (select version from public.create_provider(
+    'b3030000-0000-0000-0000-000000000001',
+    '{"firstName":"Created","lastName":"Provider","providerType":"REGULAR"}'::jsonb
+  )),
+  1,
+  'an owner with live provider.manage may create a provider at AAL1'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events
+   where action = 'provider.created' and category = 'PROVIDER_CONFIGURATION' and metadata = '{}'::jsonb),
+  1,
+  'provider creation creates exactly one opaque configuration audit event'
+);
+select extensions.throws_ok(
+  $$select public.create_provider('b3030000-0000-0000-0000-000000000001','{"firstName":"Linked","lastName":"Provider","providerType":"REGULAR","linkedUserId":"b3010000-0000-0000-0000-000000000002"}'::jsonb)$$,
+  '42501', 'AAL2 required', 'AAL1 cannot create a linked provider'
+);
+select extensions.throws_ok(
+  $$select public.archive_provider('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',1)$$,
+  '42501', 'AAL2 required', 'AAL1 cannot archive a provider'
+);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000002', true);
+select extensions.throws_ok(
+  $$select public.create_specialty('b3030000-0000-0000-0000-000000000001','P303_DENIED','Denied')$$,
+  '42501', 'not authorized', 'staff without provider.manage cannot mutate the specialty catalog'
+);
+reset role;
+select extensions.is(
+  (select count(*)::integer from public.specialties where code = 'P303_DENIED'),
+  0,
+  'a denied specialty mutation has no side effect'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000001', true);
+select set_config('request.jwt.claims', '{"aal":"aal2"}', true);
+select extensions.is(
+  (select version from public.update_provider(
+    'b3030000-0000-0000-0000-000000000001', 'b3050000-0000-0000-0000-000000000001', 1,
+    '{"professionalTitle":"DMD","linkedUserId":"b3010000-0000-0000-0000-000000000002"}'::jsonb
+  )), 2,
+  'AAL2 owner may update a provider through the explicit patch allowlist'
+);
+select extensions.throws_ok(
+  $$select public.update_provider('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',1,'{"organizationId":"b3020000-0000-0000-0000-000000000002"}'::jsonb)$$,
+  '22023', 'invalid input', 'provider patches reject tenant and arbitrary keys'
+);
+select extensions.throws_ok(
+  $$select public.update_provider('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',1,'{"professionalTitle":"Stale"}'::jsonb)$$,
+  'P0001', 'stale version', 'provider updates enforce optimistic versions'
+);
+select extensions.throws_ok(
+  $$select public.archive_provider('b3030000-0000-0000-0000-000000000002','b3050000-0000-0000-0000-000000000001',2)$$,
+  '42501', 'not authorized', 'a forged foreign acting branch cannot target an Org A provider'
+);
+select extensions.throws_ok(
+  $$select public.set_provider_branches('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',2,array['b3030000-0000-0000-0000-000000000001'::uuid,'b3030000-0000-0000-0000-000000000001'::uuid])$$,
+  '22023', 'invalid input', 'duplicate provider branch IDs are rejected before replacement'
+);
+select extensions.throws_ok(
+  $$select public.set_provider_specialties('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',2,'[{"specialtyId":"b3060000-0000-0000-0000-000000000002","isPrimary":true}]'::jsonb)$$,
+  '22023', 'invalid input', 'foreign custom specialties cannot be assigned through the replacement RPC'
+);
+select extensions.is(
+  (select version from public.set_provider_specialties(
+    'b3030000-0000-0000-0000-000000000001', 'b3050000-0000-0000-0000-000000000001', 2,
+    '[{"specialtyId":"b3060000-0000-0000-0000-000000000001","isPrimary":true}]'::jsonb
+  )), 3,
+  'same-tenant specialty replacement locks the provider and increments its version'
+);
+select extensions.is(
+  (select version from public.create_specialty('b3030000-0000-0000-0000-000000000001','P303_CUSTOM','P303 Custom')),
+  1,
+  'an owner may create a tenant-owned specialty'
+);
+select extensions.throws_ok(
+  $$select public.update_specialty('b3030000-0000-0000-0000-000000000001','b3000000-0000-0000-0000-000000000001',1,'{"name":"Changed"}'::jsonb)$$,
+  '42501', 'not authorized', 'global specialties remain outside tenant mutation scope'
+);
+reset role;
+
+create function private.p303_reject_provider_audit() returns trigger language plpgsql as $$
+begin
+  if new.action = 'provider.archived' then raise exception using errcode = 'P0001', message = 'audit blocked'; end if;
+  return new;
+end;
+$$;
+create trigger p303_reject_provider_audit before insert on public.audit_events for each row execute function private.p303_reject_provider_audit();
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'b3010000-0000-0000-0000-000000000001', true);
+select set_config('request.jwt.claims', '{"aal":"aal2"}', true);
+select extensions.throws_ok(
+  $$select public.archive_provider('b3030000-0000-0000-0000-000000000001','b3050000-0000-0000-0000-000000000001',3)$$,
+  'P0001', 'audit blocked', 'an audit insertion failure rejects provider archive'
+);
+reset role;
+select extensions.is((select status from public.providers where id = 'b3050000-0000-0000-0000-000000000001'), 'active', 'audit failure rolls back the provider archive');
+drop trigger p303_reject_provider_audit on public.audit_events;
+drop function private.p303_reject_provider_audit();
+
+set local role anon;
+select extensions.throws_ok(
+  $$select public.create_specialty('b3030000-0000-0000-0000-000000000001','P303_ANON','Anonymous')$$,
+  '42501', null, 'anonymous callers cannot execute provider mutation RPCs'
+);
+reset role;
+
 with test_failures as (
   select finish
   from extensions.finish()
