@@ -15,6 +15,7 @@ import {
   parseSupabaseQueryResult,
   validateTransactionalSuite,
 } from "./remote-database-test-guard.mjs";
+import { runPatientCreateConcurrencyTest } from "../supabase/tests/patient_create_concurrency.local.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -119,6 +120,13 @@ try {
     parseSupabaseQueryResult(result.stdout, suiteLabel);
     console.log(`PASS ${suiteLabel}`);
   }
+
+  await runPatientCreateConcurrencyTest({
+    command: resolveLocalDatabaseTestCommand("local concurrency test", containerName),
+    repositoryRoot,
+    dockerEnvironment,
+  });
+  console.log("PASS supabase/tests/patient_create_concurrency.local.mjs");
 
   console.log("Local Supabase pgTAP suites passed.");
 } catch (error) {
