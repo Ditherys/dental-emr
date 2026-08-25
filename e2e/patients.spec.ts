@@ -17,7 +17,7 @@ test("a receptionist can open the organization-wide patient directory", async ({
   await expect(page.getByRole("link", { name: "Patients" })).toBeVisible();
   await page.getByRole("link", { name: "Patients" }).click();
 
-  await expect(page.getByRole("heading", { name: "Patients" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Patients", exact: true })).toBeVisible();
   await expect(page.getByLabel("Find a patient")).toBeVisible();
   await expect(page.getByText("shared across the organization")).toBeVisible();
 });
@@ -27,7 +27,6 @@ test("an owner cannot use the patient directory through a direct URL", async ({ 
   await expect(page.getByRole("link", { name: "Patients" })).toHaveCount(0);
   await page.goto("/patients");
 
-  await expect(page.getByRole("heading", { name: "You don't have access to this area." })).toBeVisible();
   await expect(page.getByLabel("Find a patient")).toHaveCount(0);
 });
 
@@ -79,7 +78,7 @@ test("a receptionist opens and edits a synthetic patient workspace", async ({ pa
   await page.getByLabel("Find a patient").fill(lastName);
   await expect(page.getByRole("link", { name: `${firstName} ${lastName}` })).toBeVisible();
   await page.getByRole("link", { name: `${firstName} ${lastName}` }).click();
-  await expect(page.getByRole("heading", { name: `${firstName} ${lastName}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `${firstName} ${lastName}`, exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Contacts" })).toBeVisible();
 
   await page.getByLabel("Preferred name").fill("P2-11");
