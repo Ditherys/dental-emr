@@ -188,8 +188,9 @@ jobs:
       - name: Show generated database type drift
         if: failure()
         env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_TEST_ACCESS_TOKEN }}
           SUPABASE_TEST_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
-        run: npm run db:types && git diff --no-ext-diff -- src/types/database.generated.ts
+        run: npm run db:types -- --require-test-target && git diff --no-ext-diff -- src/types/database.generated.ts
 
       - name: Lint public database schema
         env:
