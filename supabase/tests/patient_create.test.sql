@@ -19,13 +19,15 @@ insert into public.branches (id, organization_id, name, slug, code, address_line
 insert into public.organization_members (id, organization_id, user_id, membership_status, joined_at) values
   ('a4040000-0000-0000-0000-000000000001', 'a4020000-0000-0000-0000-000000000001', 'a4010000-0000-0000-0000-000000000001', 'active', statement_timestamp()),
   ('a4040000-0000-0000-0000-000000000002', 'a4020000-0000-0000-0000-000000000001', 'a4010000-0000-0000-0000-000000000002', 'active', statement_timestamp()),
-  ('a4040000-0000-0000-0000-000000000003', 'a4020000-0000-0000-0000-000000000002', 'a4010000-0000-0000-0000-000000000003', 'active', statement_timestamp());
+  ('a4040000-0000-0000-0000-000000000003', 'a4020000-0000-0000-0000-000000000002', 'a4010000-0000-0000-0000-000000000003', 'active', statement_timestamp()),
+  ('a4040000-0000-0000-0000-000000000004', 'a4020000-0000-0000-0000-000000000002', 'a4010000-0000-0000-0000-000000000001', 'active', statement_timestamp());
 insert into public.member_roles (organization_id, organization_member_id, role_id, assigned_by)
 select assignment.organization_id, assignment.member_id, role.id, assignment.user_id
 from (values
   ('a4020000-0000-0000-0000-000000000001'::uuid, 'a4040000-0000-0000-0000-000000000001'::uuid, 'DENTIST'::text, 'a4010000-0000-0000-0000-000000000001'::uuid),
   ('a4020000-0000-0000-0000-000000000001'::uuid, 'a4040000-0000-0000-0000-000000000002'::uuid, 'OWNER'::text, 'a4010000-0000-0000-0000-000000000002'::uuid),
-  ('a4020000-0000-0000-0000-000000000002'::uuid, 'a4040000-0000-0000-0000-000000000003'::uuid, 'DENTIST'::text, 'a4010000-0000-0000-0000-000000000003'::uuid)
+  ('a4020000-0000-0000-0000-000000000002'::uuid, 'a4040000-0000-0000-0000-000000000003'::uuid, 'DENTIST'::text, 'a4010000-0000-0000-0000-000000000003'::uuid),
+  ('a4020000-0000-0000-0000-000000000002'::uuid, 'a4040000-0000-0000-0000-000000000004'::uuid, 'DENTIST'::text, 'a4010000-0000-0000-0000-000000000001'::uuid)
 ) as assignment(organization_id, member_id, role_code, user_id)
 join public.roles as role on role.organization_id is null and role.code = assignment.role_code;
 
@@ -68,6 +70,11 @@ select extensions.is(
   (select count(*)::integer from public.patient_contacts where organization_id = 'a4020000-0000-0000-0000-000000000001'),
   2,
   'initial mobile and email are inserted atomically with the patient'
+);
+select extensions.set_eq(
+  $$select value from public.patient_contacts where organization_id = 'a4020000-0000-0000-0000-000000000001' order by contact_type$$,
+  $$values ('ana@example.test'::text), ('+639171234567'::text)$$,
+  'initial mobile and email values are stored canonically'
 );
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
@@ -117,9 +124,15 @@ select extensions.ok(
   ) @> '{"candidates":[{"matchedSignals":["EMAIL","MOBILE","NAME_DOB"]}],"truncated":false}'::jsonb,
   'duplicate review combines the three exact signals without returning contact values'
 );
+select set_config('request.jwt.claim.sub', 'a4010000-0000-0000-0000-000000000002', true);
 select extensions.throws_ok(
   $$select public.find_duplicate_candidates('a4030000-0000-0000-0000-000000000002', 'Ana', 'Santos', date '1990-01-01', null, null)$$,
   '42501', 'not authorized', 'a forged foreign acting branch is denied without tenant enumeration'
+);
+select set_config('request.jwt.claim.sub', 'a4010000-0000-0000-0000-000000000001', true);
+select extensions.throws_ok(
+  $$select public.create_patient('a4030000-0000-0000-0000-000000000001', 'Cross', null, 'Branch', null, null, date '1992-02-02', null, null, null, null, null, null, 'a4030000-0000-0000-0000-000000000002', null, null, true)$$,
+  '22023', 'invalid input', 'a foreign preferred branch is rejected even when the actor can access both organizations'
 );
 select set_config('request.jwt.claim.sub', 'a4010000-0000-0000-0000-000000000002', true);
 select extensions.throws_ok(

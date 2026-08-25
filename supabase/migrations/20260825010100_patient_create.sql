@@ -273,13 +273,23 @@ begin
     if normalized_email is null then raise invalid_parameter_value using message = 'invalid input'; end if;
   end if;
 
-  if p_preferred_branch_id is not null and (
-    p_preferred_branch_id <> p_acting_branch_id
-    and not private.has_patient_permission_at_branch(
-      p_preferred_branch_id, 'patient.demographics.write'
-    )
-  ) then
-    raise insufficient_privilege using message = 'not authorized';
+  if p_preferred_branch_id is not null then
+    if not exists (
+      select 1
+      from public.branches as preferred_branch
+      where preferred_branch.id = p_preferred_branch_id
+        and preferred_branch.organization_id = v_organization_id
+        and preferred_branch.status = 'active'
+    ) then
+      raise invalid_parameter_value using message = 'invalid input';
+    end if;
+
+    if p_preferred_branch_id <> p_acting_branch_id
+       and not private.has_patient_permission_at_branch(
+         p_preferred_branch_id, 'patient.demographics.write'
+       ) then
+      raise insufficient_privilege using message = 'not authorized';
+    end if;
   end if;
 
   perform pg_catalog.pg_advisory_xact_lock(
@@ -317,12 +327,12 @@ begin
   if p_initial_mobile is not null then
     insert into public.patient_contacts (
       organization_id, patient_id, contact_type, value, is_primary
-    ) values (v_organization_id, patient_id, 'MOBILE', pg_catalog.btrim(p_initial_mobile), true);
+    ) values (v_organization_id, patient_id, 'MOBILE', normalized_mobile, true);
   end if;
   if p_initial_email is not null then
     insert into public.patient_contacts (
       organization_id, patient_id, contact_type, value, is_primary
-    ) values (v_organization_id, patient_id, 'EMAIL', pg_catalog.btrim(p_initial_email), true);
+    ) values (v_organization_id, patient_id, 'EMAIL', normalized_email, true);
   end if;
 
   insert into public.audit_events (
