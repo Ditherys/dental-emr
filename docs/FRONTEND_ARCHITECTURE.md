@@ -243,6 +243,17 @@ Use chronology, sectioning, and progressive disclosure. Avoid a masonry grid of 
 
 Use forms, summary lists, tables, and clearly bounded destructive actions. Do not turn settings into a marketing-style card gallery.
 
+#### Admin page UI consistency rules
+
+All admin/settings list pages (providers, branches, specialties, procedures, etc.) must follow the same layout and component patterns:
+
+- **Add action**: upper-right labeled button (`size="lg"`, `h-11`) that opens a modal Dialog. Do not render an inline form below the list.
+- **Row actions**: labeled buttons with icon + text (e.g. `Pencil` + "Edit"), `size="sm"`, `variant="outline"`. Do not use icon-only buttons for critical row actions.
+- **Archive/deactivate**: `size="sm"`, `variant="outline"` button consistent with Edit. Use AlertDialog (branches, specialties) or native `<dialog>` with confirmation (procedures) — but the trigger button must be the same size across all pages.
+- **Mobile mirror**: replicate desktop row actions in the mobile list view at the same sizes.
+- **Dialog sizing**: `max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl` for add/edit dialogs.
+- **Do not** create a new component pattern per page. Reuse shared components or follow the established pattern exactly.
+
 ### Home / operational dashboard
 
 Home should prioritize role-relevant work: today’s appointments, pending booking requests, items needing attention, unsent/failed communications, low-stock warnings, or other actionable queues. KPI summaries are allowed when they are useful to the role, but they are secondary to actual work and must not become a mandatory four-card template.
