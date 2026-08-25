@@ -134,10 +134,21 @@ select extensions.columns_are(
   'public',
   'specialties',
   array[
-    'id', 'organization_id', 'code', 'name', 'is_active', 'created_at',
-    'updated_at'
+    'id', 'organization_id', 'code', 'name', 'is_active', 'version',
+    'created_at', 'updated_at'
   ],
   'specialties has the global-or-tenant catalog shape'
+);
+select extensions.is(
+  (
+    select column_default
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'specialties'
+      and column_name = 'version'
+  ),
+  '1',
+  'specialty version defaults to one'
 );
 select extensions.columns_are(
   'public',
@@ -367,7 +378,8 @@ select extensions.set_eq(
     'specialties_code_bounded_check',
     'specialties_name_bounded_check',
     'specialties_organization_id_fkey',
-    'specialties_pkey'
+    'specialties_pkey',
+    'specialties_version_positive_check'
   ]::text[],
   'the specialty relation carries the complete bounded catalog constraint set'
 );
@@ -397,11 +409,40 @@ select extensions.set_eq(
   'the provider-specialty relation carries the complete tenant-safe constraint set'
 );
 
-select extensions.ok(exists (
-  select 1 from pg_indexes
-  where schemaname = 'public'
-    and indexname = 'provider_specialties_one_primary_key'
-), 'provider specialties has a partial one-primary unique index');
+select extensions.ok(
+  (
+    select index_metadata.indisunique
+    from pg_index as index_metadata
+    where index_metadata.indexrelid =
+      'public.provider_specialties_one_primary_key'::regclass
+  ),
+  'the one-primary specialty index is unique'
+);
+select extensions.is(
+  (
+    select array_agg(attribute.attname order by index_key.ordinality)
+    from pg_index as index_metadata
+    cross join lateral unnest(index_metadata.indkey)
+      with ordinality as index_key(attnum, ordinality)
+    join pg_attribute as attribute
+      on attribute.attrelid = index_metadata.indrelid
+     and attribute.attnum = index_key.attnum
+    where index_metadata.indexrelid =
+      'public.provider_specialties_one_primary_key'::regclass
+  ),
+  array['organization_id', 'provider_id']::name[],
+  'the one-primary specialty index is keyed by tenant and provider'
+);
+select extensions.is(
+  (
+    select pg_get_expr(index_metadata.indpred, index_metadata.indrelid)
+    from pg_index as index_metadata
+    where index_metadata.indexrelid =
+      'public.provider_specialties_one_primary_key'::regclass
+  ),
+  'is_primary',
+  'the one-primary specialty index applies exactly when is_primary is true'
+);
 select extensions.ok(exists (
   select 1 from pg_indexes
   where schemaname = 'public'
@@ -483,6 +524,17 @@ select extensions.throws_ok(
   'new row for relation "providers" violates check constraint "providers_archive_state_check"',
   'archived provider state requires an archive timestamp'
 );
+select extensions.throws_ok(
+  $$insert into public.specialties (
+      organization_id, code, name, version
+    ) values (
+      'b3020000-0000-0000-0000-000000000001',
+      'P302_VERSION_ZERO', 'P302 Version Zero', 0
+    )$$,
+  '23514',
+  'new row for relation "specialties" violates check constraint "specialties_version_positive_check"',
+  'specialty version must remain positive'
+);
 
 select extensions.throws_ok(
   $$insert into public.provider_branches (
@@ -537,9 +589,19 @@ select extensions.lives_ok(
     ) values (
       'b3020000-0000-0000-0000-000000000001',
       'b3050000-0000-0000-0000-000000000003',
-      'b3060000-0000-0000-0000-000000000001', false
+      'b3060000-0000-0000-0000-000000000001', true
     )$$,
-  'Org A may assign its own custom specialty'
+  'a second Org A provider may independently have a primary specialty'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.provider_specialties
+    where organization_id = 'b3020000-0000-0000-0000-000000000001'
+      and is_primary
+  ),
+  2,
+  'two different Org A providers may each have one primary specialty'
 );
 select extensions.throws_ok(
   $$insert into public.provider_specialties (

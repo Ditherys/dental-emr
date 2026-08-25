@@ -270,6 +270,7 @@ create table public.specialties (
   code text not null,
   name text not null,
   is_active boolean not null default true,
+  version integer not null default 1,
   created_at timestamptz not null default statement_timestamp(),
   updated_at timestamptz not null default statement_timestamp(),
   constraint specialties_code_bounded_check check (
@@ -280,7 +281,8 @@ create table public.specialties (
   constraint specialties_name_bounded_check check (
     pg_catalog.btrim(name) <> ''
     and pg_catalog.length(name) <= 160
-  )
+  ),
+  constraint specialties_version_positive_check check (version > 0)
 );
 
 revoke all on table public.specialties
