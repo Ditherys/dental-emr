@@ -1,4 +1,4 @@
-# AI Handoff - P2-12 Cloud TEST gate blocked
+# AI Handoff - P2-12 Cloud TEST type-generation blocker
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -6,15 +6,33 @@
 ## Current checkpoint
 
 - P2-04 through P2-11 are accepted by the project owner.
-- P2-12 Phase 2 closeout is authorized in this existing worktree but is blocked
-  at the required Cloud TEST migration-history inspection. TEST target metadata
-  passed and the CLI is linked only to the approved disposable TEST project, but
-  the current network cannot reach its IPv6 database endpoint. Do not relink to
-  DEV or production to work around this failure.
+- P2-12 Phase 2 closeout is authorized but blocked at generated database type
+  verification. The guarded GitHub Actions Cloud TEST workflow reached the
+  approved disposable TEST project only; it applied migrations, provisioned
+  pgTAP, loaded synthetic fixtures, and passed all 15 pgTAP suites.
 - The local Supabase workflow follows accepted ADR-020. Guarded Cloud TEST remains
   mandatory at P2-12 closeout and before production.
 
 ## P2-12 closeout status (2026-08-25)
+
+- GitHub Actions Cloud TEST run
+  `https://github.com/Ditherys/dental-emr/actions/runs/32859799644` ran against
+  `dental-emr-test-02` (`plkjajlfnhsklmdloaut`) on commit `144664a`. Cloud target
+  separation, migration preview/application, non-production pgTAP provisioning,
+  synthetic seed load, and all 15 pgTAP suites passed. The application
+  verification job also passed.
+- The run stopped at `db:types:check:test`: `supabase gen types` omitted every
+  patient table/function and the `audit_events.patient_id` field despite the
+  same project passing the patient pgTAP suites. Locally regenerating types
+  against the linked TEST project reproduced that omission. Do not commit that
+  destructive generated output; it removes the patient type contract and fails
+  the application typecheck. Investigate Supabase hosted schema/type metadata
+  freshness, then rerun the guarded workflow. No DEV or production target may
+  be used as a workaround.
+- Commits `67d3b98` and `144664a` corrected the Cloud TEST diagnostic target
+  and moved its transactional pgTAP runner from the inconsistent Supabase CLI
+  JSON output path to `psql` using the protected canonical TEST database URI.
+  The runner surfaces only sanitized stderr on failure.
 
 - The project owner confirmed `dental-emr-test-02` (`plkjajlfnhsklmdloaut`) as
   the disposable Cloud TEST target. With ephemeral TEST-only metadata,
