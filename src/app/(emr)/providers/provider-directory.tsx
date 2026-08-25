@@ -20,7 +20,7 @@ function ArchiveProvider({ provider, actingBranchId }: { provider: ProviderDetai
       <input type="hidden" name="actingBranchId" value={actingBranchId} />
       <input type="hidden" name="providerId" value={provider.providerId} />
       <input type="hidden" name="expectedVersion" value={provider.version} />
-      <Button type="submit" size="lg" variant="outline" disabled={pending}>
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
         <Archive aria-hidden="true" />
         {pending ? "Archiving..." : "Archive"}
       </Button>
@@ -34,8 +34,9 @@ function EditProviderButton({ actingBranchId, branches, provider, specialties }:
 
   return (
     <ProviderDialog actingBranchId={actingBranchId} branches={branches} provider={provider} specialties={specialties}>
-      <Button type="button" size="icon-lg" variant="ghost" className="size-11" aria-label={`Edit provider ${name}`}>
+      <Button type="button" size="sm" variant="outline" aria-label={`Edit provider ${name}`}>
         <Pencil aria-hidden="true" />
+        Edit
       </Button>
     </ProviderDialog>
   );
@@ -86,12 +87,12 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
                 {providers.map((provider) => {
                   const detail = detailById.get(provider.providerId);
                   return <tr key={provider.providerId}>
-                    <th scope="row" className="px-3 py-3 font-medium"><span className="inline-flex items-center gap-1"><span>{provider.displayName}</span>{detail && <EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} />}</span></th>
+                    <th scope="row" className="px-3 py-3 font-medium">{provider.displayName}</th>
                     <td className="px-3 py-3 text-muted-foreground">{provider.providerType.replaceAll("_", " ")}</td>
                     <td className="px-3 py-3 text-muted-foreground">{provider.primarySpecialtyLabel ?? "Not set"}</td>
                     <td className="px-3 py-3 text-muted-foreground">{provider.branchCount}</td>
                     <td className="px-3 py-3">{provider.status}</td>
-                    <td className="px-3 py-3 text-right">{provider.status !== "archived" && detail && <ArchiveProvider provider={detail} actingBranchId={actingBranchId} />}</td>
+                    <td className="px-3 py-3">{provider.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} /></div>}</td>
                   </tr>;
                 })}
               </tbody>
@@ -101,9 +102,9 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
             {providers.map((provider) => {
               const detail = detailById.get(provider.providerId);
               return <li key={provider.providerId} className="px-3 py-4">
-                <div className="flex items-center justify-between gap-3"><div className="inline-flex min-w-0 items-center gap-1 font-medium"><span className="truncate">{provider.displayName}</span>{detail && <EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} />}</div><span className="shrink-0 text-sm">{provider.status}</span></div>
+                <div className="flex items-center justify-between gap-3"><div className="min-w-0 font-medium"><span className="truncate">{provider.displayName}</span></div><span className="shrink-0 text-sm">{provider.status}</span></div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-muted-foreground"><div><dt className="sr-only">Type</dt><dd>{provider.providerType.replaceAll("_", " ")}</dd></div><div><dt className="sr-only">Specialty</dt><dd>{provider.primarySpecialtyLabel ?? "Not set"}</dd></div><div><dt className="sr-only">Branches</dt><dd>{provider.branchCount} branches</dd></div></dl>
-                {provider.status !== "archived" && detail && <div className="mt-3"><ArchiveProvider provider={detail} actingBranchId={actingBranchId} /></div>}
+                {provider.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} /></div>}
               </li>;
             })}
           </ul>
