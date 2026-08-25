@@ -12,4 +12,8 @@ describe("ESLint generated-runtime ignores", () => {
     expect(eslintConfig).toContain('"supabase/.temp/**"');
     expect(eslintConfig).not.toContain('"supabase/**"');
   });
+
+  it("ignores git-ignored local worktrees", () => {
+    expect(eslintConfig).toContain('".worktrees/**"');
+  });
 });
