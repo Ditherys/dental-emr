@@ -1,4 +1,4 @@
-# AI Handoff - P3-08 procedure administration
+# AI Handoff - P3-09 local integration verification
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
@@ -97,18 +97,9 @@
   enforce duration/buffer invariants and relation uniqueness, and permit only
   `REQUIRES_REVIEW` or `REQUEST_ONLY`. Archive calls `requireAal2()` before its
   RPC while the database retains the authoritative AAL2 gate.
-- P3-06 focused Vitest (7 tests), TypeScript, and procedure lint passed. The
-  local synthetic database suite passed all 18 registered pgTAP suites and all
-  three concurrency probes; no local port failure occurred. Full lint passed.
-  Full unit verification is currently blocked by two pre-existing assertions in
-  `scripts/migration-privilege-lint.test.mjs`: they expect 33 migration files
-  and 79 functions, but the committed P3-05 chain contains 34 and 80. This
-  checkpoint does not change migrations or that prior-checkpoint baseline, so
-  no corrective edit was made. Do not commit P3-06 until the baseline issue is
-  separately resolved or explicitly accepted.
-- P3-07 remains the next ordered implementation task after P3-06 is accepted;
-  do not add procedure UI, scheduling, availability, public, price, or clinical
-  scope before it is authorized.
+- P3-06 corrected the migration-inventory expectations after the P3-05 numeric
+  input-hardening migration. Full unit verification then passed with 39 files
+  and 393 tests, alongside TypeScript, lint, and migration privilege lint.
 - P3-07 adds only private `/providers` and `/settings/specialties` administration
   routes, loading state, Server Actions, responsive provider/specialty lists,
   and `provider.read` navigation entries. Both pages recheck live
@@ -160,8 +151,26 @@
   diff --check`. The required local reconstruction could not start because the
   separate `supabase_db_hjcmnmigvzufhvamlnmy` container already owns port 54322;
   it was not stopped or modified. No Cloud or production target was used.
-- P3-09 remains out of scope. Cloud TEST remains mandatory before any production
-  provider or patient use.
+- P3-09 local integration verification ran on 2026-08-26: `npm run
+  security:migrations`, `npm run lint`, `npm run typecheck`, `npm run test:unit`
+  (45 files, 409 tests), `npm run security:secrets`, `npm run security:audit`
+  (0 vulnerabilities), `git diff --check`, and `npm run build` all passed.
+  The build emitted the private `/providers`, `/settings/specialties`, and
+  `/settings/procedures` routes as dynamic routes.
+- A fresh P3-09 local reconstruction could not be run without disrupting the
+  unrelated `supabase_db_hjcmnmigvzufhvamlnmy` project that owns port 54322. It
+  was not stopped or modified. Earlier checkpoint reconstruction evidence covers
+  P3-03 through P3-07; rerun the full local reconstruction once the port is
+  available.
+- Synthetic responsive Playwright/manual keyboard QA was not run because the
+  guarded E2E environment is unavailable. Generated database types remain
+  deferred: the linked hosted project omits existing patient contracts. Cloud
+  TEST migration/type/RLS/authorization/E2E verification remains mandatory
+  before production, and Phase 3 is not authorized for production provider or
+  patient use.
+- Do not create `docs/PHASE3_ACCEPTANCE_REVIEW.md` yet. The plan requires an
+  independent review and explicit project-owner acceptance after the deferred
+  verification evidence is complete.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to
