@@ -55,7 +55,7 @@ try {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       result = spawnSync(
         "psql",
-        [databaseUrl, "-v", "ON_ERROR_STOP=1", "-f", suite],
+        [databaseUrl, "-XqAt", "-v", "ON_ERROR_STOP=1", "-f", suite],
         {
           cwd: repositoryRoot,
           encoding: "utf8",

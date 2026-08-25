@@ -202,6 +202,13 @@ describe("remote database test suite contract", () => {
 
     expect(hasPsqlPlainTextCompletion(failingPsqlOutput)).toBe(true);
     expect(hasPsqlPlainTextCompletion("ok 1 - unrelated output\n")).toBe(false);
+
+    expect(() =>
+      parseSupabaseQueryResult("ok 1 - assertion\nP1_TEST_PASS\n", "unaligned-pass.test.sql"),
+    ).not.toThrow();
+    expect(() =>
+      parseSupabaseQueryResult("ok 1 - assertion\nP1_TEST_FAIL\n", "unaligned-fail.test.sql"),
+    ).toThrow(/P1_TEST_PASS/);
   });
 
   it("evaluates only the LAST plain-text completion block, not an earlier one", () => {

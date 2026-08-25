@@ -387,7 +387,19 @@ export function hasPsqlPlainTextCompletion(
     lastValue = match[1];
   }
 
-  return lastValue !== null;
+  return lastValue !== null || hasPsqlUnalignedCompletion(output, expectation);
+}
+
+function hasPsqlUnalignedCompletion(output, expectation) {
+  const failureValue = expectation.value.replace(/PASS$/, "FAIL");
+
+  return new RegExp(
+    `(?:^|\\r?\\n)(?:${escapeRegExp(expectation.value)}|${escapeRegExp(failureValue)})(?:\\r?\\n|$)`,
+  ).test(output.trim());
+}
+
+function matchesPsqlUnalignedCompletion(output, expectation) {
+  return output.trim().split(/\r?\n/).at(-1) === expectation.value;
 }
 
 function matchesPsqlPlainTextCompletion(output, expectation) {
@@ -416,7 +428,10 @@ export function parseSupabaseQueryResult(
   try {
     result = JSON.parse(output);
   } catch {
-    if (!matchesPsqlPlainTextCompletion(output, expectation)) {
+    if (
+      !matchesPsqlPlainTextCompletion(output, expectation) &&
+      !matchesPsqlUnalignedCompletion(output, expectation)
+    ) {
       throw new Error(
         `${filename} did not report ${expectation.value} in ${expectation.column}.`,
       );
