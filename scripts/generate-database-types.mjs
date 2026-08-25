@@ -30,6 +30,7 @@ const supabaseCliPath = join(
 const checkOnly = process.argv.includes("--check");
 const requireTestTarget = process.argv.includes("--require-test-target");
 const projectId = process.env.SUPABASE_PROJECT_ID?.trim();
+const testDatabaseUrl = process.env.SUPABASE_TEST_DB_URL?.trim();
 const linkedProjectFile = join(
   repositoryRoot,
   "supabase",
@@ -65,9 +66,12 @@ if (requireTestTarget) {
   }
 }
 
-const projectArguments = projectId
-  ? ["--project-id", projectId]
-  : ["--linked"];
+const projectArguments =
+  requireTestTarget && testDatabaseUrl
+    ? ["--db-url", testDatabaseUrl]
+    : projectId
+      ? ["--project-id", projectId]
+      : ["--linked"];
 const generated = execFileSync(
   process.execPath,
   [
