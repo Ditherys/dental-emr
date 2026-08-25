@@ -26,12 +26,15 @@ Read the smallest relevant set before reviewing or implementing:
 Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 2026-08-19. Execute only its ordered task/checkpoint currently authorized.
 
-## Current Phase: Phase 2 Patient Foundation — Accepted
+## Current Phase: Phase 3 Provider, Specialty & Procedure Foundation — Accepted
 
 Phase 2 is accepted by the project owner as recorded in
-`docs/PHASE2_ACCEPTANCE_REVIEW.md`. ADR-020 requires guarded Cloud TEST
-verification before production deployment; Phase 2's local acceptance does not
-authorize production patient use.
+`docs/PHASE2_ACCEPTANCE_REVIEW.md`. The Phase 3 plan is proposed in
+`docs/plans/003-provider-specialty-procedure-foundation.md`; execute only its
+ordered checkpoint currently authorized. ADR-021 extends ADR-020's guarded
+local verification boundary to the accepted Phase 3 plan only. Guarded Cloud TEST remains mandatory before
+production deployment; local acceptance does not authorize production provider
+or patient use.
 
 Do not begin a later product phase until its bounded plan has been independently
 reviewed and explicitly approved.
@@ -152,11 +155,11 @@ When clinical/media work begins, verify:
 
 Supabase MCP is acceptable only against explicitly designated hosted development/test projects for inspection and assisted implementation.
 
-- Local Supabase verification for Phase 2, including P2-12 closeout, is permitted only through
-  ADR-020's explicit local commands, with deterministic synthetic data and no
-  hosted credentials.
+- Local Supabase verification for Phase 2 and an accepted Phase 3 checkpoint is
+  permitted only through ADR-020/ADR-021's explicit local commands, with
+  deterministic synthetic data and no hosted credentials.
 - Cloud TEST remains mandatory before production; local verification plus
-  dedicated review is the Phase 2 checkpoint and closeout gate.
+  dedicated review is Phase 2/accepted-Phase-3 checkpoint evidence only.
 - Migration files in Git remain authoritative.
 - Do not leave schema changes existing only as MCP/direct SQL side effects.
 - Hosted development/test MCP access must be project-scoped; prefer read-only mode for inspection.

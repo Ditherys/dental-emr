@@ -180,8 +180,8 @@ Frontend libraries are interaction/rendering adapters, not domain models. Schedu
 ## 2.3 Database and backend platform
 
 - **PostgreSQL** managed by **Supabase Cloud**
-- developers use a disposable, synthetic-only local Supabase stack for P2-01 through P2-11 migration, RLS, and pgTAP verification; guarded Cloud TEST remains mandatory at P2-12 closeout and before production under ADR-020
-- hosted development, Cloud TEST, any future separately approved staging, and production continue to use separate Supabase project boundaries; local verification plus dedicated review accepts P2-01 through P2-11 only
+- developers use a disposable, synthetic-only local Supabase stack for Phase 2 and accepted Phase 3 migration, RLS, and pgTAP verification; guarded Cloud TEST remains mandatory before production under ADR-020/ADR-021
+- hosted development, Cloud TEST, any future separately approved staging, and production continue to use separate Supabase project boundaries; local verification plus dedicated review is acceptance evidence only for Phase 2 and separately approved Phase 3 checkpoints
 - PostgreSQL constraints and transactions are used for data integrity
 - Supabase managed platform is used where appropriate for Auth, database operations, realtime capabilities if justified, and platform tooling
 - schema changes remain Git-managed migrations even though runtime databases are hosted
@@ -2161,11 +2161,11 @@ PRODUCTION
 
 Rules:
 
-- Next.js and a disposable local Supabase stack run on the developer workstation for P2-01 through P2-11 verification; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
+- Next.js and a disposable local Supabase stack run on the developer workstation for Phase 2 and accepted Phase 3 checkpoint verification; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
 - canonical persistent structured data for DEV, Cloud TEST, any future separately approved staging, and production is hosted in separate Supabase Cloud projects;
 - Cloud DEV and Cloud TEST use deterministic synthetic data only; neither accepts production-derived or de-identified patient, clinical, financial, or workforce data;
-- Git migrations remain authoritative across local and hosted targets; local verification plus dedicated review accepts P2-01 through P2-11, and guarded Cloud TEST verification is mandatory at P2-12 closeout and before production;
-- automated destructive database tests use the disposable local project for P2-01 through P2-11 verification and the dedicated disposable Cloud TEST project at P2-12 closeout and before production;
+- Git migrations remain authoritative across local and hosted targets; local verification plus dedicated review is acceptance evidence for Phase 2 and accepted Phase 3 checkpoints, and guarded Cloud TEST verification is mandatory before production;
+- automated destructive database tests use the disposable local project for Phase 2 and accepted Phase 3 verification and the dedicated disposable Cloud TEST project before production;
 - a future staging environment may use formally de-identified data only in a separate project after documented approval and validation of the anonymization controls; it must not share Cloud TEST data or credentials;
 - production uses a separate Supabase Cloud project;
 - future file/media environments use separate R2 buckets/prefix boundaries/credentials;
@@ -2379,6 +2379,7 @@ ADR-017 — Phase 1 secure migration baseline and grant-last invariant       [ac
 ADR-018 — Nonproduction database test tooling per environment              [accepted]
 ADR-019 — Bounded fixed patient-role delegation                            [accepted]
 ADR-020 — Local Phase 2 verification; Cloud TEST closeout/production gate    [accepted]
+ADR-021 — Guarded local verification for Phase 3; Cloud TEST pre-production gate [accepted]
 ```
 
 `ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Prefer `ADR-020` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.

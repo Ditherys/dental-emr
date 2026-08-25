@@ -3300,17 +3300,17 @@ Before production:
 
 ## 41.1 Environments
 
-Use separate hosted canonical data environments, with local Phase 2 verification:
+Use separate hosted canonical data environments, with local Phase 2 and accepted Phase 3 verification:
 
-- **developer workstation + local Supabase** — Next.js and a disposable local stack run locally for P2-01 through P2-11 verification using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup;
+- **developer workstation + local Supabase** — Next.js and a disposable local stack run locally for Phase 2 and accepted Phase 3 checkpoint verification using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup;
 - **Supabase Cloud DEV** — hosted shared development environment with synthetic data only;
 - **Supabase Cloud TEST / preview** — separate hosted non-production environment with deterministic synthetic data only for destructive database/security tests, mandatory Phase 2 closeout acceptance, and pre-production verification;
 - **future staging** — if separately approved, uses its own Supabase project and may use formally de-identified data only after documented approval and validation of anonymization controls; it must not share Cloud TEST data or credentials;
 - **production** — separate Supabase Cloud project and separate Cloudflare R2 production boundary, created/hardened only before real-patient deployment.
 
-Git migrations remain authoritative across local and hosted targets. During
-P2-01 through P2-11, local verification plus dedicated review accepts each
-checkpoint; guarded Cloud TEST remains required at P2-12 closeout and before
+Git migrations remain authoritative across local and hosted targets. Local
+verification plus dedicated review is acceptance evidence for Phase 2 and
+accepted Phase 3 checkpoints only; guarded Cloud TEST remains required before
 production.
 Do not develop directly against production patient data or copy real patient or
 application data to a developer workstation.
@@ -4978,6 +4978,7 @@ ADR-017: Phase 1 secure migration baseline and grant-last invariant       [accep
 ADR-018: Nonproduction database test tooling per environment              [accepted]
 ADR-019: Bounded fixed patient-role delegation                            [accepted]
 ADR-020: Local Phase 2 verification; Cloud TEST closeout/production gate    [accepted]
+ADR-021: Guarded local verification for Phase 3; Cloud TEST pre-production gate [accepted]
 ```
 
 Numbers `ADR-006` through `ADR-015` are intentionally unassigned in the current repository. Future ADRs should be assigned **when the ADR file is actually created**, not pre-numbered here. Prefer `ADR-020` and above for new decisions unless a deliberate reconciliation explicitly fills an earlier gap.

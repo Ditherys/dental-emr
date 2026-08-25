@@ -2,8 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `subagent-driven-development` (recommended) or `executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Proposed — requires independent review and explicit project-owner
-approval before any `P3-*` implementation task begins.
+**Status:** Accepted — independently reviewed and explicitly approved by the
+project owner 2026-08-26.
 
 **Goal:** Deliver an internal, organization-safe provider, specialty, and
 procedure configuration foundation for later scheduling and website phases.
@@ -29,8 +29,10 @@ Testing Library, Playwright.
   browser roles; new `SECURITY DEFINER` functions begin with default execution
   revoked and end with exact registered grants only.
 - Every provider/procedure relation uses a tenant-aware composite foreign key or
-  a trigger that proves the equivalent invariant. A cross-tenant association
-  must fail at the database layer.
+  a fixed-search-path trigger that proves the equivalent invariant. Relations
+  to specialties must allow only a global specialty or a same-organization
+  custom specialty; cross-tenant custom specialty associations must fail at the
+  database layer.
 - `provider_type` never means available, bookable, public, clinical-authorized,
   or linked to a user account. No availability, appointments, resources,
   calendar, conflict, public route/API, price, quote guidance, billing, patient,
@@ -46,7 +48,7 @@ Testing Library, Playwright.
 - Before any Next.js implementation, read the relevant installed guide under
   `node_modules/next/dist/docs/` and follow its current conventions.
 - Every database checkpoint runs the local guarded reconstruction path from
-  ADR-020. Cloud TEST remains mandatory before production, never as an
+  ADR-020/ADR-021. Cloud TEST remains mandatory before production, never as an
   ambiguous/unguarded target.
 
 ## File Structure
@@ -67,6 +69,8 @@ Testing Library, Playwright.
 | `supabase/tests/procedure_foundation.test.sql` | Procedure/qualification schema, RLS, grant, tenant, audit, and mutation tests. |
 | `supabase/seed.sql` | Idempotent synthetic specialties/providers/procedures used only by local and Cloud TEST fixtures. |
 | `scripts/approved-final-grants.mjs` | Exact Phase 3 RPC signatures and caller-role allowlist. |
+| `scripts/remote-database-test-guard.mjs` | Deterministic registered database-suite allowlist used by local and guarded Cloud TEST runners. |
+| `scripts/remote-database-test-guard.test.mjs` | Asserts authored database suites cannot be omitted from runner registration. |
 | `src/lib/providers/*` | Server-only schemas, DTO validation, typed RPC adapter, error mapping, and service functions. |
 | `src/app/(emr)/providers/*` | Permission-checked internal provider management route and actions. |
 | `src/app/(emr)/settings/specialties/*` | Permission-checked specialty management route and actions. |
@@ -89,12 +93,12 @@ editing application or migration files.
 
 **Acceptance criteria:**
 
-- [ ] The reviewer confirms this plan excludes scheduling, resources, public
+- [x] The reviewer confirms this plan excludes scheduling, resources, public
   projections, availability, prices, and clinical scope.
-- [ ] The reviewer confirms `provider.read`/`provider.manage` roles and audit
+- [x] The reviewer confirms `provider.read`/`provider.manage` roles and audit
   actions are least-privilege and compatible with Phase 2's owner/patient
   separation.
-- [ ] The project owner explicitly approves the ordered `P3-01` through
+- [x] The project owner explicitly approves the ordered `P3-01` through
   `P3-09` checkpoints.
 
 ### P3-01 — Provider permission contract
@@ -105,6 +109,8 @@ editing application or migration files.
 - Create: `supabase/tests/provider_permission_contract.test.sql`
 - Modify: `src/lib/authorization/policy.ts`
 - Modify: `src/lib/authorization/policy.test.ts`
+- Modify: `scripts/remote-database-test-guard.mjs`
+- Modify: `scripts/remote-database-test-guard.test.mjs`
 - Modify: `scripts/approved-final-grants.mjs` only if an existing function ACL
   is affected; otherwise do not add a grant entry in this task.
 
@@ -122,6 +128,10 @@ editing application or migration files.
 - [ ] Add the two permission rows with stable descriptions and idempotent
   `on conflict (code) do nothing` behavior. Add only the two exact role grants;
   do not change membership, branch, patient, or delegation functions.
+- [ ] Register `provider_permission_contract.test.sql` in
+  `DATABASE_TEST_SUITES` in `scripts/remote-database-test-guard.mjs` and extend
+  its focused unit test to assert the complete on-disk suite list includes the
+  new file. The same checkpoint that creates a suite must register it.
 - [ ] Extend `foundationPermissionCodes` and unit tests so unknown provider
   permission strings are rejected by TypeScript/authorization policy callers.
 - [ ] Run `npm run db:start:local`, `npm run db:reset:local`,
@@ -139,6 +149,8 @@ editing application or migration files.
 - Create: `supabase/migrations/20260826010100_provider_foundation.sql`
 - Create: `supabase/tests/provider_foundation.test.sql`
 - Modify: `supabase/seed.sql`
+- Modify: `scripts/remote-database-test-guard.mjs`
+- Modify: `scripts/remote-database-test-guard.test.mjs`
 
 **Interfaces:**
 
@@ -167,16 +179,25 @@ editing application or migration files.
   rows. Seed only the approved synthetic global examples: GENERAL_DENTISTRY,
   ORTHODONTICS, PERIODONTICS, PROSTHODONTICS, ENDODONTICS, ORAL_SURGERY, and
   PEDIATRIC_DENTISTRY.
-- [ ] Create `provider_branches` and `provider_specialties` with direct
-  organization ID, composite foreign keys to parent provider/branch/specialty
-  records, active state where required, and a partial unique index allowing at
-  most one primary specialty for each provider.
+- [ ] Create `provider_branches` with direct organization ID and composite
+  foreign keys to the parent provider/branch records. Create
+  `provider_specialties` with a normal `specialty_id` FK plus a
+  fixed-search-path trigger that permits only `specialties.organization_id is
+  null` or `specialties.organization_id = new.organization_id`; make specialty
+  scope immutable. Add active state where required and a partial unique index
+  allowing at most one primary specialty for each provider.
+- [ ] Prove in pgTAP that Org A can assign a global specialty and an Org A custom
+  specialty, but cannot assign an Org B custom specialty through either an RPC
+  or an integrity-level direct insertion attempt.
 - [ ] Add RLS policies only for bounded configuration reads through approved
   RPC paths; do not grant base-table SELECT. Create private helpers with a fixed
   empty search path and revoke execution immediately after definition.
 - [ ] Add idempotent synthetic Provider A/Provider B fixture rows to `seed.sql`
   without phone, email, bio, or real-person content. Extend the seed-security
   suite to prove fixture text has no secret or real-data pattern.
+- [ ] Register `provider_foundation.test.sql` in `DATABASE_TEST_SUITES` and
+  extend the focused runner unit test before running any database verification.
+  Confirm `test:db:local` output names both registered Phase 3 suites.
 - [ ] Run the complete local reconstruction/database suite and app checks from
   P3-01. Commit as `feat: add provider foundation schema` after independent
   RLS/FK/grant review.
@@ -218,12 +239,19 @@ editing application or migration files.
   `specialty.updated`, `provider.branches.updated`, and
   `provider.specialties.updated`; set the entity ID but never insert names,
   license/contact/profile values, or submitted IDs into metadata.
-- [ ] Open the new additive object migration with contiguous `REVOKE ALL` statements for
-  every new public RPC before creating/replacing functions. In the terminal
-  grants migration grant EXECUTE only to `authenticated`, register every exact
-  signature/reason in `approved-final-grants.mjs`, and retain service-role denial.
+- [ ] For a replacement RPC signature, open the object migration with the
+  contiguous `REVOKE ALL` before `CREATE OR REPLACE`. For every new RPC, create
+  it then immediately revoke all execution from `public`, `anon`,
+  `authenticated`, and `service_role` before the next object statement. In the
+  terminal grants migration grant EXECUTE only to `authenticated`, register
+  every exact signature/reason in `approved-final-grants.mjs`, and retain
+  service-role denial.
 - [ ] Extend pgTAP with exact function ACL, safe search path, audit atomicity,
   and owner/admin positive plus staff/foreign/anon/service-role negative cases.
+- [ ] Confirm the local and guarded Cloud TEST runner registration continues to
+  execute the two Phase 3 suites registered by P3-01/P3-02; retain a focused
+  runner test and verify the local run output names each suite before recording
+  a passing result.
 - [ ] Run migration lint, full local database suite, lint, typecheck, unit
   tests, secrets scan, and dependency audit. Commit as
   `feat: add provider configuration mutations` after independent security
@@ -259,11 +287,12 @@ editing application or migration files.
   no cross-tenant records, exclude archived providers by default, return no
   auth/member internals, and leave no audit event for list reads.
 - [ ] Create the additive provider-read migration with contiguous `REVOKE ALL`
-  statements before each `SECURITY DEFINER` read RPC definition, a fixed empty
-  search path, tenant authorization derived from `auth.uid()`, and no table
-  grant. Create the paired terminal grants migration that grants only the exact
-  read signatures to `authenticated`, revokes every signature from
-  `service_role`, and registers each signature/reason in
+  statements before each replacement `SECURITY DEFINER` read RPC definition;
+  for a new read RPC, revoke all execution immediately after its creation. Use
+  a fixed empty search path, derive tenant authorization from `auth.uid()`, and
+  create no table grant. Create the paired terminal grants migration that grants
+  only the exact read signatures to `authenticated`, revokes every signature
+  from `service_role`, and registers each signature/reason in
   `approved-final-grants.mjs`.
 - [ ] Implement bounded read RPC projections. Provider list rows contain opaque
   ID, display name, type, active status, website-visible flag, primary
@@ -311,9 +340,12 @@ editing application or migration files.
   version, `(organization_id,id)` uniqueness, and tenant/status/name indexes.
   Add a check that a null duration has zero buffers.
 - [ ] Create `procedure_specialties` with `REQUIRED`/`PREFERRED` requirement
-  level, and `procedure_eligible_providers` as an optional allow-list. Both
-  have organization ID plus composite FKs that reject foreign specialties or
-  providers, unique relation constraints, and no availability semantics.
+  level and a `specialty_id` FK guarded by the same fixed-search-path
+  global-or-same-tenant specialty trigger used for `provider_specialties`.
+  Create `procedure_eligible_providers` as an optional allow-list with direct
+  organization ID and composite provider FK. Both have unique relation
+  constraints and no availability semantics. Prove global/own-custom/foreign-
+  custom specialty behavior in pgTAP for procedure relations too.
 - [ ] Implement versioned, audit-atomic mutators using the same live provider
   manage predicate. Association replacements lock the procedure, validate each
   related record is active/same-tenant, reject duplicates, and commit all rows
@@ -324,9 +356,12 @@ editing application or migration files.
   `provider.read`. A list row includes opaque ID, code, name, active state,
   duration/buffers, website/booking flags, booking mode, and counts; detail
   includes editable description and selected requirement/eligible IDs only.
-- [ ] Apply the same revoke-first/grant-last migration sequence, registered
-  ACL allowlist, safe search paths, anonymous/service-role denial, and negative
-  pgTAP coverage used in P3-03.
+- [ ] Apply the replacement-signature revoke-first and new-signature
+  create-then-immediately-revoke sequence from P3-03, followed by a registered
+  grant-terminal migration, safe search paths, anonymous/service-role denial,
+  and negative pgTAP coverage. Register `procedure_foundation.test.sql` in
+  `DATABASE_TEST_SUITES` with a runner test; prove it appears in local runner
+  output before recording a passing result.
 - [ ] Run full local reconstruction and application verification. Commit as
   `feat: add procedure qualification foundation` after independent database and
   authorization review.
