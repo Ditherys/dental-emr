@@ -28,13 +28,12 @@ Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 
 ## Current Phase: Phase 3 Provider, Specialty & Procedure Foundation — Accepted
 
-Phase 2 is accepted by the project owner as recorded in
-`docs/PHASE2_ACCEPTANCE_REVIEW.md`. The Phase 3 plan is proposed in
-`docs/plans/003-provider-specialty-procedure-foundation.md`; execute only its
-ordered checkpoint currently authorized. ADR-021 extends ADR-020's guarded
-local verification boundary to the accepted Phase 3 plan only. Guarded Cloud TEST remains mandatory before
-production deployment; local acceptance does not authorize production provider
-or patient use.
+Phase 3 is accepted by the project owner as recorded in
+`docs/PHASE3_ACCEPTANCE_REVIEW.md`. The accepted plan is in
+`docs/plans/003-provider-specialty-procedure-foundation.md`. ADR-021 extends
+ADR-020's guarded local verification boundary to the accepted Phase 3 plan.
+Guarded Cloud TEST remains mandatory before production deployment; local
+acceptance does not authorize production provider or patient use.
 
 Do not begin a later product phase until its bounded plan has been independently
 reviewed and explicitly approved.
