@@ -92,6 +92,7 @@ Do not generate the entire database in one migration.
 - Application/server authorization plus RLS is mandatory defense in depth.
 - Never trust client-supplied organization/branch IDs as authorization.
 - Never disable RLS to unblock development.
+- Object storage (ADR-022): local development uses MinIO; production uses Cloudflare R2. Both are S3-compatible behind a provider-neutral abstraction.
 - Auth metadata is not the sole permission model.
 - Service-role/secret keys are server-only.
 - Cross-tenant sensitive relationships require database-level referential safety.

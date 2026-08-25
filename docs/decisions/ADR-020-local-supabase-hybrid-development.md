@@ -1,6 +1,6 @@
 # ADR-020 — Optional local Supabase with pre-production Cloud TEST acceptance
 
-**Status:** Accepted, amended 2026-08-26
+**Status:** Accepted, amended 2026-08-26 (object storage added by ADR-022)
 
 **Date:** 2026-08-24
 
@@ -8,7 +8,7 @@
 
 **Amendment:** The project owner approved local verification as the Phase 2
 closeout gate. Guarded Cloud TEST remains mandatory immediately before any
-production deployment.
+production deployment. Object storage uses local MinIO under ADR-022.
 
 **Supersedes in part:** [ADR-016](ADR-016-supabase-cloud-first-development.md)
 
@@ -77,7 +77,10 @@ Developer workstation (optional fast loop)
 ├── Docker Desktop + WSL2-backed local Supabase
 ├── disposable PostgreSQL/Auth services
 ├── committed migrations + non-production pgTAP provisioning
-└── deterministic synthetic fixtures only
+├── deterministic synthetic fixtures only
+├── MinIO (Docker) — S3-compatible object storage (ADR-022)
+│     └── patient files / images / documents
+└── no cloud credentials required
                  │
                  │ same Git checkpoint
                  ▼
@@ -93,6 +96,7 @@ Hosted DEV / staging / production
 └── isolated projects; production receives no test tooling or fixtures
 
 Canonical clinical object storage remains Cloudflare R2 under ADR-005.
+Cloudflare R2 is deferred to deployment readiness (ADR-022).
 ```
 
 ## Local workflow contract
@@ -125,6 +129,9 @@ Canonical clinical object storage remains Cloudflare R2 under ADR-005.
    when paired with the required dedicated review and all relevant local
    verification. It never replaces the guarded Cloud TEST verification required
    before production deployment.
+9. Local object storage uses MinIO under ADR-022. Cloudflare R2 is deferred
+   to deployment readiness. Storage configuration uses S3-compatible
+   environment variables that work with both MinIO and R2.
 
 ## Cloud acceptance contract
 
@@ -203,7 +210,9 @@ hosted acceptance environment are authoritative.
 - developers may mistakenly treat a local pass as completion unless checkpoint
   gates remain explicit;
 - local synthetic database artifacts still require normal workstation security
-  and must never be populated with real records.
+  and must never be populated with real records;
+- MinIO does not support Cloudflare-specific features (Workers/Images, event
+  notifications, Bucket Locks) — those are validated only at deployment readiness.
 
 ## Required follow-up before P2-03 implementation
 
@@ -235,6 +244,8 @@ hosted acceptance environment are authoritative.
 - Production-shaped migrations remain free of pgTAP and other test-only schema.
 - No real data, hosted secrets, or production identifiers are introduced.
 - Authoritative documents agree on the hybrid boundary.
+- Local object storage uses MinIO (ADR-022); no Cloudflare credentials are
+  required for local development.
 
 ## Revisit triggers
 

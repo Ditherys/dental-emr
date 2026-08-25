@@ -1,6 +1,7 @@
 # ADR-005 — Cloudflare R2 Canonical Storage + Workers/Images Media Pipeline
 
-**Status:** Accepted  
+**Status:** Accepted, amended 2026-08-26 (ADR-022 adds local MinIO)
+
 **Date:** 2026-08-12  
 **Scope:** Clinical files, image optimization, public project media
 
@@ -9,6 +10,13 @@
 The application needs durable private storage for sensitive patient files and efficient image delivery for patient photos, exported X-rays, and website media. Cloudflare R2 provides object storage but does not by itself behave like a Cloudinary-style automatic image optimization service. The project should avoid splitting file ownership across multiple media vendors unless necessary.
 
 Cloudflare provides an Images binding for Workers that can transform image streams/bytes, including data read from private R2 objects, and R2 event notifications can send object-create events to Cloudflare Queues for asynchronous processing.
+
+**Local development uses MinIO** (S3-compatible Docker object storage) under
+[ADR-022](ADR-022-local-minio-object-storage.md). MinIO satisfies the same
+S3-compatible API surface (put/get/delete/presigned URLs) without requiring
+Cloudflare credentials or internet access. The application storage abstraction
+is provider-neutral; switching from MinIO to R2 requires only configuration
+changes, not code changes.
 
 ## Decision
 

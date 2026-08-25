@@ -64,7 +64,8 @@ must not be broadened or bypassed.
 This amendment does not authorize local verification for Phase 4 or later. It
 does not authorize local production data, hosted credentials, direct database
 writes, Supabase MCP access to the local stack, a public deployment, or
-production provider/patient use.
+production provider/patient use. Phase 4 local object storage is separately
+authorized by ADR-022 (MinIO).
 
 Guarded Cloud TEST remains mandatory immediately before production deployment.
 That pre-production gate must run the same committed migrations and relevant

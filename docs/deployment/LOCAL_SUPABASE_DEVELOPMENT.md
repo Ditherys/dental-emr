@@ -47,15 +47,17 @@ use `db:reset:local` whenever exact reconstruction matters. Do not use
 
 ## Application environment
 
-Use `npx supabase status -o env` to view local runtime variables. Copy only the
-needed local URL and publishable key into the ignored `.env.local`; never commit
-the output. Do not copy a hosted secret key, database password, or project
-reference into the local workflow.
+Set `.env.local` from the running local CLI without printing or committing its
+credential output. Use `APP_ENVIRONMENT=development`,
+`SUPABASE_PROJECT_ID=local`, and the local API URL, publishable key, and
+server-only secret key. The application accepts this combination only on a
+non-Vercel developer workstation. Do not copy a hosted key, database password,
+or project reference into the local workflow.
 
 ## Phase 2 closeout hosted acceptance
 
 For P2-01 through P2-11, local verification plus dedicated review is the
-checkpoint gate. At P2-12 closeout and before production, run the guarded
+checkpoint gate. Before production, run the guarded
 Cloud TEST workflow manually from GitHub Actions against the final branch
 commit, then use the guarded commands documented in
 [`supabase/tests/README.md`](../../supabase/tests/README.md):

@@ -114,7 +114,7 @@ The following are treated as current product decisions.
 ## 2.6 Files and documents
 
 - Avoid storing extremely heavy CBCT datasets in the first version.
-- Primary private clinical object storage is Cloudflare R2.
+- Primary private clinical object storage is S3-compatible object storage (Cloudflare R2 in production, MinIO locally under ADR-022).
 - PostgreSQL stores metadata, access relationships, hashes, sizes, versions, and object keys—not the binary image itself.
 - Signed or formally issued clinical documents must be versioned/immutable snapshots.
 
@@ -161,7 +161,7 @@ PostgreSQL owns authoritative structured data for:
 - audit events;
 - external integration mappings.
 
-External services such as Google Calendar, SMS providers, Messenger, email providers, Cloudflare R2, and analytics tools do not become the system of record for these domains.
+External services such as Google Calendar, SMS providers, Messenger, email providers, S3-compatible object storage (Cloudflare R2 / MinIO), and analytics tools do not become the system of record for these domains.
 
 ## 3.2 UUID primary keys
 
@@ -1852,7 +1852,7 @@ Use a join table rather than copying the entire source object.
 
 ---
 
-# 20. Clinical Files and Cloudflare R2 Metadata
+# 20. Clinical Files and Object Storage Metadata
 
 ## 20.1 Never store permanent public URLs as authorization
 

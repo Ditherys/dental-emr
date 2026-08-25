@@ -1388,13 +1388,20 @@ Public website content can be cached separately.
 
 ## 15.1 Storage and transformation selection
 
-Private patient files use **Cloudflare R2 private buckets**. Project-controlled public website media may also use R2.
+Private patient files use **S3-compatible private object storage**. Production
+uses Cloudflare R2 private buckets. Local development uses MinIO (S3-compatible
+Docker object storage) under ADR-022. Project-controlled public website media
+may also use object storage.
 
-Image optimization/derivative generation uses **Cloudflare Workers + Cloudflare Images**. Cloudinary is not a default project dependency.
+Image optimization/derivative generation uses **Cloudflare Workers + Cloudflare
+Images** in production. Local development does not provide image transformation;
+derivative generation is deferred to deployment readiness or implemented through
+a provider-neutral Sharp-based service. Cloudinary is not a default project
+dependency.
 
 For clinical images, the uploaded original is preserved unchanged. Optimized derivatives are secondary representations and cannot replace the sole clinical source copy.
 
-## 15.2 R2 is private by default in our architecture
+## 15.2 Object storage is private by default in our architecture
 
 Clinical buckets must not be exposed through public custom domains.
 
@@ -1448,8 +1455,8 @@ Return/cache only the authorized result
 
 Rules:
 
-- never expose a clinical R2 bucket through a public custom domain merely to make transformations easier;
-- never accept an arbitrary client-supplied R2 object key as authorization proof;
+- never expose a clinical object-storage bucket through a public custom domain merely to make transformations easier;
+- never accept an arbitrary client-supplied object key as authorization proof;
 - a transformation URL/token must not grant broader or longer access than the source authorization permits;
 - source object keys, signed URLs, and internal transformation credentials are sensitive;
 - derivative objects inherit the sensitivity/tenant boundary of the source unless deliberately classified as public media;
@@ -1737,10 +1744,11 @@ Strong recommendation:
 
 - separate Supabase Cloud projects for development, Cloud TEST, any future separately approved staging, and production;
 - a disposable local Supabase stack contains deterministic synthetic fixtures only and is required for Phase 2 and accepted Phase 3 database/RLS verification; it is never a backup, staging, or production-data environment;
+- local object storage uses MinIO under ADR-022; Cloudflare R2 is deferred to deployment readiness;
 - guarded Supabase Cloud TEST verification remains mandatory before production deployment under ADR-020/ADR-021;
 - Cloud DEV and Cloud TEST use deterministic synthetic data only and never receive production-derived or de-identified patient, clinical, financial, or workforce data;
 - any future staging environment that uses formally de-identified data must be a separate project with documented approval and validated anonymization controls, and must not share Cloud TEST data or credentials;
-- separate R2 buckets/credentials;
+- separate R2 buckets/credentials in production; local MinIO is disposable;
 - separate OAuth callback/environment registrations where practical;
 - test SMS/email provider keys in non-prod;
 - production secrets not injected into generic Vercel preview deployments.
@@ -2011,16 +2019,17 @@ Then:
 - retain according to approved policy;
 - do not routinely download to staff machines.
 
-### Layer 3 — R2 clinical objects
+### Layer 3 — Object storage clinical objects
 
-Database backup does **not** protect the actual R2 clinical objects.
+Database backup does **not** protect the actual clinical objects in object
+storage (Cloudflare R2 in production, MinIO locally).
 
 Protect objects using:
 
 - private bucket;
 - object/version retention strategy;
 - separate backup/replication process if required by PIA;
-- Bucket Lock for immutable classes/backups where appropriate;
+- Bucket Lock for immutable classes/backups where appropriate (R2 only);
 - inventory/hash records to detect missing objects.
 
 ### Layer 4 — Configuration recovery
@@ -2031,7 +2040,7 @@ Document/recover non-database configuration:
 - Supabase Auth settings;
 - API keys/rotation procedures;
 - Google OAuth configuration;
-- R2 bucket configuration;
+- storage bucket configuration (R2 production / MinIO local);
 - DNS/domain;
 - cron/automation configuration;
 - third-party sender identities.

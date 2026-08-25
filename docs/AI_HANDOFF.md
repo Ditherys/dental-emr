@@ -175,6 +175,9 @@
   consistent modal dialog pattern: upper-right Add button opens a modal,
   row actions use labeled Edit (Pencil + text) and Archive buttons. No page
   renders an inline form below its list.
+- ADR-022 established local MinIO as the S3-compatible object storage for
+  development. Cloudflare R2 is deferred to deployment readiness. Storage
+  configuration uses provider-neutral S3 environment variables.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

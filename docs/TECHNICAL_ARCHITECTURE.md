@@ -201,7 +201,12 @@ Frontend libraries are interaction/rendering adapters, not domain models. Schedu
 
 ## 2.6 Canonical object storage
 
-**Recommended: Cloudflare R2** as the canonical object store for private clinical files and project-controlled website media.
+**Production: Cloudflare R2** as the canonical object store for private clinical files and project-controlled website media.
+
+**Development: MinIO** (S3-compatible Docker object storage) under ADR-022. MinIO
+runs locally, requires no cloud credentials, and provides the same S3-compatible
+API surface. The application uses a provider-neutral storage abstraction;
+switching from MinIO to R2 requires only configuration changes.
 
 Rationale:
 
@@ -213,7 +218,7 @@ Rationale:
 - supports bucket locks/retention controls useful for protecting files from accidental deletion;
 - keeps storage ownership independent from the image-rendering/optimization layer.
 
-Use R2 for:
+Use object storage for:
 
 - patient photos;
 - ordinary dental X-ray images exported as JPEG/PNG where clinically acceptable;
@@ -232,6 +237,10 @@ Do **not** treat R2 object storage as a substitute for authorization. A private 
 ## 2.7 Image optimization and derivative pipeline
 
 Use **Cloudflare Workers + Cloudflare Images** as the default image-processing layer over R2. Cloudflare's Images binding can accept image bytes/streams directly, so a private R2 source does not need to be exposed through a public URL before transformation.
+
+**Local development:** MinIO does not provide image transformation. Derivative
+generation is deferred to deployment readiness or implemented through a
+provider-neutral Sharp-based service during development.
 
 Rules:
 
@@ -450,9 +459,9 @@ staff sees integration warning
        │
   Provider Work Calendar
 
-Private clinical originals ─────────────→ Cloudflare R2
-Public/project media ────────────────────→ Cloudflare R2
-Image derivatives ───────────────────────→ Workers + Cloudflare Images → R2/cache
+Private clinical originals ─────────────→ Cloudflare R2 (production) / MinIO (local dev)
+Public/project media ────────────────────→ Cloudflare R2 (production) / MinIO (local dev)
+Image derivatives ───────────────────────→ Workers + Cloudflare Images → R2/cache (production)
 ```
 
 ---
@@ -1814,7 +1823,7 @@ src/
 
   infrastructure/
     supabase/
-    r2/
+    storage/          # S3-compatible: MinIO (local) / R2 (production)
     google/
     email/
     sms/
@@ -2162,6 +2171,7 @@ PRODUCTION
 Rules:
 
 - Next.js and a disposable local Supabase stack run on the developer workstation for Phase 2 and accepted Phase 3 checkpoint verification; the local stack may contain deterministic synthetic data only and is never canonical, staging, production, or a backup;
+- local object storage uses MinIO under ADR-022; Cloudflare R2 is deferred to deployment readiness;
 - canonical persistent structured data for DEV, Cloud TEST, any future separately approved staging, and production is hosted in separate Supabase Cloud projects;
 - Cloud DEV and Cloud TEST use deterministic synthetic data only; neither accepts production-derived or de-identified patient, clinical, financial, or workforce data;
 - Git migrations remain authoritative across local and hosted targets; local verification plus dedicated review is acceptance evidence for Phase 2 and accepted Phase 3 checkpoints, and guarded Cloud TEST verification is mandatory before production;
@@ -2380,6 +2390,7 @@ ADR-018 — Nonproduction database test tooling per environment              [ac
 ADR-019 — Bounded fixed patient-role delegation                            [accepted]
 ADR-020 — Local Phase 2 verification; Cloud TEST closeout/production gate    [accepted]
 ADR-021 — Guarded local verification for Phase 3; Cloud TEST pre-production gate [accepted]
+ADR-022 — Local MinIO object storage for development                        [accepted]
 ```
 
 `ADR-006` through `ADR-015` are intentionally unassigned. Do not reuse the old pre-numbered backlog from earlier drafts as authority. Prefer `ADR-020` and above for future ADR files unless a deliberate reconciliation explicitly assigns an earlier gap.
@@ -2460,6 +2471,9 @@ Architecture decisions rely on current Cloudflare documentation describing:
 - bucket locks;
 - Standard/Infrequent Access classes;
 - no egress bandwidth fees under current R2 pricing.
+
+**Local development:** MinIO (S3-compatible Docker object storage) satisfies the
+same S3 API surface locally without cloud credentials. See ADR-022.
 
 ## 44.3 Cloudflare Images + Workers
 

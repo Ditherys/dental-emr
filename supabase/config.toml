@@ -1,7 +1,7 @@
 # Local services provide required P2-01 through P2-11 database/RLS verification
 # under ADR-020. Git migrations remain authoritative, local data must be
-# synthetic, and Cloud TEST remains mandatory at P2-12 closeout and before
-# production. Use the guarded npm commands; never add --linked or a hosted
+# synthetic, and guarded Cloud TEST remains mandatory before production.
+# Use the guarded npm commands; never add --linked or a hosted
 # database URL to a local command.
 #
 # For detailed configuration reference documentation, visit:
@@ -109,7 +109,7 @@ openai_api_key = "env(OPENAI_API_KEY)"
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
 [local_smtp]
-enabled = true
+enabled = false
 # Port to use for the email testing server web interface.
 port = 54324
 # Uncomment to expose additional ports for testing user applications that send emails.
@@ -240,14 +240,14 @@ otp_length = 6
 otp_expiry = 3600
 
 # Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 587
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "onboarding@resend.dev"
+sender_name = "Dental EMR"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

@@ -2291,7 +2291,7 @@ As of the research date, BIR Revenue Regulations No. 26-2025 extended the electr
 
 ## 28.3 Storage security
 
-Primary private clinical-object store: **Cloudflare R2**.
+Primary private clinical-object store: **S3-compatible object storage** (Cloudflare R2 in production, MinIO locally under ADR-022).
 
 - private buckets by default;
 - no guessable public URLs;
@@ -2746,8 +2746,8 @@ The detailed engineering architecture now lives in the companion file `TECHNICAL
 - **Authentication:** Supabase Auth
 - **Authorization:** application-layer authorization + PostgreSQL/Supabase RLS defense in depth
 - **Hosting:** Vercel
-- **Private patient/clinical files:** Cloudflare R2
-- **Image optimization/delivery:** Cloudflare Workers + Cloudflare Images over R2; Cloudinary is not a default dependency
+- **Private patient/clinical files:** S3-compatible object storage (Cloudflare R2 production, MinIO local development under ADR-022)
+- **Image optimization/delivery:** Cloudflare Workers + Cloudflare Images over R2 in production; Cloudinary is not a default dependency
 - **Google scheduling integration:** Google Calendar API
 - **Email:** provider adapter, vendor selected later
 - **SMS:** Philippine-capable provider adapter, vendor selected later
@@ -2781,7 +2781,7 @@ The public website and private EMR may initially share one Next.js repository, b
 
 ## 34.4 File storage decision
 
-Use **Cloudflare R2** as the canonical object store for clinical files such as photos, ordinary X-ray exports, scans, signed PDFs, drawings, and attachments, and for project-controlled public marketing media when practical. Private files are accessed through permission-checked, short-lived delivery or a permission-checked server/Worker path. Object names must be opaque and must not expose patient names or treatment details.
+Use **S3-compatible object storage** as the canonical object store for clinical files such as photos, ordinary X-ray exports, scans, signed PDFs, drawings, and attachments, and for project-controlled public marketing media when practical. Production uses Cloudflare R2; local development uses MinIO under ADR-022. Private files are accessed through permission-checked, short-lived delivery or a permission-checked server/Worker path. Object names must be opaque and must not expose patient names or treatment details.
 
 For raster images, preserve the uploaded original unchanged. Generate bounded optimized derivatives (`thumbnail`, `preview`, `display`) through **Cloudflare Workers + Cloudflare Images**. Derivatives may use modern formats such as WebP/AVIF where clinically and visually appropriate, but they are never the sole clinical record copy. X-ray originals remain untouched; preview derivatives are for UI delivery only. Cache transformed outputs and/or persist reusable derivatives in R2 where that reduces repeated transformation work.
 
@@ -2798,7 +2798,7 @@ Backup is layered rather than a manual “download everything” feature:
 1. Supabase managed database backups on an appropriate paid production plan;
 2. evaluate Point-in-Time Recovery when the required recovery point/budget justifies it;
 3. periodic independent logical PostgreSQL dumps stored privately/off-site;
-4. clinical objects stored privately in R2 with immutable-by-convention object handling, soft-delete, and retention/bucket-lock controls where appropriate;
+4. clinical objects stored privately in S3-compatible object storage (R2 production / MinIO local) with immutable-by-convention object handling, soft-delete, and retention/bucket-lock controls where appropriate;
 5. routine restore tests to an isolated environment.
 
 Database backups do not automatically recreate deleted object-storage files, so database and object recovery must be designed separately. Routine backups should run server-to-server and should not depend on branch internet bandwidth.
@@ -3302,11 +3302,11 @@ Before production:
 
 Use separate hosted canonical data environments, with local Phase 2 and accepted Phase 3 verification:
 
-- **developer workstation + local Supabase** — Next.js and a disposable local stack run locally for Phase 2 and accepted Phase 3 checkpoint verification using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup;
+- **developer workstation + local Supabase** — Next.js and a disposable local stack run locally for Phase 2 and accepted Phase 3 checkpoint verification using deterministic synthetic data only; the local stack is never canonical, staging, production, or a backup; local object storage uses MinIO under ADR-022;
 - **Supabase Cloud DEV** — hosted shared development environment with synthetic data only;
 - **Supabase Cloud TEST / preview** — separate hosted non-production environment with deterministic synthetic data only for destructive database/security tests, mandatory Phase 2 closeout acceptance, and pre-production verification;
 - **future staging** — if separately approved, uses its own Supabase project and may use formally de-identified data only after documented approval and validation of anonymization controls; it must not share Cloud TEST data or credentials;
-- **production** — separate Supabase Cloud project and separate Cloudflare R2 production boundary, created/hardened only before real-patient deployment.
+- **production** — separate Supabase Cloud project and separate Cloudflare R2 production object storage boundary, created/hardened only before real-patient deployment.
 
 Git migrations remain authoritative across local and hosted targets. Local
 verification plus dedicated review is acceptance evidence for Phase 2 and
@@ -4979,6 +4979,7 @@ ADR-018: Nonproduction database test tooling per environment              [accep
 ADR-019: Bounded fixed patient-role delegation                            [accepted]
 ADR-020: Local Phase 2 verification; Cloud TEST closeout/production gate    [accepted]
 ADR-021: Guarded local verification for Phase 3; Cloud TEST pre-production gate [accepted]
+ADR-022: Local MinIO object storage for development                        [accepted]
 ```
 
 Numbers `ADR-006` through `ADR-015` are intentionally unassigned in the current repository. Future ADRs should be assigned **when the ADR file is actually created**, not pre-numbered here. Prefer `ADR-020` and above for new decisions unless a deliberate reconciliation explicitly fills an earlier gap.

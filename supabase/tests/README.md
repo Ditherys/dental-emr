@@ -32,9 +32,9 @@ The local runner constructs only `db query --local` invocations. It never reads
 a linked project reference or hosted credential. Reset loads the committed
 synthetic seed and removes pgTAP, so provisioning must follow every reset.
 
-## Mandatory Cloud TEST at Phase 2 closeout and before production
+## Mandatory Cloud TEST before production
 
-At P2-12 closeout and before production, remote tests must target the explicitly
+Before production deployment, remote tests must target the explicitly
 designated disposable Cloud TEST project. Set the documented environment variables from the secret store, verify
 the link, and run:
 

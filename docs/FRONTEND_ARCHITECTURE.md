@@ -5,7 +5,7 @@
 **Date:** 2026-08-12  
 **Companion documents:** `MASTER_PRODUCT_PLAN.md`, `TECHNICAL_ARCHITECTURE.md`, `DATABASE_DESIGN.md`
 
-**Development environment note:** the frontend may run locally and may connect to ADR-020's disposable synthetic-only local Supabase endpoint for P2-01 through P2-11 verification or to designated hosted Supabase non-production services. Guarded hosted Cloud TEST is mandatory at P2-12 closeout and before production. Persistent file/media storage remains cloud-hosted in Cloudflare R2 when those features are implemented.
+**Development environment note:** the frontend may run locally and may connect to ADR-020's disposable synthetic-only local Supabase endpoint for P2-01 through P2-11 verification or to designated hosted Supabase non-production services. Local object storage uses MinIO under ADR-022; Cloudflare R2 is deferred to deployment readiness. Persistent file/media storage uses Cloudflare R2 in production.
 
 ---
 
@@ -1760,7 +1760,7 @@ Use opaque IDs.
 
 ## 25.4 File preview and image variants
 
-Private R2 files:
+Private object-storage files:
 
 - authorize before obtaining/streaming any source or derivative;
 - use a short-lived signed URL or permission-checked server/Worker delivery path;
@@ -1768,12 +1768,12 @@ Private R2 files:
 - no patient name/diagnosis in object keys;
 - routine image grids should request `thumbnail` rather than the original;
 - normal clinical viewing should prefer `preview`/`display` derivatives when sufficient;
-- provide an explicit authorized “View original” path when the source is needed;
+- provide an explicit authorized "View original" path when the source is needed;
 - never present a lossy derivative as though it were the only/original clinical file;
 - X-ray preview images must be labeled/treated as previews when clinically relevant;
 - gracefully show `processing`, `failed`, or fallback-to-original states when a derivative is not ready;
 - responsive image components should choose an appropriate predefined variant rather than inventing arbitrary transformation dimensions;
-- public website media should also use the R2 + Cloudflare Workers/Images pipeline and normal CDN/cache behavior.
+- public website media should also use the R2 + Cloudflare Workers/Images pipeline and normal CDN/cache behavior in production.
 
 ---
 
@@ -1847,7 +1847,7 @@ src/
 │   ├── auth/
 │   ├── permissions/
 │   ├── supabase/
-│   ├── r2/
+│   ├── storage/          # S3-compatible: MinIO (local) / R2 (production)
 │   ├── validation/
 │   ├── dates/
 │   ├── formatting/

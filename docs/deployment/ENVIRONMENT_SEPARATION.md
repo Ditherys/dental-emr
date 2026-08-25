@@ -5,11 +5,11 @@ boundaries while requiring a disposable local Supabase verification environment
 for P2-01 through P2-11:
 
 ```text
-developer workstation + local Supabase verification
+developer workstation + local Supabase + local MinIO object storage
 Supabase Cloud DEV
 Vercel Preview/test target + Supabase Cloud TEST
 future separately approved staging + separate Supabase staging project
-Vercel Production + Supabase Cloud PRODUCTION (created later)
+Vercel Production + Supabase Cloud PRODUCTION + Cloudflare R2 (created later)
 ```
 
 Local Supabase and Cloud TEST contain deterministic synthetic data only. Never
@@ -19,24 +19,30 @@ future staging environment may use formally de-identified data only in a
 separate project after documented approval and validation of the anonymization
 controls; it must not share Cloud TEST data or credentials. Production may
 contain real patient data only after the production gates in
-`docs/SECURITY_ARCHITECTURE.md` are satisfied. File/media work must later use
-separate non-production and production R2 boundaries under ADR-005.
+`docs/SECURITY_ARCHITECTURE.md` are satisfied. Local object storage uses MinIO
+under ADR-022; Cloudflare R2 is deferred to deployment readiness.
 
 ## Required application variables
 
 | Variable | Browser-visible | Development | Preview / Cloud TEST | Production |
 | --- | --- | --- | --- | --- |
 | `APP_ENVIRONMENT` | No | `development` | `test` | `production` |
-| `SUPABASE_PROJECT_ID` | No | Cloud DEV project ref | Cloud TEST project ref | Cloud PRODUCTION project ref |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Cloud DEV URL | Cloud TEST URL | Cloud PRODUCTION URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Cloud DEV key | Cloud TEST key | Cloud PRODUCTION key |
+| `SUPABASE_PROJECT_ID` | No | `local` for the local stack, otherwise Cloud DEV project ref | Cloud TEST project ref | Cloud PRODUCTION project ref |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | local API origin, otherwise Cloud DEV URL | Cloud TEST URL | Cloud PRODUCTION URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | local key, otherwise Cloud DEV key | Cloud TEST key | Cloud PRODUCTION key |
 | `APP_URL` | No | local origin | stable test origin | production origin |
-| `SUPABASE_SECRET_KEY` | No | Cloud DEV secret, only when required | Cloud TEST secret, only when required | production-only secret, configured later |
+| `SUPABASE_SECRET_KEY` | No | local secret for the local stack, otherwise Cloud DEV secret when required | Cloud TEST secret, only when required | production-only secret, configured later |
+| `STORAGE_PROVIDER` | No | `s3` | `s3` | `s3` |
+| `STORAGE_ENDPOINT` | No | `http://localhost:9000` (MinIO) | N/A (deferred to deployment readiness) | R2 endpoint, configured later |
+| `STORAGE_BUCKET` | No | `dental-emr-local` | N/A (deferred) | production bucket, configured later |
+| `STORAGE_ACCESS_KEY` | No | local MinIO key | N/A (deferred) | R2 access key, configured later |
+| `STORAGE_SECRET_KEY` | No | local MinIO secret | N/A (deferred) | R2 secret key, configured later |
 
-`SUPABASE_PROJECT_ID` must match the project reference in
-`NEXT_PUBLIC_SUPABASE_URL`. The publishable key is not an authorization system;
-normal user access still requires server authorization and RLS. The secret key
-bypasses RLS and must remain server-only.
+For hosted targets, `SUPABASE_PROJECT_ID` must match the project reference in
+`NEXT_PUBLIC_SUPABASE_URL`. A local developer workstation uses the literal
+project ID `local` and the exact loopback API origin. The publishable key is not
+an authorization system; normal user access still requires server authorization
+and RLS. The secret key bypasses RLS and must remain server-only.
 
 ## Vercel configuration
 
@@ -53,7 +59,7 @@ bypasses RLS and must remain server-only.
 5. Mark `SUPABASE_SECRET_KEY` sensitive in Preview and Production. Omit it from
    Preview unless a server-only workflow that needs it is being validated.
 6. Do not create or configure production Supabase/R2 credentials during Phase 1.
-   When production hardening begins, add them to Vercel Production only.
+   When production hardening begins, add them to Vercel Production only. Cloudflare R2 is deferred to deployment readiness under ADR-022.
 7. Redeploy after changing variables; existing deployments retain their prior
    environment values.
 
@@ -69,8 +75,9 @@ and [system environment variable reference](https://vercel.com/docs/environment-
 - a Vercel Preview or custom test target must use `APP_ENVIRONMENT=test`;
 - Vercel Production must use `APP_ENVIRONMENT=production`;
 - production configuration is rejected outside verified Vercel Production;
-- the Supabase URL must be the exact HTTPS Cloud origin for
-  `SUPABASE_PROJECT_ID`; and
+- a non-Vercel development workstation may use only the exact local Supabase
+  loopback API origin with `SUPABASE_PROJECT_ID=local`; all hosted targets must
+  use the exact HTTPS Cloud origin for `SUPABASE_PROJECT_ID`; and
 - a Vercel deployment that exposes `VERCEL=1` but omits its target variables is
   rejected.
 
