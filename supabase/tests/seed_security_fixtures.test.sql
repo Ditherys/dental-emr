@@ -132,6 +132,40 @@ select extensions.is(
   'every branch access fixture is tenant-consistent'
 );
 
+select extensions.set_eq(
+  $$
+    select organization_id::text || ':' || first_name || ' ' || last_name
+    from public.providers
+    where id::text like '72000000-0000-0000-0000-00000000000%'
+  $$,
+  array[
+    '22000000-0000-0000-0000-000000000001:Provider A',
+    '22000000-0000-0000-0000-000000000002:Provider B'
+  ]::text[],
+  'the seed contains only the two deterministic fictitious provider labels'
+);
+
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.providers
+    where id::text like '72000000-0000-0000-0000-00000000000%'
+      and linked_user_id is null
+      and middle_name is null
+      and suffix is null
+      and professional_title is null
+      and license_number is null
+      and contact_phone is null
+      and contact_email is null
+      and bio is null
+      and not website_visible
+      and lower(first_name || ' ' || last_name) !~
+        '(password|secret|token|bearer|api[_-]?key|@|https?://)'
+  ),
+  2,
+  'provider fixtures contain no link, contact, profile, credential, URL, or secret-like text'
+);
+
 set local role authenticated;
 select set_config(
   'request.jwt.claim.sub',

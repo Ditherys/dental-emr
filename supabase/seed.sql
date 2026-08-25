@@ -329,4 +329,60 @@ begin
 end;
 $$;
 
+-- P3-02 synthetic provider fixtures. These labels are placeholders, not
+-- identifiable people, and deliberately carry no contact or public-profile
+-- content. Provider linkage/associations are exercised in pgTAP instead.
+insert into public.providers (
+  id,
+  organization_id,
+  linked_user_id,
+  first_name,
+  last_name,
+  provider_type,
+  status,
+  website_visible,
+  bio
+)
+values
+  (
+    '72000000-0000-0000-0000-000000000001',
+    '22000000-0000-0000-0000-000000000001',
+    null,
+    'Provider',
+    'A',
+    'REGULAR',
+    'active',
+    false,
+    null
+  ),
+  (
+    '72000000-0000-0000-0000-000000000002',
+    '22000000-0000-0000-0000-000000000002',
+    null,
+    'Provider',
+    'B',
+    'EXTERNAL_REFERRAL',
+    'active',
+    false,
+    null
+  )
+on conflict (id) do update
+set
+  organization_id = excluded.organization_id,
+  linked_user_id = excluded.linked_user_id,
+  first_name = excluded.first_name,
+  middle_name = null,
+  last_name = excluded.last_name,
+  suffix = null,
+  professional_title = null,
+  license_number = null,
+  contact_phone = null,
+  contact_email = null,
+  provider_type = excluded.provider_type,
+  status = excluded.status,
+  website_visible = excluded.website_visible,
+  bio = excluded.bio,
+  version = 1,
+  archived_at = null;
+
 commit;
