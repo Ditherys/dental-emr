@@ -9,7 +9,6 @@ import { getProvider, listProviders, listSpecialties } from "@/lib/providers/dat
 import { ProviderServiceError } from "@/lib/providers/service";
 
 import { ProviderDirectory } from "./provider-directory";
-import { ProviderForm } from "./provider-form";
 
 export const metadata: Metadata = { title: "Providers" };
 
@@ -43,5 +42,5 @@ export default async function ProvidersPage() {
 
   if (denied) return <PermissionDenied description={actingBranchId ? undefined : "An active branch is required to manage provider configuration."} />;
   if (failed) return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Providers" description="Internal provider configuration." /><Separator className="my-6" /><PageError description="Provider configuration could not be loaded. Refresh to try again." /></div>;
-  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Providers" description="Maintain internal provider records, branch associations, and specialties. This does not create schedules, availability, or user accounts." /><Separator className="my-6" /><ProviderDirectory providers={providers} details={details} actingBranchId={actingBranchId} branches={branches} specialties={specialties} /><ProviderForm actingBranchId={actingBranchId} branches={branches} specialties={specialties} /></div>;
+  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Providers" description="Maintain internal provider records, branch associations, and specialties. This does not create schedules, availability, or user accounts." /><Separator className="my-6" /><ProviderDirectory providers={providers} details={details} actingBranchId={actingBranchId} branches={branches} specialties={specialties} /></div>;
 }

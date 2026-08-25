@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useEffectEvent } from "react";
 
 import { createProviderAction, setProviderAssociationsAction, updateProviderAction, type ProviderActionState } from "./actions";
 import { InlineFieldError } from "@/components/feedback/inline-field-error";
@@ -34,13 +34,19 @@ function ProviderFields({ provider }: { provider?: ProviderDetail }) {
   </div>;
 }
 
-export function ProviderForm({ actingBranchId, branches, specialties, provider }: { actingBranchId: string; branches: Branch[]; specialties: Specialty[]; provider?: ProviderDetail }) {
+export function ProviderForm({ actingBranchId, branches, specialties, provider, inDialog = false, onSuccess }: { actingBranchId: string; branches: Branch[]; specialties: Specialty[]; provider?: ProviderDetail; inDialog?: boolean; onSuccess?: () => void }) {
   const [state, action, pending] = useActionState(provider ? updateProviderAction : createProviderAction, initialState);
   const [associationState, associationAction, associationPending] = useActionState(setProviderAssociationsAction, initialState);
   const selectedBranches = new Set(provider?.branchIds);
   const selectedSpecialties = new Map(provider?.specialties.map((item) => [item.specialtyId, item.isPrimary]));
-  return <section className={provider ? "border-t py-6" : "mt-10 border-t pt-8"} aria-labelledby={provider ? `provider-${provider.providerId}-form-title` : "add-provider-title"}>
-    <h2 id={provider ? `provider-${provider.providerId}-form-title` : "add-provider-title"} className="text-lg font-semibold">{provider ? "Edit provider" : "Add provider"}</h2>
+  const closeAfterSuccess = useEffectEvent(() => onSuccess?.());
+
+  useEffect(() => {
+    if (state.success || associationState.success) closeAfterSuccess();
+  }, [associationState.success, state.success]);
+
+  return <section className={inDialog ? "space-y-5" : provider ? "border-t py-6" : "mt-10 border-t pt-8"} aria-labelledby={inDialog ? undefined : provider ? `provider-${provider.providerId}-form-title` : "add-provider-title"}>
+    {!inDialog && <h2 id={provider ? `provider-${provider.providerId}-form-title` : "add-provider-title"} className="text-lg font-semibold">{provider ? "Edit provider" : "Add provider"}</h2>}
     {!provider && <p className="mt-1 text-sm text-muted-foreground">Record provider identity and stored website details. User-account linking is intentionally managed outside this screen.</p>}
     <form action={action} className="mt-5 max-w-3xl space-y-5" noValidate><input type="hidden" name="actingBranchId" value={actingBranchId} />{provider && <><input type="hidden" name="providerId" value={provider.providerId} /><input type="hidden" name="expectedVersion" value={provider.version} /></>}<fieldset disabled={pending} className="space-y-5 disabled:opacity-70"><ProviderFields provider={provider} /></fieldset>{state.fieldErrors && <InlineFieldError>{Object.values(state.fieldErrors).flat()[0]}</InlineFieldError>}<Message state={state} /><Button type="submit" size="lg" disabled={pending}>{pending ? "Saving..." : provider ? "Save provider" : "Add provider"}</Button></form>
     {provider && <form action={associationAction} className="mt-6 max-w-3xl space-y-4 border-t pt-6"><input type="hidden" name="actingBranchId" value={actingBranchId} /><input type="hidden" name="providerId" value={provider.providerId} /><input type="hidden" name="expectedVersion" value={provider.version} /><fieldset disabled={associationPending}><legend className="text-sm font-semibold">Associations</legend><div className="mt-3 grid gap-3 sm:grid-cols-2"><div><p className="text-sm font-medium">Active branches</p>{branches.map((branch) => <label key={branch.id} className="mt-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="branchIds" value={branch.id} defaultChecked={selectedBranches.has(branch.id)} />{branch.name}</label>)}</div><div><p className="text-sm font-medium">Specialties</p>{specialties.filter((specialty) => specialty.isActive).map((specialty) => <label key={specialty.specialtyId} className="mt-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="specialtyIds" value={specialty.specialtyId} defaultChecked={selectedSpecialties.has(specialty.specialtyId)} />{specialty.name}</label>)}<label className="mt-3 block text-sm font-medium">Primary specialty<select name="primarySpecialtyId" defaultValue={[...selectedSpecialties.entries()].find(([, primary]) => primary)?.[0] ?? ""} className={controlClasses}><option value="">None</option>{specialties.filter((specialty) => selectedSpecialties.has(specialty.specialtyId)).map((specialty) => <option key={specialty.specialtyId} value={specialty.specialtyId}>{specialty.name}</option>)}</select></label></div></div></fieldset><Message state={associationState} /><Button type="submit" size="lg" variant="outline" disabled={associationPending}>{associationPending ? "Saving..." : "Save associations"}</Button></form>}
