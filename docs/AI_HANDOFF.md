@@ -171,6 +171,10 @@
 - Do not create `docs/PHASE3_ACCEPTANCE_REVIEW.md` yet. The plan requires an
   independent review and explicit project-owner acceptance after the deferred
   verification evidence is complete.
+- All four admin pages (providers, branches, specialties, procedures) now use a
+  consistent modal dialog pattern: upper-right Add button opens a modal,
+  row actions use labeled Edit (Pencil + text) and Archive buttons. No page
+  renders an inline form below its list.
 - P2-04 through P2-11 are accepted by the project owner.
 - The project owner amended ADR-020 on 2026-08-26: local verification is the
   Phase 2 checkpoint and P2-12 closeout gate. Guarded Cloud TEST is deferred to

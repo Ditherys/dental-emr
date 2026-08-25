@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useEffectEvent } from "react";
 
 import { InlineFieldError } from "@/components/feedback/inline-field-error";
 import { Button } from "@/components/ui/button";
@@ -32,15 +32,21 @@ function ProcedureFields({ procedure }: { procedure?: ProcedureDetail }) {
   </div>;
 }
 
-export function ProcedureForm({ actingBranchId, specialties, providers, procedure }: { actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[]; procedure?: ProcedureDetail }) {
+export function ProcedureForm({ actingBranchId, specialties, providers, procedure, inDialog = false, onSuccess }: { actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[]; procedure?: ProcedureDetail; inDialog?: boolean; onSuccess?: () => void }) {
   const [state, action, pending] = useActionState(procedure ? updateProcedureAction : createProcedureAction, initialState);
   const [associationState, associationAction, associationPending] = useActionState(setProcedureAssociationsAction, initialState);
   const requirements = new Map(procedure?.specialties.map(({ specialtyId, requirementLevel }) => [specialtyId, requirementLevel]));
   const eligibleProviders = new Set(procedure?.eligibleProviderIds);
-  return <section className={procedure ? "border-t py-6" : "mt-10 border-t pt-8"} aria-labelledby={procedure ? `procedure-${procedure.procedureId}-form-title` : "add-procedure-title"}>
-    <h2 id={procedure ? `procedure-${procedure.procedureId}-form-title` : "add-procedure-title"} className="text-lg font-semibold">{procedure ? "Edit procedure" : "Add procedure"}</h2>
-    {!procedure && <p className="mt-1 text-sm text-muted-foreground">Record internal procedure settings only. Pricing, availability, resources, and public links are intentionally unavailable.</p>}
-    <form action={action} className="mt-5 max-w-3xl space-y-5" noValidate><input type="hidden" name="actingBranchId" value={actingBranchId} />{procedure && <><input type="hidden" name="procedureId" value={procedure.procedureId} /><input type="hidden" name="expectedVersion" value={procedure.version} /></>}<fieldset disabled={pending} className="space-y-5 disabled:opacity-70"><ProcedureFields procedure={procedure} /></fieldset>{state.fieldErrors && <InlineFieldError>{Object.values(state.fieldErrors).flat()[0]}</InlineFieldError>}<Message state={state} /><Button type="submit" size="lg" disabled={pending}>{pending ? "Saving..." : procedure ? "Save procedure" : "Add procedure"}</Button></form>
+  const closeAfterSuccess = useEffectEvent(() => onSuccess?.());
+
+  useEffect(() => {
+    if (state.success || associationState.success) closeAfterSuccess();
+  }, [associationState.success, state.success]);
+
+  return <section className={inDialog ? "space-y-5" : procedure ? "border-t py-6" : "mt-10 border-t pt-8"} aria-labelledby={inDialog ? undefined : procedure ? `procedure-${procedure.procedureId}-form-title` : "add-procedure-title"}>
+    {!inDialog && <h2 id={procedure ? `procedure-${procedure.procedureId}-form-title` : "add-procedure-title"} className="text-lg font-semibold">{procedure ? "Edit procedure" : "Add procedure"}</h2>}
+    {!inDialog && !procedure && <p className="mt-1 text-sm text-muted-foreground">Record internal procedure settings only. Pricing, availability, resources, and public links are intentionally unavailable.</p>}
+    <form action={action} className={`${inDialog ? "" : "mt-5 "}max-w-3xl space-y-5`} noValidate><input type="hidden" name="actingBranchId" value={actingBranchId} />{procedure && <><input type="hidden" name="procedureId" value={procedure.procedureId} /><input type="hidden" name="expectedVersion" value={procedure.version} /></>}<fieldset disabled={pending} className="space-y-5 disabled:opacity-70"><ProcedureFields procedure={procedure} /></fieldset>{state.fieldErrors && <InlineFieldError>{Object.values(state.fieldErrors).flat()[0]}</InlineFieldError>}<Message state={state} /><Button type="submit" size="lg" disabled={pending}>{pending ? "Saving..." : procedure ? "Save procedure" : "Add procedure"}</Button></form>
     {procedure && <form action={associationAction} className="mt-6 max-w-3xl space-y-4 border-t pt-6"><input type="hidden" name="actingBranchId" value={actingBranchId} /><input type="hidden" name="procedureId" value={procedure.procedureId} /><input type="hidden" name="expectedVersion" value={procedure.version} /><fieldset disabled={associationPending}><legend className="text-sm font-semibold">Qualification requirements</legend><div className="mt-3 grid gap-5 sm:grid-cols-2"><div><p className="text-sm font-medium">Specialties</p>{specialties.filter((specialty) => specialty.isActive).map((specialty) => <div key={specialty.specialtyId} className="mt-2 border-b py-2"><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="specialtyIds" value={specialty.specialtyId} defaultChecked={requirements.has(specialty.specialtyId)} />{specialty.name}</label><label className="block text-xs text-muted-foreground">Requirement level<select name={`requirementLevel-${specialty.specialtyId}`} defaultValue={requirements.get(specialty.specialtyId) ?? "REQUIRED"} className={controlClasses}><option value="REQUIRED">Required</option><option value="PREFERRED">Preferred</option></select></label></div>)}</div><div><p className="text-sm font-medium">Explicit eligible providers</p><p className="mt-1 text-sm text-muted-foreground">Leave empty to avoid an explicit allow-list.</p>{providers.filter((provider) => provider.status === "active").map((provider) => <label key={provider.providerId} className="mt-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="providerIds" value={provider.providerId} defaultChecked={eligibleProviders.has(provider.providerId)} />{provider.displayName}</label>)}</div></div></fieldset><Message state={associationState} /><Button type="submit" size="lg" variant="outline" disabled={associationPending}>{associationPending ? "Saving..." : "Save requirements"}</Button></form>}
   </section>;
 }

@@ -10,7 +10,6 @@ import { ProcedureServiceError } from "@/lib/procedures/service";
 import { listProviders, listSpecialties } from "@/lib/providers/data";
 import { ProviderServiceError } from "@/lib/providers/service";
 
-import { ProcedureForm } from "./procedure-form";
 import { ProcedureList } from "./procedure-list";
 
 export const metadata: Metadata = { title: "Procedures" };
@@ -44,5 +43,5 @@ export default async function ProceduresPage() {
 
   if (denied) return <PermissionDenied description={actingBranchId ? undefined : "An active branch is required to manage procedure configuration."} />;
   if (failed) return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Procedures" description="Internal procedure configuration." /><Separator className="my-6" /><PageError description="Procedure configuration could not be loaded. Refresh to try again." /></div>;
-  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Procedures" description="Maintain the internal procedure catalog and its qualification requirements. This does not create pricing, schedules, availability, resources, or public booking links." /><Separator className="my-6" /><ProcedureList procedures={procedures} details={details} actingBranchId={actingBranchId} specialties={specialties} providers={providers} /><ProcedureForm actingBranchId={actingBranchId} specialties={specialties} providers={providers} /></div>;
+  return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Procedures" description="Maintain the internal procedure catalog and its qualification requirements. This does not create pricing, schedules, availability, resources, or public booking links." /><Separator className="my-6" /><ProcedureList procedures={procedures} details={details} actingBranchId={actingBranchId} specialties={specialties} providers={providers} /></div>;
 }
