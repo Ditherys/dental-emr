@@ -17,10 +17,29 @@ Supabase stack; see
 synthetic fixtures may be stored there — never real patient files.
 
 ```powershell
-npm run storage:start:local   # idempotent: creates/starts dental-emr-minio, waits for health, ensures the dental-emr-local bucket
+npm run storage:start:local   # idempotent: creates/starts dental-emr-minio, waits for health, ensures the dental-emr-local bucket and pinned CORS
+npm run storage:smoke:local   # guarded put/stat/get/presign/delete round trip plus browser-style CORS checks against real MinIO
 npm run storage:status:local  # container state and health probe
 npm run storage:stop:local    # stops dental-emr-minio; data stays in the dental-emr-minio-data volume
 ```
+
+Browser uploads PUT directly to presigned URLs from the app origin, so the
+container is created with a pinned CORS posture (`MINIO_API_CORS_*`
+environment variables allowing `http://localhost:3000` and
+`http://127.0.0.1:3000` for `GET`/`PUT` with `content-type`/`range`, exposing
+`etag`). Recent community MinIO releases removed the S3 bucket-CORS API, so
+CORS is applied through these server environment variables instead of
+`PutBucketCors`; `storage:start:local` recreates an older container without
+them (objects in the data volume are kept) and verifies a live preflight
+before reporting PASS.
+
+The smoke command loads the `STORAGE_*` values from `.env.local`, refuses any
+non-loopback endpoint or non-`dental-emr-local` bucket, exercises the real
+storage adapter with deterministic synthetic bytes under the plan-shaped
+opaque key layout, verifies presigned upload/download URL structure (URLs and
+signatures are never printed), performs the preflight/PUT/GET requests exactly
+as the browser would from the app origin, and expects deletion to fail
+subsequent reads.
 
 The container exposes `127.0.0.1:9000` (S3 API) and `127.0.0.1:9001` (console)
 with the documented synthetic local-only credentials from `.env.example`. The

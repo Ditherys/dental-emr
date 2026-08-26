@@ -9,16 +9,23 @@ import {
 } from "./local-supabase-command.mjs";
 import {
   MINIO_CONTAINER_NAME,
+  MINIO_CORS_PROBE_ORIGIN,
+  MINIO_DATA_VOLUME,
   MINIO_HEALTH_URL,
+  containerHasPinnedCorsEnvironment,
   interpretMinioContainerState,
+  interpretMinioCorsPreflightProbe,
   isSuccessfulMinioHealthProbe,
   mergeLocalStorageEnvironment,
   redactMinioOutput,
   resolveMinioBucketProvisioningCommands,
   resolveMinioContainerCreateCommand,
+  resolveMinioContainerEnvironmentInspectCommand,
   resolveMinioContainerInspectCommand,
+  resolveMinioContainerRemoveCommand,
   resolveMinioContainerStartCommand,
   resolveMinioContainerStopCommand,
+  resolveMinioCorsPreflightProbeUrl,
   resolveMinioImageInspectCommand,
   resolveMinioImagePullCommand,
   resolveMinioStorageCommand,
@@ -153,7 +160,11 @@ async function startMinio(environment) {
     }
   }
 
-  const state = inspectMinioContainer(environment);
+  let state = inspectMinioContainer(environment);
+  state = await recreateContainerWithoutPinnedCorsEnvironment(
+    environment,
+    state,
+  );
 
   if (state === "missing") {
     const createResult = runRedactedDocker(
@@ -187,8 +198,71 @@ async function startMinio(environment) {
     }
   }
 
+  await verifyMinioBucketCorsPreflight();
   ensureLocalStorageEnvironmentFile();
   console.log("PASS storage:start:local (dental-emr-local ready)");
+}
+
+async function recreateContainerWithoutPinnedCorsEnvironment(
+  environment,
+  currentState,
+) {
+  if (currentState === "missing") {
+    return "missing";
+  }
+
+  const envInspect = runDocker(
+    resolveMinioContainerEnvironmentInspectCommand(),
+    environment,
+  );
+
+  if (envInspect.status !== 0) {
+    throw new Error(
+      `The CORS environment of ${MINIO_CONTAINER_NAME} could not be inspected.`,
+    );
+  }
+
+  if (containerHasPinnedCorsEnvironment(envInspect.stdout)) {
+    return currentState;
+  }
+
+  const removal = runRedactedDocker(resolveMinioContainerRemoveCommand(), environment);
+  if (removal.status !== 0) {
+    throw new Error(
+      `The previous ${MINIO_CONTAINER_NAME} container could not be removed to apply the pinned CORS configuration.`,
+    );
+  }
+  console.log(
+    `Recreated ${MINIO_CONTAINER_NAME} to apply the pinned local CORS configuration; objects in the ${MINIO_DATA_VOLUME} volume are kept.`,
+  );
+  return "missing";
+}
+
+async function verifyMinioBucketCorsPreflight() {
+  const response = await fetch(resolveMinioCorsPreflightProbeUrl(), {
+    method: "OPTIONS",
+    headers: {
+      Origin: MINIO_CORS_PROBE_ORIGIN,
+      "Access-Control-Request-Method": "PUT",
+      "Access-Control-Request-Headers": "content-type",
+    },
+    signal: AbortSignal.timeout(HEALTH_PROBE_TIMEOUT_MS),
+  });
+  const accepted = interpretMinioCorsPreflightProbe({
+    status: response.status,
+    allowedOriginHeader: response.headers.get("access-control-allow-origin"),
+    expectedOrigin: MINIO_CORS_PROBE_ORIGIN,
+  });
+
+  if (!accepted) {
+    throw new Error(
+      `${MINIO_CONTAINER_NAME} did not advertise the pinned browser CORS origin on preflight.`,
+    );
+  }
+
+  console.log(
+    "Bucket CORS preflight verified for the pinned browser origin http://127.0.0.1:3000.",
+  );
 }
 
 function stopMinio(environment) {

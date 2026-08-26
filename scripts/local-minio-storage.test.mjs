@@ -6,15 +6,25 @@ import { describe, expect, it } from "vitest";
 
 import {
   MINIO_CONTAINER_NAME,
+  MINIO_CORS_ALLOWED_HEADERS,
+  MINIO_CORS_ALLOWED_METHODS,
+  MINIO_CORS_ALLOWED_ORIGINS,
+  MINIO_CORS_EXPOSE_HEADERS,
+  containerHasPinnedCorsEnvironment,
   interpretMinioContainerState,
+  interpretMinioCorsPreflightProbe,
   isSuccessfulMinioHealthProbe,
   mergeLocalStorageEnvironment,
   redactMinioOutput,
   resolveLocalMinioSecrets,
   resolveMinioBucketProvisioningCommands,
   resolveMinioContainerCreateCommand,
+  resolveMinioContainerEnvironmentInspectCommand,
   resolveMinioContainerInspectCommand,
+  resolveMinioContainerRemoveCommand,
   resolveMinioContainerStopCommand,
+  resolveMinioCorsEnvironmentEntries,
+  resolveMinioCorsPreflightProbeUrl,
   resolveMinioStorageCommand,
 } from "./local-minio-storage.mjs";
 
@@ -36,7 +46,7 @@ describe("local MinIO command allowlist", () => {
 });
 
 describe("local MinIO container commands", () => {
-  it("creates the container on loopback ports with a named data volume", () => {
+  it("creates the container on loopback ports with a named data volume and pinned CORS", () => {
     expect(resolveMinioContainerCreateCommand()).toEqual([
       "run",
       "-d",
@@ -52,6 +62,14 @@ describe("local MinIO container commands", () => {
       "MINIO_ROOT_USER=minioadmin",
       "-e",
       "MINIO_ROOT_PASSWORD=minioadmin",
+      "-e",
+      "MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000,http://127.0.0.1:3000",
+      "-e",
+      "MINIO_API_CORS_ALLOW_METHODS=GET,PUT",
+      "-e",
+      "MINIO_API_CORS_ALLOW_HEADERS=content-type,range",
+      "-e",
+      "MINIO_API_CORS_EXPOSE_HEADERS=etag",
       "minio/minio",
       "server",
       "/data",
@@ -74,6 +92,20 @@ describe("local MinIO container commands", () => {
     expect(MINIO_CONTAINER_NAME).toBe("dental-emr-minio");
   });
 
+  it("inspects the configured environment and removes the fixed container", () => {
+    expect(resolveMinioContainerEnvironmentInspectCommand()).toEqual([
+      "inspect",
+      "--format",
+      "{{range .Config.Env}}{{println .}}{{end}}",
+      "dental-emr-minio",
+    ]);
+    expect(resolveMinioContainerRemoveCommand()).toEqual([
+      "rm",
+      "-f",
+      "dental-emr-minio",
+    ]);
+  });
+
   it.each([
     ["running\n", "running"],
     ["exited\n", "stopped"],
@@ -86,6 +118,85 @@ describe("local MinIO container commands", () => {
   it.each(["", "\n", null])("refuses to interpret an unreadable state (%s)", (output) => {
     expect(() => interpretMinioContainerState(output)).toThrow(
       /could not be interpreted/,
+    );
+  });
+});
+
+describe("local MinIO pinned CORS configuration", () => {
+  it("pins exactly the app browser origins, transfer methods, and headers", () => {
+    expect([...MINIO_CORS_ALLOWED_ORIGINS]).toEqual([
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ]);
+    expect([...MINIO_CORS_ALLOWED_METHODS]).toEqual(["GET", "PUT"]);
+    expect([...MINIO_CORS_ALLOWED_HEADERS]).toEqual(["content-type", "range"]);
+    expect([...MINIO_CORS_EXPOSE_HEADERS]).toEqual(["etag"]);
+  });
+
+  it("builds one MINIO_API_CORS_* entry per CORS dimension", () => {
+    expect(resolveMinioCorsEnvironmentEntries()).toEqual([
+      [
+        "MINIO_API_CORS_ALLOW_ORIGIN",
+        "http://localhost:3000,http://127.0.0.1:3000",
+      ],
+      ["MINIO_API_CORS_ALLOW_METHODS", "GET,PUT"],
+      ["MINIO_API_CORS_ALLOW_HEADERS", "content-type,range"],
+      ["MINIO_API_CORS_EXPOSE_HEADERS", "etag"],
+    ]);
+  });
+
+  it.each([
+    [
+      "MINIO_ROOT_USER=minioadmin\n" +
+        "MINIO_API_CORS_ALLOW_ORIGIN=http://localhost:3000,http://127.0.0.1:3000\n" +
+        "MINIO_API_CORS_ALLOW_METHODS=GET,PUT\n" +
+        "MINIO_API_CORS_ALLOW_HEADERS=content-type,range\n" +
+        "MINIO_API_CORS_EXPOSE_HEADERS=etag\n",
+      true,
+    ],
+    ["MINIO_ROOT_USER=minioadmin\nPATH=/usr/bin\n", false],
+    ["MINIO_API_CORS_ALLOW_ORIGIN=http://evil.example\n", false],
+    ["", false],
+    [null, false],
+  ])(
+    "recognizes pinned CORS presence in inspect output (%s)",
+    (output, expected) => {
+      expect(containerHasPinnedCorsEnvironment(output)).toBe(expected);
+    },
+  );
+
+  it("probes preflight against the local bucket through the loopback API port", () => {
+    expect(resolveMinioCorsPreflightProbeUrl()).toBe(
+      "http://127.0.0.1:9000/dental-emr-local/cors-preflight-probe",
+    );
+  });
+
+  it("accepts only a same-origin allowed preflight response", () => {
+    const accepted = { status: 204, allowedOriginHeader: "http://127.0.0.1:3000" };
+
+    expect(
+      interpretMinioCorsPreflightProbe({
+        ...accepted,
+        expectedOrigin: "http://127.0.0.1:3000",
+      }),
+    ).toBe(true);
+    expect(
+      interpretMinioCorsPreflightProbe({
+        status: 200,
+        allowedOriginHeader: "http://localhost:3000",
+        expectedOrigin: "http://localhost:3000",
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    [{ status: 403, allowedOriginHeader: "http://127.0.0.1:3000" }, "http://127.0.0.1:3000"],
+    [{ status: 204, allowedOriginHeader: "http://evil.example" }, "http://127.0.0.1:3000"],
+    [{ status: 204, allowedOriginHeader: null }, "http://127.0.0.1:3000"],
+    [{ status: 204, allowedOriginHeader: "http://127.0.0.1:3000" }, "http://evil.example"],
+  ])("rejects a non-matching preflight probe (%s)", (probe, expectedOrigin) => {
+    expect(interpretMinioCorsPreflightProbe({ ...probe, expectedOrigin })).toBe(
+      false,
     );
   });
 });
@@ -232,6 +343,8 @@ describe("local MinIO package interface", () => {
       "storage:start:local": "node scripts/run-local-minio.mjs start",
       "storage:stop:local": "node scripts/run-local-minio.mjs stop",
       "storage:status:local": "node scripts/run-local-minio.mjs status",
+      "storage:smoke:local":
+        "node --env-file-if-exists=.env.local scripts/run-local-storage-smoke.mjs",
     });
   });
 });

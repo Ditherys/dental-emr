@@ -24,6 +24,7 @@
     "storage:start:local": "node scripts/run-local-minio.mjs start",
     "storage:stop:local": "node scripts/run-local-minio.mjs stop",
     "storage:status:local": "node scripts/run-local-minio.mjs status",
+    "storage:smoke:local": "node --env-file-if-exists=.env.local scripts/run-local-storage-smoke.mjs",
     "db:reset:local": "node scripts/run-local-supabase-command.mjs reset",
     "db:provision:local": "node scripts/run-local-supabase-command.mjs provision-test-tooling",
     "test:db:local": "node scripts/run-local-database-tests.mjs",
