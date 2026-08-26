@@ -121,6 +121,21 @@ describe("queue permission vocabulary", () => {
   });
 });
 
+describe("communication permission vocabulary", () => {
+  it("exposes the two bounded communication permission codes", () => {
+    const communicationView: PermissionCode = "communication.view";
+    const communicationSend: PermissionCode = "communication.send";
+
+    // @ts-expect-error communication permissions are a closed contract.
+    const unknownCommunicationPermission: PermissionCode = "communication.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([communicationView, communicationSend]),
+    );
+    expect(unknownCommunicationPermission).toBe("communication.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);
