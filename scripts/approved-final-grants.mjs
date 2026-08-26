@@ -306,6 +306,14 @@ const patientFileUploadRpcGrants = Object.freeze([
   "public.confirm_file_upload(uuid,uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file upload boundary derives tenant and actor from an active authenticated acting branch, requires live demographics-write at the acting branch or organization-wide provider.manage, inserts only pending metadata rows with opaque scoped object keys, and locks and optimistically versions the row it confirms while appending one opaque patient-linked audit event atomically; presigned URLs stay in the server-side storage adapter." })));
 
+const PATIENT_FILE_READ_RPCS_GRANTS_MIGRATION =
+  "20260826010801_patient_file_read_rpcs_grants.sql";
+
+const patientFileReadRpcGrants = Object.freeze([
+  "public.list_patient_files(uuid,uuid,boolean)",
+  "public.get_file_metadata(uuid,uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file read boundary derives the tenant from an active authenticated acting branch, requires live demographics-read at the acting branch, and returns only the bounded metadata projection without object keys or checksums while writing no audit events; get_file_metadata is the authorization gate the server-side storage adapter reuses before minting a presigned download URL." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -363,6 +371,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: PATIENT_FILE_UPLOAD_RPCS_GRANTS_MIGRATION,
     grants: patientFileUploadRpcGrants,
+  }),
+  Object.freeze({
+    file: PATIENT_FILE_READ_RPCS_GRANTS_MIGRATION,
+    grants: patientFileReadRpcGrants,
   }),
 ]);
 

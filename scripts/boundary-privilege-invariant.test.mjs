@@ -140,6 +140,8 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.get_procedure_configuration(uuid, uuid)",
     "public.create_file_upload(uuid, uuid, text, bigint)",
     "public.confirm_file_upload(uuid, uuid, integer)",
+    "public.list_patient_files(uuid, uuid, boolean)",
+    "public.get_file_metadata(uuid, uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1203,7 +1205,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(57);
+    expect(approved.size).toBe(59);
   });
 });
 
