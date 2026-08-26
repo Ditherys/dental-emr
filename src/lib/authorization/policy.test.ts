@@ -160,6 +160,21 @@ describe("specialist permission vocabulary", () => {
   });
 });
 
+describe("document permission vocabulary", () => {
+  it("exposes the two bounded document permission codes", () => {
+    const documentView: PermissionCode = "document.view";
+    const documentGenerate: PermissionCode = "document.generate";
+
+    // @ts-expect-error document permissions are a closed contract.
+    const unknownDocumentPermission: PermissionCode = "document.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([documentView, documentGenerate]),
+    );
+    expect(unknownDocumentPermission).toBe("document.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

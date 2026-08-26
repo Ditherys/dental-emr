@@ -20,6 +20,8 @@ export const foundationPermissionCodes = [
   "communication.send",
   "calendar.manage",
   "specialist.request",
+  "document.view",
+  "document.generate",
   "analytics.view",
 ] as const;
 
