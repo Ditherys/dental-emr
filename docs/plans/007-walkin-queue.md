@@ -34,7 +34,7 @@ corrupt appointment status.
 
 ## Tasks
 
-- [ ] **P7-01: Queue permission + schema**
+- [x] **P7-01: Queue permission + schema**
   - Permission catalog rows `queue.read`/`queue.manage` with stable
     descriptions; role_permissions per matrix; `PermissionCode` + policy test;
     pgTAP proving the matrix.
@@ -45,7 +45,7 @@ corrupt appointment status.
     consistency checks. RLS enabled, zero base grants, access-path indexes
     (org, branch, status; org, branch, arrived_at), pgTAP.
 
-- [ ] **P7-02: Queue RPCs**
+- [x] **P7-02: Queue RPCs**
   - `create_walkin_entry(acting_branch_id, patient_id, chief_complaint, provider_id, resource_id)`
     — queue.manage gated; patient must be org patient; defaults status WAITING;
     one audit `queue.entry.created` ({} metadata).
@@ -62,18 +62,18 @@ corrupt appointment status.
     rollback/tenant isolation). Audit metadata allowlist already covers
     old_value/new_value/reason from P6-06.
 
-- [ ] **P7-03: Server services**
+- [x] **P7-03: Server services**
   - `src/lib/queue/` Zod schemas/types/errors/service mirroring
     `src/lib/scheduling/`; offline mocked unit tests.
 
-- [ ] **P7-04: Queue UI**
+- [x] **P7-04: Queue UI**
   - Private `/queue` page (server-gated on queue.read), dense waiting-queue
     list (desktop table / phone list), `+ Walk-in` dialog with existing-patient
     picker (authorized searchPatientsAction) or new-patient quick registration,
     queue status action buttons (44px) gated on queue.manage, phone
     composition. Server actions revalidate queue.manage + acting branch. Tests.
 
-- [ ] **P7-05: Integration verification + phase review**
+- [x] **P7-05: Integration verification + phase review**
 
 ## Explicitly deferred
 

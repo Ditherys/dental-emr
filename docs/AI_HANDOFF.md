@@ -1,7 +1,35 @@
-# AI Handoff - Phase 6 complete, Phase 7 next
+# AI Handoff - Phase 7 complete, Phase 8 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 7 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 7 (Walk-in & Queue) complete through commit `d71ed5f` (P7-04 queue UI)
+with `docs/plans/007-walkin-queue.md` P7-01..P7-05 all `[x]`.
+
+- P7-01 `9e4d8cc` queue.read/queue.manage permission contract + queue_entries
+  table (statuses WAITING/READY/CALLED/IN_CHAIR/COMPLETED/LEFT/CANCELLED,
+  tenant-safe composite FKs, completed/left consistency checks). P7-02 `3d6b408`
+  queue RPCs (create_walkin_entry/update_queue_status/list_queue) +
+  has_queue_permission_at_branch helper; forward-only transitions, one atomic
+  audit per mutation with stripped-null reason metadata. P7-03 `e1f96ec`
+  src/lib/queue services. P7-04 `d71ed5f` /queue board UI + +Walk-in dialog.
+- Acceptance criteria met: walk-in creates a queue entry not a fake
+  appointment; receptionist sees current queue; queue transitions never touch
+  appointment rows.
+- Inventory: 70 migration files, 25 grant terminals, 95 approved privileges;
+  40 pgTAP suites + 4 concurrency probes; tables 38, functions 117,
+  security-definer 95; unit 61 files / 642 tests; scripts 279.
+- Phase gate verification all green: db test, security migrations/secrets/audit,
+  unit, lint, typecheck, build (`/queue` emitted).
+
+**Next:** Phase 8 (Automation & Communication Core) per
+docs/MASTER_PRODUCT_PLAN.md §Phase 8 (§16-17 reminder rules, durable queue/jobs,
+communication table, email/SMS adapters, retries). Author bounded plan
+docs/plans/008-automation-communication.md then execute P8-01.. .
+
+## Phase 7 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 6 checkpoint (2026-08-27) - ACCEPTED
 
