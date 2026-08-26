@@ -1,7 +1,44 @@
-# AI Handoff - Phase 8 complete, Phase 9 next
+# AI Handoff - Phase 9 complete, Phase 10 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 9 checkpoint (2026-08-27) - ACCEPTED (external Google behavior NOT VERIFIED)
+
+Phase 9 (Google Calendar Integration) complete through commit `76f29ff`
+(P9-05 calendar settings UI) with `docs/plans/009-google-calendar.md` P9-01..P9-06
+all `[x]`.
+
+- P9-01 `bce6a9d` calendar.manage permission (OWNER/ADMIN/DENTIST only).
+  P9-02 `8a05af9` calendar_integrations (opaque google_account_ref, privacy
+  modes, connection status) + calendar_event_links (stable external_event_id,
+  unique appt+provider+op) + calendar_sync_jobs (durable queue, deterministic
+  idempotency key). P9-03 `07835ee` sync RPCs (enqueue/list/claim/ack/fail/
+  connect/disconnect/list integrations) + has_calendar_permission_at_branch +
+  private enqueue internal + deferred appointment_calendar_sync_trigger
+  (CREATE on insert for ASSIGNED providers with CONNECTED integration, CANCEL
+  on cancel, UPDATE on reschedule; in-transaction enqueue only).
+  P9-04 `951ec51` src/lib/calendar services + adapter abstraction (deterministic
+  test adapter, stable `cal-<appt>-<provider>` id → no-duplicate; free/busy
+  returns busy ranges only — no event details) + worker. P9-05 `76f29ff`
+  /settings/calendar UI (integrations + sync jobs, connect/disconnect/re-sync,
+  no event titles, 44px).
+- Acceptance criteria met: EMR correct when adapter down (failure → job FAILED,
+  appointment untouched); free/busy never exposes personal event details
+  (type + tests); retry no-duplicate (stable id + unique link);
+  tokens never reach browser (opaque ref, never returned by RPCs, no logging).
+- Inventory: 80 migration files, 28 grant terminals, 110 approved privileges;
+  46 pgTAP suites + 4 concurrency probes; tables 42, functions 139,
+  security-definer 117; unit 71 files / 750 tests; scripts 279.
+- **NOT VERIFIED / EXTERNAL DEPENDENCY:** real Google OAuth + Calendar API
+  adapter. Only the provider-neutral interface and deterministic local test
+  adapter are implemented. Cloud TEST is the deployment gate.
+
+**Next:** Phase 10 (Specialist / On-call Workflow) per
+docs/MASTER_PRODUCT_PLAN.md §Phase 10. Author bounded plan
+docs/plans/010-specialist-oncall.md then execute P10-01.. .
+
+## Phase 9 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 8 checkpoint (2026-08-27) - ACCEPTED
 

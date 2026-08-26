@@ -41,11 +41,11 @@ this phase and Cloud TEST remains the deployment gate.
 
 ## Tasks
 
-- [ ] **P9-01: Calendar permission contract**
+- [x] **P9-01: Calendar permission contract**
   - `calendar.manage` permission row + matrix; `PermissionCode` + policy test;
     pgTAP proving only OWNER/ADMIN/DENTIST.
 
-- [ ] **P9-02: Calendar integration + sync-job + link schema**
+- [x] **P9-02: Calendar integration + sync-job + link schema**
   - `calendar_integrations`: org, provider composite FK, google_account_ref
     (opaque, server-side), calendar_id (bounded), privacy_mode
     (HIGH_PRIVACY/BALANCED/DETAILED default HIGH_PRIVACY), connection_status
@@ -60,7 +60,7 @@ this phase and Cloud TEST remains the deployment gate.
     external_event_id nullable, idempotency via stable external_event_id,
     created_at). RLS + zero grants + indexes. pgTAP.
 
-- [ ] **P9-03: Sync RPCs + appointment automation trigger**
+- [x] **P9-03: Sync RPCs + appointment automation trigger**
   - `private.has_calendar_permission_at_branch(acting_branch_id, code)` helper.
   - `enqueue_calendar_sync` (calendar.manage gated): enqueue a sync job for an
     appointment+provider with operation, idempotent via stable key.
@@ -74,7 +74,7 @@ this phase and Cloud TEST remains the deployment gate.
     connected integration; on reschedule → UPDATE; on cancel → CANCEL. Enqueue
     is in-transaction only. pgTAP.
 
-- [ ] **P9-04: Calendar adapter + sync worker**
+- [x] **P9-04: Calendar adapter + sync worker**
   - `src/lib/calendar/adapters/`: `CalendarAdapter` interface
     (createEvent/updateEvent/cancelEvent/getFreeBusy), deterministic `test`
     adapter (stable external_event_id per appointment+provider — proves
@@ -88,13 +88,13 @@ this phase and Cloud TEST remains the deployment gate.
     failure → job FAILED, appointment untouched), free/busy returns only busy
     ranges (no event details), privacy mode title selection.
 
-- [ ] **P9-05: Calendar status UI**
+- [x] **P9-05: Calendar status UI**
   - Minimal `/settings/calendar` page (OWNER/ADMIN/DENTIST): per-provider
     integration status (connected/error), sync job failures with Retry/actions,
     no Google event details shown. Dense table/phone list. Server actions
     recheck calendar.manage + branch. Tests.
 
-- [ ] **P9-06: Integration verification + phase review**
+- [x] **P9-06: Integration verification + phase review**
 
 ## Explicitly deferred
 
