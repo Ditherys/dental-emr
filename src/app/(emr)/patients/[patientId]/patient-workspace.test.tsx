@@ -17,9 +17,16 @@ const actions = vi.hoisted(() => ({
   updatePatientAction: vi.fn(),
   updateRelationshipAction: vi.fn(),
 }));
+const fileActions = vi.hoisted(() => ({
+  archiveFileAction: vi.fn(),
+  confirmFileUploadAction: vi.fn(),
+  createFileUploadAction: vi.fn(),
+  downloadUrlAction: vi.fn(),
+}));
 const router = { refresh: vi.fn() };
 
 vi.mock("./actions", () => actions);
+vi.mock("./files/actions", () => fileActions);
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import { PatientWorkspace } from "./patient-workspace";

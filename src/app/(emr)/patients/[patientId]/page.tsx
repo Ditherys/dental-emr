@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasSharedPatientPermission } from "@/lib/authorization/policy";
+import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
 
@@ -26,10 +27,18 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   try { await requireBranchAccess({ branchId: actingBranchId }); }
   catch (error) { if (error instanceof AuthorizationError) return <PermissionDenied description="This patient record is unavailable." />; throw error; }
   let patient;
-  try { patient = await getPatient((await params).patientId, actingBranchId); }
+  const patientId = (await params).patientId;
+  try { patient = await getPatient(patientId, actingBranchId); }
   catch (error) {
     if (error instanceof AuthorizationError || error instanceof PatientServiceError && (error.code === "NOT_AUTHORIZED" || error.code === "NOT_FOUND")) return <PermissionDenied description="This patient record is unavailable." />;
     throw error;
   }
-  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} />;
+  let files: Awaited<ReturnType<typeof listPatientFiles>> = [];
+  let filesUnavailable = false;
+  try { files = await listPatientFiles({ actingBranchId, patientId }); }
+  catch (error) {
+    if (!(error instanceof FileServiceError || error instanceof AuthorizationError)) throw error;
+    filesUnavailable = true;
+  }
+  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} />;
 }

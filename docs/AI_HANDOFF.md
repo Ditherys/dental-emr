@@ -1,9 +1,72 @@
-# AI Handoff - P3-09 local integration verification
+# AI Handoff - P4-08 file attachment UI foundation
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
+
+- P4-08 (this checkpoint) adds the patient Files section UI on top of the
+  P4-07 services. New route-local files under
+  `src/app/(emr)/patients/[patientId]/files/`:
+  - `actions.ts`: `createFileUploadAction`, `confirmFileUploadAction`
+    (demographics-write + branch recheck), `downloadUrlAction`
+    (demographics-read + branch recheck), `archiveFileAction`
+    (demographics-write + branch recheck; AAL2 re-enforced inside the service).
+    Each validates untrusted input with the existing `@/lib/files/schema`
+    Zod schemas BEFORE authorization, maps `AuthorizationError` /
+    `FileServiceError` to safe result codes (`FileActionFailure`), and never
+    accepts org ids from the client; only the workflow actingBranchId is passed
+    and re-verified via `requireBranchAccess`. No revalidatePath: mirrors the
+    established `[patientId]/actions.ts` pattern where mutations return result
+    objects and the client calls `router.refresh()`.
+  - `files-section.tsx`: section styled exactly like sibling workspace
+    sections; dense semantic table on desktop/tablet (`hidden md:block`) and a
+    compact article list on phones (`md:hidden`); columns Type (mime) / Size
+    (human-readable, "Not verified" while pending) / Uploaded (ISO date only,
+    no locale-dependent formatting to avoid hydration drift) / Status.
+    Download appears only for `available` rows (presigned URL is used via a
+    transient detached anchor and never rendered into DOM); Archive appears
+    for `available`+`pending` behind an AlertDialog confirmation naming the
+    AAL2 requirement (BranchArchiveDialog pattern: preventDefault close-guard,
+    deliberate close on success). All row/header controls are >=44px
+    (`min-h-11`). Empty state and explicit load-failure alert included; no
+    invented KPIs/cards/charts.
+  - `upload-file-dialog.tsx`: controlled Dialog matching the workspace dialog
+    composition; file input shows detected mime type ("Type: ..."), client-side
+    oversize guard against MAX_FILE_SIZE_BYTES (UX only), then the exact flow:
+    createFileUploadAction -> browser fetch PUT directly to MinIO presigned URL
+    (Content-Type header set to match the SigV4 signature) ->
+    confirmFileUploadAction -> router.refresh(). In-flight transfer is aborted
+    on dialog close (cancel-safe); failures surface retryable safe messages
+    and never call confirm without a verified PUT. NOTE: MinIO CORS for
+    browser PUTs lands in P4-09 per plan; until then the PUT may fail in
+    browsers and surfaces as the safe retryable transfer error by design.
+- Page integration: `[patientId]/page.tsx` server-renders the bounded list via
+  `listPatientFiles({actingBranchId, patientId})` (RPC itself LIMIT 200)
+  after its existing read-permission checks; a list failure degrades ONLY the
+  Files section to an explicit alert instead of failing the whole record view.
+  The section renders for any actor who passed the page's live
+  `patient.demographics.read` checks; write controls appear only when the same
+  `hasSharedPatientPermission(state, "patient.demographics.write")` predicate
+  used by all other mutation controls is true.
+- Tests: `files/actions.test.ts` proves validate-before-authorize ordering,
+  exact permission names, branch recheck, service input binding, and safe code
+  mapping; `files/files-section.test.tsx` (jsdom, no network - fetch is
+  stubbed) covers bounded-list rendering incl. pending/archived states,
+  download hidden for non-available rows, touch-target classes, archive
+  confirmation + failure paths, upload happy path asserting the
+  create->PUT->confirm ordering and Content-Type header, transfer-failure
+  fail-closed behavior, client oversize rejection, denial messaging,
+  empty/load-failure states, and Escape-close. `patient-workspace.test.tsx`
+  now also mocks `./files/actions` so unit tests never import the server-only
+  service graph.
+- P4-08 verification (2026-08-26): focused `npx vitest run
+  "src/app/(emr)/patients" "src/lib/files"` 9 files / 60 tests pass; full
+  `npx vitest run` 52 files / 520 tests pass; `npm run lint` clean;
+  `npm run typecheck` clean; `npm run build` succeeds (APP_ENVIRONMENT did not
+  block; all routes compiled). Browser end-to-end upload/download/archive
+  against local MinIO remains P4-09 integration verification scope.
+
 
 - P4-07 adds server-only file services (`src/lib/files/`: Zod input/row schemas,
   safe error mapping incl. mechanical `STORAGE_*` codes, service wrappers) wiring
