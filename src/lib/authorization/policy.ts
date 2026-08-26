@@ -12,6 +12,8 @@ export const foundationPermissionCodes = [
   "patient.demographics.write",
   "provider.read",
   "provider.manage",
+  "appointment.read",
+  "appointment.write",
   "analytics.view",
 ] as const;
 

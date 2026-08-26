@@ -91,6 +91,21 @@ describe("analytics permission vocabulary", () => {
   });
 });
 
+describe("appointment permission vocabulary", () => {
+  it("exposes the two bounded appointment permission codes", () => {
+    const appointmentRead: PermissionCode = "appointment.read";
+    const appointmentWrite: PermissionCode = "appointment.write";
+
+    // @ts-expect-error appointment permissions are a closed contract.
+    const unknownAppointmentPermission: PermissionCode = "appointment.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([appointmentRead, appointmentWrite]),
+    );
+    expect(unknownAppointmentPermission).toBe("appointment.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);
