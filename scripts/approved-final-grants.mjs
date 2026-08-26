@@ -367,6 +367,9 @@ const PATIENT_FILE_METADATA_OBJECT_KEY_GRANTS_MIGRATION =
 const PATIENT_ATTRIBUTION_RPCS_GRANTS_MIGRATION =
   "20260826011401_patient_attribution_rpcs_grants.sql";
 
+const PATIENT_REFERRAL_RPCS_GRANTS_MIGRATION =
+  "20260826011601_patient_referral_rpcs_grants.sql";
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -487,6 +490,35 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         privilege: "execute",
         columns: [],
         reason: "Restores the exact existing patient-detail grant after P5-03 recreates its bounded projection to include attribution catalog labels and referrer snapshot data under the existing demographics-read authorization boundary.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: PATIENT_REFERRAL_RPCS_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.create_patient_referral(uuid,uuid,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason: "The sole referral creation boundary derives the tenant and actor from an active acting branch, requires live demographics-write, accepts only a bounded allowlisted referral document, and appends one opaque patient-linked audit event atomically.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.update_patient_referral_status(uuid,uuid,integer,text)",
+        privilege: "execute",
+        columns: [],
+        reason: "The sole referral lifecycle boundary derives the active branch tenant and actor, requires live demographics-write, locks the tenant-scoped optimistic version, permits only reviewed forward transitions, and appends one opaque patient-linked audit event atomically.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.list_patient_referrals(uuid,uuid,boolean)",
+        privilege: "execute",
+        columns: [],
+        reason: "The bounded referral read boundary derives the tenant from an active acting branch, requires live demographics-read, returns only a deterministic 200-row administrative projection, and writes no audit event.",
       },
     ]),
   }),

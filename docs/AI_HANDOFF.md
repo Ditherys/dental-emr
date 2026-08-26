@@ -1,11 +1,38 @@
-# AI Handoff - P5-04 patient referral foundation
+# AI Handoff - P5-05 patient referral RPCs
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
 
-- **P5-04 is implemented but not committed.** `20260826011500_patient_referrals.sql`
+- **P5-05 is implemented but not committed.** `20260826011600_patient_referral_rpcs.sql`
+  adds the three authenticated `SECURITY DEFINER` referral boundaries and
+  `20260826011601_patient_referral_rpcs_grants.sql` is their sole terminal
+  grant. Each derives the organization from the active acting branch and never
+  accepts client organization/patient tenancy fields. Create accepts only a
+  bounded allowlisted JSON document and always creates `RECEIVED`; status
+  mutation locks the tenant referral/version and permits only
+  `RECEIVED -> ACTIVE/CANCELLED` and `ACTIVE -> COMPLETED/CANCELLED`; list is a
+  deterministic 200-row administrative projection. Mutations require live
+  `patient.demographics.write`, reads require live
+  `patient.demographics.read`, safe errors cover denied/missing/foreign rows,
+  and each successful mutation atomically writes one `{}`-metadata referral
+  audit event. No AAL2 or provider-management exception was introduced.
+- `patient_referral_rpcs.test.sql` is registered in local/Cloud TEST runners.
+  It proves exact ACLs, empty definer paths, owner positive flow, billing,
+  anonymous-equivalent ACL, and foreign denials, allowlisted input, stale
+  versions, transition restrictions, audit counts/rollback, and no list-read
+  audit. The privilege and database-suite inventories now report 53 migrations,
+  98 functions, 79 security-definer functions, 20 grant terminals, 82 approved
+  final privileges, 65 browser-reachable grants, and 27 pgTAP suites.
+- P5-05 local verification (2026-08-26): fresh `db:start:local` /
+  `db:reset:local` / `db:provision:local` and `test:db:local` passed all 27
+  pgTAP suites plus three concurrency probes. `npm run security:migrations`,
+  `npm run lint`, `npm run typecheck`, and `npm run test:unit` (53 files, 561
+  tests) passed. No hosted or production target was used; the pre-existing
+  untracked `.playwright-cli/` directory remains untouched.
+
+- **P5-04 is committed in `4493fcc`.** `20260826011500_patient_referrals.sql`
   adds only the referral foundation table and no RPCs: requested `org_id`,
   tenant-safe composite patient FK, `IN`/`OUT` directions, bounded
   `RECEIVED`/`ACTIVE`/`COMPLETED`/`CANCELLED` status, nullable required
