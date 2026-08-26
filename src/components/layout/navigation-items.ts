@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, Globe, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -84,6 +84,12 @@ export const navigationItems = [
     href: "/settings/calendar",
     icon: CalendarSync,
     requiredPermission: "calendar.manage",
+  },
+  {
+    label: "Website",
+    href: "/settings/site",
+    icon: Globe,
+    requiredPermission: "site.manage",
   },
 ] as const satisfies ReadonlyArray<{
   label: string;

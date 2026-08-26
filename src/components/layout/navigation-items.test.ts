@@ -55,4 +55,10 @@ describe("permission-aware navigation", () => {
       requiredPermission: "specialist.request",
     });
   });
+
+  it("declares site manage as the capability for the Website link", () => {
+    expect(navigationItems.find(({ href }) => href === "/settings/site")).toMatchObject({
+      requiredPermission: "site.manage",
+    });
+  });
 });
