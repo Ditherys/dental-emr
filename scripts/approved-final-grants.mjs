@@ -404,6 +404,18 @@ const queueRpcGrants = Object.freeze([
   "public.list_queue(uuid,boolean)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only walk-in/queue boundary. Walk-in creation inserts a queue entry, never a fake appointment, and queue transitions never touch appointment rows. Functions derive the tenant and actor from an active authenticated acting branch, require live queue.manage (mutations) or queue.read (list), validate forward-only status transitions under an optimistic version, and append one atomic audit event per mutation while the list writes none." })));
 
+const COMMUNICATION_RPCS_GRANTS_MIGRATION =
+  "20260827011201_communication_rpcs_grants.sql";
+
+const communicationRpcGrants = Object.freeze([
+  "public.enqueue_communication(uuid,uuid,text,text,text,text,text,timestamptz)",
+  "public.cancel_communication(uuid,uuid,integer)",
+  "public.list_communications(uuid,uuid,text)",
+  "public.acknowledge_communication(uuid,uuid,text)",
+  "public.fail_communication(uuid,uuid)",
+  "public.claim_due_communications(uuid,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only communication/reminder boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live communication.send (enqueue/cancel/acknowledge/fail/claim) or communication.view (bounded masked list). Enqueues are durable INSERTs inside the appointment transaction so external sending never blocks the appointment save; cancellation/rescheduling cancels obsolete queued jobs; the worker claims due jobs with FOR UPDATE SKIP LOCKED and acknowledges or fails them; the list never returns a full recipient." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -602,6 +614,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: QUEUE_RPCS_GRANTS_MIGRATION,
     grants: queueRpcGrants,
+  }),
+  Object.freeze({
+    file: COMMUNICATION_RPCS_GRANTS_MIGRATION,
+    grants: communicationRpcGrants,
   }),
 ]);
 
