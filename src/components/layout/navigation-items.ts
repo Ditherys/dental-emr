@@ -1,4 +1,4 @@
-import { BarChart3, Building2, ClipboardList, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, ClipboardList, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -25,6 +25,12 @@ export const navigationItems = [
     href: "/providers",
     icon: Stethoscope,
     requiredPermission: "provider.read",
+  },
+  {
+    label: "Schedule",
+    href: "/schedule",
+    icon: CalendarDays,
+    requiredPermission: "appointment.read",
   },
   {
     label: "Specialties",
