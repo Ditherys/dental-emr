@@ -106,6 +106,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "file_read_rpcs.test.sql",
   "file_archive_rpc.test.sql",
   "communication_permission_contract.test.sql",
+  "communications_foundation.test.sql",
   "acquisition_catalogs.test.sql",
   "acquisition_report.test.sql",
   "appointment_foundation.test.sql",
