@@ -1,9 +1,40 @@
-# AI Handoff - Phase 6 scheduling in progress
+# AI Handoff - Phase 6 complete, Phase 7 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
-## Phase 6 checkpoint (2026-08-27) - IN PROGRESS
+## Phase 6 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 6 (Scheduling Engine) is complete through commit `72fbc43` (P6-09
+calendar UI) with `docs/plans/006-scheduling-engine.md` P6-01..P6-10 all `[x]`.
+
+- P6-01 `e3dd467` appointment.read/write permission contract. P6-02 `14b28bb`
+  resource_types/branch_resources/resource_unavailability. P6-03 `d0a00db`
+  provider_availability_rules/provider_schedule_exceptions. P6-04 `ae4dcc5`
+  appointments + appointment_providers + appointment_resources +
+  appointment_status_history (3 status dimensions). P6-05 `d752c8e`
+  provider_reservations + resource_reservations with partial GiST EXCLUDE
+  (btree_gist became the sole approved extension). P6-06 `59b5774` scheduling
+  RPCs (create/reschedule/cancel/status/list) + private
+  has_appointment_permission_at_branch + extended audit metadata allowlist +
+  concurrency probe. P6-07 `b5b2565` list_availability/find_available_slots.
+  P6-08 `7b36ee4` src/lib/scheduling services. P6-09 `72fbc43` /schedule
+  calendar UI + actions.
+- Inventory: 66 migration files, 24 grant terminals, 92 approved privileges,
+  1 approved extension (btree_gist); 36 pgTAP suites + 4 concurrency probes
+  (incl. appointment double-booking exclusion); tables 37, functions 113,
+  security-definer 91; unit 58 files / 613 tests; scripts 279.
+- Phase gate verification all green: db reset/provision/test, security:
+  migrations/secrets/audit, unit, lint, typecheck, build (`/schedule` emitted).
+- Acceptance criteria met: provider double-booking rejected (exclusion +
+  concurrency test), resource conflicts prevented, appointment exists without
+  provider while AWAITING_SPECIALIST, reschedule history via audit metadata +
+  status history, cancellation releases reservation slots (proven in pgTAP).
+
+**Next:** Phase 7 (Walk-in & Queue) per docs/MASTER_PRODUCT_PLAN.md §Phase 7.
+Author a bounded plan (docs/plans/007-walkin-queue.md) then execute P7-01.. .
+
+## Phase 6 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 Phase 6 (Scheduling Engine) plan authored at `docs/plans/006-scheduling-engine.md`
 with tasks P6-01..P6-10. Committed so far:

@@ -51,12 +51,12 @@ with preserved history.
 
 ## Tasks
 
-- [ ] **P6-01: Scheduling permission contract**
+- [x] **P6-01: Scheduling permission contract**
   - Permission catalog rows `appointment.read` / `appointment.write` with stable
     descriptions; role_permissions per the matrix above; `PermissionCode` +
     policy test; pgTAP proving exactly the matrix (positive and negative).
 
-- [ ] **P6-02: Resource foundation schema**
+- [x] **P6-02: Resource foundation schema**
   - Migrations: `resource_types` (org, code, name, schedulable),
     `branch_resources` (org, branch, resource_type, name, status, serial,
     notes, online_booking_eligible, version, created/archived), and
@@ -64,7 +64,7 @@ with preserved history.
     RLS enabled, zero base grants, access-path indexes, tenant-safe composite
     FKs, CHECK ends_at > starts_at. pgTAP.
 
-- [ ] **P6-03: Provider availability schema**
+- [x] **P6-03: Provider availability schema**
   - Migrations: `provider_availability_rules` (org, provider, branch, weekday,
     starts_at_local, ends_at_local, valid_from, valid_to, active) and
     `provider_schedule_exceptions` (org, provider, branch, exception_type
@@ -72,7 +72,7 @@ with preserved history.
     created_by). Provider must belong to the org; branch must belong to the
     org. RLS + zero base grants + indexes. pgTAP.
 
-- [ ] **P6-04: Appointment core schema**
+- [x] **P6-04: Appointment core schema**
   - `appointments` (org, branch, patient composite FK, procedure, title,
     starts_at, ends_at, scheduling_status, confirmation_status,
     encounter_status, booking_channel_code ref, chief_complaint,
@@ -85,7 +85,7 @@ with preserved history.
     old_value, new_value, changed_by, reason).
   - All tenant-safe composite FKs, RLS, zero base grants, indexes. pgTAP.
 
-- [ ] **P6-05: Reservation ledgers + exclusion constraints**
+- [x] **P6-05: Reservation ledgers + exclusion constraints**
   - `provider_reservations` and `resource_reservations` with a maintained
     `timespan tstzrange` and a **partial GiST EXCLUDE USING gist** on
     (provider_id WITH =, timespan WITH &&) WHERE reservation_status = 'ACTIVE'
@@ -94,7 +94,7 @@ with preserved history.
     exclusion constraint rejects overlap and allows back-to-back `[start,end)`
     ranges.
 
-- [ ] **P6-06: Appointment RPCs**
+- [x] **P6-06: Appointment RPCs**
   - `create_appointment` / `reschedule_appointment` / `cancel_appointment` /
     `update_appointment_status` / `list_appointments`. SECURITY DEFINER, empty
     search paths, org derived from active acting branch, appointment.write
@@ -112,18 +112,18 @@ with preserved history.
     positive/negative + concurrency probes (double booking, resource conflict,
     release-on-cancel).
 
-- [ ] **P6-07: Scheduling read RPCs**
+- [x] **P6-07: Scheduling read RPCs**
   - `list_availability` (provider schedule for a window), `find_available_slots`
     (bounded slot enumeration honoring availability, exceptions, buffers,
     existing reservations), `list_appointments_for_calendar` (bounded day/week
     projection). appointment.read gated, org/branch scoped, deterministic,
     bounded limits, no audit. Terminal grants. pgTAP.
 
-- [ ] **P6-08: Server services**
+- [x] **P6-08: Server services**
   - `src/lib/scheduling/` Zod schemas/types/errors/service for all scheduling
     RPCs, server-only, offline mocked unit tests.
 
-- [ ] **P6-09: Calendar UI**
+- [x] **P6-09: Calendar UI**
   - Private `/schedule` page with a day/week view (semantic grid), dense
     appointments, appointment detail/create/reschedule/cancel dialogs, provider
     and branch filters; server actions revalidate appointment.write + acting
