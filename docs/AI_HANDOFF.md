@@ -1,9 +1,32 @@
-# AI Handoff - P5-05 patient referral RPCs
+# AI Handoff - P5-06 acquisition server services
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
+
+- **P5-06 is implemented but not committed.** `src/lib/acquisition/` adds
+  server-only Zod schemas, DTO types, safe error mapping, and authenticated
+  Supabase RPC services for catalog reads, attribution update, and referral
+  create/status/list. Every input and RPC DTO is validated; no caller supplies
+  an organization value. Offline mocked-Supabase unit coverage proves exact RPC
+  contracts, input/mass-assignment rejection, DTO mapping, and safe errors.
+- P5-06 found no existing safe catalog-read RPC: base catalog table privileges
+  are deliberately zero. `20260826011700_acquisition_catalog_reads.sql` adds
+  only `list_acquisition_sources(uuid)` and `list_booking_channels(uuid)`. Both
+  are authenticated `SECURITY DEFINER` reads with empty paths, derive the org
+  from an active acting branch, require live `patient.demographics.read`, return
+  active bounded DTOs only, and expose no org field. `20260826011701` grants
+  EXECUTE only to `authenticated`; the approved privilege registry and static
+  inventory tests now reflect 55 migrations, 100 functions, 81 definers, 21
+  grant terminals, 84 final privileges, and 67 browser-reachable grants.
+- P5-06 verification (2026-08-26): focused acquisition Vitest plus full
+  `npm run test:unit` passed (54 files, 566 tests); `npm run lint`, `npm run
+  typecheck`, `npm run security:migrations`, `npm run security:secrets`, and
+  `npm run security:audit` passed. Fresh synthetic-only local reset/provision
+  and `test:db:local` passed 27 pgTAP suites plus three concurrency probes. No
+  hosted or production target was used. Pre-existing untracked `.playwright-cli/`
+  artifacts remain untouched.
 
 - **P5-05 is implemented but not committed.** `20260826011600_patient_referral_rpcs.sql`
   adds the three authenticated `SECURITY DEFINER` referral boundaries and

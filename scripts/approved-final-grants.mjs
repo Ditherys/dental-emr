@@ -370,6 +370,9 @@ const PATIENT_ATTRIBUTION_RPCS_GRANTS_MIGRATION =
 const PATIENT_REFERRAL_RPCS_GRANTS_MIGRATION =
   "20260826011601_patient_referral_rpcs_grants.sql";
 
+const ACQUISITION_CATALOG_READS_GRANTS_MIGRATION =
+  "20260826011701_acquisition_catalog_reads_grants.sql";
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -519,6 +522,27 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         privilege: "execute",
         columns: [],
         reason: "The bounded referral read boundary derives the tenant from an active acting branch, requires live demographics-read, returns only a deterministic 200-row administrative projection, and writes no audit event.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: ACQUISITION_CATALOG_READS_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.list_acquisition_sources(uuid)",
+        privilege: "execute",
+        columns: [],
+        reason: "The bounded acquisition-source catalog read derives the organization from an active authenticated acting branch, requires live patient.demographics.read, exposes only active global-or-same-tenant source DTOs, and leaves the zero base-table grant boundary intact.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.list_booking_channels(uuid)",
+        privilege: "execute",
+        columns: [],
+        reason: "The bounded booking-channel catalog read derives authorization from an active authenticated acting branch, requires live patient.demographics.read, returns only active global channel DTOs, and leaves the zero base-table grant boundary intact.",
       },
     ]),
   }),

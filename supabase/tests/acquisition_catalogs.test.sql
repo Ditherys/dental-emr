@@ -505,6 +505,98 @@ set local role service_role;
 select extensions.throws_ok($$select * from public.booking_channels$$, '42501', null, 'service_role cannot bypass the revoked catalog ACLs');
 reset role;
 
+select extensions.ok(
+  has_function_privilege('authenticated', 'public.list_acquisition_sources(uuid)', 'execute')
+  and has_function_privilege('authenticated', 'public.list_booking_channels(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.list_acquisition_sources(uuid)', 'execute')
+  and not has_function_privilege('service_role', 'public.list_booking_channels(uuid)', 'execute'),
+  'only authenticated has the exact bounded catalog read RPC grants'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from pg_proc
+    where oid in (
+      'public.list_acquisition_sources(uuid)'::regprocedure,
+      'public.list_booking_channels(uuid)'::regprocedure
+    )
+      and prosecdef
+      and proconfig = array['search_path=""']::text[]
+  ),
+  2,
+  'catalog read definers pin an empty search path'
+);
+select extensions.is(
+  pg_get_function_result('public.list_acquisition_sources(uuid)'::regprocedure),
+  'TABLE(source_id uuid, code text, name text, category text)',
+  'the acquisition catalog RPC exposes exactly its bounded source projection'
+);
+select extensions.is(
+  pg_get_function_result('public.list_booking_channels(uuid)'::regprocedure),
+  'TABLE(code text, name text)',
+  'the booking catalog RPC exposes exactly its bounded channel projection'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000001', true);
+select extensions.is(
+  (select count(*)::integer from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')),
+  18,
+  'the authenticated catalog RPC returns active global plus same-organization sources only'
+);
+select extensions.ok(
+  exists (
+    select 1
+    from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')
+    where source_id = 'b7500000-0000-0000-0000-000000000001'
+      and code = 'P501_CUSTOM'
+      and name = 'P501 Custom Source'
+      and category = 'OTHER'
+  )
+  and not exists (
+    select 1
+    from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')
+    where source_id = 'b7500000-0000-0000-0000-000000000002'
+  ),
+  'Org A receives only its own custom acquisition source through the RPC'
+);
+select extensions.ok(
+  not exists (
+    select 1
+    from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')
+    where code = 'P501_RETIRED_GLOBAL'
+  ),
+  'the acquisition RPC excludes inactive sources'
+);
+select extensions.is(
+  (select count(*)::integer from public.list_booking_channels('b7300000-0000-0000-0000-000000000001')),
+  9,
+  'the authenticated catalog RPC returns active global booking channels'
+);
+select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000002', true);
+select extensions.ok(
+  exists (
+    select 1
+    from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000002')
+    where source_id = 'b7500000-0000-0000-0000-000000000002'
+      and code = 'P501_CUSTOM'
+      and name = 'P501 Custom B'
+      and category = 'REFERRAL'
+  )
+  and not exists (
+    select 1
+    from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000002')
+    where source_id = 'b7500000-0000-0000-0000-000000000001'
+  ),
+  'Org B receives only its own custom acquisition source through the RPC'
+);
+select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000003', true);
+select extensions.throws_ok(
+  $$select * from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')$$,
+  '42501', 'not authorized', 'the catalog RPC rejects a user without live branch read permission'
+);
+reset role;
+
 -- Test-only grants make the SELECT policies independently observable. They are
 -- transaction-local and disappear with the final rollback.
 grant execute on function private.has_shared_patient_permission(uuid, text)
