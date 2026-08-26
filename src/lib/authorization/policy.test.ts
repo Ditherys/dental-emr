@@ -148,6 +148,18 @@ describe("calendar permission vocabulary", () => {
   });
 });
 
+describe("specialist permission vocabulary", () => {
+  it("exposes the specialist request permission code", () => {
+    const specialistRequest: PermissionCode = "specialist.request";
+
+    // @ts-expect-error specialist permissions are a closed contract.
+    const unknownSpecialistPermission: PermissionCode = "specialist.manage";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([specialistRequest]));
+    expect(unknownSpecialistPermission).toBe("specialist.manage");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

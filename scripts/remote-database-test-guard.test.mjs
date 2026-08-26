@@ -244,7 +244,7 @@ describe("registered database suites", () => {
 
   // An authored-but-unregistered suite reads as coverage while proving nothing.
   it("runs every suite that exists, and every registered suite exists", () => {
-    const expectedSuites = [
+const expectedSuites = [
       "acquisition_catalogs.test.sql",
       "acquisition_report.test.sql",
       "appointment_foundation.test.sql",
@@ -275,7 +275,7 @@ describe("registered database suites", () => {
       "patient_reads.test.sql",
       "patient_referral_rpcs.test.sql",
       "patient_referrals_foundation.test.sql",
-"procedure_foundation.test.sql",
+      "procedure_foundation.test.sql",
       "provider_availability.test.sql",
       "provider_foundation.test.sql",
       "provider_permission_contract.test.sql",
@@ -288,6 +288,7 @@ describe("registered database suites", () => {
       "schema.test.sql",
       "seed_security_fixtures.test.sql",
       "session_authorization_boundaries.test.sql",
+      "specialist_permission_contract.test.sql",
       "workforce_invitations.test.sql",
     ];
     const onDisk = readdirSync(testsDirectory)
