@@ -2,8 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `subagent-driven-development` (recommended) or `executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Proposed — requires independent review and explicit project-owner
-approval before execution.
+**Status:** Executed 2026-08-26 under explicit project-owner authorization (one-pass SDD directive). Phase review completed with recorded deferred dispositions (see docs/AI_HANDOFF.md).
 
 **Goal:** Establish the object-storage foundation and patient file attachment
 schema so later phases can upload, retrieve, authorize, and audit patient files.
@@ -67,51 +66,51 @@ STORAGE_REGION=auto
 
 ## Tasks
 
-- [ ] **P4-01: Storage abstraction layer**
+- [x] **P4-01: Storage abstraction layer**
   - Create `src/lib/storage/` with S3-compatible storage adapter
   - Implement `put`, `get`, `delete`, `createUploadUrl`, `createDownloadUrl`
   - Zod-validated configuration from environment variables
   - Unit tests for the adapter interface
 
-- [ ] **P4-02: MinIO Docker configuration**
+- [x] **P4-02: MinIO Docker configuration**
   - Add MinIO to local Docker infrastructure (Docker Compose or Supabase extension)
   - Document local MinIO setup and lifecycle
   - Verify MinIO runs alongside local Supabase
 
-- [ ] **P4-03: File metadata schema**
+- [x] **P4-03: File metadata schema**
   - Migration: `file_objects` table (org FK, patient FK, file UUID, object key, MIME type, size, checksum, uploader, timestamps, status)
   - RLS policies: org-scoped, patient-scoped
   - pgTAP tests for tenant isolation and FK constraints
 
-- [ ] **P4-04: File upload RPCs**
+- [x] **P4-04: File upload RPCs**
   - `create_file_upload`: generates presigned URL, returns file metadata
   - `confirm_file_upload`: confirms upload, updates status, writes audit event
   - Both require `provider.manage` or `demographics_write` permission
   - pgTAP tests for authorization and audit
 
-- [ ] **P4-05: File access RPCs**
+- [x] **P4-05: File access RPCs**
   - `get_file_download_url`: generates presigned GET URL after authorization check
   - `list_patient_files`: returns file metadata for a patient (org-scoped)
   - Both require appropriate read permission
   - pgTAP tests for tenant isolation and authorization
 
-- [ ] **P4-06: File deletion/archive**
+- [x] **P4-06: File deletion/archive**
   - `archive_file`: soft-delete file metadata, optionally delete from object storage
   - Requires AAL2
   - pgTAP tests for lifecycle and authorization
 
-- [ ] **P4-07: Server-only file services**
+- [x] **P4-07: Server-only file services**
   - File service layer with Zod validation
   - Server-only adapters for upload, access, and deletion flows
   - Unit tests for service layer
 
-- [ ] **P4-08: File attachment UI foundation**
+- [x] **P4-08: File attachment UI foundation**
   - File upload component for patient workspace
   - File list component showing metadata
   - File download action with presigned URL
   - Mobile/desktop responsive
 
-- [ ] **P4-09: Integration verification**
+- [x] **P4-09: Integration verification**
   - Local reconstruction with MinIO
   - pgTAP tests pass
   - Unit tests pass

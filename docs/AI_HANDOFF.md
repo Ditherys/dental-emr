@@ -1,11 +1,52 @@
-# AI Handoff - P4-08 file attachment UI foundation
+# AI Handoff - Phase 4 complete (P4-09 integration verification)
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
 
-- P4-08 (this checkpoint) adds the patient Files section UI on top of the
+- **Phase 4 (patient file attachment foundation) is functionally complete and
+  phase-reviewed.** All plan tasks P4-01..P4-09 are delivered; Cloud TEST
+  remains the mandatory pre-production gate before any production use.
+- P4-09 (this checkpoint) closed the local integration loop:
+  - MinIO browser CORS is pinned at container create via `MINIO_API_CORS_*`
+    env vars (this MinIO release removed the S3 bucket-CORS API — verified
+    live `PutBucketCors` returns NotImplemented). `npm run storage:start:local`
+    recreates a legacy/unpinned container once (volume data kept), then proves
+    an OPTIONS preflight for origin `http://127.0.0.1:3000` before PASS.
+  - `npm run storage:smoke:local` runs a guarded live flow against real MinIO:
+    put -> stat -> get -> presign (structure only; URLs never printed) ->
+    browser-style OPTIONS + PUT + GET from the app origin -> delete ->
+    stat-fails. It uses `scripts/local-node-ts-loader.mjs` so plain Node can
+    import the real server-only adapter via the existing vitest stub.
+- Phase review found and fixed one real cross-boundary defect: the page CSP
+  `connect-src` did not include the storage endpoint, so in-browser presigned
+  PUTs were blocked despite the CORS smoke passing from Node.
+  `src/lib/security/browser-policy.ts` now appends a validated storage origin
+  derived from `STORAGE_ENDPOINT`: exact-origin-only (no path/query/creds),
+  production requires HTTPS, and the local posture (`appEnvironment=development`
+  + `supabaseProjectId=local`) accepts ONLY exactly `http://127.0.0.1:9000`.
+  Proven by new browser-policy tests and `npm run build` with `.env.local`.
+- Deferred with recorded rationale (phase-review dispositions):
+  - Download audit event: no app-side audit writer exists anywhere yet; needs
+    an explicit audited RPC/event design before the plan's download-audit
+    acceptance line can be met. Upload+archive are DB-audited atomically.
+  - Post-confirm overwrite window: minted PUT URLs stay valid up to their 900s
+    TTL after confirm; mitigations (re-key at confirm, short TTL, versioning)
+    are deployment-readiness tooling alongside R2 derivative work.
+  - checksum_sha256 stays NULL for RPC-created rows; `available` rows now
+    carry a SERVER-verified size (confirm RPC takes HEAD-measured bytes;
+    CHECK `file_objects_available_size_check` enforces presence). Full-object
+    hash verification is deferred to deployment-readiness tooling.
+  - Orphaned pending rows from failed presigns need future cleanup tooling.
+- Final Phase 4 verification (2026-08-26): security:migrations (46 files, 18
+  terminals, 76 privileges), lint, typecheck, vitest 53 files / 561 tests,
+  db reset+provision+test:db:local (22 pgTAP suites + 3 concurrency probes),
+  storage:start+smoke PASS, build PASS.
+
+## P4-08 file attachment UI foundation
+
+- P4-08 adds the patient Files section UI on top of the
   P4-07 services. New route-local files under
   `src/app/(emr)/patients/[patientId]/files/`:
   - `actions.ts`: `createFileUploadAction`, `confirmFileUploadAction`
@@ -14,7 +55,8 @@
     (demographics-write + branch recheck; AAL2 re-enforced inside the service).
     Each validates untrusted input with the existing `@/lib/files/schema`
     Zod schemas BEFORE authorization, maps `AuthorizationError` /
-    `FileServiceError` to safe result codes (`FileActionFailure`), and never
+    `FileServiceError` to safe result codes (`FileActionFailure`), rethrows
+    Next redirect errors (AAL2 step-up) instead of swallowing them, and never
     accepts org ids from the client; only the workflow actingBranchId is passed
     and re-verified via `requireBranchAccess`. No revalidatePath: mirrors the
     established `[patientId]/actions.ts` pattern where mutations return result
@@ -36,36 +78,14 @@
     oversize guard against MAX_FILE_SIZE_BYTES (UX only), then the exact flow:
     createFileUploadAction -> browser fetch PUT directly to MinIO presigned URL
     (Content-Type header set to match the SigV4 signature) ->
-    confirmFileUploadAction -> router.refresh(). In-flight transfer is aborted
-    on dialog close (cancel-safe); failures surface retryable safe messages
-    and never call confirm without a verified PUT. NOTE: MinIO CORS for
-    browser PUTs lands in P4-09 per plan; until then the PUT may fail in
-    browsers and surfaces as the safe retryable transfer error by design.
+    confirmFileUploadAction -> router.refresh(). A generation ref makes close
+    cancel-safe in EVERY phase (create/transfer/confirm); superseded closures
+    bail silently and never setState or call confirm after close/reopen.
 - Page integration: `[patientId]/page.tsx` server-renders the bounded list via
   `listPatientFiles({actingBranchId, patientId})` (RPC itself LIMIT 200)
-  after its existing read-permission checks; a list failure degrades ONLY the
-  Files section to an explicit alert instead of failing the whole record view.
-  The section renders for any actor who passed the page's live
-  `patient.demographics.read` checks; write controls appear only when the same
-  `hasSharedPatientPermission(state, "patient.demographics.write")` predicate
-  used by all other mutation controls is true.
-- Tests: `files/actions.test.ts` proves validate-before-authorize ordering,
-  exact permission names, branch recheck, service input binding, and safe code
-  mapping; `files/files-section.test.tsx` (jsdom, no network - fetch is
-  stubbed) covers bounded-list rendering incl. pending/archived states,
-  download hidden for non-available rows, touch-target classes, archive
-  confirmation + failure paths, upload happy path asserting the
-  create->PUT->confirm ordering and Content-Type header, transfer-failure
-  fail-closed behavior, client oversize rejection, denial messaging,
-  empty/load-failure states, and Escape-close. `patient-workspace.test.tsx`
-  now also mocks `./files/actions` so unit tests never import the server-only
-  service graph.
-- P4-08 verification (2026-08-26): focused `npx vitest run
-  "src/app/(emr)/patients" "src/lib/files"` 9 files / 60 tests pass; full
-  `npx vitest run` 52 files / 520 tests pass; `npm run lint` clean;
-  `npm run typecheck` clean; `npm run build` succeeds (APP_ENVIRONMENT did not
-  block; all routes compiled). Browser end-to-end upload/download/archive
-  against local MinIO remains P4-09 integration verification scope.
+  after its existing read-permission checks; expected failures degrade ONLY
+  the Files section to an explicit alert while unexpected errors propagate to
+  the error boundary like sibling sections.
 
 
 - P4-07 adds server-only file services (`src/lib/files/`: Zod input/row schemas,

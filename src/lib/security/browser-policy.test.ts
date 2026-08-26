@@ -82,6 +82,69 @@ describe("browser security policy", () => {
     ).toThrow("must use HTTP or HTTPS");
   });
 
+  it("adds the exact storage endpoint origin to connect-src when configured", () => {
+    const policy = createContentSecurityPolicy({
+      isHttpsDeployment: false,
+      isProduction: true,
+      allowInsecureLocalSupabase: true,
+      storageEndpointUrl: "http://127.0.0.1:9000",
+      supabaseUrl: "http://127.0.0.1:54321",
+    });
+
+    expect(policy).toContain(
+      "connect-src 'self' http://127.0.0.1:54321 ws://127.0.0.1:54321 http://127.0.0.1:9000",
+    );
+  });
+
+  it("omits the storage origin entirely when no storage endpoint is configured", () => {
+    const policy = createContentSecurityPolicy({
+      isHttpsDeployment: false,
+      isProduction: false,
+      supabaseUrl: "https://synthetic-project.supabase.co",
+    });
+
+    expect(policy).not.toContain("9000");
+  });
+
+  it("rejects injection-prone and insecure-production storage endpoints", () => {
+    expect(() =>
+      createContentSecurityPolicy({
+        isHttpsDeployment: false,
+        isProduction: false,
+        storageEndpointUrl: "https://storage.example.test/bucket?x=1",
+        supabaseUrl: "https://synthetic-project.supabase.co",
+      }),
+    ).toThrow("must be an origin");
+
+    expect(() =>
+      createContentSecurityPolicy({
+        isHttpsDeployment: true,
+        isProduction: true,
+        storageEndpointUrl: "http://storage.example.test",
+        supabaseUrl: "https://synthetic-project.supabase.co",
+      }),
+    ).toThrow("Production storage browser connections must use HTTPS");
+
+    expect(() =>
+      createContentSecurityPolicy({
+        isHttpsDeployment: false,
+        isProduction: true,
+        allowInsecureLocalSupabase: true,
+        storageEndpointUrl: "http://10.0.0.5:9000",
+        supabaseUrl: "http://127.0.0.1:54321",
+      }),
+    ).toThrow("STORAGE_ENDPOINT must exactly match the local MinIO API origin");
+
+    expect(() =>
+      createContentSecurityPolicy({
+        isHttpsDeployment: false,
+        isProduction: false,
+        storageEndpointUrl: "not a url",
+        supabaseUrl: "https://synthetic-project.supabase.co",
+      }),
+    ).toThrow("STORAGE_ENDPOINT must be a valid absolute HTTP(S) URL");
+  });
+
   it("allows only the exact local Supabase origin for a local development build", () => {
     const policy = createContentSecurityPolicy({
       isHttpsDeployment: false,

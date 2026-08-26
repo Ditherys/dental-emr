@@ -12,6 +12,7 @@ type BrowserPolicyOptions = Readonly<{
   allowInsecureLocalSupabase?: boolean;
   isHttpsDeployment: boolean;
   isProduction: boolean;
+  storageEndpointUrl?: string;
   supabaseUrl: string;
 }>;
 
@@ -142,17 +143,80 @@ function getSupabaseConnectSources(
   return [parsedUrl.origin, websocketUrl.origin];
 }
 
+function getStorageConnectSource(
+  storageEndpointUrl: string,
+  isProduction: boolean,
+  allowInsecureLocalStorage: boolean,
+) {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(storageEndpointUrl);
+  } catch {
+    throw new Error(
+      "STORAGE_ENDPOINT must be a valid absolute HTTP(S) URL before browser security headers can be created.",
+    );
+  }
+
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+    throw new Error("STORAGE_ENDPOINT must use HTTP or HTTPS.");
+  }
+
+  if (
+    parsedUrl.username ||
+    parsedUrl.password ||
+    (parsedUrl.pathname !== "/" && parsedUrl.pathname !== "") ||
+    parsedUrl.search ||
+    parsedUrl.hash
+  ) {
+    throw new Error(
+      "STORAGE_ENDPOINT must be an origin without credentials, path, query, or fragment.",
+    );
+  }
+
+  const isExactLocalMinioOrigin =
+    parsedUrl.origin === "http://127.0.0.1:9000";
+
+  if (allowInsecureLocalStorage && !isExactLocalMinioOrigin) {
+    throw new Error(
+      "STORAGE_ENDPOINT must exactly match the local MinIO API origin.",
+    );
+  }
+
+  if (
+    isProduction &&
+    parsedUrl.protocol !== "https:" &&
+    !allowInsecureLocalStorage
+  ) {
+    throw new Error("Production storage browser connections must use HTTPS.");
+  }
+
+  return parsedUrl.origin;
+}
+
 export function createContentSecurityPolicy({
   allowInsecureLocalSupabase = false,
   isHttpsDeployment,
   isProduction,
+  storageEndpointUrl,
   supabaseUrl,
 }: BrowserPolicyOptions) {
   const connectSources = getSupabaseConnectSources(
     supabaseUrl,
     isProduction,
     allowInsecureLocalSupabase,
-  ).join(" ");
+  );
+
+  if (storageEndpointUrl) {
+    connectSources.push(
+      getStorageConnectSource(
+        storageEndpointUrl,
+        isProduction,
+        allowInsecureLocalSupabase,
+      ),
+    );
+  }
+
   const scriptSources = ["'self'", "'unsafe-inline'"];
 
   if (!isProduction) {
@@ -168,7 +232,7 @@ export function createContentSecurityPolicy({
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data:",
     "font-src 'self'",
-    `connect-src 'self' ${connectSources}`,
+    `connect-src 'self' ${connectSources.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

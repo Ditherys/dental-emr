@@ -12,6 +12,7 @@ type EnvironmentSource = Readonly<
 
 export type EnvironmentSeparationConfig = Readonly<{
   appEnvironment: AppEnvironment;
+  storageEndpoint: string | undefined;
   supabaseProjectId: string;
   supabaseUrl: string;
 }>;
@@ -210,6 +211,7 @@ export function validateEnvironmentSeparation(
 
   return Object.freeze({
     appEnvironment,
+    storageEndpoint: environment.STORAGE_ENDPOINT,
     supabaseProjectId,
     supabaseUrl,
   });

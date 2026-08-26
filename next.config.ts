@@ -32,6 +32,7 @@ const nextConfig: NextConfig = {
         environmentConfig.supabaseProjectId === "local",
       isHttpsDeployment: isHttpsDeploymentUrl(appUrl),
       isProduction: process.env.NODE_ENV === "production",
+      storageEndpointUrl: environmentConfig.storageEndpoint,
       supabaseUrl: environmentConfig.supabaseUrl,
     }).map(({ source, headers }) => ({
       source,
