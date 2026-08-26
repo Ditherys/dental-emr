@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-expect(result.checked.files).toBe(89);
+expect(result.checked.files).toBe(91);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -341,7 +341,7 @@ expect(result.checked.files).toBe(89);
       created.filter((statement) => statement.objectClass === objectClass).length;
 
 expect(count("table")).toBe(46);
-    expect(count("function")).toBe(150);
+    expect(count("function")).toBe(154);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -349,7 +349,7 @@ expect(count("table")).toBe(46);
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(126);
+    ).toBe(130);
     expect(
       created.filter(
         (statement) =>
@@ -690,11 +690,24 @@ describe("the approved final privilege set", () => {
     ]);
   });
 
-  it("grants anon and PUBLIC nothing at all", () => {
+  it("grants anon and PUBLIC exactly the one deliberate public-site exception", () => {
     const exposed = TERMINAL_MIGRATIONS.flatMap((terminal) => terminal.grants).filter(
       (grant) => ["anon", "public"].includes(grant.grantee),
     );
 
-    expect(exposed).toEqual([]);
+    // P12-02: get_public_site is the single deliberate unauthenticated surface
+    // (plan 012). It is SECURITY DEFINER, returns only the bounded
+    // website-safe projection, and is the ONLY anon-reachable function in the
+    // whole system; PUBLIC still holds nothing at all.
+    expect(exposed).toEqual([
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.get_public_site(text)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+    ]);
   });
 });

@@ -464,6 +464,48 @@ const documentRpcGrants = Object.freeze([
   "public.get_document_snapshot(uuid,uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only document generation and read boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live document.generate (generate_document) or document.view (list/get snapshot). generate_document builds the immutable data snapshot server-side from only the authorized, allowlisted patient record sections and appends one audit event; list is a bounded 100-row projection without the snapshot body; get_document_snapshot returns the exact stored snapshot for reproducible re-render." })));
 
+const SITE_RPCS_GRANTS_MIGRATION =
+  "20260827012401_site_rpcs_grants.sql";
+
+const siteRpcGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_public_site(text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The single deliberate unauthenticated public site surface, also callable by signed-in users. It is SECURITY DEFINER with an empty search_path and returns only the bounded website-safe projection (business name, representative website-visible branch address, admin settings, website_visible active providers/procedures) with zero clinical, patient, billing, workforce, internal, or audit data.",
+  },
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.get_public_site(text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "THE SINGLE DELIBERATE PUBLIC GRANT in the entire system (plan 012 / P12-02): a public clinic website must be readable by unauthenticated visitors. This is the ONLY anon-reachable function and it returns only the bounded website-safe projection above, so the public surface cannot expose clinical or patient data.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_public_site_settings(uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The site.manage-gated read of the admin-editable public site settings. It derives the organization from an active authenticated acting branch, requires live site.manage (OWNER/ADMIN only), and returns the settings object plus the optimistic version.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.update_public_site_settings(uuid,integer,jsonb)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only site settings mutation path. It derives the organization from an active authenticated acting branch, requires live site.manage (OWNER/ADMIN only), accepts exactly the allowlisted settings keys with bounded values, applies an optimistic version, and appends one site.settings_updated audit event with empty metadata.",
+  },
+]);
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -682,6 +724,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: DOCUMENT_RPCS_GRANTS_MIGRATION,
     grants: documentRpcGrants,
+  }),
+  Object.freeze({
+    file: SITE_RPCS_GRANTS_MIGRATION,
+    grants: siteRpcGrants,
   }),
 ]);
 

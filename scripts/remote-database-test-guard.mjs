@@ -102,6 +102,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "resource_foundation.test.sql",
   "scheduling_reads.test.sql",
   "site_permission_contract.test.sql",
+  "site_rpcs.test.sql",
   "file_objects_foundation.test.sql",
   "file_upload_rpcs.test.sql",
   "file_read_rpcs.test.sql",

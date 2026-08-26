@@ -180,9 +180,12 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.respond_specialist_request(uuid, uuid, integer, jsonb)",
     "public.cancel_specialist_request(uuid, uuid, integer, text)",
     "public.list_specialist_requests(uuid, text)",
-    "public.generate_document(uuid, uuid, text, jsonb)",
+"public.generate_document(uuid, uuid, text, jsonb)",
     "public.list_documents(uuid, uuid, text)",
     "public.get_document_snapshot(uuid, uuid)",
+    "public.get_public_site(text)",
+    "public.get_public_site_settings(uuid)",
+    "public.update_public_site_settings(uuid, integer, jsonb)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -190,6 +193,13 @@ const APPROVED_FINAL_PRIVILEGES = [
     privilege: "execute",
     column: null,
   })),
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.get_public_site(text)",
+    privilege: "execute",
+    column: null,
+  },
 ];
 
 describe("probe row folding", () => {
@@ -1246,7 +1256,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(100);
+    expect(approved.size).toBe(104);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {
