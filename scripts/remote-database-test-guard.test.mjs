@@ -251,6 +251,7 @@ const expectedSuites = [
       "appointment_permission_contract.test.sql",
       "appointment_rpcs.test.sql",
       "audit_foundation.test.sql",
+      "booking_permission_contract.test.sql",
       "branch_lifecycle.test.sql",
       "calendar_permission_contract.test.sql",
       "calendar_sync_foundation.test.sql",

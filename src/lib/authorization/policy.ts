@@ -23,6 +23,7 @@ export const foundationPermissionCodes = [
   "document.view",
   "document.generate",
   "site.manage",
+  "booking.review",
   "analytics.view",
 ] as const;
 

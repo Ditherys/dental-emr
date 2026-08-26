@@ -187,6 +187,18 @@ describe("site permission vocabulary", () => {
   });
 });
 
+describe("booking permission vocabulary", () => {
+  it("exposes the booking review permission code", () => {
+    const bookingReview: PermissionCode = "booking.review";
+
+    // @ts-expect-error booking permissions are a closed contract.
+    const unknownBookingPermission: PermissionCode = "booking.manage";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([bookingReview]));
+    expect(unknownBookingPermission).toBe("booking.manage");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

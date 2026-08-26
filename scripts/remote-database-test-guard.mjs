@@ -131,6 +131,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "specialist_requests_foundation.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
+  "booking_permission_contract.test.sql",
   "branch_lifecycle.test.sql",
 ]);
 

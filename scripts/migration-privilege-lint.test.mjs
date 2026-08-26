@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-expect(result.checked.files).toBe(91);
+expect(result.checked.files).toBe(92);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,7 +340,7 @@ expect(result.checked.files).toBe(91);
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-expect(count("table")).toBe(46);
+expect(count("table")).toBe(47);
     expect(count("function")).toBe(154);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
