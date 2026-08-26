@@ -36,7 +36,7 @@ code. Strong mobile performance and an SEO foundation.
 
 ## Tasks
 
-- [ ] **P12-01: Site permission + settings schema**
+- [x] **P12-01: Site permission + settings schema**
   - `site.manage` permission row + matrix; `PermissionCode` + policy test;
     pgTAP proving matrix.
   - `public_site_settings`: org PK (FK org), hero_heading, hero_subtext,
@@ -44,7 +44,7 @@ code. Strong mobile performance and an SEO foundation.
     jsonb (object, bounded), privacy_notice, messenger_link, booking_link,
     social_links jsonb, version, timestamps. RLS + zero base grants. pgTAP.
 
-- [ ] **P12-02: Public read RPC + settings RPC**
+- [x] **P12-02: Public read RPC + settings RPC**
   - `get_public_site(p_org_slug text)` — SECURITY DEFINER, empty search_path,
     NO auth required, returns bounded website-safe JSON: org business_name +
     address, settings fields, website_visible providers (display name, bio,
@@ -65,13 +65,13 @@ code. Strong mobile performance and an SEO foundation.
     hidden providers/procedures excluded, settings update + audit + versioning +
     permission denials.
 
-- [ ] **P12-03: Server services + admin settings UI**
+- [x] **P12-03: Server services + admin settings UI**
   - `src/lib/site/` service layer (schemas/types/errors/service) for the RPCs
     + offline tests.
   - `/settings/site` admin page (OWNER/ADMIN): edit hero/about/contact/hours/
     privacy/links; server actions recheck site.manage + branch; tests.
 
-- [ ] **P12-04: Public website UI**
+- [x] **P12-04: Public website UI**
   - Rebuild the `(public)` home page into the clinic website: home/about
     (hero from settings), services section (website_visible procedures),
     dentist profiles section (website_visible providers), location/contact,
@@ -85,7 +85,7 @@ code. Strong mobile performance and an SEO foundation.
     provider/procedure public fields; asserts NO patient/clinical strings;
     mobile composition).
 
-- [ ] **P12-05: Integration verification + phase review**
+- [x] **P12-05: Integration verification + phase review**
 
 ## Explicitly deferred
 

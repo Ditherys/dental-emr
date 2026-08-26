@@ -1,7 +1,36 @@
-# AI Handoff - Phase 11 complete, Phase 12 next
+# AI Handoff - Phase 12 complete, Phase 13 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 12 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 12 (Clinic Website) complete through commit `c141255` (P12-04 public
+website) with `docs/plans/012-clinic-website.md` P12-01..P12-05 all `[x]`.
+
+- P12-01 `60712ab` site.manage permission (OWNER/ADMIN) + public_site_settings
+  (hero/about/contact/hours/privacy/links, bounded). P12-02 `295153c`
+  get_public_site(org_slug) — the SINGLE DELIBERATE anon-granted public RPC
+  returning only website-safe fields (website_visible providers/procedures,
+  settings; no-leakage pgTAP-proven against inserted patient/clinical data) +
+  get/update settings RPCs (site.manage gated, versioned, audited). P12-03/04
+  `c141255` src/lib/site services + public-resolver + /settings/site admin UI +
+  rebuilt (public) home (hero/about/services/providers/contact/privacy/CTAs,
+  mobile-first, SEO metadata, force-dynamic).
+- Acceptance criteria met: mobile-first responsive; public site exposes no
+  clinical data (keyset + no-clinical-string DOM tests); content from controlled
+  website_visible fields; admin-editable without code.
+- Inventory: 91 migration files, 31 grant terminals, 121 approved privileges
+  (incl. the one deliberate anon grant on get_public_site); 53 pgTAP suites +
+  4 concurrency probes; tables 46, functions 154, security-definer 130;
+  unit 86 files / 885 tests; scripts 279.
+
+**Next:** Phase 13 (Website Booking Integration) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 13. Author bounded plan docs/plans/013-website-booking.md then execute
+P13-01.. . This is the highest-risk public booking surface (slot holds, no
+double-booking, acquisition/campaign capture, secure management links).
+
+## Phase 12 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 11 checkpoint (2026-08-27) - ACCEPTED (real PDF conversion NOT VERIFIED)
 
