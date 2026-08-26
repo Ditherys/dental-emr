@@ -289,6 +289,7 @@ const expectedSuites = [
       "seed_security_fixtures.test.sql",
       "session_authorization_boundaries.test.sql",
       "specialist_permission_contract.test.sql",
+      "specialist_requests_foundation.test.sql",
       "workforce_invitations.test.sql",
     ];
     const onDisk = readdirSync(testsDirectory)
