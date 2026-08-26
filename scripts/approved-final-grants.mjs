@@ -298,6 +298,14 @@ const procedureRpcGrants = Object.freeze([
   "public.get_procedure_configuration(uuid, uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only procedure catalog and qualification path derives tenant and actor from an active authenticated acting branch, requires live organization-wide provider.manage for mutations or provider.read for bounded projections, uses optimistic versions, and writes opaque audit events atomically; archive requires AAL2." })));
 
+const PATIENT_FILE_UPLOAD_RPCS_GRANTS_MIGRATION =
+  "20260826010701_patient_file_upload_rpcs_grants.sql";
+
+const patientFileUploadRpcGrants = Object.freeze([
+  "public.create_file_upload(uuid,uuid,text,bigint)",
+  "public.confirm_file_upload(uuid,uuid,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file upload boundary derives tenant and actor from an active authenticated acting branch, requires live demographics-write at the acting branch or organization-wide provider.manage, inserts only pending metadata rows with opaque scoped object keys, and locks and optimistically versions the row it confirms while appending one opaque patient-linked audit event atomically; presigned URLs stay in the server-side storage adapter." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -351,6 +359,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         reason: "Restores the exact 20260826010501 terminal EXECUTE grant that the 20260826010502 numeric-input hardening migration cancelled when it recreated the function definition; authorization remains entirely inside the SECURITY DEFINER body.",
       },
     ]),
+  }),
+  Object.freeze({
+    file: PATIENT_FILE_UPLOAD_RPCS_GRANTS_MIGRATION,
+    grants: patientFileUploadRpcGrants,
   }),
 ]);
 
