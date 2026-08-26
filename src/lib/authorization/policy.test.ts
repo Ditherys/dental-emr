@@ -175,6 +175,18 @@ describe("document permission vocabulary", () => {
   });
 });
 
+describe("site permission vocabulary", () => {
+  it("exposes the site manage permission code", () => {
+    const siteManage: PermissionCode = "site.manage";
+
+    // @ts-expect-error site permissions are a closed contract.
+    const unknownSitePermission: PermissionCode = "site.publish";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([siteManage]));
+    expect(unknownSitePermission).toBe("site.publish");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

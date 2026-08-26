@@ -22,6 +22,7 @@ export const foundationPermissionCodes = [
   "specialist.request",
   "document.view",
   "document.generate",
+  "site.manage",
   "analytics.view",
 ] as const;
 
