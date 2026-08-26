@@ -275,6 +275,7 @@ describe("registered database suites", () => {
       "provider_permission_contract.test.sql",
       "queue_foundation.test.sql",
       "queue_permission_contract.test.sql",
+      "queue_rpcs.test.sql",
       "reservation_ledgers.test.sql",
       "resource_foundation.test.sql",
       "scheduling_reads.test.sql",

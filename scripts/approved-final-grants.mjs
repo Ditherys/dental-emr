@@ -395,6 +395,15 @@ const schedulingReadsGrants = Object.freeze([
   "public.find_available_slots(uuid,uuid,timestamptz,timestamptz,integer,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "Bounded scheduling read surfaces. Both derive the organization from an active authenticated acting branch, require live appointment.read, validate the window/duration bounds, restrict results to the acting branch and organization, return only deterministic availability/slot projections, and write no audit event." })));
 
+const QUEUE_RPCS_GRANTS_MIGRATION =
+  "20260827010901_queue_rpcs_grants.sql";
+
+const queueRpcGrants = Object.freeze([
+  "public.create_walkin_entry(uuid,uuid,text,uuid,uuid)",
+  "public.update_queue_status(uuid,uuid,integer,text,text)",
+  "public.list_queue(uuid,boolean)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only walk-in/queue boundary. Walk-in creation inserts a queue entry, never a fake appointment, and queue transitions never touch appointment rows. Functions derive the tenant and actor from an active authenticated acting branch, require live queue.manage (mutations) or queue.read (list), validate forward-only status transitions under an optimistic version, and append one atomic audit event per mutation while the list writes none." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -589,6 +598,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: SCHEDULING_READS_GRANTS_MIGRATION,
     grants: schedulingReadsGrants,
+  }),
+  Object.freeze({
+    file: QUEUE_RPCS_GRANTS_MIGRATION,
+    grants: queueRpcGrants,
   }),
 ]);
 

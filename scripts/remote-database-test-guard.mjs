@@ -97,6 +97,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "procedure_foundation.test.sql",
   "queue_foundation.test.sql",
   "queue_permission_contract.test.sql",
+  "queue_rpcs.test.sql",
   "reservation_ledgers.test.sql",
   "resource_foundation.test.sql",
   "scheduling_reads.test.sql",
