@@ -43,4 +43,10 @@ describe("permission-aware navigation", () => {
     expect(navigationItems.find(({ href }) => href === "/settings/specialties")).toMatchObject({ requiredPermission: "provider.read" });
     expect(navigationItems.find(({ href }) => href === "/settings/procedures")).toMatchObject({ requiredPermission: "provider.read" });
   });
+
+  it("declares communication view as the capability for the Communications link", () => {
+    expect(navigationItems.find(({ href }) => href === "/communications")).toMatchObject({
+      requiredPermission: "communication.view",
+    });
+  });
 });

@@ -10,6 +10,7 @@ import type {
   enqueueCommunicationInputSchema,
   failCommunicationInputSchema,
   listCommunicationsInputSchema,
+  requeueCommunicationInputSchema,
 } from "./schema";
 
 export type CommunicationStatus = z.infer<typeof communicationStatusSchema>;
@@ -17,6 +18,7 @@ export type CommunicationChannel = z.infer<typeof communicationChannelSchema>;
 export type CommunicationTemplateType = z.infer<typeof communicationTemplateTypeSchema>;
 export type EnqueueCommunicationInput = z.infer<typeof enqueueCommunicationInputSchema>;
 export type CancelCommunicationInput = z.infer<typeof cancelCommunicationInputSchema>;
+export type RequeueCommunicationInput = z.infer<typeof requeueCommunicationInputSchema>;
 export type ListCommunicationsInput = z.infer<typeof listCommunicationsInputSchema>;
 export type AcknowledgeCommunicationInput = z.infer<typeof acknowledgeCommunicationInputSchema>;
 export type FailCommunicationInput = z.infer<typeof failCommunicationInputSchema>;

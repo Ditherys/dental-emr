@@ -33,6 +33,12 @@ export const cancelCommunicationInputSchema = z.object({
   expectedVersion: z.number().int().positive(),
 }).strict();
 
+export const requeueCommunicationInputSchema = z.object({
+  actingBranchId: databaseUuid,
+  communicationId: databaseUuid,
+  expectedVersion: z.number().int().positive(),
+}).strict();
+
 export const listCommunicationsInputSchema = z.object({
   actingBranchId: databaseUuid,
   appointmentId: databaseUuid.nullable().optional(),

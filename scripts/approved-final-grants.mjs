@@ -416,6 +416,21 @@ const communicationRpcGrants = Object.freeze([
   "public.claim_due_communications(uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only communication/reminder boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live communication.send (enqueue/cancel/acknowledge/fail/claim) or communication.view (bounded masked list). Enqueues are durable INSERTs inside the appointment transaction so external sending never blocks the appointment save; cancellation/rescheduling cancels obsolete queued jobs; the worker claims due jobs with FOR UPDATE SKIP LOCKED and acknowledges or fails them; the list never returns a full recipient." })));
 
+const REQUEUE_COMMUNICATION_GRANTS_MIGRATION =
+  "20260827011301_communication_requeue_grants.sql";
+
+const requeueCommunicationGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.requeue_communication(uuid,uuid,integer)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only bounded manual retry surface. It derives the tenant and actor from an active authenticated acting branch, requires live communication.send, rejects non-FAILED rows and stale versions, and copies the failed job's own stored content into a fresh QUEUED row keyed requeue-<id>-<version> so the browser never supplies recipient or body.",
+  },
+]);
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -618,6 +633,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: COMMUNICATION_RPCS_GRANTS_MIGRATION,
     grants: communicationRpcGrants,
+  }),
+  Object.freeze({
+    file: REQUEUE_COMMUNICATION_GRANTS_MIGRATION,
+    grants: requeueCommunicationGrants,
   }),
 ]);
 

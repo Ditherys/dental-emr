@@ -14,6 +14,7 @@ import {
   enqueueCommunication,
   failCommunication,
   listCommunications,
+  requeueCommunication,
 } from "./service";
 
 const branchId = "c1000000-0000-0000-0000-000000000001";
@@ -127,6 +128,10 @@ describe("communication service input validation boundary", () => {
     await expect(cancelCommunication({ actingBranchId: branchId, communicationId: "not-a-uuid", expectedVersion: 1 })).rejects.toBeInstanceOf(z.ZodError);
     await expect(cancelCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1, version: 1 })).rejects.toBeInstanceOf(z.ZodError);
 
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 0 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId: "not-a-uuid", expectedVersion: 1 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1, recipient: "+639181234567" })).rejects.toBeInstanceOf(z.ZodError);
+
     await expect(listCommunications({ actingBranchId: branchId, status: "SOMETHING" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listCommunications({ actingBranchId: branchId, appointmentId: "not-a-uuid" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listCommunications({ actingBranchId: branchId, limit: 10 })).rejects.toBeInstanceOf(z.ZodError);
@@ -208,6 +213,27 @@ describe("communication service RPC contract", () => {
       p_communication_id: communicationId,
       p_expected_version: 3,
     });
+  });
+
+  it("binds requeue to its exact RPC contract and parses the fresh QUEUED row", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ communication_id: communicationId, status: "QUEUED" }], error: null });
+    await expect(requeueCommunication({
+      actingBranchId: branchId,
+      communicationId,
+      expectedVersion: 4,
+    })).resolves.toEqual({ communicationId, status: "QUEUED" });
+    expect(rpc).toHaveBeenLastCalledWith("requeue_communication", {
+      p_acting_branch_id: branchId,
+      p_communication_id: communicationId,
+      p_expected_version: 4,
+    });
+
+    rpc.mockResolvedValueOnce({ data: [{ communication_id: communicationId, status: "NOT_A_STATUS" }], error: null });
+    await expect(requeueCommunication({
+      actingBranchId: branchId,
+      communicationId,
+      expectedVersion: 4,
+    })).rejects.toBeInstanceOf(z.ZodError);
   });
 
   it("binds acknowledge to its exact RPC contract", async () => {
@@ -369,6 +395,15 @@ describe("communication service RPC contract", () => {
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
     await expect(cancelCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1 })).rejects.toEqual(new CommunicationServiceError("STALE_VERSION"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1 })).rejects.toEqual(new CommunicationServiceError("STALE_VERSION"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "invalid state" } });
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1 })).rejects.toEqual(new CommunicationServiceError("INVALID_STATE"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(requeueCommunication({ actingBranchId: branchId, communicationId, expectedVersion: 1 })).rejects.toEqual(new CommunicationServiceError("NOT_AUTHORIZED"));
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "invalid state" } });
     await expect(acknowledgeCommunication({ actingBranchId: branchId, communicationId })).rejects.toEqual(new CommunicationServiceError("INVALID_STATE"));

@@ -15,6 +15,7 @@ import {
   enqueueCommunicationInputSchema,
   failCommunicationInputSchema,
   listCommunicationsInputSchema,
+  requeueCommunicationInputSchema,
 } from "./schema";
 import type {
   ClaimedCommunication,
@@ -54,6 +55,16 @@ export async function enqueueCommunication(input: unknown): Promise<Communicatio
 export async function cancelCommunication(input: unknown): Promise<CommunicationMutationResult> {
   const value = cancelCommunicationInputSchema.parse(input);
   const row = communicationMutationRowSchema.parse(firstRow(await callRpc("cancel_communication", {
+    p_acting_branch_id: value.actingBranchId,
+    p_communication_id: value.communicationId,
+    p_expected_version: value.expectedVersion,
+  })));
+  return { communicationId: row.communication_id, status: row.status };
+}
+
+export async function requeueCommunication(input: unknown): Promise<CommunicationMutationResult> {
+  const value = requeueCommunicationInputSchema.parse(input);
+  const row = communicationMutationRowSchema.parse(firstRow(await callRpc("requeue_communication", {
     p_acting_branch_id: value.actingBranchId,
     p_communication_id: value.communicationId,
     p_expected_version: value.expectedVersion,

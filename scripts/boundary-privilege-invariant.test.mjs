@@ -167,6 +167,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.acknowledge_communication(uuid, uuid, text)",
     "public.fail_communication(uuid, uuid)",
     "public.claim_due_communications(uuid, integer)",
+    "public.requeue_communication(uuid, uuid, integer)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1229,8 +1230,8 @@ describe("the grant-terminal boundary", () => {
   it("does not expect server-only service_role grants from a browser-role probe", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
-    expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(84);
+expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
+    expect(approved.size).toBe(85);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

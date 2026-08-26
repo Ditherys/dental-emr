@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, ClipboardList, LayoutDashboard, ListOrdered, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, ClipboardList, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -37,6 +37,12 @@ export const navigationItems = [
     href: "/queue",
     icon: ListOrdered,
     requiredPermission: "queue.read",
+  },
+  {
+    label: "Communications",
+    href: "/communications",
+    icon: MessageSquareText,
+    requiredPermission: "communication.view",
   },
   {
     label: "Specialties",

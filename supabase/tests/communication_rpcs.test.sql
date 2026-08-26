@@ -190,6 +190,26 @@ select extensions.throws_ok($$select public.enqueue_communication('b9300000-0000
 select extensions.throws_ok($$select public.list_communications('b9300000-0000-0000-0000-000000000001',null,null)$$,'42501','not authorized','a foreign-organization receptionist cannot list Org A communications');
 select set_config('request.jwt.claim.sub','b9100000-0000-0000-0000-000000000001',true);
 
+-- requeue_communication: FAILED-only manual retry that copies the failed job's
+-- own stored content into a fresh QUEUED row keyed requeue-<id>-<version>, so a
+-- retry never re-accepts recipient/body from the browser. p803-reminder-3 is the
+-- FAILED fixture (three failures terminalized it); p803-reminder-1 is CANCELLED.
+select extensions.ok(
+  has_function_privilege('authenticated','public.requeue_communication(uuid,uuid,integer)','execute')
+  and not has_function_privilege('anon','public.requeue_communication(uuid,uuid,integer)','execute')
+  and not has_function_privilege('service_role','public.requeue_communication(uuid,uuid,integer)','execute'),
+  'only authenticated holds the requeue grant'
+);
+select extensions.is((select status from public.requeue_communication('b9300000-0000-0000-0000-000000000001',(select id from public.communications where idempotency_key='p803-reminder-3'),(select version from public.communications where idempotency_key='p803-reminder-3'))),'QUEUED','a FAILED communication is requeued into a fresh QUEUED row');
+select extensions.is((select count(*)::integer from public.communications where idempotency_key='requeue-' || (select id::text from public.communications where idempotency_key='p803-reminder-3') || '-' || (select version from public.communications where idempotency_key='p803-reminder-3')),1,'the requeue row carries a requeue-<id>-<version> idempotency key');
+select extensions.ok((select new_comm.status='QUEUED' and new_comm.attempts=0 and new_comm.id <> old_comm.id and (new_comm.channel, new_comm.template_type, new_comm.recipient, new_comm.body, new_comm.patient_id, new_comm.appointment_id) = (old_comm.channel, old_comm.template_type, old_comm.recipient, old_comm.body, old_comm.patient_id, old_comm.appointment_id) from public.communications as new_comm join public.communications as old_comm on old_comm.idempotency_key='p803-reminder-3' where new_comm.idempotency_key='requeue-' || old_comm.id::text || '-' || old_comm.version),'the requeue copies the failed stored content into a fresh QUEUED row with zero attempts');
+select extensions.throws_ok($$select public.requeue_communication('b9300000-0000-0000-0000-000000000001',(select id from public.communications where idempotency_key='p803-reminder-3'),(select version from public.communications where idempotency_key='p803-reminder-3'))$$,'23505',null,'a second requeue of the same version is rejected by the unique idempotency key');
+select extensions.throws_ok($$select public.requeue_communication('b9300000-0000-0000-0000-000000000001',(select id from public.communications where idempotency_key='p803-reminder-3'),1)$$,'P0001','stale version','a stale expected version is rejected before any requeue');
+select extensions.throws_ok($$select public.requeue_communication('b9300000-0000-0000-0000-000000000001',(select id from public.communications where idempotency_key='p803-reminder-1'),(select version from public.communications where idempotency_key='p803-reminder-1'))$$,'P0001','invalid state','a non-FAILED communication cannot be requeued');
+select set_config('request.jwt.claim.sub','b9100000-0000-0000-0000-000000000002',true);
+select extensions.throws_ok($$select public.requeue_communication('b9300000-0000-0000-0000-000000000001',(select id from public.communications where idempotency_key='p803-reminder-3'),(select version from public.communications where idempotency_key='p803-reminder-3'))$$,'42501','not authorized','a user without communication.send cannot requeue');
+select set_config('request.jwt.claim.sub','b9100000-0000-0000-0000-000000000001',true);
+
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
 select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;
 
