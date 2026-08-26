@@ -10,6 +10,11 @@ export type StorageGetResult = Readonly<{
   contentType: string;
 }>;
 
+export type StorageStatResult = Readonly<{
+  sizeBytes: number;
+  contentType: string;
+}>;
+
 export type StorageUrlResult = Readonly<{
   url: string;
   expiresAt: Date;
@@ -22,6 +27,7 @@ export type StorageAdapter = Readonly<{
     contentType: string,
   ) => Promise<StoragePutResult>;
   get: (key: string) => Promise<StorageGetResult>;
+  stat: (key: string) => Promise<StorageStatResult>;
   delete: (key: string) => Promise<void>;
   createUploadUrl: (
     key: string,

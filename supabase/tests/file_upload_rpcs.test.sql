@@ -34,16 +34,16 @@ insert into public.patients (id, organization_id, patient_number, first_name, la
   ('b6640000-0000-0000-0000-000000000003','b6610000-0000-0000-0000-000000000002','P404-B-0001','Foreign','Patient B',date '1980-01-01','active',null);
 
 select extensions.ok(
-  (select count(*) from (values('public.create_file_upload(uuid,uuid,text,bigint)'),('public.confirm_file_upload(uuid,uuid,integer)')) as rpc(name) where has_function_privilege('authenticated',rpc.name,'EXECUTE'))=2
+  (select count(*) from (values('public.create_file_upload(uuid,uuid,text,bigint)'),('public.confirm_file_upload(uuid,uuid,integer,bigint)')) as rpc(name) where has_function_privilege('authenticated',rpc.name,'EXECUTE'))=2
   and not exists(
     select 1 from (values('anon'),('service_role'),('public')) as viewer(role_name)
-    cross join (values('public.create_file_upload(uuid,uuid,text,bigint)'),('public.confirm_file_upload(uuid,uuid,integer)')) as rpc(name)
+    cross join (values('public.create_file_upload(uuid,uuid,text,bigint)'),('public.confirm_file_upload(uuid,uuid,integer,bigint)')) as rpc(name)
     where has_function_privilege(viewer.role_name,rpc.name,'EXECUTE')
   ),
   'only authenticated receives the file upload RPC grants'
 );
 select extensions.is(
-  (select count(*)::integer from pg_proc where oid in ('public.create_file_upload(uuid,uuid,text,bigint)'::regprocedure,'public.confirm_file_upload(uuid,uuid,integer)'::regprocedure) and prosecdef and proconfig=array['search_path=""']::text[]),
+  (select count(*)::integer from pg_proc where oid in ('public.create_file_upload(uuid,uuid,text,bigint)'::regprocedure,'public.confirm_file_upload(uuid,uuid,integer,bigint)'::regprocedure) and prosecdef and proconfig=array['search_path=""']::text[]),
   2,
   'both file upload RPCs are SECURITY DEFINER with an empty search path'
 );
@@ -80,12 +80,27 @@ select extensions.throws_ok($$select public.create_file_upload('b6620000-0000-00
 select extensions.throws_ok($$select public.create_file_upload('b6620000-0000-0000-0000-000000000002','b6640000-0000-0000-0000-000000000003','application/pdf',1024)$$,'42501','not authorized','a forged foreign acting branch cannot open an upload');
 
 select extensions.is(
-  (select version from public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.pdf')::uuid,1)),
+  (select version from public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.pdf')::uuid,1,4096)),
   2,
   'confirmation bumps the optimistic version'
 );
 reset role;
 select extensions.is((select status from public.file_objects where id=current_setting('p404.pdf')::uuid),'available','confirmation moves the row out of pending');
+select extensions.is(
+  (select size_bytes from public.file_objects where id=current_setting('p404.pdf')::uuid),
+  4096::bigint,
+  'confirmation persists exactly the server-verified size passed by the storage HEAD, overwriting any declared value'
+);
+select extensions.throws_ok(
+  $$update public.file_objects set size_bytes = null where id=current_setting('p404.pdf')::uuid$$,
+  '23514','new row for relation "file_objects" violates check constraint "file_objects_available_size_check"',
+  'an available row cannot drop back to an unverified NULL size'
+);
+select extensions.throws_ok(
+  $$insert into public.file_objects (organization_id,patient_id,object_key,mime_type,size_bytes,checksum_sha256,uploaded_by,status) values ('b6610000-0000-0000-0000-000000000001','b6640000-0000-0000-0000-000000000001','org/b6610000-0000-0000-0000-000000000001/patients/b6640000-0000-0000-0000-000000000001/files/b6650000-0000-0000-0000-000000000099','application/pdf',null,repeat('a',64),'b6600000-0000-0000-0000-000000000001','available')$$,
+  '23514','new row for relation "file_objects" violates check constraint "file_objects_available_size_check"',
+  'no row can exist as available without a persisted size'
+);
 select extensions.is(
   (select count(*)::integer from public.audit_events where action='patient.file.confirmed' and metadata='{}'::jsonb and entity_type='file_object' and entity_id=current_setting('p404.pdf')::uuid),
   1,
@@ -95,15 +110,16 @@ select extensions.is(
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.pdf')::uuid,2)$$,'P0001','invalid state','an already-available file cannot be confirmed again');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.pdf')::uuid,2,4096)$$,'P0001','invalid state','an already-available file cannot be confirmed again');
 reset role;
 select extensions.is((select count(*)::integer from public.audit_events where action='patient.file.confirmed'),1,'a failed re-confirmation writes no audit event');
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,5)$$,'P0001','stale version','a stale confirmation cannot overwrite a newer version');
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1)$$,'42501','not authorized','a missing file is not disclosed to the caller');
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,0)$$,'22023','invalid input','a non-positive expected version is rejected before any row access');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,5,2048)$$,'P0001','stale version','a stale confirmation cannot overwrite a newer version');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1,1024)$$,'42501','not authorized','a missing file is not disclosed to the caller');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,0,2048)$$,'22023','invalid input','a non-positive expected version is rejected before any row access');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1,0)$$,'22023','invalid input','a non-positive verified size is rejected before any row access');
 reset role;
 select extensions.is((select count(*)::integer from public.audit_events where action='patient.file.confirmed'),1,'failed confirmations leave exactly the successful audit event');
 
@@ -122,7 +138,7 @@ for each row execute function private.p404_reject_file_audit();
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1)$$,'P0001','audit blocked','an audit insertion failure rejects the confirmation');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1,2048)$$,'P0001','audit blocked','an audit insertion failure rejects the confirmation');
 reset role;
 drop trigger p404_reject_file_audit on public.audit_events;
 drop function private.p404_reject_file_audit();
@@ -164,7 +180,7 @@ select set_config('p404.bin',(select id::text from public.file_objects where org
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.bin')::uuid,1)$$,'42501','not authorized','a cross-tenant confirmation is refused without disclosing the file');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.bin')::uuid,1,512)$$,'42501','not authorized','a cross-tenant confirmation is refused without disclosing the file');
 reset role;
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b6610000-0000-0000-0000-000000000002' and action='patient.file.confirmed'),0,'the refused cross-tenant confirmation wrote no audit event');
 select extensions.is((select status from public.file_objects where id=current_setting('p404.bin')::uuid),'pending','the foreign pending row is untouched by the refused confirmation');
@@ -173,7 +189,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000002',true);
 select set_config('p404.csv',(select file_id::text from public.create_file_upload('b6620000-0000-0000-0000-000000000001','b6640000-0000-0000-0000-000000000001','text/csv',256)),true);
-select extensions.is((select version from public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.csv')::uuid,1)),2,'a demographics-write holder may open and confirm an upload');
+select extensions.is((select version from public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.csv')::uuid,1,256)),2,'a demographics-write holder may open and confirm an upload');
 reset role;
 
 set local role authenticated;
@@ -181,13 +197,13 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000003',true);
 select extensions.throws_ok($$select public.create_file_upload('b6620000-0000-0000-0000-000000000001','b6640000-0000-0000-0000-000000000001','text/plain',64)$$,'42501','not authorized','staff with neither permission cannot open uploads');
 select extensions.throws_ok($$select public.create_file_upload('b6620000-0000-0000-0000-000000000001','b6640000-0000-0000-0000-000000000003','text/plain',64)$$,'42501','not authorized','unauthorized callers get the identical error for foreign patients');
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1)$$,'42501','not authorized','staff with neither permission cannot confirm uploads');
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1)$$,'42501','not authorized','unauthorized callers get the identical error for missing files');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1,2048)$$,'42501','not authorized','staff with neither permission cannot confirm uploads');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1,1024)$$,'42501','not authorized','unauthorized callers get the identical error for missing files');
 reset role;
 
 set local role anon;
 select extensions.throws_ok($$select public.create_file_upload('b6620000-0000-0000-0000-000000000001','b6640000-0000-0000-0000-000000000001','application/pdf',1)$$,'42501',null,'anonymous callers cannot execute create_file_upload');
-select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1)$$,'42501',null,'anonymous callers cannot execute confirm_file_upload');
+select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001','b6650000-0000-0000-0000-000000000099',1,1024)$$,'42501',null,'anonymous callers cannot execute confirm_file_upload');
 reset role;
 
 set local role authenticated;

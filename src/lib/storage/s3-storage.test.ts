@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { HeadObjectCommand } from "@aws-sdk/client-s3";
 
 import type { StorageConfig } from "./config";
 import { StorageError } from "./errors";
@@ -177,6 +178,60 @@ describe("s3 storage adapter", () => {
       await expect(adapter.get("org/k")).rejects.toThrow(
         new StorageError("READ_FAILED"),
       );
+    });
+  });
+
+  describe("stat", () => {
+    it("returns object size and content type from a HEAD request", async () => {
+      const { send, dependencies } = createDependencies();
+      send.mockResolvedValue({ ContentLength: 2048, ContentType: "application/pdf" });
+      const adapter = createS3Storage(config, dependencies);
+
+      await expect(adapter.stat("org/k")).resolves.toEqual({
+        sizeBytes: 2048,
+        contentType: "application/pdf",
+      });
+
+      expect(send).toHaveBeenCalledTimes(1);
+      expect(send.mock.calls[0][0]).toBeInstanceOf(HeadObjectCommand);
+      expect(sentInput(send)).toEqual({ Bucket: config.bucket, Key: "org/k" });
+    });
+
+    it("treats a missing response content length as a safe error", async () => {
+      const { send, dependencies } = createDependencies();
+      send.mockResolvedValue({ ContentType: "application/pdf" });
+      const adapter = createS3Storage(config, dependencies);
+
+      await expect(adapter.stat("org/k")).rejects.toThrow(
+        new StorageError("READ_FAILED"),
+      );
+    });
+
+    it("maps head failures to a safe error without leaking credentials", async () => {
+      const { send, dependencies } = createDependencies();
+      send.mockRejectedValue(
+        new Error(`head boom ${config.accessKey} ${config.secretKey}`),
+      );
+      const adapter = createS3Storage(config, dependencies);
+
+      const error = await adapter
+        .stat("org/k")
+        .then(() => null, (caught: unknown) => caught);
+
+      expect(error).toEqual(new StorageError("READ_FAILED"));
+      expect(String(error)).not.toContain(config.accessKey);
+      expect(String(error)).not.toContain(config.secretKey);
+    });
+
+    it("preserves the original head failure as a server-side cause", async () => {
+      const { send, dependencies } = createDependencies();
+      const original = new Error("head boom");
+      send.mockRejectedValue(original);
+      const adapter = createS3Storage(config, dependencies);
+
+      await expect(adapter.stat("org/k")).rejects.toMatchObject({
+        cause: original,
+      });
     });
   });
 

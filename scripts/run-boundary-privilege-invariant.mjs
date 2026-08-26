@@ -429,7 +429,7 @@ export function assertStatementModeFile({
   const report = [];
   let pendingGrace = [];
   let previous = previousSnapshot;
-  const approvedKeys = browserReachableApprovedKeys(allowedTerminalMigrations);
+  const approvedKeys = browserReachableApprovedKeys(allowedTerminalMigrations, file.name);
 
   statements.forEach((statement, index) => {
     const snapshot = snapshots[index];
@@ -588,12 +588,15 @@ function main() {
     // grants from terminal migrations reached so far. This generalizes the
     // original single-final-terminal invariant to later grant-terminal files
     // without expecting future grants early or forgetting prior approvals.
+    // throughFile also keeps a superseded historical signature expected until
+    // its own revoking migration has been applied, and excludes it after.
     problems.push(
       ...assertFinalBoundary({
         label,
         baselineSnapshot: platformBaseline,
         snapshot,
         terminalMigrations: terminalMigrationsThroughCurrentFile,
+        throughFile: file.name,
       }),
     );
 

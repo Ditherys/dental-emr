@@ -523,16 +523,25 @@ export function assertPreFinalStatementBoundary({
 /**
  * At the grant-terminal migration the effective privilege set must equal the
  * platform baseline plus exactly the approved grants — no more, no less.
+ *
+ * `throughFile` names the migration file whose "boundary after" is being
+ * judged; R6-D replay asserts this comparison at every intermediate file
+ * boundary, not only at the end of the chain. Only terminal migrations reached
+ * by that file contribute, and superseded entries are expected until their own
+ * revoking migration. When omitted it means the end-of-chain final state,
+ * where every registered terminal contributes and every superseded entry has
+ * been revoked and is therefore excluded.
  */
 export function assertFinalBoundary({
   label,
   baselineSnapshot,
   snapshot,
   terminalMigrations,
+  throughFile,
 }) {
   const problems = [];
   const { added } = diffAgainstBaseline(baselineSnapshot, snapshot);
-  const approved = browserReachableApprovedKeys(terminalMigrations);
+  const approved = browserReachableApprovedKeys(terminalMigrations, throughFile);
   const seen = new Set();
 
   for (const { key, entry } of added) {
@@ -589,16 +598,53 @@ export function assertStructuralExpectations(label, snapshot) {
 }
 
 /**
- * The approved grants that the probe can actually observe. service_role grants
- * are excluded because ADR-017 §5 scopes the invariant to browser-reachable
- * roles and the probe does not inspect server-only roles.
+ * The approved grants the probe can actually observe THROUGH migration file
+ * `throughFile`, or the end-of-chain final state when no boundary is given.
+ *
+ * service_role grants are excluded because ADR-017 §5 scopes the invariant to
+ * browser-reachable roles and the probe does not inspect server-only roles.
+ *
+ * Two rules, both keyed on `throughFile`:
+ *
+ *   1. Only terminal migrations REACHED by the boundary file contribute — the
+ *      identical comparison `terminalMigrationsThroughFile`
+ *      (run-boundary-privilege-invariant.mjs) uses: filenames begin with
+ *      sortable timestamps ordered by `localeCompare`, and a file counts when
+ *      it sorts at or before the boundary file. Doing this here, rather than
+ *      trusting callers to pre-filter, keeps future grants out of mid-chain
+ *      replay expectations even when handed the whole registry.
+ *
+ *   2. Superseded entries are BOUNDARY-AWARE. Such an entry records the
+ *      replacement object (`supersededBy`) and the migration that revokes it
+ *      (`supersededFrom`). `assertFinalBoundary` runs at every intermediate
+ *      file boundary during R6-D replay, not only at the end of the chain, so
+ *      between the granting and revoking migrations the live catalog
+ *      legitimately still holds the old signature:
+ *
+ *        - through any file BEFORE `supersededFrom` in migration order →
+ *          the superseded entry is included;
+ *        - from `supersededFrom` onward (the boundary after the revoking
+ *          migration itself included) → excluded, the revoke has been applied;
+ *        - with no boundary given — the end-of-chain final state → excluded.
+ *
+ * A superseded entry that fails to name its revoking migration throws instead
+ * of guessing: silently including it would break late-boundary replay, silently
+ * excluding it would break early-boundary replay, so neither is acceptable.
  */
-export function browserReachableApprovedKeys(terminalMigrations) {
+export function browserReachableApprovedKeys(terminalMigrations, throughFile) {
   const keys = new Map();
 
   for (const terminal of terminalMigrations) {
+    if (throughFile !== undefined && terminal.file.localeCompare(throughFile) > 0) {
+      continue;
+    }
+
     for (const grant of terminal.grants) {
       if (!PROBED_GRANTEES.includes(grant.grantee.toLowerCase())) {
+        continue;
+      }
+
+      if (isSupersededGrantRevokedThrough(grant, throughFile)) {
         continue;
       }
 
@@ -607,4 +653,32 @@ export function browserReachableApprovedKeys(terminalMigrations) {
   }
 
   return keys;
+}
+
+/**
+ * True when `grant` carries a supersede marker AND its revoking migration has
+ * been reached by `throughFile`, i.e. `supersededFrom` sorts at or before the
+ * boundary file — the identical comparison
+ * `terminalMigrationsThroughFile` uses for terminal files themselves. No
+ * marker means a plain grant that is always expected; a marker without a
+ * revoking migration fails closed.
+ */
+function isSupersededGrantRevokedThrough(grant, throughFile) {
+  if (!grant.supersededBy && !grant.supersededFrom) {
+    return false;
+  }
+
+  if (!grant.supersededFrom) {
+    throw new Error(
+      `The approved grant "${grant.object}" records supersededBy without supersededFrom. ` +
+        "Boundary-aware exclusion cannot tell when this privilege stops being expected; " +
+        "record the registered terminal migration file that revokes it.",
+    );
+  }
+
+  if (throughFile === undefined) {
+    return true;
+  }
+
+  return grant.supersededFrom.localeCompare(throughFile) <= 0;
 }

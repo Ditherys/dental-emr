@@ -3,10 +3,11 @@ import "server-only";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import type { GetObjectCommandOutput } from "@aws-sdk/client-s3";
+import type { GetObjectCommandOutput, HeadObjectCommandOutput } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createHash } from "node:crypto";
 
@@ -16,6 +17,7 @@ import type {
   StorageAdapter,
   StorageGetResult,
   StoragePutResult,
+  StorageStatResult,
   StorageUrlResult,
 } from "./types";
 
@@ -23,7 +25,11 @@ const DEFAULT_PRESIGN_EXPIRATION_SECONDS = 900;
 const MAX_PRESIGN_EXPIRATION_SECONDS = 604800;
 export const MAX_PUT_BYTES = 100 * 1024 * 1024;
 
-type StorageCommand = PutObjectCommand | GetObjectCommand | DeleteObjectCommand;
+type StorageCommand =
+  | PutObjectCommand
+  | GetObjectCommand
+  | HeadObjectCommand
+  | DeleteObjectCommand;
 
 export type S3StorageDependencies = Readonly<{
   send: (command: StorageCommand) => Promise<unknown>;
@@ -131,6 +137,27 @@ export function createS3Storage(
 
       return {
         body: response.Body.transformToWebStream() as ReadableStream<Uint8Array>,
+        contentType: response.ContentType ?? "",
+      };
+    },
+
+    async stat(key: string): Promise<StorageStatResult> {
+      let response: HeadObjectCommandOutput;
+
+      try {
+        response = (await dependencies.send(
+          new HeadObjectCommand({ Bucket: bucket, Key: key }),
+        )) as HeadObjectCommandOutput;
+      } catch (error) {
+        throw new StorageError("READ_FAILED", { cause: error });
+      }
+
+      if (typeof response.ContentLength !== "number") {
+        throw new StorageError("READ_FAILED");
+      }
+
+      return {
+        sizeBytes: response.ContentLength,
         contentType: response.ContentType ?? "",
       };
     },

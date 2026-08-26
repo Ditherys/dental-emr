@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TERMINAL_MIGRATIONS } from "./approved-final-grants.mjs";
+import { TERMINAL_MIGRATIONS, assertSupersedeReferencesResolve } from "./approved-final-grants.mjs";
 import {
   ACCEPTED_BOUNDARY_EXCEPTIONS,
   assertBaselineObservesPrivileges,
@@ -139,7 +139,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_procedures(uuid)",
     "public.get_procedure_configuration(uuid, uuid)",
     "public.create_file_upload(uuid, uuid, text, bigint)",
-    "public.confirm_file_upload(uuid, uuid, integer)",
+    "public.confirm_file_upload(uuid, uuid, integer, bigint)",
     "public.list_patient_files(uuid, uuid, boolean)",
     "public.get_file_metadata(uuid, uuid)",
     "public.archive_file(uuid, uuid, integer)",
@@ -1207,6 +1207,275 @@ describe("the grant-terminal boundary", () => {
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
     expect(approved.size).toBe(60);
+  });
+
+  it("excludes a superseded historical signature from the observable final set", () => {
+    // Mirrors the confirm_file_upload verified-size replacement: the old
+    // terminal file's immutable grant must still satisfy the static per-file
+    // lint, but the live catalog no longer holds the privilege, so the final
+    // boundary (no boundary file given = end of chain) must not demand it
+    // effectively.
+    const terminals = [
+      {
+        file: "0100_terminal.sql",
+        grants: [
+          {
+            grantee: "authenticated",
+            objectClass: "function",
+            object: "public.confirm(uuid,uuid,integer)",
+            privilege: "execute",
+            columns: [],
+            supersededBy: "public.confirm(uuid,uuid,integer,bigint)",
+            supersededFrom: "0110_terminal.sql",
+            reason: "Historical signature replaced by the verified-size migration.",
+          },
+        ],
+      },
+      {
+        file: "0110_terminal.sql",
+        grants: [
+          {
+            grantee: "authenticated",
+            objectClass: "function",
+            object: "public.confirm(uuid,uuid,integer,bigint)",
+            privilege: "execute",
+            columns: [],
+            reason: "The replacement signature persisting the server-verified size.",
+          },
+        ],
+      },
+    ];
+
+    const approved = browserReachableApprovedKeys(terminals);
+    const keys = [...approved.keys()];
+
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toBe(
+      "authenticated | function | public.confirm(uuid,uuid,integer,bigint) | execute | ",
+    );
+
+    expect(
+      assertFinalBoundary({
+        label: "final",
+        baselineSnapshot: PLATFORM_BASELINE,
+        snapshot: snapshot({
+          privileges: [
+            ...PLATFORM_BASELINE.privileges,
+            {
+              grantee: "authenticated",
+              object_class: "function",
+              object: "public.confirm(uuid, uuid, integer, bigint)",
+              privilege: "execute",
+              column: null,
+            },
+          ],
+        }),
+        terminalMigrations: terminals,
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("boundary-aware superseded-grant replay windows", () => {
+  const OLD_CONFIRM_KEY =
+    "authenticated | function | public.confirm_file_upload(uuid,uuid,integer) | execute | ";
+  const NEW_CONFIRM_KEY =
+    "authenticated | function | public.confirm_file_upload(uuid,uuid,integer,bigint) | execute | ";
+  const CONFIRM_GRANT_FILE = "20260826010701_patient_file_upload_rpcs_grants.sql";
+  const REVOKING_FILE = "20260826011100_confirm_file_upload_verified_size.sql";
+  const REPLACEMENT_GRANT_FILE = "20260826011101_confirm_file_upload_verified_size_grants.sql";
+
+  /**
+   * Synthetic mirror of the reviewed chain shape: grant the old signature at
+   * 0100, an unrelated grant-terminal at 0200, revoke via a registered (empty)
+   * terminal at 0300, and grant the replacement signature at 0301.
+   */
+  function replayTerminals() {
+    return [
+      {
+        file: "0100_confirm_grants.sql",
+        grants: [
+          {
+            grantee: "authenticated",
+            objectClass: "function",
+            object: "public.confirm_file_upload(uuid,uuid,integer)",
+            privilege: "execute",
+            columns: [],
+            supersededBy: "public.confirm_file_upload(uuid,uuid,integer,bigint)",
+            supersededFrom: "0300_confirm_verified_size.sql",
+            reason: "Historical three-argument signature.",
+          },
+        ],
+      },
+      { file: "0200_unrelated_grants.sql", grants: [] },
+      { file: "0300_confirm_verified_size.sql", grants: [] },
+      {
+        file: "0301_confirm_verified_size_grants.sql",
+        grants: [
+          {
+            grantee: "authenticated",
+            objectClass: "function",
+            object: "public.confirm_file_upload(uuid,uuid,integer,bigint)",
+            privilege: "execute",
+            columns: [],
+            reason: "The verified-size replacement signature.",
+          },
+        ],
+      },
+    ];
+  }
+
+  const OLD_CONFIRM_ROW = {
+    grantee: "authenticated",
+    object_class: "function",
+    object: "public.confirm_file_upload(uuid, uuid, integer)",
+    privilege: "execute",
+    column: null,
+  };
+
+  it("expects the superseded three-argument confirm grant at every registered boundary before its revoking migration", () => {
+    for (const file of [
+      CONFIRM_GRANT_FILE,
+      "20260826010801_patient_file_read_rpcs_grants.sql",
+      "20260826010901_patient_file_archive_rpc_grants.sql",
+      "20260826011001_patient_file_metadata_object_key_grants.sql",
+    ]) {
+      const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS, file);
+
+      expect(approved.has(OLD_CONFIRM_KEY), file).toBe(true);
+      expect(approved.has(NEW_CONFIRM_KEY), file).toBe(false);
+    }
+  });
+
+  it("drops the old signature exactly at the revoking migration and picks up the replacement from its own granting file", () => {
+    // Boundary after the revoking object migration: the old signature is gone
+    // and the replacement grant has not been applied yet.
+    const atRevocation = browserReachableApprovedKeys(TERMINAL_MIGRATIONS, REVOKING_FILE);
+    expect(atRevocation.has(OLD_CONFIRM_KEY)).toBe(false);
+    expect(atRevocation.has(NEW_CONFIRM_KEY)).toBe(false);
+
+    const atReplacement = browserReachableApprovedKeys(TERMINAL_MIGRATIONS, REPLACEMENT_GRANT_FILE);
+    expect(atReplacement.has(OLD_CONFIRM_KEY)).toBe(false);
+    expect(atReplacement.has(NEW_CONFIRM_KEY)).toBe(true);
+
+    const finalState = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
+    expect(finalState.has(OLD_CONFIRM_KEY)).toBe(false);
+    expect(finalState.has(NEW_CONFIRM_KEY)).toBe(true);
+  });
+
+  it("passes the intermediate boundary where the catalog legitimately still holds the old signature", () => {
+    // The exact false violation finding A removes: between the granting and
+    // revoking migrations the live EXECUTE grant must satisfy the boundary.
+    expect(
+      assertFinalBoundary({
+        label: "boundary after 0200_unrelated_grants.sql",
+        baselineSnapshot: PLATFORM_BASELINE,
+        snapshot: snapshot({
+          privileges: [...PLATFORM_BASELINE.privileges, OLD_CONFIRM_ROW],
+        }),
+        terminalMigrations: replayTerminals(),
+        throughFile: "0200_unrelated_grants.sql",
+      }),
+    ).toEqual([]);
+  });
+
+  it("fails closed when the old signature survives past its revoking migration", () => {
+    const problems = assertFinalBoundary({
+      label: "boundary after 0300_confirm_verified_size.sql",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({
+        privileges: [...PLATFORM_BASELINE.privileges, OLD_CONFIRM_ROW],
+      }),
+      terminalMigrations: replayTerminals(),
+      throughFile: "0300_confirm_verified_size.sql",
+    });
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("public.confirm_file_upload(uuid,uuid,integer)");
+    expect(problems[0]).toContain("not in the approved final privilege set");
+  });
+
+  it("fails closed when the old signature is missing before its revoking migration", () => {
+    const problems = assertFinalBoundary({
+      label: "boundary after 0100_confirm_grants.sql",
+      baselineSnapshot: PLATFORM_BASELINE,
+      snapshot: snapshot({ privileges: PLATFORM_BASELINE.privileges }),
+      terminalMigrations: replayTerminals(),
+      throughFile: "0100_confirm_grants.sql",
+    });
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("public.confirm_file_upload(uuid,uuid,integer)");
+    expect(problems[0]).toContain("does not grant it effectively");
+  });
+
+  it("refuses to compute expectations from a superseded entry that does not name its revoking migration", () => {
+    expect(() =>
+      browserReachableApprovedKeys([
+        {
+          file: "0100_confirm_grants.sql",
+          grants: [
+            {
+              grantee: "authenticated",
+              objectClass: "function",
+              object: "public.confirm_file_upload(uuid,uuid,integer)",
+              privilege: "execute",
+              columns: [],
+              supersededBy: "public.confirm_file_upload(uuid,uuid,integer,bigint)",
+              reason: "Historical three-argument signature.",
+            },
+          ],
+        },
+      ]),
+    ).toThrow(/supersededFrom/);
+  });
+});
+
+describe("supersede-reference validation of the approved registry", () => {
+  it("accepts the committed registry", () => {
+    expect(() => assertSupersedeReferencesResolve(TERMINAL_MIGRATIONS)).not.toThrow();
+  });
+
+  function registryWithSupersededEntryMutated(mutation) {
+    return structuredClone(TERMINAL_MIGRATIONS).map((terminal) => ({
+      ...terminal,
+      grants: terminal.grants.map((grant) =>
+        grant.supersededBy || grant.supersededFrom ? mutation(grant) : grant,
+      ),
+    }));
+  }
+
+  it("rejects a supersededFrom that is not a migration file", () => {
+    const broken = registryWithSupersededEntryMutated((grant) => ({
+      ...grant,
+      supersededFrom: "19990101000000_never_registered.sql",
+    }));
+
+    expect(() => assertSupersedeReferencesResolve(broken)).toThrow(
+      /is not a \.sql file in supabase\/migrations/,
+    );
+  });
+
+  it("rejects a supersededBy naming an object no registered grant carries", () => {
+    const broken = registryWithSupersededEntryMutated((grant) => ({
+      ...grant,
+      supersededBy: "public.confirm_file_upload(uuid,uuid,text)",
+    }));
+
+    expect(() => assertSupersedeReferencesResolve(broken)).toThrow(
+      /no registered terminal migration grants/,
+    );
+  });
+
+  it("rejects a supersede marker that does not record its revoking migration", () => {
+    const broken = registryWithSupersededEntryMutated((grant) => ({
+      ...grant,
+      supersededFrom: undefined,
+    }));
+
+    expect(() => assertSupersedeReferencesResolve(broken)).toThrow(
+      /without supersededFrom/,
+    );
   });
 });
 

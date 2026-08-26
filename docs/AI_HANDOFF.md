@@ -5,6 +5,80 @@
 
 ## Current checkpoint
 
+- P4-07 adds server-only file services (`src/lib/files/`: Zod input/row schemas,
+  safe error mapping incl. mechanical `STORAGE_*` codes, service wrappers) wiring
+  the app to the Phase 4 file RPCs and the storage adapter. No UI, actions,
+  routes, or new dependencies were added; all modules are `server-only`.
+- P4-07 found and closed a real gap: the accepted P4-05 read RPCs returned no
+  `object_key`, yet the plan and grant inventory both state presigning happens
+  app-side after authorizing against `get_file_metadata`, and confirm/download/
+  archive need the key server-side (patient/org ids are not derivable from a
+  fileId). Fix is additive and precedented on the create_procedure hardening
+  pattern: `20260826011000` recreates only `get_file_metadata(uuid,uuid)` adding
+  `object_key` to its bounded projection (checksums still hidden), and
+  `20260826011001` re-states the exact terminal EXECUTE grant, registered in
+  `scripts/approved-final-grants.mjs`. The pgTAP projection assertions in
+  `file_read_rpcs.test.sql` were updated to prove key exposure and that
+  `list_patient_files` still excludes it.
+- P4-07 extends the storage adapter minimally with `stat(key)` returning
+  `{sizeBytes, contentType}` via S3 HeadObjectCommand (`READ_FAILED` mapping);
+  unit tests cover success, missing content-length, and credential-safe errors.
+- Confirm flow ordering is metadata gate → status must be pending → `stat` →
+  verified-fact binding → `confirm_file_upload(uuid,uuid,integer,bigint)`. The
+  service enforces `stat.sizeBytes <= MAX_FILE_SIZE_BYTES`, a positive size,
+  and `stat.contentType === mime_type` (safe `INVALID_STATE` otherwise), then
+  passes the HEAD-measured `p_verified_size_bytes`. Declared client sizes no
+  longer participate in confirmation; any stat failure fails closed as
+  `INVALID_STATE` (missing object vs outage are indistinguishable by design).
+- Review fix closes the NULL-declared-size bypass: `20260826011100` recreates
+  only `confirm_file_upload` with an additional required `bigint` parameter and
+  persists that server-verified value into `size_bytes` on becoming available
+  (authorization/locking/version/audit logic unchanged); it also adds the
+  `file_objects_available_size_check` table CHECK so no row can be or become
+  `available` with a null size, and revokes both old and new signatures
+  adjacent to creation. Because the signature changed, `20260826011101`
+  restates the terminal EXECUTE grant for the NEW signature following the exact
+  create_procedure input-hardening precedent. The immutable
+  `20260826010701` registration keeps its historical three-argument entry
+  marked `supersededBy` the new signature: it still satisfies the per-file
+  static lint while being excluded from the live-catalog final boundary
+  (`browserReachableApprovedKeys`). pgTAP coverage proves verified-size
+  persistence, CHECK rejection on both direct-insert and null-update paths,
+  positive-size input validation, and stale-version rejection on the new
+  signature.
+- `checksum_sha256` deferral rationale: computing SHA-256 at confirm would
+  require a full object read per confirmation, which is disproportionate for
+  the upload path; checksum verification is deferred to deployment-readiness
+  tooling alongside the R2 derivative work. The database now guarantees every
+  available row carries a server-verified size, while checksums remain
+  unverified/null until that tooling lands.
+- Archive flow order is proven by tests: `requireAal2()` first, then metadata
+  gate, then `archive_file`, then best-effort `storage.delete`; deletion failure
+  never fails the archive and returns `{objectDeleted:false}`. Download refuses
+  archived and pending rows before touching storage. A failed presign after
+  `create_file_upload` intentionally leaves an orphaned pending row for later
+  cleanup tooling. `CreateFileUploadResult` no longer exposes `objectKey`;
+  `uploadUrl`, `expiresAt`, `fileId`, and `version` suffice for callers.
+- Download auditing was NOT implemented: no app-side audit-writing mechanism
+  exists in this repository (audit_events are written exclusively inside
+  SECURITY DEFINER RPCs; grep of src/lib finds no audit writer). Per task rules
+  no hack was added; download auditing needs either an RPC or an event mechanism
+  and should be planned explicitly.
+- Review-fix verification (2026-08-26, this checkpoint): the reviewer-reported
+  typecheck failure (`delete row.object_key` TS2790) was replaced with a rest
+  destructure and `npm run typecheck` now truly passes; `npm run lint` passes
+  (0 errors). Fresh local reconstruction applied all 46 migrations plus
+  synthetic seed; provisioning passed; `npm run test:db:local` passed all 22
+  pgTAP suites and three concurrency probes. `npm run security:migrations`
+  reports 46 files, 18 grant terminals, and 76 approved grants. Focused Vitest
+  (`src/lib/files`, `src/lib/storage`) covers contentType mismatch, oversize
+  stat, and verified-size RPC binding. Cloud TEST remains mandatory before
+  production.
+- Earlier P4-07 local verification: fresh local reconstruction applied all 44
+  migrations plus synthetic seed; provisioning passed; `npm run test:db:local`
+  passed all 22 pgTAP suites and three concurrency probes. `npm run lint`,
+  `npm run typecheck`, `npm run security:migrations` (44 files, 17 terminals,
+  75 approved grants), and full `npx vitest run` (50 files, 488 tests) passed.
 - P3-00 is accepted. The independently reviewed Phase 3 plan is
   `docs/plans/003-provider-specialty-procedure-foundation.md`; ADR-021 extends
   the guarded, synthetic-only local verification boundary to its accepted

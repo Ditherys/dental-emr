@@ -19,8 +19,27 @@
  *      migration no longer grants also fails, because a stale allowlist is a
  *      false record of the security boundary.
  *
+ * A registered grant whose object signature a later reviewed migration replaced
+ * carries a `supersededBy` field naming the replacement object and a
+ * `supersededFrom` field naming the registered terminal migration that revokes
+ * it. It still matches the immutable historical terminal file statically.
+ * Because R6-D replays assert the final-boundary comparison at EVERY
+ * intermediate file boundary, replay expectations include the old signature
+ * until its revoking migration has been applied and exclude it from that
+ * boundary onward — and from the end-of-chain final state — where the
+ * superseded privilege no longer exists in the live catalog.
+ *
  * See docs/decisions/ADR-017-phase1-secure-migration-baseline.md.
  */
+
+import { existsSync, readdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = resolve(scriptDirectory, "..");
+
+export const MIGRATIONS_DIRECTORY = "supabase/migrations";
 
 const FOUNDATION_TABLES = Object.freeze([
   ["public.organizations", "Tenancy root. RLS restricts it to organizations the caller is an active member of."],
@@ -302,9 +321,30 @@ const PATIENT_FILE_UPLOAD_RPCS_GRANTS_MIGRATION =
   "20260826010701_patient_file_upload_rpcs_grants.sql";
 
 const patientFileUploadRpcGrants = Object.freeze([
-  "public.create_file_upload(uuid,uuid,text,bigint)",
-  "public.confirm_file_upload(uuid,uuid,integer)",
-].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file upload boundary derives tenant and actor from an active authenticated acting branch, requires live demographics-write at the acting branch or organization-wide provider.manage, inserts only pending metadata rows with opaque scoped object keys, and locks and optimistically versions the row it confirms while appending one opaque patient-linked audit event atomically; presigned URLs stay in the server-side storage adapter." })));
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.create_file_upload(uuid,uuid,text,bigint)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only patient file upload creation boundary derives tenant and actor from an active authenticated acting branch, requires live demographics-write at the acting branch or organization-wide provider.manage, inserts only pending metadata rows with opaque scoped object keys, and appends one opaque patient-linked audit event atomically; presigned URLs stay in the server-side storage adapter.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.confirm_file_upload(uuid,uuid,integer)",
+    privilege: "execute",
+    columns: [],
+    supersededBy: "public.confirm_file_upload(uuid,uuid,integer,bigint)",
+    supersededFrom: "20260826011100_confirm_file_upload_verified_size.sql",
+    reason:
+      "Historical EXECUTE grant of the immutable 20260826010701 terminal for the original three-argument confirmation signature. Revoked by 20260826011100, which recreated the definition with a fourth required bigint parameter carrying the server-measured object size and revoked both signatures adjacent to recreation; 20260826011101 restores EXECUTE on the replacement signature. Replay boundaries through 20260826011001 legitimately hold this privilege and must expect it; from the revoking boundary onward it no longer exists in the live catalog and is excluded.",
+  },
+]);
+
+const PATIENT_FILE_CONFIRM_VERIFIED_SIZE_GRANTS_MIGRATION =
+  "20260826011101_confirm_file_upload_verified_size_grants.sql";
 
 const PATIENT_FILE_READ_RPCS_GRANTS_MIGRATION =
   "20260826010801_patient_file_read_rpcs_grants.sql";
@@ -312,7 +352,7 @@ const PATIENT_FILE_READ_RPCS_GRANTS_MIGRATION =
 const patientFileReadRpcGrants = Object.freeze([
   "public.list_patient_files(uuid,uuid,boolean)",
   "public.get_file_metadata(uuid,uuid)",
-].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file read boundary derives the tenant from an active authenticated acting branch, requires live demographics-read at the acting branch, and returns only the bounded metadata projection without object keys or checksums while writing no audit events; get_file_metadata is the authorization gate the server-side storage adapter reuses before minting a presigned download URL." })));
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file read boundary derives the tenant from an active authenticated acting branch, requires live demographics-read at the acting branch, and returns only the bounded metadata projection without checksums while writing no audit events; get_file_metadata is the authorization gate the server-side storage adapter reuses before minting a presigned download URL. Its single-file projection was later extended with the opaque object_key by the reviewed P4-07 extension migration." })));
 
 const PATIENT_FILE_ARCHIVE_RPC_GRANTS_MIGRATION =
   "20260826010901_patient_file_archive_rpc_grants.sql";
@@ -320,6 +360,9 @@ const PATIENT_FILE_ARCHIVE_RPC_GRANTS_MIGRATION =
 const patientFileArchiveRpcGrants = Object.freeze([
   "public.archive_file(uuid,uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only patient file archive boundary requires AAL2 first, derives tenant and actor from an active authenticated acting branch, requires live demographics-write at the acting branch or organization-wide provider.manage, flips only metadata status to archived under a locked optimistic version while appending one opaque patient-linked audit event atomically; object-storage deletion stays in the server-side storage adapter." })));
+
+const PATIENT_FILE_METADATA_OBJECT_KEY_GRANTS_MIGRATION =
+  "20260826011001_patient_file_metadata_object_key_grants.sql";
 
 /**
  * Grant-terminal migrations, in migration order.
@@ -387,7 +430,96 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
     file: PATIENT_FILE_ARCHIVE_RPC_GRANTS_MIGRATION,
     grants: patientFileArchiveRpcGrants,
   }),
+  Object.freeze({
+    file: PATIENT_FILE_METADATA_OBJECT_KEY_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.get_file_metadata(uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "Restores the exact 20260826010801 terminal EXECUTE grant that the P4-07 projection-extension migration cancelled when it recreated the function definition. The bounded single-file gate now also returns the opaque object_key so the server-only file service can verify stored objects and mint presigned URLs strictly after this authorization check; checksums stay unexposed and base-table privileges remain denied.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: PATIENT_FILE_CONFIRM_VERIFIED_SIZE_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.confirm_file_upload(uuid,uuid,integer,bigint)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "Restores the exact 20260826010701 terminal EXECUTE grant pattern that the P4-07 verified-size migration cancelled when it replaced the confirm_file_upload definition with a fourth required bigint parameter. The server-side storage adapter measures the stored object with a HEAD request and passes that server-verified size, which the SECURITY DEFINER body persists into size_bytes when the row becomes available, and a database CHECK now guarantees every available file row carries a non-null verified size.",
+      },
+    ]),
+  }),
 ]);
+
+/**
+ * Fails closed when a supersede marker references something that does not
+ * actually exist. `supersededFrom` names the migration whose application
+ * revokes the grant — the pivot of the boundary-aware replay expectation — so
+ * it must be the exact name of a .sql file in MIGRATIONS_DIRECTORY; the
+ * revoking migration is usually an ordinary object migration, not itself a
+ * registered grant-terminal. A dangling value there would silently misplace
+ * the exclusion window. `supersededBy`, when present, must name an object some
+ * registered grant carries. A supersede marker without `supersededFrom` is
+ * refused outright: replay could not know when the privilege stops being
+ * expected.
+ *
+ * Runs once at module load so every consumer of this registry — the static
+ * lint, the unit tests, and R6-D replay — refuses a broken one immediately.
+ */
+export function assertSupersedeReferencesResolve(terminalMigrations = TERMINAL_MIGRATIONS) {
+  const migrationsDirectory = join(repositoryRoot, ...MIGRATIONS_DIRECTORY.split("/"));
+  const migrationFiles = new Set(
+    existsSync(migrationsDirectory)
+      ? readdirSync(migrationsDirectory).filter((name) => name.toLowerCase().endsWith(".sql"))
+      : [],
+  );
+  const registeredObjects = new Set(
+    terminalMigrations.flatMap((terminal) =>
+      terminal.grants.map((grant) => grant.object.replaceAll(" ", "")),
+    ),
+  );
+
+  for (const terminal of terminalMigrations) {
+    for (const grant of terminal.grants) {
+      if (!grant.supersededBy && !grant.supersededFrom) {
+        continue;
+      }
+
+      if (!grant.supersededFrom) {
+        throw new Error(
+          `The approved grant "${grant.object}" records supersededBy without supersededFrom. ` +
+            "Boundary replay cannot tell which migration revokes it; name the migration file " +
+            "in " + MIGRATIONS_DIRECTORY + " that revokes this grant.",
+        );
+      }
+
+      if (!migrationFiles.has(grant.supersededFrom)) {
+        throw new Error(
+          `The approved grant "${grant.object}" names supersededFrom ` +
+            `"${grant.supersededFrom}", which is not a .sql file in ${MIGRATIONS_DIRECTORY}.`,
+        );
+      }
+
+      if (grant.supersededBy && !registeredObjects.has(grant.supersededBy.replaceAll(" ", ""))) {
+        throw new Error(
+          `The approved grant "${grant.object}" names supersededBy ` +
+            `"${grant.supersededBy}", which no registered terminal migration grants.`,
+        );
+      }
+    }
+  }
+}
+
+assertSupersedeReferencesResolve();
 
 /**
  * Extensions the canonical baseline is permitted to create.
@@ -408,5 +540,3 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
  * here stating why the extension belongs in every environment.
  */
 export const APPROVED_EXTENSIONS = Object.freeze([]);
-
-export const MIGRATIONS_DIRECTORY = "supabase/migrations";

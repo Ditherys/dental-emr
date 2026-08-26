@@ -92,8 +92,8 @@ select extensions.is(
    from pg_proc as routine,
         unnest(routine.proargmodes, routine.proargnames) with ordinality as argument(mode, name, ordinality)
    where routine.oid='public.get_file_metadata(uuid,uuid)'::regprocedure),
-  array['i:p_acting_branch_id','i:p_file_id','t:file_id','t:mime_type','t:size_bytes','t:status','t:version','t:created_at','t:uploaded_by']::text[],
-  'the single-file projection matches the bounded list projection exactly'
+  array['i:p_acting_branch_id','i:p_file_id','t:file_id','t:object_key','t:mime_type','t:size_bytes','t:status','t:version','t:created_at','t:uploaded_by']::text[],
+  'the single-file gate adds only the opaque object key to the bounded projection'
 );
 select set_config('p405.audit_before',(select count(*)::text from public.audit_events),true);
 
@@ -117,9 +117,9 @@ select extensions.is((select count(*)::integer from public.list_patient_files('b
 select extensions.throws_ok($$select count(*) from public.list_patient_files('b6720000-0000-0000-0000-000000000001','b6740000-0000-0000-0000-000000000001',null)$$,'22023','invalid input','a null include_archived flag is rejected');
 
 select extensions.is((
-  select listed.file_id::text || '|' || listed.mime_type || '|' || listed.size_bytes::text || '|' || listed.status || '|' || listed.version::text || '|' || listed.uploaded_by::text
+  select listed.file_id::text || '|' || listed.object_key || '|' || listed.mime_type || '|' || listed.size_bytes::text || '|' || listed.status || '|' || listed.version::text || '|' || listed.uploaded_by::text
   from public.get_file_metadata('b6720000-0000-0000-0000-000000000001','b6750000-0000-0000-0000-000000000001') as listed
-),'b6750000-0000-0000-0000-000000000001|application/pdf|1024|pending|1|b6700000-0000-0000-0000-000000000001','metadata exposes only the approved bounded fields with an opaque uploader uuid');
+),'b6750000-0000-0000-0000-000000000001|org/b6710000-0000-0000-0000-000000000001/patients/b6740000-0000-0000-0000-000000000001/files/b6750000-0000-0000-0000-000000000001|application/pdf|1024|pending|1|b6700000-0000-0000-0000-000000000001','metadata exposes the approved bounded fields plus the opaque object key with an opaque uploader uuid');
 
 select extensions.throws_ok($$select public.get_file_metadata('b6720000-0000-0000-0000-000000000001','b6740000-0000-0000-0000-000000000004')$$,'42501','not authorized','a patient uuid passed as a file id gets the identical safe denial');
 
