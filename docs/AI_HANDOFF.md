@@ -1,7 +1,40 @@
-# AI Handoff - Phase 10 complete, Phase 11 next
+# AI Handoff - Phase 11 complete, Phase 12 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 11 checkpoint (2026-08-27) - ACCEPTED (real PDF conversion NOT VERIFIED)
+
+Phase 11 (Document & Print Engine) complete through commit `00146e3` (P11-04
+renderer + print UI) with `docs/plans/011-document-print.md` P11-01..P11-05 all
+`[x]`.
+
+- P11-01 `e607687` document.generate/view permission contract
+  (generate OWNER/ADMIN/DENTIST; view + RECEPTIONIST).
+  P11-02/03 `7120f94` documents table (template_version + data_snapshot +
+  include_set, snapshot object+size checks) + generate/list/get_snapshot RPCs +
+  has_document_permission_at_branch; snapshot built server-side from authorized
+  sections (demographics/referrals/appointments) per type; include-set controls
+  configurable export (never blind full export); audit document.generated per
+  generation; additive audit-metadata extension (document_type/include_set
+  keys). P11-04 `00146e3` src/lib/documents services + render.ts (branded A4
+  `@page`/`@media print` HTML, escaped) + /documents UI (patient picker,
+  generate dialog with include-set checkboxes) + /documents/[id]/print route.
+- Acceptance criteria met: A4 usable (print HTML route + print chrome-hidden
+  shell); configurable export (include_set); clinic branding (org/branch
+  rendered server-side); sensitive exports authorized/audited (document.generate
+  + audit event); reproducible snapshot (template_version + data_snapshot
+  byte-identical re-render, pgTAP-proven).
+- Inventory: 88 migration files, 30 grant terminals, 117 approved privileges;
+  49 pgTAP suites + 3 concurrency probes; tables 45, functions 150,
+  security-definer 126; unit 79 files / 838 tests; scripts 279.
+- **NOT VERIFIED / EXTERNAL DEPENDENCY:** PDF conversion. The A4 print HTML is
+  the print-to-PDF seam.
+
+**Next:** Phase 12 (Clinic Website) per docs/MASTER_PRODUCT_PLAN.md §Phase 12.
+Author bounded plan docs/plans/012-clinic-website.md then execute P12-01.. .
+
+## Phase 11 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 11 checkpoint (2026-08-27) - P11-04 IMPLEMENTED, not committed
 

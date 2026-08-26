@@ -42,11 +42,11 @@ generation time). Sensitive exports are permission-gated and audited.
 
 ## Tasks
 
-- [ ] **P11-01: Document permission contract**
+- [x] **P11-01: Document permission contract**
   - `document.generate` / `document.view` permission rows + matrix;
     `PermissionCode` + policy test; pgTAP proving the matrix.
 
-- [ ] **P11-02: Document schema**
+- [x] **P11-02: Document schema**
   - `documents`: org, branch, patient composite FK, document_type
     (PATIENT_RECORD_SUMMARY/APPOINTMENT_SLIP/REFERRAL_LETTER), template_version
     bounded, data_snapshot jsonb (the finalized reproducible data), include_set
@@ -54,7 +54,7 @@ generation time). Sensitive exports are permission-gated and audited.
     generated_at, version, timestamps. RLS + zero base grants + indexes +
     CHECK data_snapshot is an object <= size. pgTAP.
 
-- [ ] **P11-03: Document RPCs**
+- [x] **P11-03: Document RPCs**
   - `private.has_document_permission_at_branch(acting_branch_id, code)` helper.
   - `generate_document(acting_branch_id, patient_id, document_type, include_set jsonb)`
     — document.generate gated; builds the data snapshot server-side from the
@@ -85,7 +85,7 @@ generation time). Sensitive exports are permission-gated and audited.
     (A4 `@media print` HTML) + server actions (generate/list) rechecking
     document.generate/document.view + acting branch. Tests.
 
-- [ ] **P11-05: Integration verification + phase review**
+- [x] **P11-05: Integration verification + phase review**
 
 ## Explicitly deferred
 
