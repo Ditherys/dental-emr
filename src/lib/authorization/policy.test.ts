@@ -136,6 +136,18 @@ describe("communication permission vocabulary", () => {
   });
 });
 
+describe("calendar permission vocabulary", () => {
+  it("exposes the calendar manage permission code", () => {
+    const calendarManage: PermissionCode = "calendar.manage";
+
+    // @ts-expect-error calendar permissions are a closed contract.
+    const unknownCalendarPermission: PermissionCode = "calendar.read";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([calendarManage]));
+    expect(unknownCalendarPermission).toBe("calendar.read");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

@@ -18,6 +18,7 @@ export const foundationPermissionCodes = [
   "queue.manage",
   "communication.view",
   "communication.send",
+  "calendar.manage",
   "analytics.view",
 ] as const;
 
