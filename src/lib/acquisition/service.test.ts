@@ -9,6 +9,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc
 import { AcquisitionServiceError, mapAcquisitionRpcError } from "./errors";
 import {
   createPatientReferral,
+  getAcquisitionSummary,
   listAcquisitionSources,
   listBookingChannels,
   listPatientReferrals,
@@ -105,5 +106,42 @@ describe("acquisition service boundary", () => {
     await expect(listBookingChannels({ actingBranchId: branchId })).rejects.toEqual(new AcquisitionServiceError("NOT_AUTHORIZED"));
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
     await expect(updatePatientReferralStatus({ actingBranchId: branchId, referralId, expectedVersion: 1, status: "ACTIVE" })).rejects.toEqual(new AcquisitionServiceError("STALE_VERSION"));
+  });
+});
+
+describe("acquisition summary service boundary", () => {
+  beforeEach(() => rpc.mockReset());
+
+  it("rejects a window outside 30/90/365 and any client org value", async () => {
+    await expect(getAcquisitionSummary({ actingBranchId: branchId, windowDays: 45 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getAcquisitionSummary({ actingBranchId: branchId, windowDays: 90, organizationId: "a8200000-0000-0000-0000-000000000001" })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("calls the bounded summary RPC and maps aggregated rows", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [
+        { group_type: "source", code: "FACEBOOK", name: "Facebook", patient_count: 2 },
+        { group_type: "category", code: "DIGITAL", name: "DIGITAL", patient_count: 3 },
+        { group_type: "channel", code: "WALK_IN", name: "Walk-in", patient_count: 4 },
+      ],
+      error: null,
+    });
+    await expect(getAcquisitionSummary({ actingBranchId: branchId, windowDays: 30 })).resolves.toEqual([
+      { groupType: "source", code: "FACEBOOK", name: "Facebook", patientCount: 2 },
+      { groupType: "category", code: "DIGITAL", name: "DIGITAL", patientCount: 3 },
+      { groupType: "channel", code: "WALK_IN", name: "Walk-in", patientCount: 4 },
+    ]);
+    expect(rpc).toHaveBeenLastCalledWith("get_acquisition_summary", {
+      p_acting_branch_id: branchId,
+      p_window_days: 30,
+    });
+  });
+
+  it("maps a denied summary read to a safe authorization error", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(getAcquisitionSummary({ actingBranchId: branchId, windowDays: 365 })).rejects.toEqual(new AcquisitionServiceError("NOT_AUTHORIZED"));
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "22023", message: "invalid input" } });
+    await expect(getAcquisitionSummary({ actingBranchId: branchId, windowDays: 365 })).rejects.toEqual(new AcquisitionServiceError("INVALID_INPUT"));
   });
 });

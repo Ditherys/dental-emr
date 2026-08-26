@@ -24,6 +24,13 @@ const channelCodeSchema = z.string().trim().regex(/^[A-Z][A-Z0-9_]*$/).max(80);
 
 export const catalogReadInputSchema = z.object({ actingBranchId: databaseUuid }).strict();
 
+export const acquisitionReportWindowSchema = z.union([z.literal(30), z.literal(90), z.literal(365)]);
+export const acquisitionSummaryInputSchema = z.object({
+  actingBranchId: databaseUuid,
+  windowDays: acquisitionReportWindowSchema,
+}).strict();
+export const acquisitionSummaryGroupTypeSchema = z.enum(["source", "category", "channel"]);
+
 export const updatePatientAttributionInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
@@ -71,6 +78,12 @@ export const acquisitionSourceRowSchema = z.object({
   category: acquisitionCategorySchema,
 }).strict();
 export const bookingChannelRowSchema = z.object({ code: channelCodeSchema, name: z.string().min(1).max(160) }).strict();
+export const acquisitionSummaryRowSchema = z.object({
+  group_type: acquisitionSummaryGroupTypeSchema,
+  code: channelCodeSchema,
+  name: z.string().min(1).max(160),
+  patient_count: z.number().int().nonnegative(),
+}).strict();
 export const patientIdVersionRowSchema = z.object({ patient_id: databaseUuid, version: z.number().int().positive() }).strict();
 export const referralIdVersionRowSchema = z.object({ referral_id: databaseUuid, version: z.number().int().positive() }).strict();
 export const patientReferralRowSchema = z.object({

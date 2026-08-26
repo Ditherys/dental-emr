@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AcquisitionServiceError, mapAcquisitionRpcError } from "./errors";
 import {
   acquisitionSourceRowSchema,
+  acquisitionSummaryInputSchema,
+  acquisitionSummaryRowSchema,
   bookingChannelRowSchema,
   catalogReadInputSchema,
   createPatientReferralInputSchema,
@@ -19,6 +21,7 @@ import {
 } from "./schema";
 import type {
   AcquisitionSource,
+  AcquisitionSummary,
   BookingChannel,
   PatientAttributionMutationResult,
   PatientReferral,
@@ -50,6 +53,19 @@ export async function listBookingChannels(input: unknown): Promise<BookingChanne
   const value = catalogReadInputSchema.parse(input);
   return z.array(bookingChannelRowSchema).parse(await callRpc("list_booking_channels", {
     p_acting_branch_id: value.actingBranchId,
+  }));
+}
+
+export async function getAcquisitionSummary(input: unknown): Promise<AcquisitionSummary> {
+  const value = acquisitionSummaryInputSchema.parse(input);
+  return z.array(acquisitionSummaryRowSchema).parse(await callRpc("get_acquisition_summary", {
+    p_acting_branch_id: value.actingBranchId,
+    p_window_days: value.windowDays,
+  })).map((row) => ({
+    groupType: row.group_type,
+    code: row.code,
+    name: row.name,
+    patientCount: row.patient_count,
   }));
 }
 

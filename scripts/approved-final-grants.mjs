@@ -373,6 +373,9 @@ const PATIENT_REFERRAL_RPCS_GRANTS_MIGRATION =
 const ACQUISITION_CATALOG_READS_GRANTS_MIGRATION =
   "20260826011701_acquisition_catalog_reads_grants.sql";
 
+const ACQUISITION_REPORT_GRANTS_MIGRATION =
+  "20260826011801_acquisition_report_grants.sql";
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -543,6 +546,20 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         privilege: "execute",
         columns: [],
         reason: "The bounded booking-channel catalog read derives authorization from an active authenticated acting branch, requires live patient.demographics.read, returns only active global channel DTOs, and leaves the zero base-table grant boundary intact.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: ACQUISITION_REPORT_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.get_acquisition_summary(uuid,integer)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "The sole browser-reachable analytics report read. It derives the organization from an active authenticated acting branch, requires live organization-wide analytics.view (OWNER/ADMIN only), validates the bounded window, and returns only aggregated patient counts by source/category/channel for the actor's organization while writing no audit event.",
       },
     ]),
   }),

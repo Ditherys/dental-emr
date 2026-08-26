@@ -112,6 +112,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_patient_referrals(uuid, uuid, boolean)",
     "public.list_acquisition_sources(uuid)",
     "public.list_booking_channels(uuid)",
+    "public.get_acquisition_summary(uuid, integer)",
     "public.create_patient_contact(uuid, uuid, text, text, text, boolean, boolean)",
     "public.update_patient_contact(uuid, uuid, uuid, integer, text, text, text, boolean, boolean)",
     "public.archive_patient_contact(uuid, uuid, uuid, integer)",
@@ -1213,7 +1214,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(67);
+    expect(approved.size).toBe(68);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

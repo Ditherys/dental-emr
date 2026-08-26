@@ -1,4 +1,4 @@
-import { Building2, ClipboardList, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
+import { BarChart3, Building2, ClipboardList, LayoutDashboard, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -37,6 +37,12 @@ export const navigationItems = [
     href: "/settings/procedures",
     icon: ClipboardList,
     requiredPermission: "provider.read",
+  },
+  {
+    label: "Acquisition report",
+    href: "/reports/acquisition",
+    icon: BarChart3,
+    requiredPermission: "analytics.view",
   },
   {
     label: "Account & security",

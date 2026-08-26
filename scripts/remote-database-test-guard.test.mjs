@@ -246,6 +246,7 @@ describe("registered database suites", () => {
   it("runs every suite that exists, and every registered suite exists", () => {
     const expectedSuites = [
       "acquisition_catalogs.test.sql",
+      "acquisition_report.test.sql",
       "audit_foundation.test.sql",
       "branch_lifecycle.test.sql",
       "file_archive_rpc.test.sql",

@@ -12,6 +12,7 @@ export const foundationPermissionCodes = [
   "patient.demographics.write",
   "provider.read",
   "provider.manage",
+  "analytics.view",
 ] as const;
 
 export type PermissionCode = (typeof foundationPermissionCodes)[number];

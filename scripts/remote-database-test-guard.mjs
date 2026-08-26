@@ -99,6 +99,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "file_read_rpcs.test.sql",
   "file_archive_rpc.test.sql",
   "acquisition_catalogs.test.sql",
+  "acquisition_report.test.sql",
   "patient_attribution_columns.test.sql",
   "patient_attribution_rpcs.test.sql",
   "patient_referrals_foundation.test.sql",

@@ -79,6 +79,18 @@ describe("provider permission vocabulary", () => {
   });
 });
 
+describe("analytics permission vocabulary", () => {
+  it("exposes the analytics report permission code", () => {
+    const analyticsView: PermissionCode = "analytics.view";
+
+    // @ts-expect-error analytics permissions are a closed contract.
+    const unknownAnalyticsPermission: PermissionCode = "analytics.write";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([analyticsView]));
+    expect(unknownAnalyticsPermission).toBe("analytics.write");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);
