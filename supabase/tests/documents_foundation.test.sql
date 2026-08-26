@@ -1,0 +1,37 @@
+begin;
+
+select extensions.no_plan();
+
+-- Synthetic-only P11-02 graph. No browser policies exist.
+insert into public.organizations (id, legal_name, business_name, slug) values
+  ('e2000000-0000-0000-0000-000000000001','P1102 Synthetic A Inc.','P1102 A','p1102-a'),
+  ('e2000000-0000-0000-0000-000000000002','P1102 Synthetic B Inc.','P1102 B','p1102-b');
+insert into public.branches (id, organization_id, name, slug, code, address_line1, city, province) values
+  ('e3000000-0000-0000-0000-000000000001','e2000000-0000-0000-0000-000000000001','P1102 A Main','p1102-a-main','P1102-A','1 Synthetic St','Test City','Test Province'),
+  ('e3000000-0000-0000-0000-000000000002','e2000000-0000-0000-0000-000000000002','P1102 B Main','p1102-b-main','P1102-B','2 Synthetic St','Test City','Test Province');
+insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
+  ('e5000000-0000-0000-0000-000000000001','e2000000-0000-0000-0000-000000000001','P1102-A-0001','Patient','A',date '1990-01-01','e3000000-0000-0000-0000-000000000001'),
+  ('e5000000-0000-0000-0000-000000000002','e2000000-0000-0000-0000-000000000002','P1102-B-0001','Patient','B',date '1991-01-01','e3000000-0000-0000-0000-000000000002');
+
+select extensions.columns_are('public','documents',array['id','organization_id','branch_id','patient_id','document_type','template_version','data_snapshot','include_set','status','generated_by','generated_at','version','created_at','updated_at'],'documents has only the approved P11-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.documents'::regclass),'documents has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.documents',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no documents privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='documents'),0,'documents is deny-by-default with no browser policies');
+select extensions.is((select count(*)::integer from pg_constraint where conrelid='public.documents'::regclass and conname in ('documents_type_check','documents_template_version_bounded_check','documents_data_snapshot_check','documents_include_set_check','documents_status_check','documents_version_positive_check','documents_organization_branch_fk','documents_organization_patient_fk')),8,'documents declares the approved CHECK and tenant FK constraints');
+select extensions.lives_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1','{"demographics":{"firstName":"Patient"}}'::jsonb,'{"demographics":true}'::jsonb)$$,'a document row accepts a bounded object snapshot and include set');
+select extensions.is((select status from public.documents where patient_id='e5000000-0000-0000-0000-000000000001'),'GENERATED','documents default to GENERATED');
+select extensions.is((select version from public.documents where patient_id='e5000000-0000-0000-0000-000000000001'),1,'documents start at version one');
+select extensions.ok((select generated_at is not null and template_version='v1' from public.documents where patient_id='e5000000-0000-0000-0000-000000000001'),'documents capture the generation timestamp and template version');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000002','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1','{}'::jsonb,'{}'::jsonb)$$,'23503',null,'a document cannot combine an organization with a foreign branch');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000002','APPOINTMENT_SLIP','v1','{}'::jsonb,'{}'::jsonb)$$,'23503',null,'a document cannot reference a foreign-organization patient');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','PRESCRIPTION','v1','{}'::jsonb,'{}'::jsonb)$$,'23514',null,'document types are restricted to the three rendered templates');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1','[]'::jsonb,'{}'::jsonb)$$,'23514',null,'a data snapshot must be a jsonb object');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1',('{"x":"'||repeat('n',17000)||'"}')::jsonb,'{}'::jsonb)$$,'23514',null,'a data snapshot larger than 16KB is rejected');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1','{}'::jsonb,'[]'::jsonb)$$,'23514',null,'an include set must be a jsonb object');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','','{}'::jsonb,'{}'::jsonb)$$,'23514',null,'blank template versions are rejected');
+select extensions.throws_ok($$insert into public.documents (organization_id,branch_id,patient_id,document_type,template_version,data_snapshot,include_set,status) values ('e2000000-0000-0000-0000-000000000001','e3000000-0000-0000-0000-000000000001','e5000000-0000-0000-0000-000000000001','APPOINTMENT_SLIP','v1','{}'::jsonb,'{}'::jsonb,'FAILED')$$,'23514',null,'only GENERATED is a legal status in this phase');
+
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;
+
+rollback;

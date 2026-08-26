@@ -455,6 +455,15 @@ const specialistRequestRpcGrants = Object.freeze([
   "public.list_specialist_requests(uuid,text)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only visiting/on-call specialist request boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live specialist.request. Requests carry only a minimal bounded non-clinical case summary; responses are SENT-only forward transitions by the requested provider linked user or an org role.manage holder; acceptance assigns the SPECIALIST provider and enqueues the existing calendar-sync CREATE and communication automation inside the same transaction; the list is a bounded 200-row projection exposing only the case summary." })));
 
+const DOCUMENT_RPCS_GRANTS_MIGRATION =
+  "20260827012201_document_rpcs_grants.sql";
+
+const documentRpcGrants = Object.freeze([
+  "public.generate_document(uuid,uuid,text,jsonb)",
+  "public.list_documents(uuid,uuid,text)",
+  "public.get_document_snapshot(uuid,uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only document generation and read boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live document.generate (generate_document) or document.view (list/get snapshot). generate_document builds the immutable data snapshot server-side from only the authorized, allowlisted patient record sections and appends one audit event; list is a bounded 100-row projection without the snapshot body; get_document_snapshot returns the exact stored snapshot for reproducible re-render." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -669,6 +678,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: SPECIALIST_REQUEST_RPCS_GRANTS_MIGRATION,
     grants: specialistRequestRpcGrants,
+  }),
+  Object.freeze({
+    file: DOCUMENT_RPCS_GRANTS_MIGRATION,
+    grants: documentRpcGrants,
   }),
 ]);
 
