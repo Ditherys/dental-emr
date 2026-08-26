@@ -21,6 +21,7 @@ import type {
 
 const DEFAULT_PRESIGN_EXPIRATION_SECONDS = 900;
 const MAX_PRESIGN_EXPIRATION_SECONDS = 604800;
+export const MAX_PUT_BYTES = 100 * 1024 * 1024;
 
 type StorageCommand = PutObjectCommand | GetObjectCommand | DeleteObjectCommand;
 
@@ -87,6 +88,11 @@ export function createS3Storage(
     ): Promise<StoragePutResult> {
       try {
         const bytes = await readAllBytes(body);
+
+        if (bytes.byteLength > MAX_PUT_BYTES) {
+          throw new StorageError("PAYLOAD_TOO_LARGE");
+        }
+
         const checksum = createHash("sha256").update(bytes).digest("hex");
 
         await dependencies.send(
@@ -99,8 +105,12 @@ export function createS3Storage(
         );
 
         return { key, checksum };
-      } catch {
-        throw new StorageError("STORE_FAILED");
+      } catch (error) {
+        if (error instanceof StorageError) {
+          throw error;
+        }
+
+        throw new StorageError("STORE_FAILED", { cause: error });
       }
     },
 
@@ -111,8 +121,8 @@ export function createS3Storage(
         response = (await dependencies.send(
           new GetObjectCommand({ Bucket: bucket, Key: key }),
         )) as GetObjectCommandOutput;
-      } catch {
-        throw new StorageError("READ_FAILED");
+      } catch (error) {
+        throw new StorageError("READ_FAILED", { cause: error });
       }
 
       if (!response.Body) {
@@ -130,8 +140,8 @@ export function createS3Storage(
         await dependencies.send(
           new DeleteObjectCommand({ Bucket: bucket, Key: key }),
         );
-      } catch {
-        throw new StorageError("DELETE_FAILED");
+      } catch (error) {
+        throw new StorageError("DELETE_FAILED", { cause: error });
       }
     },
 
@@ -153,8 +163,8 @@ export function createS3Storage(
         );
 
         return { url, expiresAt: expirationDateFromNow(seconds) };
-      } catch {
-        throw new StorageError("UPLOAD_URL_FAILED");
+      } catch (error) {
+        throw new StorageError("UPLOAD_URL_FAILED", { cause: error });
       }
     },
 
@@ -171,8 +181,8 @@ export function createS3Storage(
         );
 
         return { url, expiresAt: expirationDateFromNow(seconds) };
-      } catch {
-        throw new StorageError("DOWNLOAD_URL_FAILED");
+      } catch (error) {
+        throw new StorageError("DOWNLOAD_URL_FAILED", { cause: error });
       }
     },
   };

@@ -5,6 +5,7 @@ import type { StorageConfig } from "./config";
 import { StorageError } from "./errors";
 import {
   createS3Storage,
+  MAX_PUT_BYTES,
   type S3StorageDependencies,
 } from "./s3-storage";
 
@@ -96,6 +97,33 @@ describe("s3 storage adapter", () => {
       expect(String(error)).not.toContain(config.accessKey);
       expect(String(error)).not.toContain(config.secretKey);
     });
+
+    it("preserves the original failure as a server-side cause", async () => {
+      const { send, dependencies } = createDependencies();
+      const original = new Error("boom");
+      send.mockRejectedValue(original);
+      const adapter = createS3Storage(config, dependencies);
+
+      await expect(adapter.put("org/k", streamOf(""), "text/plain")).rejects
+        .toMatchObject({ cause: original });
+    });
+
+    it("rejects bodies above the configured upload ceiling before sending", async () => {
+      const { send, dependencies } = createDependencies();
+      const adapter = createS3Storage(config, dependencies);
+      const oversized = Buffer.alloc(MAX_PUT_BYTES + 1, 0);
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(oversized));
+          controller.close();
+        },
+      });
+
+      await expect(adapter.put("org/k", body, "text/plain")).rejects.toThrow(
+        new StorageError("PAYLOAD_TOO_LARGE"),
+      );
+      expect(send).not.toHaveBeenCalled();
+    });
   });
 
   describe("get", () => {
@@ -134,6 +162,16 @@ describe("s3 storage adapter", () => {
     it("maps read failures to a safe error", async () => {
       const { send, dependencies } = createDependencies();
       send.mockRejectedValue(new Error(`boom ${config.accessKey}`));
+      const adapter = createS3Storage(config, dependencies);
+
+      await expect(adapter.get("org/k")).rejects.toThrow(
+        new StorageError("READ_FAILED"),
+      );
+    });
+
+    it("maps a missing response body to a safe error", async () => {
+      const { send, dependencies } = createDependencies();
+      send.mockResolvedValue({});
       const adapter = createS3Storage(config, dependencies);
 
       await expect(adapter.get("org/k")).rejects.toThrow(

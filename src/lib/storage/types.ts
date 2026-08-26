@@ -1,3 +1,5 @@
+import "server-only";
+
 export type StoragePutResult = Readonly<{
   key: string;
   checksum: string;
