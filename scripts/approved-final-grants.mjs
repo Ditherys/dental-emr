@@ -445,6 +445,16 @@ const calendarSyncRpcGrants = Object.freeze([
   "public.list_calendar_integrations(uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only provider calendar sync and integration boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live calendar.manage. Enqueues are durable, idempotent INSERTs inside the appointment transaction; the worker claims due jobs with FOR UPDATE SKIP LOCKED and acknowledges or fails them with an upserted event link; connect/disconnect are high-impact configuration mutations that append one opaque audit event each; the list projections are bounded and never expose the opaque google_account_ref or Google event details." })));
 
+const SPECIALIST_REQUEST_RPCS_GRANTS_MIGRATION =
+  "20260827011901_specialist_request_rpcs_grants.sql";
+
+const specialistRequestRpcGrants = Object.freeze([
+  "public.create_specialist_request(uuid,uuid,jsonb)",
+  "public.respond_specialist_request(uuid,uuid,integer,jsonb)",
+  "public.cancel_specialist_request(uuid,uuid,integer,text)",
+  "public.list_specialist_requests(uuid,text)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only visiting/on-call specialist request boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live specialist.request. Requests carry only a minimal bounded non-clinical case summary; responses are SENT-only forward transitions by the requested provider linked user or an org role.manage holder; acceptance assigns the SPECIALIST provider and enqueues the existing calendar-sync CREATE and communication automation inside the same transaction; the list is a bounded 200-row projection exposing only the case summary." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -655,6 +665,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CALENDAR_SYNC_RPCS_GRANTS_MIGRATION,
     grants: calendarSyncRpcGrants,
+  }),
+  Object.freeze({
+    file: SPECIALIST_REQUEST_RPCS_GRANTS_MIGRATION,
+    grants: specialistRequestRpcGrants,
   }),
 ]);
 

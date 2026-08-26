@@ -122,6 +122,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 "patient_referral_rpcs.test.sql",
   "audit_foundation.test.sql",
   "specialist_permission_contract.test.sql",
+  "specialist_request_rpcs.test.sql",
   "specialist_requests_foundation.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
