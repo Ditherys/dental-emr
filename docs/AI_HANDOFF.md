@@ -1,7 +1,32 @@
-# AI Handoff - P5-06 acquisition server services
+# AI Handoff - Phase 5 complete, Phase 6 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 5 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 5 (Acquisition & Referrals Foundation) is complete through commit
+`e03e57f` (P5-08 analytics report) with `docs/plans/005-acquisition-referrals.md`
+P5-01..P5-09 all marked `[x]`.
+
+- P5-01 catalogs (`c84093a`), P5-02 attribution columns (`a41068a`),
+  P5-03 attribution RPCs (`56876bb`), P5-04 referral schema (`4493fcc`),
+  P5-05 referral RPCs (`f38b063`), P5-06 services (`0caf234`),
+  P5-07 registration/workspace UI (`7613738`), P5-08 analytics report (`e03e57f`).
+- Deliverables: acquisition_sources/booking_channels catalogs + org-custom
+  sources; patients attribution columns (tenant-safe source, same-org referrer,
+  external snapshot, initial channel); create/update/list referral RPCs with
+  optimistic versions + one atomic `{}` audit event each; `analytics.view`
+  permission (OWNER/ADMIN only) + org-scoped aggregated report RPC
+  `get_acquisition_summary(uuid,integer)` (30/90/365 window, counts only, no
+  audit event); `/reports/acquisition` page + server actions; nav gated on
+  `analytics.view`.
+- Current inventory: 57 migration files, 22 grant terminals, 85 approved final
+  privileges; 28 pgTAP suites + 3 concurrency probes; 55 unit files / 578 tests.
+- Phase gate verification all green: `db:reset:local`, `db:provision:local`,
+  `test:db:local` (28 suites), `security:migrations` (passed), `security:secrets`
+  (clean), `security:audit` (0 vulns), `test:unit`, `lint`, `typecheck`,
+  `build` (Compiled + 19/19 static pages).
 
 ## Current checkpoint
 

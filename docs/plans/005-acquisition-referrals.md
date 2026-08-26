@@ -37,12 +37,12 @@ reports. Historical accumulation starts now so later analytics have data.
 
 ## Tasks
 
-- [ ] **P5-01: Catalog schema**
+- [x] **P5-01: Catalog schema**
   - Migrations: global `acquisition_sources` + `booking_channels` catalogs
     (seeded via migration INSERTs with stable codes, `is_active`, category),
     org-custom acquisition sources referencing a category; RLS deny-by-default
     following file_objects precedent; pgTAP suite.
-- [ ] **P5-02: Patient attribution columns**
+- [x] **P5-02: Patient attribution columns**
   - Migration: add to `patients` — `acquisition_source_id` (tenant-safe:
     global OR same-org custom, enforced like specialties), `referrer_patient_id`
     (composite FK same-org), external referrer snapshot columns
@@ -50,40 +50,40 @@ reports. Historical accumulation starts now so later analytics have data.
     `external_referrer_contact`), `initial_booking_channel_code`.
     Nullable; no backfill. CHECK: at most one of (referrer_patient_id,
     external_referrer_name) set. pgTAP suite.
-- [ ] **P5-03: Attribution write/read RPCs**
+- [x] **P5-03: Attribution write/read RPCs**
   - Recreate `create_patient` (hardening precedent) accepting optional
     attribution block validated against active catalogs; new
     `update_patient_attribution(acting_branch_id, patient_id, expected_version, ...)`
     demographics-write gated; extend bounded detail read to include
     attribution projection. Terminal grants + pgTAP (positive/negative/
     cross-tenant/inactive-source rejection).
-- [ ] **P5-04: Referral foundation schema**
+- [x] **P5-04: Referral foundation schema**
   - Migration: `patient_referrals` (org FK, patient FK composite, direction
     IN/OUT, status RECEIVED/ACTIVE/COMPLETED/CANCELLED, required specialty
     nullable link to specialties, external party snapshot, notes ≤2000,
     version, timestamps); RLS + zero grants; access-path indexes; pgTAP.
-- [ ] **P5-05: Referral RPCs**
+- [x] **P5-05: Referral RPCs**
   - create/update-status/list referrals (demographics-write for mutations,
     read permission for lists; optimistic versions; audit events; AAL2 NOT
     required this phase); safe errors; pgTAP suite incl. state-machine checks
     and cross-tenant denials.
-- [ ] **P5-06: Server services**
+- [x] **P5-06: Server services**
   - `src/lib/acquisition/` Zod schemas/services/error mapping for catalogs,
     attribution update, referrals CRUD; unit tests offline.
-- [ ] **P5-07: Registration & workspace UI**
+- [x] **P5-07: Registration & workspace UI**
   - `/patients/new` gains an optional Acquisition section (source select from
     catalog, conditional referrer picker over authorized directory or external
     fields, channel select); workspace Demographics section shows read-only
     attribution; new workspace Referrals section (list + create/status actions)
     using established dialog/table patterns; server actions recheck live
     permissions; tests.
-- [ ] **P5-08: Basic source report**
+- [x] **P5-08: Basic source report**
   - New permission `analytics.view` granted ONLY to OWNER/ADMIN (P3-01
     contract pattern, pgTAP-proven); aggregate RPC returning counts grouped by
     source/category/channel for the actor's org (bounded window param);
     private `/reports/acquisition` page (dense table, phone composition);
     navigation entry gated on the new permission; tests.
-- [ ] **P5-09: Integration verification + phase review**
+- [x] **P5-09: Integration verification + phase review**
 
 ## Explicitly deferred
 
