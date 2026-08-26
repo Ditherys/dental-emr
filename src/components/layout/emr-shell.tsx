@@ -22,7 +22,7 @@ export function EmrShell({
   return (
     <BranchContextProvider model={branchContext}>
       <div className="min-h-svh bg-background xl:grid xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className="hidden border-r bg-sidebar xl:flex xl:min-h-svh xl:flex-col">
+        <aside className="hidden border-r bg-sidebar xl:flex xl:min-h-svh xl:flex-col print:hidden">
           <div className="flex h-16 items-center px-4">
             <AppBrand href="/dashboard" />
           </div>
@@ -45,7 +45,7 @@ export function EmrShell({
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-40 border-b bg-background/95 supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-sm">
+          <header className="sticky top-0 z-40 border-b bg-background/95 supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-sm print:hidden">
             <div className="flex min-h-16 items-center gap-2 px-3 sm:px-4 lg:px-6">
               <MobileNavigation visibleHrefs={visibleNavigationHrefs} />
               <div className="hidden min-w-0 sm:block xl:hidden">
@@ -63,7 +63,7 @@ export function EmrShell({
             </div>
           </header>
 
-          <main className="min-h-[calc(100svh-4rem)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8">
+          <main className="min-h-[calc(100svh-4rem)] px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8 print:p-0">
             {children}
           </main>
         </div>

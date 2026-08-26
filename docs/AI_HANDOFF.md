@@ -3,6 +3,80 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Phase 11 checkpoint (2026-08-27) - P11-04 IMPLEMENTED, not committed
+
+P11-04 (server renderer + services + print UI) per `docs/plans/011-document-print.md`
+is implemented on top of commits `7120f94` (P11-02 schema) and `7120f94` (P11-03
+RPCs). Working tree only; nothing committed.
+
+- `src/lib/documents/` server services mirroring `src/lib/specialist/`:
+  - `include-set.ts` (client-safe, single source of truth): 3 document types,
+    per-type include-set section allowlists, human labels.
+  - `schema.ts` (server-only): strict input schemas (`generateDocumentInputSchema`
+    as a discriminated union keyed on documentType with per-type strict
+    boolean-value include-set objects; `listDocumentsInputSchema`;
+    `getDocumentSnapshotInputSchema`), output row schemas for the 3 RPCs
+    (`documentMutationRowSchema`, `documentListRowSchema`, `documentSnapshotRowSchema`
+    with structured `documentDataSnapshotSchema` sections), and RPC allowlists reused
+    exactly: PATIENT_RECORD_SUMMARY -> demographics/referrals/appointments,
+    APPOINTMENT_SLIP -> demographics/appointments, REFERRAL_LETTER ->
+    demographics/referrals.
+  - `types.ts`: DTO types (camelCase): DocumentType, DocumentRecord (no
+    snapshot body), DocumentSnapshot, DocumentDataSnapshot, DocumentMutationResult.
+  - `errors.ts`: DocumentServiceError + mapDocumentRpcError (NOT_AUTHORIZED/
+    INVALID_INPUT/FAILED).
+  - `service.ts`: server-only generateDocument/listDocuments/getDocumentSnapshot
+    with exact p_* args; **normalizes include-set to truthy keys only** before
+    calling generate_document because the RPC builds snapshot sections on key
+    *presence* not value — a deselected (false) section can never leak.
+  - `render.ts`: server-only pure `renderDocumentHtml({ documentType,
+    templateVersion, dataSnapshot, orgName, branchName })` -> clinic-branded A4
+    print HTML string (`@page { size: A4; margin: 18mm }`, `@media print`,
+    header org/branch/title, deterministic footer with template version, only
+    the snapshot sections present, every value HTML-escaped via escapeHtml).
+- UI:
+  - `/documents` page: `requireVerifiedIdentity` + `document.view` (+branch
+    recheck), `document.generate` gate for `canGenerate`, optional `?patientId=`
+    query pre-selects a patient and server-loads their document list.
+  - `documents-board.tsx` (client): patient picker (searchPatientsAction), dense
+    desktop table / phone list (type, template version, generated at, include-set
+    summary), Generate dialog (type select + per-type include-set checkboxes,
+    >=1 section required), View/Print per row re-checks `getSnapshotAction` then
+    opens `/documents/[id]/print`; all controls 44px (min-h-11/h-11).
+  - `documents/actions.ts`: loadDocumentsAction (document.view+branch),
+    generateDocumentAction (document.generate+branch+per-type include-set
+    validation), getSnapshotAction (document.view+branch). revalidatePath
+    `/documents`. No org identifiers accepted.
+  - `documents/[documentId]/print/page.tsx`: server-gated A4 print route;
+    orchestration extracted to `print-document.ts` `resolvePrintDocument`
+    (auth recheck + snapshot + render) so the print logic is unit-testable.
+  - Nav entry "Documents" (`FileText`, `document.view`).
+  - `emr-shell.tsx`/`emr layout.tsx`: `print:hidden` on aside/header/Toaster and
+    `print:p-0` on main so browser print of the print route emits the A4
+    document without the app chrome.
+- Tests: `service.test.ts`, `render.test.ts`, `actions.test.ts`,
+  `documents-board.test.tsx`, `print-page.test.tsx` (5 files, 42 tests new).
+  Covers
+  RPC contract incl. include-set normalization, forbidden-key rejection per
+  type, output parse failures, error mapping, list projection (no snapshot
+  body), permission/branch reauthorization, generate validation + audit-mapped
+  errors, phone/desktop render, 44px, escaping + A4/print CSS + branding,
+  denied/failed/ready print resolution.
+- Verification (2026-08-27): `npm run test:unit` 79 files / 838 tests pass,
+  `npm run lint` clean, `npm run typecheck` clean, `npm run build` passes and
+  emits `/documents` and `/documents/[documentId]/print`, `git diff --check`
+  clean, `security:migrations` (30 terminals/117 privileges, unchanged),
+  `security:secrets` clean. No new migrations/RPCs. No Cloud/prod target used.
+- Deviations: (1) `renderDocumentHtml` takes no generated timestamp (RPC
+  snapshot row has none); footer is deterministic ("Prepared from the structured
+  EMR record · Template v1 · Reproducible snapshot"). (2) service strips
+  false-valued include-set keys before the RPC (see above). (3) print route
+  renders via `dangerouslySetInnerHTML` of server-authored escaped HTML (safe by
+  construction; all snapshot text escaped in render). (4) `/documents` list is
+  patient-scoped per plan (list RPC requires patient_id; no clinic-wide RPC
+  added). (5) dates render as stored ISO date/time segment deterministically
+  (no locale/timezone dependency).
+
 ## Phase 10 checkpoint (2026-08-27) - ACCEPTED
 
 Phase 10 (Specialist / On-call Workflow) complete through commit `7ff5164`

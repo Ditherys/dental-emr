@@ -73,7 +73,7 @@ generation time). Sensitive exports are permission-gated and audited.
   - Terminal grants + pgTAP (positive/negative/tenant isolation/audit on
     generate + configurable include set respected).
 
-- [ ] **P11-04: Server renderer + services + print UI**
+- [x] **P11-04: Server renderer + services + print UI**
   - `src/lib/documents/` service layer (schemas/types/errors/service) mirroring
     `src/lib/calendar/`.
   - `src/lib/documents/render.ts`: server-only renderer producing clinic-

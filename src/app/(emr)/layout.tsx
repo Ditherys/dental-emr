@@ -57,6 +57,7 @@ export default async function EmrLayout({ children }: { children: ReactNode }) {
       <Toaster
         closeButton
         position="top-right"
+        className="print:hidden"
         toastOptions={{
           classNames: {
             toast: "rounded-md border-border bg-popover text-popover-foreground",
