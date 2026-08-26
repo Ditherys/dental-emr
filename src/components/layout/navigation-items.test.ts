@@ -49,4 +49,10 @@ describe("permission-aware navigation", () => {
       requiredPermission: "communication.view",
     });
   });
+
+  it("declares specialist request as the capability for the Specialists link", () => {
+    expect(navigationItems.find(({ href }) => href === "/specialists")).toMatchObject({
+      requiredPermission: "specialist.request",
+    });
+  });
 });
