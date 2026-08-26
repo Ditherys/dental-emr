@@ -268,6 +268,7 @@ describe("registered database suites", () => {
       "patient_referral_rpcs.test.sql",
       "patient_referrals_foundation.test.sql",
 "procedure_foundation.test.sql",
+      "provider_availability.test.sql",
       "provider_foundation.test.sql",
       "provider_permission_contract.test.sql",
       "resource_foundation.test.sql",
