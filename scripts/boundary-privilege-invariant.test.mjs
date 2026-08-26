@@ -156,6 +156,8 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.cancel_appointment(uuid, uuid, integer, text)",
     "public.update_appointment_status(uuid, uuid, integer, text, text, text)",
     "public.list_appointments(uuid, timestamptz, timestamptz, uuid, text)",
+    "public.list_availability(uuid, uuid, date, date)",
+    "public.find_available_slots(uuid, uuid, timestamptz, timestamptz, integer, integer)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1219,7 +1221,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(73);
+    expect(approved.size).toBe(75);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

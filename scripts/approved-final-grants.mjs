@@ -387,6 +387,14 @@ const appointmentRpcGrants = Object.freeze([
   "public.list_appointments(uuid,timestamptz,timestamptz,uuid,text)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only appointment scheduling boundary. It derives the tenant and actor from an active authenticated acting branch, requires live appointment.write (create/reschedule/cancel/status) or appointment.read (list), validates providers against active branch assignments and recurring availability with no UNAVAILABLE/LEAVE exception, relies on the reservation-ledger exclusion constraints as the final race protection, and appends one atomic audit event per mutation." })));
 
+const SCHEDULING_READS_GRANTS_MIGRATION =
+  "20260827010601_scheduling_reads_grants.sql";
+
+const schedulingReadsGrants = Object.freeze([
+  "public.list_availability(uuid,uuid,date,date)",
+  "public.find_available_slots(uuid,uuid,timestamptz,timestamptz,integer,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "Bounded scheduling read surfaces. Both derive the organization from an active authenticated acting branch, require live appointment.read, validate the window/duration bounds, restrict results to the acting branch and organization, return only deterministic availability/slot projections, and write no audit event." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -577,6 +585,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: APPOINTMENT_RPCS_GRANTS_MIGRATION,
     grants: appointmentRpcGrants,
+  }),
+  Object.freeze({
+    file: SCHEDULING_READS_GRANTS_MIGRATION,
+    grants: schedulingReadsGrants,
   }),
 ]);
 
