@@ -247,6 +247,7 @@ describe("registered database suites", () => {
     const expectedSuites = [
       "audit_foundation.test.sql",
       "branch_lifecycle.test.sql",
+      "file_objects_foundation.test.sql",
       "foundation_rls.test.sql",
       "patient_authorization.test.sql",
       "patient_children_write.test.sql",
