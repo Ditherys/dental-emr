@@ -376,6 +376,17 @@ const ACQUISITION_CATALOG_READS_GRANTS_MIGRATION =
 const ACQUISITION_REPORT_GRANTS_MIGRATION =
   "20260826011801_acquisition_report_grants.sql";
 
+const APPOINTMENT_RPCS_GRANTS_MIGRATION =
+  "20260827010501_appointment_rpcs_grants.sql";
+
+const appointmentRpcGrants = Object.freeze([
+  "public.create_appointment(uuid,uuid,jsonb)",
+  "public.reschedule_appointment(uuid,uuid,integer,timestamptz,timestamptz)",
+  "public.cancel_appointment(uuid,uuid,integer,text)",
+  "public.update_appointment_status(uuid,uuid,integer,text,text,text)",
+  "public.list_appointments(uuid,timestamptz,timestamptz,uuid,text)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only appointment scheduling boundary. It derives the tenant and actor from an active authenticated acting branch, requires live appointment.write (create/reschedule/cancel/status) or appointment.read (list), validates providers against active branch assignments and recurring availability with no UNAVAILABLE/LEAVE exception, relies on the reservation-ledger exclusion constraints as the final race protection, and appends one atomic audit event per mutation." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -562,6 +573,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
           "The sole browser-reachable analytics report read. It derives the organization from an active authenticated acting branch, requires live organization-wide analytics.view (OWNER/ADMIN only), validates the bounded window, and returns only aggregated patient counts by source/category/channel for the actor's organization while writing no audit event.",
       },
     ]),
+  }),
+  Object.freeze({
+    file: APPOINTMENT_RPCS_GRANTS_MIGRATION,
+    grants: appointmentRpcGrants,
   }),
 ]);
 
