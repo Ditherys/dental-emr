@@ -39,11 +39,11 @@ interface with a deterministic local test adapter; no vendor is hard-coded.
 
 ## Tasks
 
-- [ ] **P8-01: Communication permission contract**
+- [x] **P8-01: Communication permission contract**
   - `communication.view` / `communication.send` permission rows + matrix;
     `PermissionCode` + policy test; pgTAP proving the matrix.
 
-- [ ] **P8-02: Communications durable job + history schema**
+- [x] **P8-02: Communications durable job + history schema**
   - `communications` table: org, branch nullable, patient nullable (org
     composite FK), channel (EMAIL/SMS), template_type (CONFIRMATION, REMINDER,
     RESCHEDULE, CANCELLATION), recipient (bounded address/number), subject/body
@@ -55,7 +55,7 @@ interface with a deterministic local test adapter; no vendor is hard-coded.
     org,patient; org,appointment), unique (org, idempotency_key), CHECKs.
     pgTAP.
 
-- [ ] **P8-03: Enqueue/cancel/list RPCs + appointment automation triggers**
+- [x] **P8-03: Enqueue/cancel/list RPCs + appointment automation triggers**
   - `enqueue_communication` (SECURITY DEFINER, communication.send gated) inserts
     a QUEUED job with a caller-provided idempotency_key (reject duplicates).
   - `cancel_communication` for obsolete jobs (only QUEUED/SENT-with-attempts
@@ -73,7 +73,7 @@ interface with a deterministic local test adapter; no vendor is hard-coded.
     pending; appointment create enqueues exactly one confirmation; cancel
     enqueues cancellation + cancels reminders; tenant/permission denials.
 
-- [ ] **P8-04: Worker + provider adapter abstraction**
+- [x] **P8-04: Worker + provider adapter abstraction**
   - `process_due_communications` SECURITY DEFINER RPC: claims up to N due jobs
     with `FOR UPDATE SKIP LOCKED`, marks them PROCESSING (status stays QUEUED
     with attempts+1? no — use a distinct claim via next_attempt_at/attempts),
@@ -86,14 +86,14 @@ interface with a deterministic local test adapter; no vendor is hard-coded.
     with backoff next_attempt_at). Unit tests prove idempotency (a job sent
     once is never re-sent), retry, and duplicate-send rejection.
 
-- [ ] **P8-05: Communication dashboard UI**
+- [x] **P8-05: Communication dashboard UI**
   - Private `/settings/communications` (or `/communications`) page gated on
     communication.view: dense table of communications with status, channel,
     template, recipient (masked), attempts, timestamps, delivery state; phone
     list; retry/cancel actions gated on communication.send; server actions
     recheck permissions + acting branch. Tests.
 
-- [ ] **P8-06: Integration verification + phase review**
+- [x] **P8-06: Integration verification + phase review**
 
 ## Explicitly deferred
 

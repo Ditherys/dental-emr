@@ -1,7 +1,45 @@
-# AI Handoff - Phase 7 complete, Phase 8 next
+# AI Handoff - Phase 8 complete, Phase 9 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 8 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 8 (Automation & Communication Core) complete through commit `c7df3da`
+(P8-05 communications dashboard + requeue retry) with
+`docs/plans/008-automation-communication.md` P8-01..P8-06 all `[x]`.
+
+- P8-01 `6b3ccd4` communication.view/send permission contract (OWNER/ADMIN/
+  RECEPTIONIST). P8-02 `6047668` communications table = durable job queue +
+  history (QUEUED/SENT/DELIVERED/FAILED/CANCELLED, idempotency unique key,
+  attempts/max_attempts/next_attempt_at, template-only bounded bodies).
+  P8-03 `3681cb7` enqueue/cancel/list/acknowledge/fail/claim_due RPCs +
+  has_communication_permission_at_branch helper + appointment automation
+  triggers (CONFIRMATION on create/confirm, CANCELLATION + cancel-obsolete on
+  cancel, RESCHEDULE on reschedule; idempotent keys; non-clinical templates;
+  enqueue is in-transaction only, never blocking). P8-04 `4a83129`
+  src/lib/communication services + worker + adapter abstraction (deterministic
+  test adapter, idempotent by communicationId, retry/duplicate-send proven).
+  P8-05 `c7df3da` /communications dashboard + requeue_communication RPC
+  (FAILED-only manual retry copying stored content — resolves the masked-
+  recipient retry data boundary).
+- Acceptance criteria met: external send never blocks appointment save
+  (in-transaction enqueue only); jobs retryable/idempotent; cancellation
+  cancels obsolete reminders (trigger); staff see delivered/failed state
+  (dashboard); duplicate-send tests pass.
+- Inventory: 76 migration files, 27 grant terminals, 102 approved privileges;
+  44 pgTAP suites + 4 concurrency probes; tables 39, functions 128,
+  security-definer 106; unit 66 files / 693 tests; scripts 279.
+- Phase gate verification all green: db test, security migrations/secrets/audit,
+  unit, lint, typecheck, build (`/communications` emitted).
+
+**Next:** Phase 9 (Google Calendar Integration) per
+docs/MASTER_PRODUCT_PLAN.md §Phase 9. External OAuth + provider-neutral
+calendar adapter with the deterministic local adapter; EMR→Google event sync,
+retry no-duplicate, tokens never reach browser. Author bounded plan
+docs/plans/009-google-calendar.md then execute P9-01.. .
+
+## Phase 8 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 7 checkpoint (2026-08-27) - ACCEPTED
 
