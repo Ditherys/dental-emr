@@ -9,6 +9,28 @@ under [ADR-020](../docs/decisions/ADR-020-local-supabase-hybrid-development.md).
 Use only the guarded `npm run db:*:local` commands for it; Git migrations remain
 authoritative and Cloud TEST remains the mandatory pre-production gate.
 
+## Local object storage (MinIO)
+
+Phase 4 attachments use a local MinIO container alongside the guarded local
+Supabase stack; see
+[ADR-022](../docs/decisions/ADR-022-local-minio-object-storage.md). Only
+synthetic fixtures may be stored there — never real patient files.
+
+```powershell
+npm run storage:start:local   # idempotent: creates/starts dental-emr-minio, waits for health, ensures the dental-emr-local bucket
+npm run storage:status:local  # container state and health probe
+npm run storage:stop:local    # stops dental-emr-minio; data stays in the dental-emr-minio-data volume
+```
+
+The container exposes `127.0.0.1:9000` (S3 API) and `127.0.0.1:9001` (console)
+with the documented synthetic local-only credentials from `.env.example`. The
+fixed container name, ports, and volume make MinIO machine-scoped: git
+worktrees on one machine share the same container, volume, and bucket (the
+Supabase local stack, by contrast, is worktree-scoped). On start, matching
+`STORAGE_*` values are appended to the ignored `.env.local` when absent;
+existing values are never overwritten or printed. Cloudflare R2 remains the
+canonical production object store.
+
 ## One-time project setup
 
 1. Create or designate a non-production Supabase Cloud project named `dental-emr-dev` or equivalent. Use the approved Southeast Asia / Singapore region when available.

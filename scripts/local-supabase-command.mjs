@@ -1,3 +1,10 @@
+import { spawnSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const scriptDirectory = dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = resolve(scriptDirectory, "..");
+
 const LOCAL_SUPABASE_COMMANDS = Object.freeze({
   start: Object.freeze(["start"]),
   stop: Object.freeze(["stop"]),
@@ -122,6 +129,26 @@ export function assertLocalDockerEndpoint(endpoint) {
 export function assertLocalDockerRuntime({ context, endpoint }) {
   assertLocalDockerContext(context);
   assertLocalDockerEndpoint(endpoint);
+}
+
+export function assertLocalDockerEndpointIsSafe(environment) {
+  const context = spawnSync("docker", ["context", "show"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    env: environment,
+  });
+  const endpoint = spawnSync(
+    "docker",
+    ["context", "inspect", "desktop-linux", "--format", "{{.Endpoints.docker.Host}}"],
+    { cwd: repositoryRoot, encoding: "utf8", env: environment },
+  );
+
+  if (context.error || context.status !== 0 || endpoint.error || endpoint.status !== 0) {
+    throw new Error("Docker Desktop's local endpoint could not be inspected.");
+  }
+
+  assertLocalDockerContext(context.stdout ?? "");
+  assertLocalDockerEndpoint(endpoint.stdout ?? "");
 }
 
 export function resolveLocalDockerEnvironment(environment) {
