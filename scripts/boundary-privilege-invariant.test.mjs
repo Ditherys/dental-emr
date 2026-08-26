@@ -168,6 +168,14 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.fail_communication(uuid, uuid)",
     "public.claim_due_communications(uuid, integer)",
     "public.requeue_communication(uuid, uuid, integer)",
+    "public.enqueue_calendar_sync(uuid, uuid, uuid, text)",
+    "public.list_calendar_syncs(uuid, uuid)",
+    "public.claim_due_calendar_syncs(uuid, integer)",
+    "public.acknowledge_calendar_sync(uuid, uuid, text)",
+    "public.fail_calendar_sync(uuid, uuid, text)",
+    "public.connect_calendar(uuid, uuid, text, text)",
+    "public.disconnect_calendar(uuid, uuid)",
+    "public.list_calendar_integrations(uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1231,7 +1239,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(85);
+    expect(approved.size).toBe(93);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

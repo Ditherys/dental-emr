@@ -431,6 +431,20 @@ const requeueCommunicationGrants = Object.freeze([
   },
 ]);
 
+const CALENDAR_SYNC_RPCS_GRANTS_MIGRATION =
+  "20260827011601_calendar_sync_rpcs_grants.sql";
+
+const calendarSyncRpcGrants = Object.freeze([
+  "public.enqueue_calendar_sync(uuid,uuid,uuid,text)",
+  "public.list_calendar_syncs(uuid,uuid)",
+  "public.claim_due_calendar_syncs(uuid,integer)",
+  "public.acknowledge_calendar_sync(uuid,uuid,text)",
+  "public.fail_calendar_sync(uuid,uuid,text)",
+  "public.connect_calendar(uuid,uuid,text,text)",
+  "public.disconnect_calendar(uuid,uuid)",
+  "public.list_calendar_integrations(uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only provider calendar sync and integration boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live calendar.manage. Enqueues are durable, idempotent INSERTs inside the appointment transaction; the worker claims due jobs with FOR UPDATE SKIP LOCKED and acknowledges or fails them with an upserted event link; connect/disconnect are high-impact configuration mutations that append one opaque audit event each; the list projections are bounded and never expose the opaque google_account_ref or Google event details." })));
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -637,6 +651,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: REQUEUE_COMMUNICATION_GRANTS_MIGRATION,
     grants: requeueCommunicationGrants,
+  }),
+  Object.freeze({
+    file: CALENDAR_SYNC_RPCS_GRANTS_MIGRATION,
+    grants: calendarSyncRpcGrants,
   }),
 ]);
 
