@@ -1,7 +1,36 @@
-# AI Handoff - Phase 5 complete, Phase 6 next
+# AI Handoff - Phase 6 scheduling in progress
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 6 checkpoint (2026-08-27) - IN PROGRESS
+
+Phase 6 (Scheduling Engine) plan authored at `docs/plans/006-scheduling-engine.md`
+with tasks P6-01..P6-10. Committed so far:
+
+- P6-01 `e3dd467` appointment.read/write permission contract (OWNER/ADMIN/DENTIST/
+  RECEPTIONIST both, DENTAL_ASSISTANT read only, VISITING_SPECIALIST/BILLING none).
+- P6-02 `14b28bb` resource_types (global seed + org-custom, immutable global
+  scope) + branch_resources (tenant-safe branch/resource_type FKs) +
+  resource_unavailability; deny-by-default.
+- P6-03 `d0a00db` provider_availability_rules + provider_schedule_exceptions
+  (org-scoped composite FKs, weekday 0-6 DOW, exception types).
+- P6-04 `ae4dcc5` appointments (3 status dimensions, composite FKs,
+  cancelled/completed consistency checks) + appointment_providers +
+  appointment_resources + appointment_status_history.
+- P6-05 `d752c8e` provider_reservations + resource_reservations with generated
+  `timespan tstzrange` and **partial GiST EXCLUDE** on (id WITH =, timespan WITH &&)
+  WHERE status='ACTIVE'. Introduced **btree_gist** as the sole approved
+  production extension (approved-final-grants APPROVED_EXTENSIONS + lint test
+  updated). Exclusion rejections proven in pgTAP (23P01), back-to-back and
+  cross-branch allowed, release/cancel frees slots.
+- Inventory: 62 migration files, 22 grant terminals, 85 approved privileges,
+  1 approved extension (btree_gist); 33 pgTAP suites; tables 37, functions 104.
+
+**Next:** P6-06 appointment RPCs (create/reschedule/cancel/status/list) with
+single-transaction conflict detection, reservation create/release, audit events,
+terminal grants, pgTAP incl. concurrency. Then P6-07 read RPCs, P6-08 services,
+P6-09 calendar UI, P6-10 phase gate.
 
 ## Phase 5 checkpoint (2026-08-27) - ACCEPTED
 
