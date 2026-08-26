@@ -14,6 +14,8 @@ export const foundationPermissionCodes = [
   "provider.manage",
   "appointment.read",
   "appointment.write",
+  "queue.read",
+  "queue.manage",
   "analytics.view",
 ] as const;
 

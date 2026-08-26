@@ -106,6 +106,21 @@ describe("appointment permission vocabulary", () => {
   });
 });
 
+describe("queue permission vocabulary", () => {
+  it("exposes the two bounded queue permission codes", () => {
+    const queueRead: PermissionCode = "queue.read";
+    const queueManage: PermissionCode = "queue.manage";
+
+    // @ts-expect-error queue permissions are a closed contract.
+    const unknownQueuePermission: PermissionCode = "queue.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([queueRead, queueManage]),
+    );
+    expect(unknownQueuePermission).toBe("queue.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);
