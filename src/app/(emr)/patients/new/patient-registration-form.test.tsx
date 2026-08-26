@@ -77,4 +77,49 @@ describe("PatientRegistrationForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("access or selected branch changed");
   });
+
+  it("includes optional catalog attribution in the create request", async () => {
+    const submitPatient = vi.fn().mockResolvedValue({ ok: true, patientId: "22000000-0000-0000-0000-000000000003" });
+    render(
+      <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
+        <PatientRegistrationForm initialActingBranchId={branchId} submitPatient={submitPatient} acquisition={{ sources: [{ sourceId: "22000000-0000-0000-0000-000000000004", code: "GOOGLE", name: "Google Search", category: "DIGITAL" }], channels: [{ code: "MESSENGER", name: "Facebook Messenger" }] }} />
+      </BranchContextProvider>,
+    );
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText("Discovery source"), { target: { value: "22000000-0000-0000-0000-000000000004" } });
+    fireEvent.change(screen.getByLabelText("Initial booking channel"), { target: { value: "MESSENGER" } });
+    fireEvent.click(screen.getByRole("button", { name: "Register patient" }));
+    await waitFor(() => expect(submitPatient).toHaveBeenCalledWith(expect.objectContaining({ acquisitionSourceId: "22000000-0000-0000-0000-000000000004", initialBookingChannelCode: "MESSENGER" })));
+  });
+  it("shows an accessible field error when both referrer types are selected", async () => {
+    const submitPatient = vi.fn();
+    const searchPatients = vi.fn().mockResolvedValue({ ok: true, rows: [{ patientId: "22000000-0000-0000-0000-000000000005", displayName: "Existing Patient", patientNumber: "P-000005" }] });
+    render(
+      <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
+        <PatientRegistrationForm initialActingBranchId={branchId} submitPatient={submitPatient} searchPatients={searchPatients} acquisition={{ sources: [], channels: [] }} />
+      </BranchContextProvider>,
+    );
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText("Find an existing patient"), { target: { value: "Existing" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.change(await screen.findByLabelText("Authorized patient result"), { target: { value: "22000000-0000-0000-0000-000000000005" } });
+    const externalReferrerName = screen.getByLabelText("External referrer name");
+    fireEvent.change(externalReferrerName, { target: { value: "Dr. External" } });
+    fireEvent.click(screen.getByRole("button", { name: "Register patient" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Provide an internal or external referrer, not both.");
+    expect(externalReferrerName).toHaveAttribute("aria-describedby", "external-referrer-name-error");
+    expect(submitPatient).not.toHaveBeenCalled();
+  });
+
+  it("shows a safe error when the authorized referrer lookup rejects", async () => {
+    const searchPatients = vi.fn(async () => { throw new Error("network"); });
+    render(
+      <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
+        <PatientRegistrationForm initialActingBranchId={branchId} searchPatients={searchPatients} acquisition={{ sources: [], channels: [] }} />
+      </BranchContextProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Find an existing patient"), { target: { value: "Existing" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Referrer search is unavailable.");
+  });
 });

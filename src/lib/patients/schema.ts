@@ -23,11 +23,13 @@ const optionalEmail = optionalText(320).refine(
       )),
   "Enter a valid email address.",
 );
+const optionalAttributionText = (maximum: number) =>
+  z.string().trim().max(maximum).transform((value) => value || undefined).optional();
 
 const contactType = z.enum(["MOBILE", "EMAIL", "LANDLINE", "OTHER"]);
 const relationshipType = z.enum(["PARENT", "GUARDIAN", "CHILD", "SPOUSE", "DEPENDENT", "EMERGENCY_CONTACT", "HOUSEHOLD_CONTACT", "OTHER"]);
 
-export const createPatientSchema = z.object({
+export const createPatientBaseSchema = z.object({
   actingBranchId: databaseUuid,
   firstName: z.string().trim().min(1).max(120),
   middleName: optionalText(120),
@@ -44,7 +46,19 @@ export const createPatientSchema = z.object({
   preferredBranchId: databaseUuid.optional(),
   initialMobile: optionalMobile,
   initialEmail: optionalEmail,
+  acquisitionSourceId: databaseUuid.optional(),
+  referrerPatientId: databaseUuid.optional(),
+  externalReferrerName: optionalAttributionText(160),
+  externalReferrerOrganization: optionalAttributionText(160),
+  externalReferrerContact: optionalAttributionText(200),
+  initialBookingChannelCode: z.string().trim().regex(/^[A-Z][A-Z0-9_]*$/).max(80).optional(),
   duplicateConfirmed: z.boolean(),
+}).strict();
+
+export const createPatientSchema = createPatientBaseSchema.superRefine((value, context) => {
+  if (value.referrerPatientId && value.externalReferrerName) {
+    context.addIssue({ code: "custom", path: ["externalReferrerName"], message: "Provide an internal or external referrer, not both." });
+  }
 });
 
 export type CreatePatientValues = z.infer<typeof createPatientSchema>;

@@ -10,18 +10,26 @@ import { InlineFieldError } from "@/components/feedback/inline-field-error";
 import { ALL_BRANCHES_VALUE, useBranchContext } from "@/components/layout/branch-context";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createPatientSchema } from "@/lib/patients/schema";
+import { createPatientBaseSchema } from "@/lib/patients/schema";
 import type { CreatePatientValues } from "@/lib/patients/schema";
 import type { DuplicateReview } from "@/lib/patients/types";
+import type { AcquisitionSource, BookingChannel } from "@/lib/acquisition/types";
+import { searchPatientsAction } from "../actions";
 
 import { createPatientAction } from "./actions";
 
-const registrationSchema = createPatientSchema.omit({ actingBranchId: true, duplicateConfirmed: true });
+const registrationSchema = createPatientBaseSchema.omit({ actingBranchId: true, duplicateConfirmed: true }).superRefine((value, context) => {
+  if (value.referrerPatientId && value.externalReferrerName) {
+    context.addIssue({ code: "custom", path: ["externalReferrerName"], message: "Provide an internal or external referrer, not both." });
+  }
+});
 type RegistrationValues = Omit<CreatePatientValues, "actingBranchId" | "duplicateConfirmed">;
 
 type PatientRegistrationFormProps = {
   initialActingBranchId: string;
   submitPatient?: (input: CreatePatientValues) => ReturnType<typeof createPatientAction>;
+  searchPatients?: typeof searchPatientsAction;
+  acquisition?: { sources: AcquisitionSource[]; channels: BookingChannel[] };
 };
 
 const defaultValues: RegistrationValues = {
@@ -45,20 +53,25 @@ function signalLabel(signal: DuplicateReview["candidates"][number]["matchedSigna
   return signal === "NAME_DOB" ? "same name and birth date" : signal === "MOBILE" ? "same mobile" : "same email";
 }
 
-export function PatientRegistrationForm({ initialActingBranchId, submitPatient = createPatientAction }: PatientRegistrationFormProps) {
+export function PatientRegistrationForm({ initialActingBranchId, submitPatient = createPatientAction, searchPatients = searchPatientsAction, acquisition }: PatientRegistrationFormProps) {
   const router = useRouter();
   const { selection } = useBranchContext();
   const [review, setReview] = useState<DuplicateReview | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [referrerQuery, setReferrerQuery] = useState("");
+  const [referrerCandidates, setReferrerCandidates] = useState<{ patientId: string; displayName: string; patientNumber: string }[]>([]);
+  const [referrerSearchError, setReferrerSearchError] = useState<string | null>(null);
   const form = useForm<RegistrationValues>({ resolver: zodResolver(registrationSchema), defaultValues });
   const actingBranchId = selection && selection !== ALL_BRANCHES_VALUE ? selection : initialActingBranchId;
 
   async function submit(values: RegistrationValues, duplicateConfirmed: boolean) {
     setIsSubmitting(true);
     setFormError(null);
-    const result = await submitPatient({ ...values, actingBranchId, duplicateConfirmed });
-    setIsSubmitting(false);
+    let result: Awaited<ReturnType<typeof submitPatient>>;
+    try { result = await submitPatient({ ...values, actingBranchId, duplicateConfirmed }); }
+    catch { setFormError("The patient could not be registered. Try again."); return; }
+    finally { setIsSubmitting(false); }
 
     if (result.ok) {
       router.push("/patients");
@@ -81,7 +94,22 @@ export function PatientRegistrationForm({ initialActingBranchId, submitPatient =
         : "The patient could not be registered. Try again.");
   }
 
-  const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 sm:h-10";
+  async function findReferrer() {
+    const query = referrerQuery.trim();
+    if (!query) return;
+    setReferrerSearchError(null);
+    let result: Awaited<ReturnType<typeof searchPatientsAction>>;
+    try { result = await searchPatients({ actingBranchId, query, sort: "name_asc", page: 1, pageSize: 10 }); }
+    catch { setReferrerCandidates([]); setReferrerSearchError("Referrer search is unavailable."); return; }
+    if (!result.ok) {
+      setReferrerCandidates([]);
+      setReferrerSearchError(result.code === "NOT_AUTHORIZED" ? "Your access or selected branch changed." : "Referrer search is unavailable.");
+      return;
+    }
+    setReferrerCandidates(result.rows.map(({ patientId, displayName, patientNumber }) => ({ patientId, displayName, patientNumber })));
+  }
+
+  const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
   const fieldError = (name: keyof RegistrationValues) => form.formState.errors[name]?.message;
 
   return (
@@ -119,6 +147,27 @@ export function PatientRegistrationForm({ initialActingBranchId, submitPatient =
           <Field label="Postal code" error={fieldError("postalCode")}><input {...form.register("postalCode")} autoComplete="postal-code" className={inputClass} /></Field>
         </div>
       </section>
+
+      {acquisition && <section className="border-t py-5 sm:py-6" aria-labelledby="acquisition-heading">
+        <h2 id="acquisition-heading" className="text-base font-semibold">Acquisition</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Optional. Record how the patient found the clinic, any referrer, and their first booking channel.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Field label="Discovery source" error={fieldError("acquisitionSourceId")}><select {...form.register("acquisitionSourceId", { setValueAs: (value) => value || undefined })} className={inputClass}><option value="">Not recorded</option>{acquisition.sources.map((source) => <option key={source.sourceId} value={source.sourceId}>{source.name}</option>)}</select></Field>
+          <Field label="Initial booking channel" error={fieldError("initialBookingChannelCode")}><select {...form.register("initialBookingChannelCode", { setValueAs: (value) => value || undefined })} className={inputClass}><option value="">Not recorded</option>{acquisition.channels.map((channel) => <option key={channel.code} value={channel.code}>{channel.name}</option>)}</select></Field>
+        </div>
+        <div className="mt-4 border-t pt-4">
+          <p className="text-sm font-medium">Referrer</p>
+          <p className="mt-1 text-sm text-muted-foreground">Choose one authorized existing patient, or record an external professional or organization.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]"><label className="grid gap-1.5 text-sm font-medium">Find an existing patient<input value={referrerQuery} onChange={(event) => setReferrerQuery(event.target.value)} className={inputClass} /></label><Button type="button" variant="outline" className="min-h-11 self-end" onClick={findReferrer}>Search</Button></div>
+          {referrerSearchError && <p role="alert" className="mt-2 text-sm text-destructive">{referrerSearchError}</p>}
+          {referrerCandidates.length > 0 && <label className="mt-3 grid gap-1.5 text-sm font-medium">Authorized patient result<select {...form.register("referrerPatientId", { setValueAs: (value) => value || undefined })} className={inputClass}><option value="">Choose a patient</option>{referrerCandidates.map((candidate) => <option key={candidate.patientId} value={candidate.patientId}>{candidate.displayName} ({candidate.patientNumber})</option>)}</select></label>}
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <Field label="External referrer name" error={fieldError("externalReferrerName")}><input {...form.register("externalReferrerName")} className={inputClass} /></Field>
+            <Field label="External organization" error={fieldError("externalReferrerOrganization")}><input {...form.register("externalReferrerOrganization")} className={inputClass} /></Field>
+            <Field label="External contact" error={fieldError("externalReferrerContact")}><input {...form.register("externalReferrerContact")} className={inputClass} /></Field>
+          </div>
+        </div>
+      </section>}
 
       <div className="border-t py-4 sm:flex sm:items-center sm:justify-between sm:gap-6">
         <p className="text-sm text-muted-foreground">The current working branch is required and is rechecked when you submit.</p>

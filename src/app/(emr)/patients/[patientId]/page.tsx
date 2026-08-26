@@ -4,6 +4,7 @@ import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasSharedPatientPermission } from "@/lib/authorization/policy";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
+import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
 
@@ -40,5 +41,12 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
     if (!(error instanceof FileServiceError || error instanceof AuthorizationError)) throw error;
     filesUnavailable = true;
   }
-  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} />;
+  let referrals: Awaited<ReturnType<typeof listPatientReferrals>> = [];
+  let referralsUnavailable = false;
+  try { referrals = await listPatientReferrals({ actingBranchId, patientId, includeTerminal: true }); }
+  catch (error) {
+    if (!(error instanceof AcquisitionServiceError || error instanceof AuthorizationError)) throw error;
+    referralsUnavailable = true;
+  }
+  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} />;
 }

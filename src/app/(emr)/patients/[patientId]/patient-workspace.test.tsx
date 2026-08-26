@@ -50,6 +50,7 @@ const patient: PatientDetail = {
   preferredBranch: null,
   status: "active",
   version: 1,
+  attribution: { acquisitionSource: { code: "GOOGLE", name: "Google Search", category: "DIGITAL" }, initialBookingChannel: { code: "MESSENGER", name: "Facebook Messenger" }, referrerPatient: null, externalReferrer: { name: "Dr. Synthetic", organization: "Synthetic Clinic", contact: null } },
   contacts: [{ contactId: "42000000-0000-0000-0000-000000000001", contactType: "MOBILE", label: null, value: "+639171234567", isPrimary: true, version: 1 }],
   relationships: [{ relationshipId: "52000000-0000-0000-0000-000000000001", relatedPatientId: null, relatedPatientDisplayName: null, externalContactName: "Synthetic Guardian", externalMobile: null, externalEmail: null, relationshipType: "GUARDIAN", isLegalGuardian: true, canReceiveCommunications: true, canConsent: true, version: 1 }],
 };
@@ -78,6 +79,8 @@ describe("PatientWorkspace", () => {
     expect(screen.getByRole("link", { name: "Demographics" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Contacts" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Relationships" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Referrals" })).toBeVisible();
+    expect(screen.getByText("Google Search")).toBeVisible();
     expect(screen.getByText(/Legal guardian/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Clinical" })).not.toBeInTheDocument();
   });

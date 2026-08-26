@@ -6,7 +6,7 @@ import { databaseUuid } from "@/lib/validation/database-uuid";
 import { createClient } from "@/lib/supabase/server";
 import { requireAal2 } from "@/lib/auth/mfa";
 
-import { archivePatientChildSchema, createPatientSchema, patientContactSchema, patientLifecycleSchema, patientRelationshipSchema, updatePatientContactSchema, updatePatientRelationshipSchema, updatePatientSchema } from "./schema";
+import { archivePatientChildSchema, createPatientBaseSchema, createPatientSchema, patientContactSchema, patientLifecycleSchema, patientRelationshipSchema, updatePatientContactSchema, updatePatientRelationshipSchema, updatePatientSchema } from "./schema";
 import { mapPatientRpcError } from "./errors";
 import type {
   CreatePatientInput,
@@ -50,7 +50,7 @@ const relationshipMutationResultSchema = z.object({ relationship_id: databaseUui
 export async function findDuplicateCandidates(
   input: Omit<CreatePatientInput, "duplicateConfirmed">,
 ): Promise<DuplicateReview> {
-  const value = createPatientSchema.omit({ duplicateConfirmed: true }).parse(input);
+  const value = createPatientBaseSchema.omit({ duplicateConfirmed: true }).parse(input);
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("find_duplicate_candidates", {
     p_acting_branch_id: value.actingBranchId,
@@ -68,24 +68,26 @@ export async function findDuplicateCandidates(
 export async function createPatient(input: CreatePatientInput): Promise<CreatePatientResult> {
   const value = createPatientSchema.parse(input);
   const supabase = await createClient();
+  const { acquisitionSourceId, referrerPatientId, externalReferrerName, externalReferrerOrganization, externalReferrerContact, initialBookingChannelCode, ...patient } = value;
   const { data, error } = await supabase.rpc("create_patient", {
-    p_acting_branch_id: value.actingBranchId,
-    p_first_name: value.firstName,
-    p_middle_name: value.middleName ?? null,
-    p_last_name: value.lastName,
-    p_suffix: value.suffix ?? null,
-    p_preferred_name: value.preferredName ?? null,
-    p_birth_date: value.birthDate,
-    p_sex_at_registration: value.sexAtRegistration ?? null,
-    p_address_line1: value.addressLine1 ?? null,
-    p_address_line2: value.addressLine2 ?? null,
-    p_city: value.city ?? null,
-    p_province: value.province ?? null,
-    p_postal_code: value.postalCode ?? null,
-    p_preferred_branch_id: value.preferredBranchId ?? null,
-    p_initial_mobile: value.initialMobile ?? null,
-    p_initial_email: value.initialEmail ?? null,
-    p_duplicate_confirmed: value.duplicateConfirmed,
+    p_acting_branch_id: patient.actingBranchId,
+    p_first_name: patient.firstName,
+    p_middle_name: patient.middleName ?? null,
+    p_last_name: patient.lastName,
+    p_suffix: patient.suffix ?? null,
+    p_preferred_name: patient.preferredName ?? null,
+    p_birth_date: patient.birthDate,
+    p_sex_at_registration: patient.sexAtRegistration ?? null,
+    p_address_line1: patient.addressLine1 ?? null,
+    p_address_line2: patient.addressLine2 ?? null,
+    p_city: patient.city ?? null,
+    p_province: patient.province ?? null,
+    p_postal_code: patient.postalCode ?? null,
+    p_preferred_branch_id: patient.preferredBranchId ?? null,
+    p_initial_mobile: patient.initialMobile ?? null,
+    p_initial_email: patient.initialEmail ?? null,
+    p_duplicate_confirmed: patient.duplicateConfirmed,
+    p_attribution: { acquisitionSourceId, referrerPatientId, externalReferrerName, externalReferrerOrganization, externalReferrerContact, initialBookingChannelCode },
   });
 
   if (error) throw mapPatientRpcError(error);

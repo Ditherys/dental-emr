@@ -1,6 +1,8 @@
 "use server";
 
 import { AuthorizationError, requireBranchAccess, requireSharedPatientPermission } from "@/lib/authorization";
+import { AcquisitionServiceError, createPatientReferral, updatePatientReferralStatus } from "@/lib/acquisition/service";
+import { createPatientReferralInputSchema, updatePatientReferralStatusInputSchema } from "@/lib/acquisition/schema";
 import {
   PatientServiceError,
   archivePatient,
@@ -22,7 +24,7 @@ import {
   updatePatientContactSchema,
   updatePatientRelationshipSchema,
   updatePatientSchema,
-  createPatientSchema,
+  createPatientBaseSchema,
 } from "@/lib/patients/schema";
 import type { DuplicateReview } from "@/lib/patients/types";
 
@@ -42,11 +44,12 @@ async function authorize(branchId: string) {
 function result(error: unknown): PatientMutationResult {
   if (error instanceof AuthorizationError) return { ok: false, code: "NOT_AUTHORIZED" };
   if (error instanceof PatientServiceError) return { ok: false, code: error.code };
+  if (error instanceof AcquisitionServiceError) return { ok: false, code: error.code };
   return { ok: false, code: "FAILED" };
 }
 
 export async function findDuplicateCandidatesAction(input: unknown): Promise<{ ok: true; review: DuplicateReview } | PatientMutationResult> {
-  const schema = createPatientSchema.omit({ duplicateConfirmed: true });
+  const schema = createPatientBaseSchema.omit({ duplicateConfirmed: true });
   const invalidResult = invalid(schema, input); if (invalidResult) return invalidResult;
   try {
     await authorize((input as { actingBranchId: string }).actingBranchId);
@@ -96,4 +99,14 @@ export async function lifecyclePatientAction(input: unknown, transition: "archiv
     if (transition === "archive") await archivePatient(input as never); else await reactivatePatient(input as never);
     return { ok: true };
   } catch (error) { return result(error); }
+}
+
+export async function createPatientReferralAction(input: unknown): Promise<PatientMutationResult> {
+  const invalidResult = invalid(createPatientReferralInputSchema, input); if (invalidResult) return invalidResult;
+  try { await authorize((input as { actingBranchId: string }).actingBranchId); await createPatientReferral(input); return { ok: true }; } catch (error) { return result(error); }
+}
+
+export async function updatePatientReferralStatusAction(input: unknown): Promise<PatientMutationResult> {
+  const invalidResult = invalid(updatePatientReferralStatusInputSchema, input); if (invalidResult) return invalidResult;
+  try { await authorize((input as { actingBranchId: string }).actingBranchId); await updatePatientReferralStatus(input); return { ok: true }; } catch (error) { return result(error); }
 }

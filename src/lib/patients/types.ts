@@ -34,6 +34,12 @@ export type CreatePatientInput = PatientDemographicsInput & {
   actingBranchId: string;
   initialMobile?: string;
   initialEmail?: string;
+  acquisitionSourceId?: string;
+  referrerPatientId?: string;
+  externalReferrerName?: string;
+  externalReferrerOrganization?: string;
+  externalReferrerContact?: string;
+  initialBookingChannelCode?: string;
   duplicateConfirmed: boolean;
 };
 
@@ -130,6 +136,12 @@ export type PatientDetail = {
   birthDate: string;
   status: "active" | "inactive" | "archived";
   version: number;
+  attribution: {
+    acquisitionSource: { code: string; name: string; category: "REFERRAL" | "DIGITAL" | "TRADITIONAL" | "PARTNER" | "OTHER" | "UNKNOWN" } | null;
+    initialBookingChannel: { code: string; name: string } | null;
+    referrerPatient: { patientId: string; displayName: string } | null;
+    externalReferrer: { name: string | null; organization: string | null; contact: string | null };
+  };
   contacts: PatientContactDetail[];
   relationships: PatientRelationshipDetail[];
 };

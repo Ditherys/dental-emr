@@ -64,6 +64,12 @@ const detailSchema = z.object({
   preferredBranch: z.object({ branchId: databaseUuid, name: z.string() }).nullable(),
   status,
   version: z.number().int().positive(),
+  attribution: z.object({
+    acquisitionSource: z.object({ code: z.string(), name: z.string(), category: z.enum(["REFERRAL", "DIGITAL", "TRADITIONAL", "PARTNER", "OTHER", "UNKNOWN"]) }).nullable(),
+    initialBookingChannel: z.object({ code: z.string(), name: z.string() }).nullable(),
+    referrerPatient: z.object({ patientId: databaseUuid, displayName: z.string() }).nullable(),
+    externalReferrer: z.object({ name: z.string().nullable(), organization: z.string().nullable(), contact: z.string().nullable() }),
+  }),
   contacts: z.array(contactSchema),
   relationships: z.array(relationshipSchema),
 });

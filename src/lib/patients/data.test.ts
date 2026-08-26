@@ -32,7 +32,7 @@ describe("patient read adapters", () => {
         firstName: "Ana", middleName: null, lastName: "Santos", suffix: null, preferredName: null,
         birthDate: "1990-01-01", sexAtRegistration: null, addressLine1: null, addressLine2: null,
         city: null, province: null, postalCode: null, preferredBranch: null, status: "active",
-        version: 1, contacts: [], relationships: [],
+        version: 1, attribution: { acquisitionSource: null, initialBookingChannel: null, referrerPatient: null, externalReferrer: { name: null, organization: null, contact: null } }, contacts: [], relationships: [],
       }, error: null,
     });
 

@@ -5,6 +5,43 @@
 
 ## Current checkpoint
 
+- **P5-07 registration and workspace UI is implemented but not committed.**
+  `/patients/new` starts catalog reads from the existing server-authorized
+  writable branch and renders the optional Acquisition section only when both
+  bounded catalog adapters succeed. It includes catalog-backed discovery-source
+  and booking-channel selects, a bounded existing-patient lookup through the
+  existing authorization-rechecking directory action, and external referrer
+  snapshot fields. Catalog failures safely omit the optional section; no public
+  directory or organization value was introduced.
+- `createPatient` now calls P5-03's explicit 18-argument `create_patient`
+  overload with the strict optional attribution document. The patient creation
+  schema rejects arbitrary attribution fields and competing internal/external
+  referrers. The duplicate-read workflow continues to validate against the
+  exported unrefined base schema because Zod cannot derive an omitted shape from
+  a refined object schema.
+- The workspace detail adapter now validates the P5-03 bounded attribution
+  projection and renders it read-only. The route independently attempts the
+  referral list after the core patient record; expected acquisition/authorization
+  errors degrade only that section to a safe alert. `ReferralsSection` provides
+  responsive semantic table/phone-list views, a dialog-based create flow, and
+  allowed status controls with 44px targets. Its route-local actions validate
+  input, recheck `patient.demographics.write` plus the submitted acting branch,
+  and call only P5-06 services; they accept no organization identifier.
+- P5-07 tests cover attribution schema/adapter shape, registration submission,
+  workspace read-only attribution rendering, and referral create action branch
+  reauthorization. Verification (2026-08-26): focused patient tests, `npm run
+  test:unit` (54 files, 569 tests), `npm run lint`, `npm run typecheck`, and
+  `npm run build` passed. No database migration or hosted target was used. The
+  pre-existing untracked `.playwright-cli/` directory remains untouched.
+- P5-07 review fixes: conflicting internal/external referrers now attach a
+  visible, accessible error to the external-referrer field in both client and
+  server validation. Registration referrer lookup and referral create/status
+  handlers catch rejected action promises, show safe failures, and clear their
+  saving state in `finally`. Form controls in the affected registration and
+  referral dialogs remain 44px at every breakpoint. Focused component/action
+  tests now prove referrer conflict/search rejection, referral create/status
+  rejection recovery, and status-action branch reauthorization.
+
 - **P5-06 is implemented but not committed.** `src/lib/acquisition/` adds
   server-only Zod schemas, DTO types, safe error mapping, and authenticated
   Supabase RPC services for catalog reads, attribution update, and referral

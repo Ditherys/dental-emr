@@ -4,6 +4,7 @@ import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { PageHeader } from "@/components/layout/page-header";
 import { AuthorizationError, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasSharedPatientPermission } from "@/lib/authorization/policy";
+import { AcquisitionServiceError, listAcquisitionSources, listBookingChannels } from "@/lib/acquisition/service";
 
 import { PatientRegistrationForm } from "./patient-registration-form";
 
@@ -41,10 +42,20 @@ export default async function NewPatientPage() {
     return <PermissionDenied description="Choose an active branch before registering a patient." />;
   }
 
+  let acquisition: { sources: Awaited<ReturnType<typeof listAcquisitionSources>>; channels: Awaited<ReturnType<typeof listBookingChannels>> } | undefined;
+  try {
+    acquisition = {
+      sources: await listAcquisitionSources({ actingBranchId }),
+      channels: await listBookingChannels({ actingBranchId }),
+    };
+  } catch (error) {
+    if (!(error instanceof AcquisitionServiceError || error instanceof AuthorizationError)) throw error;
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl">
       <PageHeader title="Register patient" description="Create an organization-wide patient record using the current working branch." />
-      <PatientRegistrationForm initialActingBranchId={actingBranchId} />
+      <PatientRegistrationForm initialActingBranchId={actingBranchId} acquisition={acquisition} />
     </div>
   );
 }

@@ -27,6 +27,11 @@ describe("createPatientSchema", () => {
     expect(createPatientSchema.safeParse({ ...input, initialMobile: "0917" }).success).toBe(false);
     expect(createPatientSchema.safeParse({ ...input, initialEmail: "maria@例.example" }).success).toBe(false);
   });
+
+  it("accepts bounded attribution and rejects competing referrer types", () => {
+    expect(createPatientSchema.parse({ ...input, acquisitionSourceId: "22000000-0000-0000-0000-000000000002", initialBookingChannelCode: "WALK_IN" }).initialBookingChannelCode).toBe("WALK_IN");
+    expect(createPatientSchema.safeParse({ ...input, referrerPatientId: "22000000-0000-0000-0000-000000000002", externalReferrerName: "External dentist" }).success).toBe(false);
+  });
 });
 
 describe("mapPatientRpcError", () => {
