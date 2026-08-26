@@ -36,11 +36,11 @@ existing appointment/calendar/communication automation.
 
 ## Tasks
 
-- [ ] **P10-01: Specialist request permission contract**
+- [x] **P10-01: Specialist request permission contract**
   - `specialist.request` permission row + matrix; `PermissionCode` + policy
     test; pgTAP proving the matrix.
 
-- [ ] **P10-02: Specialist request schema**
+- [x] **P10-02: Specialist request schema**
   - `specialist_requests`: org, branch, patient composite FK, appointment
     composite FK (nullable), required_specialty (org/global, nullable),
     requested_provider (org FK, nullable), requested_starts_at/ends_at
@@ -52,7 +52,7 @@ existing appointment/calendar/communication automation.
     changed_by, reason, changed_at.
   - RLS, zero base grants, access-path indexes, pgTAP.
 
-- [ ] **P10-03: Specialist request RPCs + automation + bookability guarantee**
+- [x] **P10-03: Specialist request RPCs + automation + bookability guarantee**
   - `private.has_specialist_permission_at_branch(acting_branch_id, code)`
     helper.
   - `create_specialist_request` (specialist.request gated; status SENT, expiry
@@ -73,7 +73,7 @@ existing appointment/calendar/communication automation.
     bookable** (find_available_slots returns zero for a VISITING/ON_CALL
     provider with no availability rule), expiration → EXPIRED.
 
-- [ ] **P10-04: Server services + UI**
+- [x] **P10-04: Server services + UI**
   - `src/lib/specialist/` service layer mirroring `src/lib/calendar/`
     (schemas/types/errors/service) + offline tests.
   - Minimal `/specialists` page (OWNER/ADMIN/DENTIST/RECEPTIONIST): list
@@ -83,7 +83,7 @@ existing appointment/calendar/communication automation.
     actions recheck specialist.request + responder rules + acting branch.
     Tests.
 
-- [ ] **P10-05: Integration verification + phase review**
+- [x] **P10-05: Integration verification + phase review**
 
 ## Explicitly deferred
 

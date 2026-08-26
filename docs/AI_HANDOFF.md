@@ -1,7 +1,43 @@
-# AI Handoff - Phase 9 complete, Phase 10 next
+# AI Handoff - Phase 10 complete, Phase 11 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 10 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 10 (Specialist / On-call Workflow) complete through commit `7ff5164`
+(P10-04 specialist services + UI) with `docs/plans/010-specialist-oncall.md`
+P10-01..P10-05 all `[x]`.
+
+- P10-01 `b34fc24` specialist.request permission (OWNER/ADMIN/DENTIST/
+  RECEPTIONIST). P10-02 `594a3d7` specialist_requests + status history (minimal
+  bounded non-clinical case_summary, global-OR-org specialty scope trigger,
+  status state machine SENT/ACCEPTED/ASSIGNED/DECLINED/
+  ALTERNATE_TIME_REQUESTED/EXPIRED/CANCELLED). P10-03 `f08f552` create/respond/
+  cancel/list RPCs + has_specialist_permission_at_branch; ACCEPT inserts
+  appointment_providers SPECIALIST ASSIGNED + enqueues calendar CREATE +
+  communication (acceptance triggers assignment + automation atomically);
+  responder must be the requested provider's linked user OR org role.manage;
+  bookability proven (find_available_slots = 0 for VISITING/ON_CALL provider
+  with no availability rules). P10-04 `7ff5164` src/lib/specialist services +
+  /specialists UI (request + respond + cancel; responder rule enforced
+  server-side in RPC).
+- Acceptance criteria met: on-call not automatically bookable; availability
+  request carries minimal case_summary only (no clinical content); acceptance
+  assigns provider + triggers calendar/communication automation.
+- Inventory: 84 migration files, 29 grant terminals, 114 approved privileges;
+  47 pgTAP suites + 3 concurrency probes; tables 44, functions 145,
+  security-definer 122; unit 74 files / 795 tests; scripts 279.
+- Phase gate verification all green: db test, security migrations/secrets/audit,
+  unit, lint, typecheck, build (`/specialists` emitted).
+
+**Next:** Phase 11 (Document & Print Engine) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 11 (initial templates: patient record summary, treatment estimate,
+statement of account, prescription, referral letter, consent form, appointment
+slip, treatment plan; A4, clinic branding, sensitive exports authorized/audited).
+Author bounded plan docs/plans/011-document-print.md then execute P11-01.. .
+
+## Phase 10 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 9 checkpoint (2026-08-27) - ACCEPTED (external Google behavior NOT VERIFIED)
 
