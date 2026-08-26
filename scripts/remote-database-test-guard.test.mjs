@@ -254,6 +254,7 @@ describe("registered database suites", () => {
       "file_upload_rpcs.test.sql",
       "foundation_rls.test.sql",
       "patient_attribution_columns.test.sql",
+      "patient_attribution_rpcs.test.sql",
       "patient_authorization.test.sql",
       "patient_children_write.test.sql",
       "patient_contacts_relationships.test.sql",

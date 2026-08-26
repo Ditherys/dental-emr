@@ -228,7 +228,7 @@ const patientCreateGrants = Object.freeze([
     privilege: "execute",
     columns: [],
     reason:
-      "The only patient creation mutation path. It derives actor and tenant from the authenticated acting branch, locks duplicate/counter state, validates and rechecks duplicates, creates contacts and patient atomically, and appends one patient-linked audit event.",
+      "The original patient creation boundary remains executable for backward-compatible calls. It derives actor and tenant from the authenticated acting branch, locks duplicate/counter state, validates and rechecks duplicates, creates contacts and patient atomically, and appends one patient-linked audit event.",
   },
 ]);
 
@@ -364,6 +364,9 @@ const patientFileArchiveRpcGrants = Object.freeze([
 const PATIENT_FILE_METADATA_OBJECT_KEY_GRANTS_MIGRATION =
   "20260826011001_patient_file_metadata_object_key_grants.sql";
 
+const PATIENT_ATTRIBUTION_RPCS_GRANTS_MIGRATION =
+  "20260826011401_patient_attribution_rpcs_grants.sql";
+
 /**
  * Grant-terminal migrations, in migration order.
  *
@@ -455,6 +458,35 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         columns: [],
         reason:
           "Restores the exact 20260826010701 terminal EXECUTE grant pattern that the P4-07 verified-size migration cancelled when it replaced the confirm_file_upload definition with a fourth required bigint parameter. The server-side storage adapter measures the stored object with a HEAD request and passes that server-verified size, which the SECURITY DEFINER body persists into size_bytes when the row becomes available, and a database CHECK now guarantees every available file row carries a non-null verified size.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: PATIENT_ATTRIBUTION_RPCS_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.create_patient(uuid,text,text,text,text,text,date,text,text,text,text,text,text,uuid,text,text,boolean,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason: "Additive patient-creation overload preserving the historical signature while accepting only a server-validated attribution document; tenant, actor, audit, and version values remain derived internally.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.update_patient_attribution(uuid,uuid,integer,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason: "The sole attribution mutation boundary derives the active branch tenant and actor, requires live demographics-write permission, locks the tenant-scoped patient version, validates active catalogs and same-tenant referrers, and appends one opaque audit event atomically.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.get_patient_detail(uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason: "Restores the exact existing patient-detail grant after P5-03 recreates its bounded projection to include attribution catalog labels and referrer snapshot data under the existing demographics-read authorization boundary.",
       },
     ]),
   }),
