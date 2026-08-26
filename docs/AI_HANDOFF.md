@@ -1,9 +1,32 @@
-# AI Handoff - Phase 4 complete (P4-09 integration verification)
+# AI Handoff - P5-04 patient referral foundation
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
 ## Current checkpoint
+
+- **P5-04 is implemented but not committed.** `20260826011500_patient_referrals.sql`
+  adds only the referral foundation table and no RPCs: requested `org_id`,
+  tenant-safe composite patient FK, `IN`/`OUT` directions, bounded
+  `RECEIVED`/`ACTIVE`/`COMPLETED`/`CANCELLED` status, nullable required
+  specialty, bounded external-party snapshot fields, 2000-character notes,
+  optimistic version, and timestamps. Base grants remain revoked for PUBLIC,
+  anon, authenticated, and service_role; the sole RLS policy reuses
+  demographics-read visibility, while future P5-05 owns the RPC boundary.
+- The specialty reference has a private `FOR KEY SHARE` scope trigger allowing
+  global or same-org specialties only, with an empty search path and all
+  execution revoked. The access path is `(org_id, patient_id, status)`.
+- `patient_referrals_foundation.test.sql` is registered in the local/Cloud TEST
+  runner and proves schema, constraints, foreign-patient rejection,
+  global/own/foreign specialty integrity, RLS isolation, zero base grants,
+  index shape, and trigger hardening. Static test inventories were increased to
+  51 migrations, 26 tables, 95 functions, 25 policies, and 26 pgTAP suites.
+- P5-04 verification (2026-08-26): `npm run security:migrations`, fresh
+  `db:start:local` / `db:reset:local` / `db:provision:local` /
+  `test:db:local` (26 suites + 3 concurrency probes), `npm run lint`,
+  `npm run typecheck`, and `npm run test:unit` (53 files, 561 tests) passed.
+  No hosted or production target was used. The pre-existing untracked
+  `.playwright-cli/` directory was not changed.
 
 - **Phase 4 (patient file attachment foundation) is functionally complete and
   phase-reviewed.** All plan tasks P4-01..P4-09 are delivered; Cloud TEST
