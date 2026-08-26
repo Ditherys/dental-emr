@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(46);
+    expect(result.checked.files).toBe(47);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,9 +340,9 @@ describe("the active migration chain", () => {
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-    expect(count("table")).toBe(23);
-    expect(count("function")).toBe(87);
-    expect(count("policy")).toBe(22);
+    expect(count("table")).toBe(25);
+    expect(count("function")).toBe(90);
+    expect(count("policy")).toBe(24);
     // R6-C1 / ADR-018: the canonical baseline is production-shaped and creates
     // no extension. pgTAP is provisioned only into non-production projects.
     expect(count("extension")).toBe(0);

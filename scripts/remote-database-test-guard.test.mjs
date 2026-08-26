@@ -245,6 +245,7 @@ describe("registered database suites", () => {
   // An authored-but-unregistered suite reads as coverage while proving nothing.
   it("runs every suite that exists, and every registered suite exists", () => {
     const expectedSuites = [
+      "acquisition_catalogs.test.sql",
       "audit_foundation.test.sql",
       "branch_lifecycle.test.sql",
       "file_archive_rpc.test.sql",
