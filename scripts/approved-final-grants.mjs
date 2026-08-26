@@ -644,4 +644,10 @@ assertSupersedeReferencesResolve();
  * violation. That is the intended review gate: adding one requires an entry
  * here stating why the extension belongs in every environment.
  */
-export const APPROVED_EXTENSIONS = Object.freeze([]);
+export const APPROVED_EXTENSIONS = Object.freeze([
+  {
+    name: "btree_gist",
+    reason:
+      "Provides the uuid `=` operator class required by the reservation-ledger partial GiST exclusion constraints (P6-05) that reject provider/resource double booking at the database level.",
+  },
+]);

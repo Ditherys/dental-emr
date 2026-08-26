@@ -272,6 +272,7 @@ describe("registered database suites", () => {
       "provider_availability.test.sql",
       "provider_foundation.test.sql",
       "provider_permission_contract.test.sql",
+      "reservation_ledgers.test.sql",
       "resource_foundation.test.sql",
       "schema.test.sql",
       "seed_security_fixtures.test.sql",

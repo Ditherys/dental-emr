@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(61);
+    expect(result.checked.files).toBe(62);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,12 +340,13 @@ describe("the active migration chain", () => {
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-expect(count("table")).toBe(35);
+expect(count("table")).toBe(37);
     expect(count("function")).toBe(104);
     expect(count("policy")).toBe(25);
-    // R6-C1 / ADR-018: the canonical baseline is production-shaped and creates
-    // no extension. pgTAP is provisioned only into non-production projects.
-    expect(count("extension")).toBe(0);
+    // btree_gist (P6-05) is the sole approved production extension; it backs the
+    // reservation-ledger exclusion constraints. pgTAP is still provisioned only
+    // into non-production projects.
+    expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
     ).toBe(83);
@@ -641,8 +642,14 @@ describe("the approved final privilege set", () => {
   // R6-C1 / ADR-018. The empty list is the enforcement mechanism, so a test
   // must fail if a later change quietly re-approves an extension without the
   // review that entry represents.
-  it("approves no extension in the canonical baseline", () => {
-    expect(APPROVED_EXTENSIONS).toEqual([]);
+  it("approves exactly the btree_gist extension in the canonical baseline", () => {
+    expect(APPROVED_EXTENSIONS).toEqual([
+      {
+        name: "btree_gist",
+        reason:
+          "Provides the uuid `=` operator class required by the reservation-ledger partial GiST exclusion constraints (P6-05) that reject provider/resource double booking at the database level.",
+      },
+    ]);
   });
 
   it("refuses pgTAP if it is ever reintroduced into a migration", () => {
