@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, ClipboardList, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CalendarSync, ClipboardList, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -66,6 +66,12 @@ export const navigationItems = [
     label: "Account & security",
     href: "/settings/account",
     icon: ShieldCheck,
+  },
+  {
+    label: "Calendar sync",
+    href: "/settings/calendar",
+    icon: CalendarSync,
+    requiredPermission: "calendar.manage",
   },
 ] as const satisfies ReadonlyArray<{
   label: string;
