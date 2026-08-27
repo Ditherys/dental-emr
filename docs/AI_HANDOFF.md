@@ -1,7 +1,40 @@
-# AI Handoff - Phase 20 complete, Phase 21 next
+# AI Handoff - Phase 21 complete, Phase 22 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 21 checkpoint (2026-08-27) - ACCEPTED (discovery only)
+
+Phase 21 (Billing Enhancement / BIR-Compliant Invoicing Discovery) is complete
+with `docs/plans/021-billing-invoicing-discovery.md` P21-01..P21-03 all `[x]`.
+Per `MASTER_PRODUCT_PLAN.md` §Phase 21, no regulated invoice functionality was
+built from assumptions.
+
+- The deliverable is `docs/discovery/021-bir-invoicing-requirements.md`: an
+  owner confirmation checklist (taxpayer status, VAT vs non-VAT, COR, registered
+  document types, CAS/loose-leaf authority, number series, services document
+  type, tax rate, branch issuance, walk-in vs online, retention, e-invoicing
+  applicability, billing contact); BIR concepts to verify with the accountant;
+  and a bounded design for numbering, data, reporting, and access that composes
+  with the canonical billing ledger (DATABASE_DESIGN §22/DB-9) and preserves
+  branch attribution.
+- The design explicitly keeps invoice numbers consecutive/unreused with voided
+  documents preserved, derives documents from ledger rows rather than a second
+  source of truth, snapshots printed documents, and gates exports on permission
+  and audit.
+- Implementation gate: owner confirms the checklist, the accountant confirms the
+  applicable requirements, the design is revised and approved, and a bounded
+  implementation plan is authored and reviewed. No billing permission, table,
+  migration, grant, or regulated feature was added.
+- This phase made no schema/migration/application change; verification is the
+  documentation review.
+
+**Next:** Phase 22 (Messenger Integration) per `MASTER_PRODUCT_PLAN.md` §Phase
+22. This is also a boundary/verification phase: understand Meta app/business
+requirements, use the unified Phase 8 communication system, ensure
+patient-initiated conversation handling, never disclose clinical records
+through ordinary chat, and follow current Meta policy; build only after those
+requirements are documented and verified.
 
 ## Phase 20 checkpoint (2026-08-27) - ACCEPTED
 
