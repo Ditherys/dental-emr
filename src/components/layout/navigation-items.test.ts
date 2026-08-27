@@ -56,6 +56,12 @@ describe("permission-aware navigation", () => {
     });
   });
 
+  it("declares booking review as the capability for the Booking requests link", () => {
+    expect(navigationItems.find(({ href }) => href === "/booking-requests")).toMatchObject({
+      requiredPermission: "booking.review",
+    });
+  });
+
   it("declares site manage as the capability for the Website link", () => {
     expect(navigationItems.find(({ href }) => href === "/settings/site")).toMatchObject({
       requiredPermission: "site.manage",

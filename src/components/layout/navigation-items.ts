@@ -1,4 +1,4 @@
-import { BarChart3, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, Globe, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
+import { BarChart3, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, Globe, Inbox, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -49,6 +49,12 @@ export const navigationItems = [
     href: "/specialists",
     icon: UserCog,
     requiredPermission: "specialist.request",
+  },
+  {
+    label: "Booking requests",
+    href: "/booking-requests",
+    icon: Inbox,
+    requiredPermission: "booking.review",
   },
   {
     label: "Documents",
