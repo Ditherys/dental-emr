@@ -227,6 +227,18 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.mark_intake_form_paper(uuid, uuid, integer, text)",
     "public.list_intake_forms(uuid, uuid)",
     "public.list_consent_templates(uuid)",
+    "public.create_recall_rule(uuid, text, integer, text, uuid)",
+    "public.update_recall_rule(uuid, uuid, integer, text, integer, text, boolean)",
+    "public.list_recall_rules(uuid, boolean)",
+    "public.create_recall(uuid, uuid, uuid, timestamptz)",
+    "public.set_recall_opt_out(uuid, uuid, boolean)",
+    "public.complete_recall(uuid, uuid, integer)",
+    "public.cancel_recall(uuid, uuid, integer)",
+    "public.link_recall_appointment(uuid, uuid, integer, uuid)",
+    "public.enqueue_recall_reminder(uuid, uuid, integer)",
+    "public.list_recalls(uuid, uuid, text)",
+    "public.get_recall_retention_summary(uuid)",
+    "public.mark_recall_opted_out(uuid, uuid, integer)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1339,7 +1351,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(151);
+    expect(approved.size).toBe(163);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

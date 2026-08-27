@@ -501,6 +501,24 @@ const clinicalRpcGrants = Object.freeze([
   "public.finalize_prescription(uuid,uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
 
+const RECALL_RPCS_GRANTS_MIGRATION =
+  "20260827014001_recall_rpcs_grants.sql";
+
+const recallRpcGrants = Object.freeze([
+  "public.create_recall_rule(uuid,text,integer,text,uuid)",
+  "public.update_recall_rule(uuid,uuid,integer,text,integer,text,boolean)",
+  "public.list_recall_rules(uuid,boolean)",
+  "public.create_recall(uuid,uuid,uuid,timestamptz)",
+  "public.set_recall_opt_out(uuid,uuid,boolean)",
+  "public.complete_recall(uuid,uuid,integer)",
+  "public.cancel_recall(uuid,uuid,integer)",
+  "public.link_recall_appointment(uuid,uuid,integer,uuid)",
+  "public.enqueue_recall_reminder(uuid,uuid,integer)",
+  "public.list_recalls(uuid,uuid,text)",
+  "public.get_recall_retention_summary(uuid)",
+  "public.mark_recall_opted_out(uuid,uuid,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only recall boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live recall.manage (rule configuration, scheduling, opt-out, reminders, transitions) or recall.read (overdue list and bounded retention summary). Reminder enqueues are durable Phase 8 REMINDER INSERTs inside the recall transaction that respect patient and individual opt-outs and NONE-channel rules; overdue is derived. Every mutation appends one atomic opaque audit event while the read projections write none." })));
+
 const DOCUMENT_RPCS_GRANTS_MIGRATION =
   "20260827012201_document_rpcs_grants.sql";
 
@@ -1014,6 +1032,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: INTAKE_CONSENT_TEMPLATES_RPC_GRANTS_MIGRATION,
     grants: intakeConsentTemplatesRpcGrants,
+  }),
+  Object.freeze({
+    file: RECALL_RPCS_GRANTS_MIGRATION,
+    grants: recallRpcGrants,
   }),
 ]);
 
