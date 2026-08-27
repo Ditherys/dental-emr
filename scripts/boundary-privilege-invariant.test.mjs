@@ -252,6 +252,8 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_inventory_movements(uuid, uuid)",
     "public.get_inventory_aggregate(uuid)",
     "public.list_inventory_transfers(uuid, text)",
+    "public.get_operational_analytics_summary(uuid, uuid, integer)",
+    "public.list_operational_analytics_breakdown(uuid, uuid, integer)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1364,7 +1366,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(176);
+    expect(approved.size).toBe(178);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

@@ -244,7 +244,7 @@ describe("registered database suites", () => {
 
   // An authored-but-unregistered suite reads as coverage while proving nothing.
   it("runs every suite that exists, and every registered suite exists", () => {
-const expectedSuites = [
+    const expectedSuites = [
       "acquisition_catalogs.test.sql",
       "acquisition_report.test.sql",
       "appointment_foundation.test.sql",
@@ -281,6 +281,7 @@ const expectedSuites = [
       "inventory_permission_contract.test.sql",
       "inventory_rpcs.test.sql",
       "odontogram_rpcs.test.sql",
+      "operational_analytics.test.sql",
       "patient_attribution_columns.test.sql",
       "patient_attribution_rpcs.test.sql",
       "patient_authorization.test.sql",
@@ -305,7 +306,7 @@ const expectedSuites = [
       "recall_rpcs.test.sql",
       "reservation_ledgers.test.sql",
       "resource_foundation.test.sql",
-"scheduling_reads.test.sql",
+      "scheduling_reads.test.sql",
       "schema.test.sql",
       "seed_security_fixtures.test.sql",
       "session_authorization_boundaries.test.sql",
@@ -313,7 +314,7 @@ const expectedSuites = [
       "site_rpcs.test.sql",
       "specialist_permission_contract.test.sql",
       "specialist_request_rpcs.test.sql",
-"specialist_requests_foundation.test.sql",
+      "specialist_requests_foundation.test.sql",
       "tooth_conditions.test.sql",
       "treatment_plan_rpcs.test.sql",
       "treatment_plans.test.sql",

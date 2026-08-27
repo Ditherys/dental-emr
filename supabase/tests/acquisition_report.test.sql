@@ -49,7 +49,7 @@ select extensions.set_eq(
 
 select extensions.is(
   (select description from public.permissions where code = 'analytics.view'),
-  'View organization-level acquisition and referral analytics reports.',
+  'View organization-level operational, acquisition, and referral analytics.',
   'the analytics.view permission description stays stable'
 );
 

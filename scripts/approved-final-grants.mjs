@@ -376,6 +376,21 @@ const ACQUISITION_CATALOG_READS_GRANTS_MIGRATION =
 const ACQUISITION_REPORT_GRANTS_MIGRATION =
   "20260826011801_acquisition_report_grants.sql";
 
+const OPERATIONAL_ANALYTICS_GRANTS_MIGRATION =
+  "20260827014501_operational_analytics_grants.sql";
+
+const operationalAnalyticsGrants = Object.freeze([
+  "public.get_operational_analytics_summary(uuid,uuid,integer)",
+  "public.list_operational_analytics_breakdown(uuid,uuid,integer)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason: "The aggregate-only operational analytics boundary derives the tenant from an active authenticated acting branch, requires live organization-wide analytics.view (OWNER/ADMIN only), validates an optional same-organization branch and a 30/90/365-day window, and returns only summary counts/rates or bounded dimension counts/booked minutes. It exposes no patient rows or clinical/contact content, keeps acquisition source separate from initial booking channel, and writes no audit event.",
+})));
+
 const APPOINTMENT_RPCS_GRANTS_MIGRATION =
   "20260827010501_appointment_rpcs_grants.sql";
 
@@ -1075,6 +1090,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: INVENTORY_TRANSFER_READ_GRANTS_MIGRATION,
     grants: inventoryTransferReadGrants,
+  }),
+  Object.freeze({
+    file: OPERATIONAL_ANALYTICS_GRANTS_MIGRATION,
+    grants: operationalAnalyticsGrants,
   }),
 ]);
 
