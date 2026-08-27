@@ -1,7 +1,38 @@
-# AI Handoff - Phase 16 complete, Phase 17 next
+# AI Handoff - Phase 17 complete, Phase 18 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 17 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 17 (Digital Intake & Consent) complete through commit `55e128d`
+(P17-03 intake services + staff + public UI) with
+`docs/plans/017-digital-intake-consent.md` P17-01..P17-04 all `[x]`.
+
+- P17-01/02 `c625657` intake.manage permission (OWNER/ADMIN/RECEPTIONIST) +
+  consent_templates (global-immutable) + intake_forms (answers preserved
+  verbatim, privacy_acknowledged, status PENDING/SUBMITTED/SIGNED/PRINTED,
+  submitted_via LINK/PAPER, template_version/time/signers) + intake_links
+  (SHA-256 token hash, state-transition expiry) + 6 RPCs (create form returns
+  token once, anon get/submit gated by token hash — wrong/expired/revoked/
+  foreign tokens indistinguishable NULL so a link cannot expose another
+  patient; mark paper; list). P17-03 `55e128d` src/lib/intake services +
+  patient Intake section (create link token-once, mark paper) + public
+  (public)/intake/[token] form + /api/public/intake route; consent-template gap
+  closed with list_consent_templates RPC (rpc `20260827013800`).
+- Acceptance criteria met: form link cannot expose another patient (token-hash
+  binding, indistinguishable NULLs, pgTAP); signed form captures template
+  version/time/signers; clinic can print instead of digitally sign
+  (mark_intake_form_paper + print).
+- Inventory: 112 migration files, 39 grant terminals, 169 approved privileges
+  (7 deliberate anon grants); 68 pgTAP suites + 5 concurrency probes; tables 62,
+  functions 206, security-definer 174; unit 109 files / 1128 tests; scripts 279.
+
+**Next:** Phase 18 (Recall & Follow-up Automation) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 18. Author bounded plan docs/plans/018-recall-followup.md then execute
+P18-01.. .
+
+## Phase 17 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 16 checkpoint (2026-08-27) - ACCEPTED
 

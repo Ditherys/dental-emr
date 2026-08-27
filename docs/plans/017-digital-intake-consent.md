@@ -38,7 +38,7 @@ alternative.
 
 ## Tasks
 
-- [ ] **P17-01: Intake permission + schema**
+- [x] **P17-01: Intake permission + schema**
   - `intake.manage` permission + matrix; `PermissionCode` + policy test; pgTAP.
   - `consent_templates`: org (nullable global + org custom), code, name, body
     bounded, version, is_active, timestamps; global-immutable scope trigger.
@@ -54,7 +54,7 @@ alternative.
     RLS + zero grants.
   - pgTAP.
 
-- [ ] **P17-02: Intake RPCs**
+- [x] **P17-02: Intake RPCs**
   - `private.has_intake_permission_at_branch(acting_branch_id, code)` helper.
   - `create_intake_form(acting_branch_id, patient_id, form_type, consent_template_id null)` —
     intake.manage gated; creates PENDING form + an ACTIVE intake_link (7-day
@@ -85,7 +85,7 @@ alternative.
     paper alternative; privacy acknowledgement required for consent; tenant
     isolation; permission denials).
 
-- [ ] **P17-03: Server services + staff UI + public intake UI**
+- [x] **P17-03: Server services + staff UI + public intake UI**
   - `src/lib/intake/` service layer + offline tests.
   - Staff `/settings/intake` (or patient-scoped intake section in the patient
     workspace): create form link (shows token once), list forms + status,
@@ -96,7 +96,7 @@ alternative.
     patient enumeration; wrong token → "link not found". Mobile-first, minimal.
     Tests (no cross-patient data, consent privacy checkbox, submit flow).
 
-- [ ] **P17-04: Integration verification + phase review**
+- [x] **P17-04: Integration verification + phase review**
 
 ## Explicitly deferred
 
