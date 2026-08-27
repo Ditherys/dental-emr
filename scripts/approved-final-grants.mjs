@@ -507,6 +507,75 @@ const DOCUMENT_RPCS_GRANTS_MIGRATION =
 const DOCUMENT_TREATMENT_PLAN_GRANTS_MIGRATION =
   "20260827013500_document_treatment_plan.sql";
 
+const INTAKE_RPCS_GRANTS_MIGRATION =
+  "20260827013701_intake_rpcs_grants.sql";
+
+const intakeRpcGrants = Object.freeze([
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_get_intake_form(text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 6 of 7 (P17-02): an unauthenticated patient opening a per-form intake link must read the bounded form. It is SECURITY DEFINER with an empty search_path, never reads auth.uid(), resolves the organization by slug, matches a link purely by its stored SHA-256 token hash, and returns only form id/type/template version/consent body/privacy notice/expiry/status for that one patient+form -- never patient identity, answers, or other forms. Wrong, expired, revoked, or foreign-organization tokens are indistinguishable NULLs.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_get_intake_form(text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous intake-form read is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_submit_intake_form(text,text,jsonb,boolean)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 7 of 7 (P17-02): an unauthenticated patient must submit answers for the one intake form their link token binds. It validates a bounded answers object and requires privacy_acknowledged for CONSENT forms, transitions PENDING to SUBMITTED with answers preserved verbatim and submitted_via LINK, expires the link, and is idempotent for duplicates; no audit event is written because the caller is anonymous.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_submit_intake_form(text,text,jsonb,boolean)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous intake submission is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.create_intake_form(uuid,uuid,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only intake form/link creation boundary. It requires live intake.manage (OWNER/ADMIN/RECEPTIONIST) at an active acting branch, validates a same-tenant patient and a global-or-same-organization active consent template for CONSENT forms, creates a PENDING form plus one ACTIVE 7-day link storing only the SHA-256 token hash, returns the token plaintext exactly once, and appends one intake.form.created audit event atomically.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.mark_intake_form_paper(uuid,uuid,integer,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The paper-sign alternative and the only intake paper/print transition. It requires live intake.manage, moves a PENDING or SUBMITTED same-branch form to PRINTED under an optimistic version stamping signed_by/signed_at and submitted_via PAPER, revokes every ACTIVE link, and appends one intake.form.printed audit event with bounded {reason} metadata.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.list_intake_forms(uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The intake.manage-gated bounded 100-row status projection for a same-tenant patient at the acting branch. Returns only form id, type, template version, status, submission/signing provenance and timestamps; never the answers body, and writes no audit event.",
+  },
+]);
+
 const documentRpcGrants = Object.freeze([
   "public.generate_document(uuid,uuid,text,jsonb)",
   "public.list_documents(uuid,uuid,text)",
@@ -922,6 +991,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
           "Restores the exact 20260827012201 terminal EXECUTE grant that the P16-03 TREATMENT_PLAN document extension cancelled when it recreated the generate_document definition to snapshot same-tenant treatment plans (header plus gated items/alternatives/discussions/drawing). The approved final privilege set is unchanged: no new grantable object is introduced and authorization remains entirely inside the SECURITY DEFINER body.",
       },
     ]),
+  }),
+  Object.freeze({
+    file: INTAKE_RPCS_GRANTS_MIGRATION,
+    grants: intakeRpcGrants,
   }),
 ]);
 

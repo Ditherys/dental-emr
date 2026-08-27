@@ -221,6 +221,11 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.save_treatment_plan_drawing(uuid, uuid, integer, jsonb)",
     "public.list_treatment_plans(uuid, uuid)",
     "public.get_treatment_plan_detail(uuid, uuid)",
+    "public.create_intake_form(uuid, uuid, text, uuid)",
+    "public.public_get_intake_form(text, text)",
+    "public.public_submit_intake_form(text, text, jsonb, boolean)",
+    "public.mark_intake_form_paper(uuid, uuid, integer, text)",
+    "public.list_intake_forms(uuid, uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -260,6 +265,20 @@ const APPROVED_FINAL_PRIVILEGES = [
     grantee: "anon",
     object_class: "function",
     object: "public.public_cancel_booking_request(uuid, text)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_get_intake_form(text, text)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_submit_intake_form(text, text, jsonb, boolean)",
     privilege: "execute",
     column: null,
   },
@@ -1319,7 +1338,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(143);
+    expect(approved.size).toBe(150);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

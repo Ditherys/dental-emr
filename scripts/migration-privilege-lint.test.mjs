@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-expect(result.checked.files).toBe(107);
+expect(result.checked.files).toBe(110);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,8 +340,8 @@ expect(result.checked.files).toBe(107);
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-expect(count("table")).toBe(59);
-    expect(count("function")).toBe(198);
+expect(count("table")).toBe(62);
+    expect(count("function")).toBe(205);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -349,7 +349,7 @@ expect(count("table")).toBe(59);
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(167);
+    ).toBe(173);
     expect(
       created.filter(
         (statement) =>
@@ -690,15 +690,15 @@ describe("the approved final privilege set", () => {
     ]);
   });
 
-  it("grants anon and PUBLIC exactly the five deliberate public RPCs", () => {
+  it("grants anon exactly the seven deliberate public RPCs", () => {
     const exposed = TERMINAL_MIGRATIONS.flatMap((terminal) => terminal.grants).filter(
       (grant) => ["anon", "public"].includes(grant.grantee),
     );
 
-    // P12-02 get_public_site plus P13-02's four booking RPCs are the five
-    // deliberate public surfaces (plans 012/013). They are SECURITY DEFINER,
-    // return only the bounded public projections, and PUBLIC still holds
-    // nothing at all.
+    // P12-02 get_public_site plus P13-02's four booking RPCs and P17-02's two
+    // intake RPCs are the seven deliberate public surfaces (plans 012/013/017).
+    // They are SECURITY DEFINER, return only the bounded public projections,
+    // and PUBLIC still holds nothing at all.
     expect(exposed).toEqual([
       {
         grantee: "anon",
@@ -736,6 +736,22 @@ describe("the approved final privilege set", () => {
         grantee: "anon",
         objectClass: "function",
         object: "public.public_cancel_booking_request(uuid,text)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_get_intake_form(text,text)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_submit_intake_form(text,text,jsonb,boolean)",
         privilege: "execute",
         columns: [],
         reason: expect.any(String),
