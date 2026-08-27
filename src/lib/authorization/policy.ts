@@ -27,6 +27,8 @@ export const foundationPermissionCodes = [
   "site.manage",
   "booking.review",
   "intake.manage",
+  "recall.read",
+  "recall.manage",
   "analytics.view",
 ] as const;
 

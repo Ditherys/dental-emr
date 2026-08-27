@@ -226,6 +226,21 @@ describe("intake permission vocabulary", () => {
   });
 });
 
+describe("recall permission vocabulary", () => {
+  it("exposes the two bounded recall permission codes", () => {
+    const recallRead: PermissionCode = "recall.read";
+    const recallManage: PermissionCode = "recall.manage";
+
+    // @ts-expect-error recall permissions are a closed contract.
+    const unknownRecallPermission: PermissionCode = "recall.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([recallRead, recallManage]),
+    );
+    expect(unknownRecallPermission).toBe("recall.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);
