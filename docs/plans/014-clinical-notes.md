@@ -42,12 +42,12 @@ edit clinical notes.
 
 ## Tasks
 
-- [ ] **P14-01: Clinical permission contract**
+- [x] **P14-01: Clinical permission contract**
   - `patient.clinical.read` / `patient.clinical.write` permission rows +
     matrix; `PermissionCode` + policy test; pgTAP proving the matrix and that
     RECEPTIONIST gets neither.
 
-- [ ] **P14-02: Clinical schema**
+- [x] **P14-02: Clinical schema**
   - `clinical_encounters`: org, branch, patient composite FK, appointment
     composite FK (nullable), treating_provider (org FK, required), status
     (OPEN/FINALIZED), version, timestamps. RLS + zero base grants + indexes.
@@ -64,7 +64,7 @@ edit clinical notes.
     (DRAFT/FINALIZED), finalized_at, version. RLS + zero grants.
   - pgTAP for all.
 
-- [ ] **P14-03: Clinical RPCs**
+- [x] **P14-03: Clinical RPCs**
   - `private.has_clinical_permission_at_branch(acting_branch_id, code)` helper
     (clinical.read/write).
   - `create_clinical_encounter` (clinical.write gated; link appointment/
@@ -85,7 +85,7 @@ edit clinical notes.
     audited atomically with audit-rollback trigger test, tenant isolation,
     appointment/provider linkage correctness).
 
-- [ ] **P14-04: Server services + clinical UI**
+- [x] **P14-04: Server services + clinical UI**
   - `src/lib/clinical/` service layer mirroring `src/lib/specialist/` +
     offline tests.
   - Patient workspace "Clinical" section: encounter list (treatment history),
@@ -95,7 +95,7 @@ edit clinical notes.
     clinical section. Dense/phone composition, 44px. Tests (reception sees no
     clinical UI; draft→finalize→amend flow; history preserved).
 
-- [ ] **P14-05: Integration verification + phase review**
+- [x] **P14-05: Integration verification + phase review**
 
 ## Explicitly deferred
 

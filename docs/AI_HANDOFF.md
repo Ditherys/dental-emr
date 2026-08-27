@@ -1,7 +1,39 @@
-# AI Handoff - Phase 13 complete, Phase 14 next
+# AI Handoff - Phase 14 complete, Phase 15 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 14 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 14 (Clinical Notes & Dental EMR) complete through commit `aab7d73`
+(P14-04 clinical services + patient clinical UI) with
+`docs/plans/014-clinical-notes.md` P14-01..P14-05 all `[x]`.
+
+- P14-01 `45a38e2` patient.clinical.read/write permission contract
+  (write OWNER/ADMIN/DENTIST; read + DENTAL_ASSISTANT; RECEPTIONIST neither —
+  updated the stale Phase 2 patient_authorization assertions accordingly).
+  P14-02/03 `3f0daec` clinical schema (encounters, notes with
+  **immutable-finalized trigger** + amendment-chain self-FK, medical
+  conditions/allergies/medications, prescriptions) + 13 clinical RPCs +
+  has_clinical_permission_at_branch; finalized notes/prescriptions are
+  immutable; amendments are child rows preserving history; audit per mutation
+  (rollback-proven); encounter links appointment/provider org-scoped.
+  P14-04 `aab7d73` src/lib/clinical services + patient Clinical section
+  (treatment history, notes draft/finalize/amend, medical history, prescriptions;
+  RECEPTIONIST sees no section, DENTAL_ASSISTANT read-only, DENTIST full).
+- Acceptance criteria met: finalized notes preserve history (immutable +
+  amendment chain); clinical changes audited; reception cannot edit clinical
+  notes (no permission + UI hidden); encounter links appointment/provider.
+- Inventory: 100 migration files, 34 grant terminals, 145 approved privileges;
+  60 pgTAP suites + 5 concurrency probes; tables 53, functions 180,
+  security-definer 151; unit 97 files / 999 tests; scripts 279.
+
+**Next:** Phase 15 (Odontogram / Dental Chart) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 15. Author bounded plan docs/plans/015-odontogram.md then execute
+P15-01.. . Canonical dental chart data stays renderer-independent (the
+Ditherys/React-Odontogram-Modul fork is the preferred prototype renderer).
+
+## Phase 14 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 13 checkpoint (2026-08-27) - ACCEPTED
 
