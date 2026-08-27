@@ -143,6 +143,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "booking_public_rpcs.test.sql",
   "booking_review_rpcs.test.sql",
   "branch_lifecycle.test.sql",
+  "intake_consent_templates.test.sql",
   "intake_forms.test.sql",
   "intake_permission_contract.test.sql",
   "intake_rpcs.test.sql",

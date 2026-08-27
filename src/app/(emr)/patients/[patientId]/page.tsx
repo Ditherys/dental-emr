@@ -12,6 +12,7 @@ import { PatientServiceError } from "@/lib/patients/errors";
 import { listProviders } from "@/lib/providers/data";
 import { ProviderServiceError } from "@/lib/providers/service";
 import { TreatmentPlanServiceError, listTreatmentPlans } from "@/lib/treatment-plan/service";
+import { IntakeServiceError, listConsentTemplates, listIntakeForms } from "@/lib/intake/service";
 
 import { PatientWorkspace } from "./patient-workspace";
 
@@ -56,6 +57,23 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   const canReadClinical = hasSharedPatientPermission(state, "patient.clinical.read");
   const canWriteClinical = hasSharedPatientPermission(state, "patient.clinical.write");
   const canGenerateDocuments = hasPermission(state, "document.generate", actingBranchId);
+  const canManageIntake = hasPermission(state, "intake.manage", actingBranchId);
+  let intakeForms: Awaited<ReturnType<typeof listIntakeForms>> = [];
+  let intakeLoadFailed = false;
+  let consentTemplates: Awaited<ReturnType<typeof listConsentTemplates>> = [];
+  let consentTemplatesUnavailable = false;
+  if (canManageIntake) {
+    try { intakeForms = await listIntakeForms({ actingBranchId, patientId }); }
+    catch (error) {
+      if (!(error instanceof IntakeServiceError || error instanceof AuthorizationError)) throw error;
+      intakeLoadFailed = true;
+    }
+    try { consentTemplates = await listConsentTemplates({ actingBranchId }); }
+    catch (error) {
+      if (!(error instanceof IntakeServiceError || error instanceof AuthorizationError)) throw error;
+      consentTemplatesUnavailable = true;
+    }
+  }
   let clinicalEncounters: Awaited<ReturnType<typeof listClinicalEncounters>> = [];
   let medicalRecords: Awaited<ReturnType<typeof listPatientMedicalRecords>> = [];
   let toothConditions: Awaited<ReturnType<typeof listToothConditions>> = [];
@@ -81,5 +99,5 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
       clinicalProvidersUnavailable = true;
     }
   }
-  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} canReadClinical={canReadClinical} canWriteClinical={canWriteClinical} initialClinicalEncounters={clinicalEncounters} initialMedicalRecords={medicalRecords} initialToothConditions={toothConditions} initialTreatmentPlans={treatmentPlans} canGenerateDocuments={canGenerateDocuments} initialProviders={clinicalProviders} clinicalLoadFailed={clinicalLoadFailed} clinicalProvidersUnavailable={clinicalProvidersUnavailable} />;
+  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} canReadClinical={canReadClinical} canWriteClinical={canWriteClinical} initialClinicalEncounters={clinicalEncounters} initialMedicalRecords={medicalRecords} initialToothConditions={toothConditions} initialTreatmentPlans={treatmentPlans} canGenerateDocuments={canGenerateDocuments} initialProviders={clinicalProviders} clinicalLoadFailed={clinicalLoadFailed} clinicalProvidersUnavailable={clinicalProvidersUnavailable} canManageIntake={canManageIntake} initialIntakeForms={intakeForms} intakeLoadFailed={intakeLoadFailed} consentTemplates={consentTemplates} consentTemplatesUnavailable={consentTemplatesUnavailable} />;
 }

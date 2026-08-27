@@ -273,6 +273,7 @@ const expectedSuites = [
       "file_read_rpcs.test.sql",
       "file_upload_rpcs.test.sql",
       "foundation_rls.test.sql",
+      "intake_consent_templates.test.sql",
       "intake_forms.test.sql",
       "intake_permission_contract.test.sql",
       "intake_rpcs.test.sql",

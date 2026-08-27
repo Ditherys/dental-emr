@@ -226,6 +226,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.public_submit_intake_form(text, text, jsonb, boolean)",
     "public.mark_intake_form_paper(uuid, uuid, integer, text)",
     "public.list_intake_forms(uuid, uuid)",
+    "public.list_consent_templates(uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1338,7 +1339,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(150);
+    expect(approved.size).toBe(151);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

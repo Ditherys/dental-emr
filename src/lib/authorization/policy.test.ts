@@ -214,6 +214,18 @@ describe("booking permission vocabulary", () => {
   });
 });
 
+describe("intake permission vocabulary", () => {
+  it("exposes the intake manage permission code", () => {
+    const intakeManage: PermissionCode = "intake.manage";
+
+    // @ts-expect-error intake permissions are a closed contract.
+    const unknownIntakePermission: PermissionCode = "intake.view";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining([intakeManage]));
+    expect(unknownIntakePermission).toBe("intake.view");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

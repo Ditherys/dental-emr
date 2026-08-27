@@ -510,6 +510,21 @@ const DOCUMENT_TREATMENT_PLAN_GRANTS_MIGRATION =
 const INTAKE_RPCS_GRANTS_MIGRATION =
   "20260827013701_intake_rpcs_grants.sql";
 
+const INTAKE_CONSENT_TEMPLATES_RPC_GRANTS_MIGRATION =
+  "20260827013801_intake_consent_templates_rpc_grants.sql";
+
+const intakeConsentTemplatesRpcGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.list_consent_templates(uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The intake.manage-gated bounded 100-row consent-template catalog read for the create-link dialog. It derives the organization from an active authenticated acting branch, requires live intake.manage, returns only active global (org null) or same-organization templates ordered by name, and never exposes the template body while writing no audit event.",
+  },
+]);
+
 const intakeRpcGrants = Object.freeze([
   {
     grantee: "anon",
@@ -995,6 +1010,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: INTAKE_RPCS_GRANTS_MIGRATION,
     grants: intakeRpcGrants,
+  }),
+  Object.freeze({
+    file: INTAKE_CONSENT_TEMPLATES_RPC_GRANTS_MIGRATION,
+    grants: intakeConsentTemplatesRpcGrants,
   }),
 ]);
 

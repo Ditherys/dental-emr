@@ -28,6 +28,7 @@ const router = { refresh: vi.fn() };
 vi.mock("./actions", () => actions);
 vi.mock("./files/actions", () => fileActions);
 vi.mock("./clinical-section", () => ({ ClinicalSection: () => <div data-testid="clinical-section" /> }));
+vi.mock("./intake-section", () => ({ IntakeSection: () => <div data-testid="intake-section" /> }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import { PatientWorkspace } from "./patient-workspace";
@@ -72,6 +73,14 @@ function renderClinicalWorkspace() {
   );
 }
 
+function renderIntakeWorkspace() {
+  return render(
+    <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
+      <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit canManageIntake />
+    </BranchContextProvider>,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   Object.values(actions).forEach((action) => action.mockResolvedValue({ ok: true }));
@@ -101,6 +110,20 @@ describe("PatientWorkspace", () => {
 
     expect(screen.getByRole("link", { name: "Clinical" })).toBeVisible();
     expect(screen.getByTestId("clinical-section")).toBeInTheDocument();
+  });
+
+  it("hides the Intake section without intake.manage", () => {
+    renderWorkspace();
+
+    expect(screen.queryByRole("link", { name: "Intake" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("intake-section")).not.toBeInTheDocument();
+  });
+
+  it("shows the Intake section only to users with intake.manage", () => {
+    renderIntakeWorkspace();
+
+    expect(screen.getByRole("link", { name: "Intake" })).toBeVisible();
+    expect(screen.getByTestId("intake-section")).toBeInTheDocument();
   });
 
   it("keeps a duplicate demographics edit for explicit confirmation and preserves it when cancelled", async () => {
