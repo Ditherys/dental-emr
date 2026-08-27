@@ -1,7 +1,41 @@
-# AI Handoff - Phase 22 complete, Phase 23 next
+# AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 23 checkpoint (2026-08-27) - ACCEPTED (decision record)
+
+Phase 23 (Advanced Operations) is complete with `docs/plans/023-advanced-operations.md`.
+Per `MASTER_PRODUCT_PLAN.md` §Phase 23, its items are a **potential** list with
+no acceptance criteria and no confirmed product requirements, so this phase is a
+decision record only.
+
+- Six candidates assessed against canonical data and prerequisites: waitlist
+  automation, HMO, advanced finance, patient portal, schedule optimization, and
+  no-show prediction. Each is deferred because its requirements are not
+  confirmed and/or its prerequisite data does not exist yet (billing ledger
+  gated on Phase 21, capacity hours not modeled, ML out of scope).
+- Any candidate the owner later confirms becomes a separately authored,
+  reviewed, and approved bounded plan. No schema/migration/application change
+  was made.
+
+## Phase 24 checkpoint (2026-08-27) - ACCEPTED (boundary only)
+
+Phase 24 (AI / MCP) is complete with `docs/plans/024-ai-mcp-boundary.md` and
+`docs/decisions/ADR-024-ai-mcp-boundary.md`.
+
+- AI/MCP is intentionally late-stage per `MASTER_PRODUCT_PLAN.md` §24/§48 and is
+  gated on a mature, production-proven authorization/audit architecture; the
+  platform is still pre-production (Cloud TEST gate), so no MCP server, tool,
+  AI client, assistant, or backdoor was added.
+- ADR-024 records: MCP tools reuse the same application authorization layer as
+  the UI; no privileged MCP backdoor bypasses clinic permissions; sensitive
+  writes follow §48.3 (AI proposes → server resolves → user confirms →
+  authorized tool executes → audit recorded); AI is administrative/query
+  assistance only (no diagnosis); clinical-note drafting, if ever, requires
+  dentist review/finalization; synthetic data only in AI dev/test environments.
+- Implementation gate: production-proven authz/audit + Cloud TEST deployment
+  gate + a bounded, independently reviewed AI/MCP plan.
 
 ## Phase 22 checkpoint (2026-08-27) - ACCEPTED (boundary only)
 
