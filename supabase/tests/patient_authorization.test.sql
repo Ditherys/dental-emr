@@ -222,6 +222,8 @@ select extensions.set_eq(
     where code like 'patient.%'
   $$,
   $$ values
+    ('patient.clinical.read'::text),
+    ('patient.clinical.write'::text),
     ('patient.demographics.read'::text),
     ('patient.demographics.write'::text)
   $$,
@@ -238,12 +240,19 @@ select extensions.set_eq(
       and role.organization_id is null
   $$,
   $$ values
+    ('ADMIN:patient.clinical.read'::text),
+    ('ADMIN:patient.clinical.write'::text),
+    ('DENTAL_ASSISTANT:patient.clinical.read'::text),
+    ('DENTIST:patient.clinical.read'::text),
+    ('DENTIST:patient.clinical.write'::text),
     ('DENTIST:patient.demographics.read'::text),
     ('DENTIST:patient.demographics.write'::text),
+    ('OWNER:patient.clinical.read'::text),
+    ('OWNER:patient.clinical.write'::text),
     ('RECEPTIONIST:patient.demographics.read'::text),
     ('RECEPTIONIST:patient.demographics.write'::text)
   $$,
-  'only dentist and receptionist receive patient permissions by default'
+  'patient permissions follow the approved clinical + demographics role matrix'
 );
 
 select extensions.ok(

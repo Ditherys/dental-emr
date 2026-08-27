@@ -106,6 +106,21 @@ describe("appointment permission vocabulary", () => {
   });
 });
 
+describe("clinical permission vocabulary", () => {
+  it("exposes the two bounded clinical permission codes", () => {
+    const clinicalRead: PermissionCode = "patient.clinical.read";
+    const clinicalWrite: PermissionCode = "patient.clinical.write";
+
+    // @ts-expect-error clinical permissions are a closed contract.
+    const unknownClinicalPermission: PermissionCode = "patient.clinical.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([clinicalRead, clinicalWrite]),
+    );
+    expect(unknownClinicalPermission).toBe("patient.clinical.delete");
+  });
+});
+
 describe("queue permission vocabulary", () => {
   it("exposes the two bounded queue permission codes", () => {
     const queueRead: PermissionCode = "queue.read";
