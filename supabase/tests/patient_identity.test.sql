@@ -602,15 +602,15 @@ select extensions.ok(
 
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000001', true);
 select extensions.ok(
-  not private.has_shared_patient_permission(
+  private.has_shared_patient_permission(
     'a2020000-0000-0000-0000-000000000001',
     'patient.demographics.read'
   )
-  and not private.has_shared_patient_permission(
+  and private.has_shared_patient_permission(
     'a2020000-0000-0000-0000-000000000001',
     'patient.demographics.write'
   ),
-  'an owner is directly denied both shared-patient permissions'
+  'an owner directly satisfies both shared-patient permissions with organization-wide authority'
 );
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000004', true);
 select extensions.ok(
@@ -702,7 +702,8 @@ select extensions.is((select count(*)::integer from public.patients where organi
 select extensions.is((select count(*)::integer from public.patients where organization_id = 'a2020000-0000-0000-0000-000000000002'), 0, 'Org A branch receptionist cannot read Org B patients');
 
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000001', true);
-select extensions.is((select count(*)::integer from public.patients), 0, 'Org A owner has no patient directory access');
+select extensions.is((select count(*)::integer from public.patients where organization_id = 'a2020000-0000-0000-0000-000000000001'), 2, 'Org A owner reads the shared Org A patient directory');
+select extensions.is((select count(*)::integer from public.patients where organization_id = 'a2020000-0000-0000-0000-000000000002'), 0, 'Org A owner cannot read Org B patients');
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000004', true);
 select extensions.is((select count(*)::integer from public.patients), 0, 'Org A visiting specialist has no patient directory access');
 select set_config('request.jwt.claim.sub', 'a2010000-0000-0000-0000-000000000005', true);

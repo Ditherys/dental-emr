@@ -126,8 +126,8 @@ select set_config('request.jwt.claim.sub', 'a3010000-0000-0000-0000-000000000001
 select extensions.is((select count(*)::integer from public.patient_contacts), 1, 'authorized dentist can satisfy child-table RLS');
 select extensions.is((select count(*)::integer from public.patient_relationships), 2, 'authorized dentist can read active guardian relationships');
 select set_config('request.jwt.claim.sub', 'a3010000-0000-0000-0000-000000000002', true);
-select extensions.is((select count(*)::integer from public.patient_contacts), 0, 'owner cannot use contacts to discover patients');
-select extensions.is((select count(*)::integer from public.patient_relationships), 0, 'owner cannot use relationships to discover patients');
+select extensions.is((select count(*)::integer from public.patient_contacts), 1, 'owner can read shared child contacts with organization-wide authority');
+select extensions.is((select count(*)::integer from public.patient_relationships), 2, 'owner can read shared guardian relationships with organization-wide authority');
 reset role;
 
 update public.organization_members

@@ -135,9 +135,16 @@ select extensions.throws_ok(
   '22023', 'invalid input', 'a foreign preferred branch is rejected even when the actor can access both organizations'
 );
 select set_config('request.jwt.claim.sub', 'a4010000-0000-0000-0000-000000000002', true);
+select extensions.ok(
+  public.find_duplicate_candidates(
+    'a4030000-0000-0000-0000-000000000001', 'Ana', 'Santos', date '1990-01-01', '09171234567', 'ana@example.test'
+  ) @> '{"candidates":[{"matchedSignals":["EMAIL","MOBILE","NAME_DOB"]}],"truncated":false}'::jsonb,
+  'an owner can enumerate duplicate candidates with the full demographic permission set'
+);
+select set_config('request.jwt.claim.sub', 'a4ffffff-0000-0000-0000-000000000099', true);
 select extensions.throws_ok(
   $$select public.find_duplicate_candidates('a4030000-0000-0000-0000-000000000001', 'Ana', 'Santos', date '1990-01-01', null, null)$$,
-  '42501', 'not authorized', 'an owner without patient permission cannot enumerate duplicate candidates'
+  '42501', 'not authorized', 'an absent or forged JWT user cannot enumerate duplicate candidates'
 );
 reset role;
 

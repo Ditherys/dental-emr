@@ -218,11 +218,24 @@ select extensions.throws_ok($$select public.review_booking_request('e2100000-000
 select extensions.throws_ok($$select public.review_booking_request('e2100000-0000-0000-0000-000000000001','e7000000-0000-0000-0000-000000000002',2,'DECLINE')$$,'P0001','invalid state','an already-approved request cannot be reviewed again');
 
 -- Approval of an instant request with no candidate match requires
--- demographics.write, which the OWNER reviewer does not hold.
+-- demographics.write. Removing that one grant from the owner proves the
+-- requirement is live; the grant is restored so the owner keeps full authority.
 select set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000002',true);
+delete from public.role_permissions
+where role_id = (select id from public.roles where organization_id is null and code = 'OWNER')
+  and permission_id = (select id from public.permissions where code = 'patient.demographics.write');
 select extensions.throws_ok($$select public.review_booking_request('e2100000-0000-0000-0000-000000000001','e7000000-0000-0000-0000-000000000005',1,'APPROVE')$$,'42501','not authorized','an instant approval with no patient candidate requires demographics.write');
 select extensions.is((select request_status from public.booking_requests where id='e7000000-0000-0000-0000-000000000005'),'SUBMITTED','a denied approval leaves the request untouched');
 select extensions.is((select count(*)::integer from public.provider_reservations where organization_id='e2000000-0000-0000-0000-000000000001' and reservation_kind='HOLD' and reservation_status='ACTIVE' and starts_at=(select window_w4 from p1303_test_state)),1,'a denied approval leaves the hold untouched');
+insert into public.role_permissions (role_id, permission_id)
+select role.id, permission.id
+from public.roles as role
+cross join public.permissions as permission
+where role.organization_id is null
+  and role.is_system
+  and role.code = 'OWNER'
+  and permission.code = 'patient.demographics.write'
+on conflict do nothing;
 -- The org-wide OWNER can still approve request-only requests (no patient write).
 select extensions.is((select request_status from public.review_booking_request('e2100000-0000-0000-0000-000000000001','e7000000-0000-0000-0000-000000000006',1,'APPROVE')),'APPROVED','an org-wide OWNER with booking.review approves a request-only request');
 

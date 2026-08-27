@@ -91,9 +91,14 @@ select extensions.ok(
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', 'a5010000-0000-0000-0000-000000000002', true);
+select extensions.ok(
+  public.search_patients('a5030000-0000-0000-0000-000000000001', 'ana', null, null, 'name_asc', 1, 25)
+    @> '{"rows":[{"patientNumber":"P-000001","primaryMobile":"+639171234567","primaryEmail":"ana@example.test"}],"total":1,"page":1,"pageSize":25}'::jsonb,
+  'an owner can search the shared organization patient directory without a clinical role'
+);
 select extensions.throws_ok(
-  $$select public.search_patients('a5030000-0000-0000-0000-000000000001', null, null, null, 'name_asc', 1, 25)$$,
-  '42501', 'not authorized', 'owner without a patient-capable role cannot search after provisioning staff'
+  $$select public.search_patients('a5030000-0000-0000-0000-000000000002', 'bea', null, null, 'name_asc', 1, 25)$$,
+  '42501', 'not authorized', 'an owner cannot search another organization directory at a foreign branch'
 );
 reset role;
 

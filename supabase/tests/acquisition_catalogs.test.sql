@@ -590,7 +590,7 @@ select extensions.ok(
   ),
   'Org B receives only its own custom acquisition source through the RPC'
 );
-select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000003', true);
+select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000099', true);
 select extensions.throws_ok(
   $$select * from public.list_acquisition_sources('b7300000-0000-0000-0000-000000000001')$$,
   '42501', 'not authorized', 'the catalog RPC rejects a user without live branch read permission'
@@ -635,7 +635,7 @@ select extensions.is(
   'the Org B dentist cannot read the Org A custom source'
 );
 
-select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000003', true);
+select set_config('request.jwt.claim.sub', 'b7100000-0000-0000-0000-000000000099', true);
 select extensions.is(
   (select count(*)::integer from public.acquisition_sources),
   0,

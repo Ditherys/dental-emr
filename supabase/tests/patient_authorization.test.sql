@@ -249,19 +249,50 @@ select extensions.set_eq(
     ('DENTIST:patient.demographics.write'::text),
     ('OWNER:patient.clinical.read'::text),
     ('OWNER:patient.clinical.write'::text),
+    ('OWNER:patient.demographics.read'::text),
+    ('OWNER:patient.demographics.write'::text),
     ('RECEPTIONIST:patient.demographics.read'::text),
     ('RECEPTIONIST:patient.demographics.write'::text)
   $$,
-  'patient permissions follow the approved clinical + demographics role matrix'
+  'patient permissions follow the approved clinical + demographics role matrix with OWNER as the highest-authority principal'
+);
+
+select extensions.ok(
+  private.user_has_permission(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000001',
+    'patient.demographics.read'
+  )
+  and private.user_has_permission(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000001',
+    'patient.demographics.write'
+  )
+  and private.user_has_permission(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000001',
+    'patient.clinical.read'
+  )
+  and private.user_has_permission(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000001',
+    'patient.clinical.write'
+  ),
+  'the owner resolves to the full organization-level clinical and demographic permission set'
 );
 
 select extensions.ok(
   not private.user_has_permission(
     '91000000-0000-0000-0000-000000000001',
-    '92000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000002',
     'patient.demographics.read'
+  )
+  and not private.user_has_permission(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000002',
+    'patient.clinical.read'
   ),
-  'the owner does not gain patient-record access'
+  'full owner authority is strictly organization-scoped and never crosses tenants'
 );
 
 select extensions.ok(
@@ -315,7 +346,7 @@ select extensions.lives_ok(
       null
     )
   $$,
-  'the owner can prepare a dentist invitation without receiving patient access'
+  'the owner can prepare a dentist invitation as a full-superset principal'
 );
 
 select extensions.ok(
@@ -363,20 +394,13 @@ select extensions.is(
   'each successful invitation emits exactly one atomic audit event'
 );
 
-select extensions.throws_ok(
-  $$
-    select public.prepare_workforce_invitation(
-      '96000000-0000-0000-0000-000000000004',
-      '91000000-0000-0000-0000-000000000001',
-      '92000000-0000-0000-0000-000000000001',
-      'spare-a@p201.example.test',
-      '95000000-0000-0000-0000-000000000001',
-      null
-    )
-  $$,
-  'P0001',
-  'role contains permissions the actor may not delegate',
-  'the exception never applies to an organization-owned custom role'
+select extensions.ok(
+  private.can_delegate_role_permissions(
+    '91000000-0000-0000-0000-000000000001',
+    '92000000-0000-0000-0000-000000000001',
+    '95000000-0000-0000-0000-000000000001'
+  ),
+  'as a full-superset principal, the owner may delegate an organization-owned patient role'
 );
 
 select extensions.throws_ok(
@@ -577,10 +601,10 @@ select extensions.throws_ok(
   $$,
   '42501',
   'role assignment is not authorized',
-  'the owner cannot self-assign patient access'
+  'the anti-self rule still prevents an owner from assigning a role to their own membership'
 );
 
-select extensions.throws_ok(
+select extensions.lives_ok(
   $$
     select public.set_member_role(
       '94000000-0000-0000-0000-000000000005',
@@ -589,9 +613,7 @@ select extensions.throws_ok(
       true
     )
   $$,
-  '42501',
-  'role contains permissions the actor may not delegate',
-  'direct assignment does not apply the exception to a custom role'
+  'an AAL2 owner can directly assign an organization-owned role as a full-superset principal'
 );
 
 select extensions.throws_ok(
@@ -656,7 +678,7 @@ where role_id = (
   )
   and permission_id = (
     select id from public.permissions
-    where code = 'security.manage'
+    where code = 'patient.clinical.write'
   );
 
 select extensions.ok(
@@ -665,7 +687,7 @@ select extensions.ok(
     '92000000-0000-0000-0000-000000000001',
     (select id from public.roles where organization_id is null and code = 'DENTIST')
   ),
-  'revoking security.manage is reflected by the delegation predicate on the next statement'
+  'revoking a permission the target role requires is reflected by the delegation predicate on the next statement'
 );
 
 select extensions.throws_ok(
@@ -681,7 +703,7 @@ select extensions.throws_ok(
   $$,
   'P0001',
   'role contains permissions the actor may not delegate',
-  'the invitation path also observes security.manage revocation immediately'
+  'the invitation path also observes the permission revocation immediately'
 );
 
 select extensions.is(
@@ -710,7 +732,7 @@ select extensions.is(
       and actor_user_id = '91000000-0000-0000-0000-000000000001'
       and action in ('membership.invited', 'member_role.assigned')
   ),
-  4,
+  5,
   'failed authorization emits no success audit event'
 );
 
