@@ -121,6 +121,13 @@ existing caller roles.
 Rejected because ownership is administrative authority, not patient-care
 authority. It would expose patient records to non-clinical future SaaS owners.
 
+> **Superseded by ADR-025 (2026-08-27).** The project owner has decided OWNER
+> is the highest-authority organization principal with organization-wide
+> clinical and administrative access. ADR-025 grants every catalog permission
+> to the system OWNER role while preserving tenant isolation, audit, AAL2, and
+> record-integrity invariants. This supersession does not change ADR-019's
+> delegation mechanics or any other role's scope.
+
 ### Add a general patient-role delegation permission
 
 Rejected for this phase because existing `security.manage` already identifies

@@ -823,8 +823,14 @@ Allowed by default:
 
 Clinical access:
 
-- **not automatically granted merely by owner status**;
-- owner who is also a dentist receives clinical permissions via dentist/provider role.
+- **full organization-wide clinical and administrative access** per ADR-025.
+  `OWNER` is the highest-authority principal within an organization and does not
+  need a separate dentist role to open patient or clinical records.
+- this authority never bypasses tenant isolation, authentication assurance
+  (AAL2 where required), auditability, immutable/finalized record protections,
+  versioning, destructive-action safeguards, or database constraints;
+- `ADMIN` does not receive the same expansion (minimum necessary; explicit
+  grants are required).
 
 ### Clinic Manager / Administrator
 

@@ -122,9 +122,12 @@ it is not a production-patient launch approval.
    does not open Branch B schedules, resources, encounters, billing, or other
    branch-owned records. This special semantic must live in named patient
    authorization helpers, not in the generic permission helper.
-5. **Owner is not clinician.** `OWNER` and `ADMIN` do not receive patient access
-   merely from administrative status. A dentist-owner holds a separate clinical
-   or operational role.
+5. **OWNER is the highest-authority principal.** Per ADR-025, `OWNER` receives
+   organization-wide clinical and administrative access, including patient
+   demographics and clinical records, across every branch of its organization.
+   OWNER authority does not bypass tenant isolation, authentication assurance,
+   auditability, record-integrity protections, or other security invariants.
+   `ADMIN` does not receive the same expansion.
 6. **Visiting specialists fail closed.** `VISITING_SPECIALIST` receives no
    patient directory permission in Phase 2 because provider/case assignment does
    not exist yet. Assigned-case access belongs to a later provider/scheduling
@@ -421,7 +424,7 @@ Default grants:
 |---|---:|---:|---|
 | DENTIST | yes | yes | continuity across the shared organization patient population |
 | RECEPTIONIST | yes | yes | registration, identity, contacts, guardians, duplicate prevention |
-| OWNER | no | no | ownership is administrative, not patient-care authority |
+| OWNER | yes | yes | highest-authority principal: organization-wide clinical and administrative access (ADR-025) |
 | ADMIN | no | no | minimum necessary; explicit additional role/custom grant is required |
 | DENTAL_ASSISTANT | no | no | clinic policy is unresolved; fail closed |
 | VISITING_SPECIALIST | no | no | assigned-case model does not exist yet |

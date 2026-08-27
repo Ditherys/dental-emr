@@ -3,6 +3,31 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Authorization model change (2026-08-27) - OWNER full access (ADR-025)
+
+The project owner decided OWNER is the highest-authority organization principal
+with organization-wide clinical and administrative access, superseding the
+earlier "owner is not a clinician" assumption.
+
+- Forward migration `20260827014600_owner_full_access.sql` grants the system
+  OWNER role every permission in the catalog (idempotent `role_permissions`
+  insert). Database predicates and the application authorization state both
+  read this shared source of truth, so DB and app contracts agree.
+- OWNER needs no separate DENTIST role and no per-branch membership; org-wide
+  role semantics already resolve at every active branch. Tenant isolation,
+  AAL2, audit, versioning, immutable records, and no-base-table-DML invariants
+  are preserved and tested.
+- ADMIN and all other roles are unchanged; a pgTAP invariant forces any future
+  permission to be granted to OWNER.
+- Docs updated: `plans/002-patient-foundation.md`, `SECURITY_ARCHITECTURE.md`
+  §9.4, ADR-019 supersession note, and new `ADR-025-owner-full-access.md`.
+- pgTAP: `owner_full_access.test.sql` added (registered in the test guard);
+  `patient_authorization`, `patient_identity`, `patient_reads`,
+  `patient_create`, `patient_contacts_relationships`, `acquisition_catalogs`,
+  and `booking_review_rpcs` suites updated so same-org owner denials became
+  positive or used genuinely-denied actors while cross-tenant and invariant
+  denials were kept.
+
 ## Phase 23 checkpoint (2026-08-27) - ACCEPTED (decision record)
 
 Phase 23 (Advanced Operations) is complete with `docs/plans/023-advanced-operations.md`.
