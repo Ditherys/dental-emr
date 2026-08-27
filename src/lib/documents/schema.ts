@@ -12,6 +12,7 @@ export const documentTypeSchema = z.enum([
   "PATIENT_RECORD_SUMMARY",
   "APPOINTMENT_SLIP",
   "REFERRAL_LETTER",
+  "TREATMENT_PLAN",
 ]);
 
 function includeSetSchema(keys: readonly string[]) {
@@ -34,6 +35,9 @@ export const appointmentSlipIncludeSetSchema = includeSetSchema(
 );
 export const referralLetterIncludeSetSchema = includeSetSchema(
   documentTypeIncludeSetKeys.REFERRAL_LETTER,
+);
+export const treatmentPlanIncludeSetSchema = includeSetSchema(
+  documentTypeIncludeSetKeys.TREATMENT_PLAN,
 );
 
 export const generateDocumentInputSchema = z.discriminatedUnion("documentType", [
@@ -61,6 +65,15 @@ export const generateDocumentInputSchema = z.discriminatedUnion("documentType", 
       includeSet: referralLetterIncludeSetSchema,
     })
     .strict(),
+  z
+    .object({
+      actingBranchId: databaseUuid,
+      patientId: databaseUuid,
+      documentType: z.literal("TREATMENT_PLAN"),
+      planId: databaseUuid,
+      includeSet: treatmentPlanIncludeSetSchema,
+    })
+    .strict(),
 ]);
 
 export const listDocumentsInputSchema = z
@@ -85,12 +98,14 @@ export const documentMutationRowSchema = z
   })
   .strict();
 
+// TREATMENT_PLAN generation stores the non-boolean `planId` selector inside the
+// include set, so a stored include set may carry the plan selector string.
 export const documentListRowSchema = z
   .object({
     document_id: databaseUuid,
     document_type: documentTypeSchema,
     template_version: z.string(),
-    include_set: z.record(z.string(), z.boolean()),
+    include_set: z.record(z.string(), z.boolean().or(z.string())),
     generated_by: databaseUuid.nullable(),
     generated_at: isoTimestamp,
     version: z.number().int().positive(),
@@ -156,11 +171,73 @@ export const appointmentSnapshotSchema = z
   })
   .strict();
 
+export const treatmentPlanSnapshotSchema = z
+  .object({
+    planId: databaseUuid,
+    patientId: databaseUuid,
+    title: z.string(),
+    status: z.string(),
+    version: z.number().int().positive(),
+    createdAt: isoTimestamp,
+    updatedAt: isoTimestamp,
+    createdBy: databaseUuid,
+  })
+  .strict();
+
+export const treatmentPlanItemSnapshotSchema = z
+  .object({
+    itemId: databaseUuid,
+    lineNo: z.number().int().positive(),
+    procedureId: databaseUuid.nullable(),
+    toothCode: z.string().nullable(),
+    description: z.string(),
+    estimatedFee: z.number().nullable(),
+    createdAt: isoTimestamp,
+  })
+  .strict();
+
+export const treatmentPlanAlternativeSnapshotSchema = z
+  .object({
+    alternativeId: databaseUuid,
+    alternativeNo: z.number().int().positive(),
+    summary: z.string(),
+    createdAt: isoTimestamp,
+  })
+  .strict();
+
+// The document snapshot discussion carries dentist/time/context only; the
+// free-form notes body is intentionally never part of the plan document.
+export const treatmentPlanDiscussionSnapshotSchema = z
+  .object({
+    discussionId: databaseUuid,
+    discussedBy: databaseUuid,
+    treatingProviderId: databaseUuid.nullable(),
+    discussedAt: isoTimestamp,
+    context: z.string(),
+    createdAt: isoTimestamp,
+  })
+  .strict();
+
+export const treatmentPlanDrawingSnapshotSchema = z
+  .object({
+    drawingId: databaseUuid,
+    drawing: z.record(z.string(), z.unknown()),
+    updatedBy: databaseUuid,
+    updatedAt: isoTimestamp,
+    version: z.number().int().positive(),
+  })
+  .nullable();
+
 export const documentDataSnapshotSchema = z
   .object({
     demographics: patientDemographicsSnapshotSchema.optional(),
     referrals: z.array(patientReferralSnapshotSchema).optional(),
     appointments: z.array(appointmentSnapshotSchema).optional(),
+    plan: treatmentPlanSnapshotSchema.optional(),
+    items: z.array(treatmentPlanItemSnapshotSchema).optional(),
+    alternatives: z.array(treatmentPlanAlternativeSnapshotSchema).optional(),
+    discussions: z.array(treatmentPlanDiscussionSnapshotSchema).optional(),
+    drawing: treatmentPlanDrawingSnapshotSchema.optional(),
   })
   .strict();
 

@@ -5,6 +5,11 @@ import type {
   DocumentRenderInput,
   PatientDemographicsSnapshot,
   PatientReferralSnapshot,
+  TreatmentPlanAlternativeSnapshot,
+  TreatmentPlanDrawingSnapshot,
+  TreatmentPlanDiscussionSnapshot,
+  TreatmentPlanItemSnapshot,
+  TreatmentPlanSnapshot,
 } from "./types";
 
 const ESCAPE_MAP: Record<string, string> = {
@@ -23,6 +28,7 @@ const DOCUMENT_TITLES = {
   PATIENT_RECORD_SUMMARY: "Patient Record Summary",
   APPOINTMENT_SLIP: "Appointment Slip",
   REFERRAL_LETTER: "Referral Letter",
+  TREATMENT_PLAN: "Treatment Plan",
 } as const;
 
 // Deterministic across environments: renders the stored ISO date/time segment
@@ -136,6 +142,139 @@ function renderAppointments(appointments: AppointmentSnapshot[]): string {
   ].join("");
 }
 
+function formatFee(value: unknown): string {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 2,
+  }).format(number);
+}
+
+function renderTreatmentPlanHeader(plan: TreatmentPlanSnapshot): string {
+  return [
+    '<section class="print-section">',
+    "<h2>Plan</h2>",
+    '<table class="print-kv">',
+    kvRow("Title", plan.title),
+    kvRow("Status", plan.status),
+    kvRow("Version", plan.version),
+    kvRow("Created", formatIsoDateTime(plan.createdAt)),
+    kvRow("Last updated", formatIsoDateTime(plan.updatedAt)),
+    "</table>",
+    "</section>",
+  ].join("");
+}
+
+function renderTreatmentPlanItems(items: TreatmentPlanItemSnapshot[]): string {
+  const rows = items
+    .map((item) => {
+      return [
+        "<tr>",
+        `<td>${escapeHtml(item.lineNo)}</td>`,
+        `<td>${escapeHtml(item.toothCode)}</td>`,
+        `<td>${escapeHtml(item.description)}</td>`,
+        `<td>${escapeHtml(formatFee(item.estimatedFee))}</td>`,
+        "</tr>",
+      ].join("");
+    })
+    .join("");
+
+  return [
+    '<section class="print-section">',
+    "<h2>Proposed items</h2>",
+    '<table class="print-grid">',
+    "<thead><tr><th scope=\"col\">Line</th><th scope=\"col\">Tooth</th><th scope=\"col\">Description</th><th scope=\"col\">Estimated fee</th></tr></thead>",
+    `<tbody>${rows}</tbody>`,
+    "</table>",
+    "</section>",
+  ].join("");
+}
+
+function renderTreatmentPlanAlternatives(alternatives: TreatmentPlanAlternativeSnapshot[]): string {
+  const rows = alternatives
+    .map((alternative) => {
+      return [
+        "<tr>",
+        `<td>${escapeHtml(alternative.alternativeNo)}</td>`,
+        `<td>${escapeHtml(alternative.summary)}</td>`,
+        "</tr>",
+      ].join("");
+    })
+    .join("");
+
+  return [
+    '<section class="print-section">',
+    "<h2>Alternatives</h2>",
+    '<table class="print-grid">',
+    "<thead><tr><th scope=\"col\">#</th><th scope=\"col\">Summary</th></tr></thead>",
+    `<tbody>${rows}</tbody>`,
+    "</table>",
+    "</section>",
+  ].join("");
+}
+
+function renderTreatmentPlanDiscussions(discussions: TreatmentPlanDiscussionSnapshot[]): string {
+  const rows = discussions
+    .map((discussion) => {
+      return [
+        "<tr>",
+        `<td>${escapeHtml(formatIsoDateTime(discussion.discussedAt))}</td>`,
+        `<td>${escapeHtml(discussion.context)}</td>`,
+        `<td>${escapeHtml(discussion.treatingProviderId ?? "—")}</td>`,
+        "</tr>",
+      ].join("");
+    })
+    .join("");
+
+  return [
+    '<section class="print-section">',
+    "<h2>Discussions</h2>",
+    '<table class="print-grid">',
+    "<thead><tr><th scope=\"col\">When</th><th scope=\"col\">Context</th><th scope=\"col\">Treating provider</th></tr></thead>",
+    `<tbody>${rows}</tbody>`,
+    "</table>",
+    "</section>",
+  ].join("");
+}
+
+// The drawing is the plan's renderer-independent canvas: strokes of points.
+// Only the bounded stroke geometry is emitted into a safe SVG so the printed
+// plan reproduces the acknowledged drawing without any client-side rendering.
+function renderTreatmentPlanDrawing(drawing: NonNullable<TreatmentPlanDrawingSnapshot>): string {
+  const canvas = drawing.drawing ?? {};
+  const rawStrokes = Array.isArray(canvas.strokes) ? canvas.strokes : [];
+  const width = Number(canvas.width) || 320;
+  const height = Number(canvas.height) || 200;
+  const paths = rawStrokes
+    .map((stroke) => {
+      const points = Array.isArray(stroke && typeof stroke === "object" ? stroke.points : undefined)
+        ? (stroke as { points: { x?: unknown; y?: unknown }[] }).points
+        : [];
+      const segments = points
+        .map((point) => {
+          const x = Number(point.x);
+          const y = Number(point.y);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) return "";
+          return `${x.toFixed(1)},${y.toFixed(1)} `;
+        })
+        .join("");
+      return segments.trim()
+        ? `<polyline fill="none" stroke="#111827" stroke-width="1.5" points="${escapeHtml(segments.trim())}"/>`
+        : "";
+    })
+    .filter(Boolean)
+    .join("");
+
+  return [
+    '<section class="print-section">',
+    "<h2>Plan drawing</h2>",
+    `<svg viewBox="0 0 ${escapeHtml(width)} ${escapeHtml(height)}" role="img" aria-label="Acknowledged treatment plan drawing" xmlns="http://www.w3.org/2000/svg" class="print-drawing">${paths}</svg>`,
+    "</section>",
+  ].join("");
+}
+
 export function renderDocumentHtml({
   documentType,
   templateVersion,
@@ -154,6 +293,21 @@ export function renderDocumentHtml({
   }
   if (dataSnapshot.appointments && dataSnapshot.appointments.length > 0) {
     sections.push(renderAppointments(dataSnapshot.appointments));
+  }
+  if (dataSnapshot.plan) {
+    sections.push(renderTreatmentPlanHeader(dataSnapshot.plan));
+  }
+  if (dataSnapshot.items && dataSnapshot.items.length > 0) {
+    sections.push(renderTreatmentPlanItems(dataSnapshot.items));
+  }
+  if (dataSnapshot.alternatives && dataSnapshot.alternatives.length > 0) {
+    sections.push(renderTreatmentPlanAlternatives(dataSnapshot.alternatives));
+  }
+  if (dataSnapshot.discussions && dataSnapshot.discussions.length > 0) {
+    sections.push(renderTreatmentPlanDiscussions(dataSnapshot.discussions));
+  }
+  if (dataSnapshot.drawing) {
+    sections.push(renderTreatmentPlanDrawing(dataSnapshot.drawing));
   }
 
   const content =
@@ -174,6 +328,7 @@ export function renderDocumentHtml({
     ".print-document table { width: 100%; border-collapse: collapse; }",
     ".print-document th, .print-document td { border: 1px solid #d1d5db; padding: 5px 8px; text-align: left; vertical-align: top; }",
     ".print-document .print-kv th { width: 34%; background: #f9fafb; font-weight: 600; }",
+    ".print-document .print-drawing { width: 100%; max-height: 160mm; border: 1px solid #e5e7eb; background: #ffffff; }",
     ".print-document footer { margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 8px; font-size: 10px; color: #6b7280; }",
     ".print-document .print-empty { color: #6b7280; }",
     "@media print { body { margin: 0; } .print-document { max-width: 100%; margin: 0; box-shadow: none; } .print-document a { color: inherit; text-decoration: none; } }",

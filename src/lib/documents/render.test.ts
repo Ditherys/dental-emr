@@ -6,6 +6,7 @@ import { escapeHtml, renderDocumentHtml } from "./render";
 const branchId = "c1000000-0000-0000-0000-000000000001";
 const patientId = "c2000000-0000-0000-0000-000000000002";
 const appointmentId = "c5000000-0000-0000-0000-000000000005";
+const planId = "c4000000-0000-0000-0000-000000000004";
 
 function demographics(overrides: Record<string, unknown> = {}) {
   return {
@@ -176,6 +177,73 @@ describe("renderDocumentHtml", () => {
     };
 
     expect(renderDocumentHtml(input)).toBe(renderDocumentHtml(input));
+  });
+
+  it("renders the acknowledged treatment-plan snapshot including the drawing canvas", () => {
+    const html = renderDocumentHtml({
+      documentType: "TREATMENT_PLAN",
+      templateVersion: "v1",
+      dataSnapshot: {
+        plan: {
+          planId,
+          patientId,
+          title: "Full mouth restoration",
+          status: "ACKNOWLEDGED",
+          version: 3,
+          createdAt: "2026-08-27T09:00:00+00:00",
+          updatedAt: "2026-08-27T10:00:00+00:00",
+          createdBy: "c3000000-0000-0000-0000-000000000003",
+        },
+        items: [
+          { itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500, createdAt: "2026-08-27T09:00:00+00:00" },
+          { itemId: "c6000000-0000-0000-0000-000000000007", lineNo: 2, procedureId: null, toothCode: "27", description: "Crown on 27.", estimatedFee: null, createdAt: "2026-08-27T09:00:00+00:00" },
+        ],
+        alternatives: [
+          { alternativeId: "c6000000-0000-0000-0000-000000000008", alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt: "2026-08-27T09:00:00+00:00" },
+        ],
+        discussions: [
+          { discussionId: "c6000000-0000-0000-0000-000000000009", discussedBy: "c3000000-0000-0000-0000-000000000003", treatingProviderId: "c7000000-0000-0000-0000-000000000007", discussedAt: "2026-08-27T09:30:00+00:00", context: "Case discussion", createdAt: "2026-08-27T09:30:00+00:00" },
+        ],
+        drawing: {
+          drawingId: "c6000000-0000-0000-0000-00000000000a",
+          drawing: { strokes: [{ points: [{ x: 1, y: 2 }, { x: 10, y: 20 }] }], width: 320, height: 200 },
+          updatedBy: "c3000000-0000-0000-0000-000000000003",
+          updatedAt: "2026-08-27T09:45:00+00:00",
+          version: 1,
+        },
+      },
+      orgName: "SmileCare Dental Clinic",
+      branchName: "Makati Branch",
+    });
+
+    expect(html).toContain("Treatment Plan");
+    expect(html).toContain("Full mouth restoration");
+    expect(html).toContain("ACKNOWLEDGED");
+    expect(html).toContain("Composite filling on 26.");
+    expect(html).toContain("Crown on 27.");
+    expect(html).toContain("Extraction and implant alternative.");
+    expect(html).toContain("Case discussion");
+    expect(html).toContain('role="img"');
+    expect(html).toContain("1.0,2.0 10.0,20.0");
+    expect(html).toContain("2,500.00");
+  });
+
+  it("escapes treatment-plan snapshot text and emits no discussion notes bodies", () => {
+    const html = renderDocumentHtml({
+      documentType: "TREATMENT_PLAN",
+      templateVersion: "v1",
+      dataSnapshot: {
+        plan: { planId, patientId, title: "<script>plan</script>", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", updatedAt: "2026-08-27T09:00:00+00:00", createdBy: "c3000000-0000-0000-0000-000000000003" },
+        discussions: [
+          { discussionId: "c6000000-0000-0000-0000-000000000009", discussedBy: "c3000000-0000-0000-0000-000000000003", treatingProviderId: null, discussedAt: "2026-08-27T09:30:00+00:00", context: "Consent discussion", createdAt: "2026-08-27T09:30:00+00:00" },
+        ],
+      },
+      orgName: "SmileCare Dental Clinic",
+      branchName: "Makati Branch",
+    });
+
+    expect(html).not.toContain("<script>plan</script>");
+    expect(html).toContain("&lt;script&gt;plan&lt;/script&gt;");
   });
 });
 

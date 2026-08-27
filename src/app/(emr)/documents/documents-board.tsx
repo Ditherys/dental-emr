@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  boardGeneratableDocumentTypes,
   documentTypeIncludeSetKeys,
   documentTypeLabels,
   includeSetKeyLabels,
@@ -195,7 +196,7 @@ function GenerateDocumentDialog({
           <label className="grid gap-1.5 text-sm font-medium">
             Document type
             <select value={documentType} onChange={(event) => selectType(event.target.value as DocumentType)} className={inputClass}>
-              {(Object.keys(documentTypeLabels) as DocumentType[]).map((type) => (
+              {boardGeneratableDocumentTypes.map((type) => (
                 <option key={type} value={type}>{documentTypeLabels[type]}</option>
               ))}
             </select>

@@ -9,6 +9,11 @@ import type {
   listDocumentsInputSchema,
   patientDemographicsSnapshotSchema,
   patientReferralSnapshotSchema,
+  treatmentPlanAlternativeSnapshotSchema,
+  treatmentPlanDrawingSnapshotSchema,
+  treatmentPlanDiscussionSnapshotSchema,
+  treatmentPlanItemSnapshotSchema,
+  treatmentPlanSnapshotSchema,
 } from "./schema";
 
 export type DocumentType = z.infer<typeof documentTypeSchema>;
@@ -16,6 +21,11 @@ export type DocumentType = z.infer<typeof documentTypeSchema>;
 export type PatientDemographicsSnapshot = z.infer<typeof patientDemographicsSnapshotSchema>;
 export type PatientReferralSnapshot = z.infer<typeof patientReferralSnapshotSchema>;
 export type AppointmentSnapshot = z.infer<typeof appointmentSnapshotSchema>;
+export type TreatmentPlanSnapshot = z.infer<typeof treatmentPlanSnapshotSchema>;
+export type TreatmentPlanItemSnapshot = z.infer<typeof treatmentPlanItemSnapshotSchema>;
+export type TreatmentPlanAlternativeSnapshot = z.infer<typeof treatmentPlanAlternativeSnapshotSchema>;
+export type TreatmentPlanDiscussionSnapshot = z.infer<typeof treatmentPlanDiscussionSnapshotSchema>;
+export type TreatmentPlanDrawingSnapshot = z.infer<typeof treatmentPlanDrawingSnapshotSchema>;
 export type DocumentDataSnapshot = z.infer<typeof documentDataSnapshotSchema>;
 
 export type GenerateDocumentInput = z.infer<typeof generateDocumentInputSchema>;
@@ -26,7 +36,7 @@ export type DocumentRecord = {
   documentId: string;
   documentType: DocumentType;
   templateVersion: string;
-  includeSet: Record<string, boolean>;
+  includeSet: Record<string, boolean | string>;
   generatedBy: string | null;
   generatedAt: string;
   version: number;

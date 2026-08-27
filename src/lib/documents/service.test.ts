@@ -36,6 +36,8 @@ const listRow = {
   version: 1,
 };
 
+const planId = "c4000000-0000-0000-0000-000000000004";
+
 const snapshotRow = {
   document_id: documentId,
   document_type: "PATIENT_RECORD_SUMMARY",
@@ -163,6 +165,44 @@ describe("document service RPC contract", () => {
     });
   });
 
+  it("forwards the plan selector and only the checked sections for TREATMENT_PLAN", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ document_id: documentId, version: 1 }], error: null });
+    await expect(generateDocument({
+      actingBranchId: branchId,
+      patientId,
+      documentType: "TREATMENT_PLAN",
+      planId,
+      includeSet: { items: true, alternatives: false, discussions: true, drawing: true },
+    })).resolves.toEqual({ documentId, version: 1 });
+    expect(rpc).toHaveBeenLastCalledWith("generate_document", {
+      p_acting_branch_id: branchId,
+      p_patient_id: patientId,
+      p_document_type: "TREATMENT_PLAN",
+      p_include_set: { items: true, discussions: true, drawing: true, planId },
+    });
+
+    await expect(generateDocument({
+      actingBranchId: branchId,
+      patientId,
+      documentType: "TREATMENT_PLAN",
+      planId,
+      includeSet: {},
+    })).rejects.toBeInstanceOf(z.ZodError);
+  });
+
+  it("lists a stored TREATMENT_PLAN row whose include set carries the plan selector", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ ...listRow, document_type: "TREATMENT_PLAN", include_set: { items: true, drawing: true, planId } }], error: null });
+    await expect(listDocuments({ actingBranchId: branchId, patientId })).resolves.toEqual([{
+      documentId,
+      documentType: "TREATMENT_PLAN",
+      templateVersion: "v1",
+      includeSet: { items: true, drawing: true, planId },
+      generatedBy: null,
+      generatedAt,
+      version: 1,
+    }]);
+  });
+
   it("lists rows with the full bounded projection and no snapshot body", async () => {
     rpc.mockResolvedValueOnce({ data: [listRow], error: null });
     await expect(listDocuments({ actingBranchId: branchId, patientId })).resolves.toEqual([{
@@ -204,6 +244,25 @@ describe("document service RPC contract", () => {
       p_acting_branch_id: branchId,
       p_document_id: documentId,
     });
+  });
+
+  it("parses a TREATMENT_PLAN snapshot in the bounded document shape", async () => {
+    rpc.mockResolvedValueOnce({ data: [{
+      document_id: documentId,
+      document_type: "TREATMENT_PLAN",
+      template_version: "v1",
+      data_snapshot: {
+        plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt: generatedAt, updatedAt: generatedAt, createdBy: "c3000000-0000-0000-0000-000000000003" },
+        items: [{ itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500, createdAt: generatedAt }],
+        discussions: [{ discussionId: "c6000000-0000-0000-0000-000000000009", discussedBy: "c3000000-0000-0000-0000-000000000003", treatingProviderId: null, discussedAt: generatedAt, context: "Case discussion", createdAt: generatedAt }],
+        drawing: { drawingId: "c6000000-0000-0000-0000-00000000000a", drawing: { strokes: [] }, updatedBy: "c3000000-0000-0000-0000-000000000003", updatedAt: generatedAt, version: 1 },
+      },
+      version: 1,
+    }], error: null });
+    const snapshot = await getDocumentSnapshot({ actingBranchId: branchId, documentId });
+    expect(snapshot.dataSnapshot.plan?.status).toBe("ACKNOWLEDGED");
+    expect(snapshot.dataSnapshot.items?.[0]?.description).toBe("Composite filling on 26.");
+    expect(snapshot.dataSnapshot.drawing?.drawing).toEqual({ strokes: [] });
   });
 
   it("rejects malformed mutation, list, and snapshot rows", async () => {

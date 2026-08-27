@@ -47,6 +47,11 @@ const letter = record({
   documentType: "REFERRAL_LETTER",
   includeSet: { demographics: true, referrals: true },
 });
+const plan = record({
+  documentId: "cd000000-0000-0000-0000-000000000010",
+  documentType: "TREATMENT_PLAN",
+  includeSet: { items: true, drawing: true, planId: "c4000000-0000-0000-0000-000000000004" },
+});
 
 function renderBoard(overrides: {
   canGenerate?: boolean;
@@ -94,6 +99,14 @@ describe("DocumentsBoard", () => {
     expect(screen.getAllByText("v1").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Demographics · Referrals · Appointments/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Demographics · Appointments/).length).toBeGreaterThan(0);
+  });
+
+  it("renders a generated TREATMENT_PLAN row with its label and include set", () => {
+    renderBoard({ rows: [plan] });
+
+    expect(screen.getAllByText("Treatment plan").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Items · Drawing").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "View / Print" }).length).toBeGreaterThan(0);
   });
 
   it("shows an empty state when there are no documents for the patient", () => {

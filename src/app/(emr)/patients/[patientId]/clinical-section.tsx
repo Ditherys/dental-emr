@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, MedicalRecord } from "@/lib/clinical/types";
 import type { ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
+import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 
 import {
   amendClinicalNoteAction,
@@ -27,6 +28,7 @@ import {
   type ClinicalMutationResult,
 } from "./clinical-actions";
 import { OdontogramSection } from "./odontogram-section";
+import { TreatmentPlanSection } from "./treatment-plan-section";
 
 type Props = {
   patientId: string;
@@ -36,6 +38,8 @@ type Props = {
   initialMedicalRecords: MedicalRecord[];
   initialProviders?: ProviderListItem[];
   initialToothConditions?: ToothCondition[];
+  initialTreatmentPlans?: TreatmentPlan[];
+  canGenerateDocuments?: boolean;
   providersUnavailable?: boolean;
   loadFailed?: boolean;
 };
@@ -68,11 +72,11 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions = [], providersUnavailable, loadFailed }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions = [], initialTreatmentPlans = [], canGenerateDocuments = false, providersUnavailable, loadFailed }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"records" | "odontogram">("records");
+  const [tab, setTab] = useState<"records" | "odontogram" | "treatment-plans">("records");
   const [details, setDetails] = useState<Record<string, ClinicalEncounterDetail>>({});
   const [expandedEncounterId, setExpandedEncounterId] = useState<string | null>(null);
   const [loadingEncounterId, setLoadingEncounterId] = useState<string | null>(null);
@@ -215,9 +219,10 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, i
 
   return <section id="clinical" className="border-t py-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, dental chart, and medical history.</p></div>{canWriteClinical && !providersUnavailable && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
-    <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button></nav>
+    <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button><button type="button" onClick={() => setTab("treatment-plans")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "treatment-plans" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Treatment plan</button></nav>
     {error && !dialogOpen && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
     {tab === "odontogram" ? <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} initialConditions={initialToothConditions} loadFailed={loadFailed} />
+      : tab === "treatment-plans" ? <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} />
       : <>{providersUnavailable && canWriteClinical && <p className="mt-3 text-sm text-muted-foreground">The provider directory is unavailable, so new encounters cannot be opened here.</p>}
     {loadFailed ? <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
       <h3 className="mt-5 text-sm font-medium text-muted-foreground">Treatment history</h3>

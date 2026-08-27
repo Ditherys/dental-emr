@@ -504,6 +504,9 @@ const clinicalRpcGrants = Object.freeze([
 const DOCUMENT_RPCS_GRANTS_MIGRATION =
   "20260827012201_document_rpcs_grants.sql";
 
+const DOCUMENT_TREATMENT_PLAN_GRANTS_MIGRATION =
+  "20260827013500_document_treatment_plan.sql";
+
 const documentRpcGrants = Object.freeze([
   "public.generate_document(uuid,uuid,text,jsonb)",
   "public.list_documents(uuid,uuid,text)",
@@ -905,6 +908,20 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: TREATMENT_PLAN_RPCS_GRANTS_MIGRATION,
     grants: treatmentPlanRpcGrants,
+  }),
+  Object.freeze({
+    file: DOCUMENT_TREATMENT_PLAN_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.generate_document(uuid,uuid,text,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "Restores the exact 20260827012201 terminal EXECUTE grant that the P16-03 TREATMENT_PLAN document extension cancelled when it recreated the generate_document definition to snapshot same-tenant treatment plans (header plus gated items/alternatives/discussions/drawing). The approved final privilege set is unchanged: no new grantable object is introduced and authorization remains entirely inside the SECURITY DEFINER body.",
+      },
+    ]),
   }),
 ]);
 

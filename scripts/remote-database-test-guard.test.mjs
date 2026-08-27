@@ -266,6 +266,7 @@ const expectedSuites = [
       "communications_foundation.test.sql",
       "document_permission_contract.test.sql",
       "document_rpcs.test.sql",
+      "document_treatment_plan.test.sql",
       "documents_foundation.test.sql",
       "file_archive_rpc.test.sql",
       "file_objects_foundation.test.sql",

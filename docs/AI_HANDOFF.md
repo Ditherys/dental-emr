@@ -1,7 +1,55 @@
-# AI Handoff - Phase 15 complete, Phase 16 next
+# AI Handoff - Phase 16 treatment plans in progress, P16-03 complete
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 16 P16-03 checkpoint (2026-08-27) - READY FOR REVIEW
+
+Phase 16 P16-03 (Document integration + services + UI) implemented on top of
+P16-01/02 (`e65e6a6` treatment plan schema + RPCs). Not committed.
+
+- P16-03 document seam `20260827013500_document_treatment_plan.sql`: additively
+  replaces the `documents_type_check` to admit `TREATMENT_PLAN`, extends the
+  audit metadata allow-list with `TREATMENT_PLAN` (preserving every existing
+  Phase 1/6/11/13/14 key), and recreates `generate_document` to snapshot a
+  same-tenant plan: the plan header always, plus items/alternatives/discussions/
+  drawing gated by the include set; discussion entries carry
+  dentist/time/context and never the free-form notes bodies; the
+  renderer-independent drawing jsonb is included verbatim. The plan selector
+  travels in the include set under the non-boolean `planId` key (the fixed RPC
+  signature cannot grow a parameter and no new RPC is added). The file is a
+  registered grant-terminal that re-states the exact `generate_document`
+  authenticated EXECUTE grant the recreate cancels, so the approved final
+  privilege set is unchanged (no new grantable object).
+- Frontend document lib extended for TREATMENT_PLAN (schema/types/include-set/
+  render/service): the board renders TREATMENT_PLAN rows and the A4 print route
+  renders the acknowledged plan snapshot incl. a safe SVG of the drawing; the
+  board's generate dialog stays limited to the non-plan types (plan generation
+  is plan-scoped inside the patient section).
+- `src/lib/treatment-plan/` service layer: schemas/types/errors/service for all
+  twelve P16-02 RPCs plus `generateTreatmentPlanDocument` (delegates to the
+  documents service), with offline mocked tests.
+- Patient Clinical "Treatment plan" tab (`treatment-plan-section.tsx` +
+  `treatment-plan-actions.ts`): plan list (dense table + phone), create plan,
+  plan detail with items add/edit/remove and alternatives (DRAFT), renderer-
+  independent pointer-capture drawing canvas persisted via
+  `saveTreatmentPlanDrawing` (blocked after ACKNOWLEDGED), append-only
+  discussions capturing provider/time/context, Present and Acknowledge
+  (DRAFT→PRESENTED→ACKNOWLEDGED; everything read-only after ACKNOWLEDGED), and a
+  Print button that generates the TREATMENT_PLAN document and opens the Phase 11
+  snapshot print route. Gated on `patient.clinical.read`/`write`; Print
+  additionally requires `document.generate`. RECEPTIONIST sees no section.
+- Inventory: 107 migration files, 37 grant terminals, 161 approved privileges;
+  63 pgTAP suites + 5 concurrency probes; tables 59, functions 198,
+  security-definer 167; unit 103 files / 1077 tests; scripts 279.
+- Verification: `db:reset:local`, `db:provision:local`, `test:db:local` all
+  suites + concurrency probes pass (incl. new `document_treatment_plan.test.sql`,
+  43 assertions); `security:migrations` passes; `npx vitest run scripts` 279
+  tests pass; `npm run test:unit` 1077 tests pass; lint, typecheck, build, and
+  `git diff --check` clean.
+
+**Next:** P16-04 integration verification + phase review. Cloud TEST remains the
+deployment gate.
 
 ## Phase 15 checkpoint (2026-08-27) - ACCEPTED
 

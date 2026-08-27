@@ -35,11 +35,18 @@ function firstRow(data: unknown) {
 
 // The RPC builds snapshot sections on include-set key presence, not value. Only
 // sections the caller explicitly checked (value true) are forwarded so a
-// deselected section can never leak into the generated snapshot.
-function truthyIncludeSet(includeSet: Record<string, boolean | undefined>) {
-  return Object.fromEntries(
-    Object.entries(includeSet).filter(([, selected]) => selected === true),
-  );
+// deselected section can never leak into the generated snapshot. The
+// TREATMENT_PLAN variant also forwards the non-boolean planId selector the RPC
+// needs to pick the exact plan being snapshotted.
+function rpcIncludeSet(value: Extract<z.infer<typeof generateDocumentInputSchema>, { documentType: "TREATMENT_PLAN" }>): Record<string, unknown>;
+function rpcIncludeSet(value: z.infer<typeof generateDocumentInputSchema>): Record<string, boolean>;
+function rpcIncludeSet(value: z.infer<typeof generateDocumentInputSchema>): Record<string, boolean | string> {
+  const sections = Object.fromEntries(
+    Object.entries(value.includeSet).filter(([, selected]) => selected === true),
+  ) as Record<string, boolean>;
+  return value.documentType === "TREATMENT_PLAN"
+    ? { ...sections, planId: value.planId }
+    : sections;
 }
 
 export async function generateDocument(input: unknown): Promise<DocumentMutationResult> {
@@ -48,7 +55,7 @@ export async function generateDocument(input: unknown): Promise<DocumentMutation
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_document_type: value.documentType,
-    p_include_set: truthyIncludeSet(value.includeSet),
+    p_include_set: rpcIncludeSet(value),
   })));
   return { documentId: row.document_id, version: row.version };
 }
