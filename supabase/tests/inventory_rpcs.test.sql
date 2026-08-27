@@ -57,8 +57,9 @@ select extensions.is((select count(*)::integer from pg_proc where oid in (
   'public.list_inventory_stock(uuid,uuid,boolean)'::regprocedure,
   'public.list_inventory_movements(uuid,uuid)'::regprocedure,
   'public.get_inventory_aggregate(uuid)'::regprocedure,
+  'public.list_inventory_transfers(uuid,text)'::regprocedure,
   'private.has_inventory_permission_at_branch(uuid,text)'::regprocedure
-) and prosecdef and proconfig = array['search_path=""']::text[]),13,'the thirteen P19-02 definers pin an empty search path');
+) and prosecdef and proconfig = array['search_path=""']::text[]),14,'the fourteen P19 inventory definers pin an empty search path');
 select extensions.ok(
   has_function_privilege('authenticated','public.create_inventory_item(uuid,text,text,text,text,integer,boolean)','execute')
   and has_function_privilege('authenticated','public.update_inventory_item(uuid,uuid,integer,text,text,text,integer,boolean,boolean)','execute')
@@ -72,17 +73,20 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.list_inventory_stock(uuid,uuid,boolean)','execute')
   and has_function_privilege('authenticated','public.list_inventory_movements(uuid,uuid)','execute')
   and has_function_privilege('authenticated','public.get_inventory_aggregate(uuid)','execute')
+  and has_function_privilege('authenticated','public.list_inventory_transfers(uuid,text)','execute')
   and not has_function_privilege('anon','public.create_inventory_item(uuid,text,text,text,text,integer,boolean)','execute')
   and not has_function_privilege('service_role','public.create_inventory_item(uuid,text,text,text,text,integer,boolean)','execute')
   and not has_function_privilege('anon','public.get_inventory_aggregate(uuid)','execute')
   and not has_function_privilege('service_role','public.get_inventory_aggregate(uuid)','execute'),
-  'only authenticated has the twelve exact P19-02 RPC grants'
+  'only authenticated has the thirteen exact P19 RPC grants'
 );
 select extensions.ok(not exists(
   select 1
   from (values
     ('private.has_inventory_permission_at_branch(uuid,text)'),
-    ('private.protect_inventory_movements()')
+    ('private.protect_inventory_movements()'),
+    ('private.enforce_consumable_inventory_stock()'),
+    ('private.prevent_stocked_item_equipment_conversion()')
   ) as object(signature)
   cross join (values('public'),('anon'),('authenticated'),('service_role')) as role(rolename)
   where has_function_privilege(role.rolename, object.signature, 'execute')
@@ -157,12 +161,17 @@ select 1, transfer_id from public.create_inventory_transfer('e1030000-0000-0000-
 select extensions.is((select quantity_on_hand || ':' || version from public.list_inventory_stock('e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=1),false) limit 1),'10:5','creating the transfer reduces the source balance to ten');
 select extensions.is((select count(*)::integer from public.list_inventory_stock('e1030000-0000-0000-0000-000000000002',(select id from r1902_items where seq=1),false)),0,'the destination balance is unchanged after creation (no stock row yet)');
 select extensions.is((select status || ':' || version from public.inventory_transfers where id=(select id from r1902_transfers where seq=1)),'SENT:1','the transfer starts SENT at version one');
+select extensions.is((select count(*)::integer from public.list_inventory_transfers('e1030000-0000-0000-0000-000000000001','SENT')),1,'the source branch can list its pending transfer');
+select extensions.is((select count(*)::integer from public.list_inventory_transfers('e1030000-0000-0000-0000-000000000002','SENT')),1,'the destination branch can list its pending transfer before confirmation');
+select extensions.is((select item_code || ':' || quantity::text || ':' || status from public.list_inventory_transfers('e1030000-0000-0000-0000-000000000002','SENT') where transfer_id=(select id from r1902_transfers where seq=1)),'ANESTHETIC:4:SENT','the transfer projection returns the bounded item, quantity, and state');
+select extensions.throws_ok($$select public.list_inventory_transfers('e1030000-0000-0000-0000-000000000002','LOST')$$,'22023','invalid input','an invented transfer-list status is rejected');
 select extensions.is((select count(*)::integer from public.inventory_movements where organization_id='e1020000-0000-0000-0000-000000000001' and movement_type='TRANSFER_OUT' and transfer_id=(select id from r1902_transfers where seq=1)),1,'creation appends exactly one TRANSFER_OUT ledger row at the source');
 select extensions.is((select count(*)::integer from public.inventory_movements where organization_id='e1020000-0000-0000-0000-000000000001' and movement_type='TRANSFER_IN' and transfer_id=(select id from r1902_transfers where seq=1)),0,'no TRANSFER_IN row exists before confirmation');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='e1020000-0000-0000-0000-000000000001' and action='inventory.transfer.created'),1,'transfer creation writes exactly one inventory.transfer.created audit event');
 select extensions.ok((select metadata->>'source'='e1030000-0000-0000-0000-000000000001' and metadata->>'destination'='e1030000-0000-0000-0000-000000000002' and metadata->>'quantity'='4' from public.audit_events where organization_id='e1020000-0000-0000-0000-000000000001' and action='inventory.transfer.created' order by occurred_at desc limit 1),'the transfer audit event carries bounded {source, destination, quantity} metadata');
 select extensions.throws_ok($$select public.create_inventory_transfer('e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=1),1,'self transfer')$$,'22023','invalid input','a transfer with identical source and destination is rejected');
 select extensions.throws_ok($$select public.create_inventory_transfer('e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000003',(select id from r1902_items where seq=1),1,'foreign destination')$$,'42501','not authorized','a transfer to a foreign-organization branch is rejected');
+select extensions.throws_ok($$select public.create_inventory_transfer('e1030000-0000-0000-0000-000000000002','e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000002',(select id from r1902_items where seq=1),1,'forged source')$$,'42501','not authorized','a submitted source branch cannot differ from the authorized acting branch');
 select extensions.throws_ok($$select public.create_inventory_transfer('e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000002',(select id from r1902_items where seq=1),100,'overdraw')$$,'P0001','insufficient stock','a transfer larger than the source balance is rejected');
 select extensions.is((select quantity_on_hand || ':' || version from public.list_inventory_stock('e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=1),false) limit 1),'10:5','the rejected transfer leaves the source balance untouched');
 
@@ -183,6 +192,7 @@ select 2, transfer_id from public.create_inventory_transfer('e1030000-0000-0000-
 select extensions.is((select quantity_on_hand || ':' || version from public.list_inventory_stock('e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=2),false) limit 1),'3:2','creating the second transfer reduces the source balance to three');
 select extensions.throws_ok($$select public.cancel_inventory_transfer('e1030000-0000-0000-0000-000000000001',(select id from r1902_transfers where seq=2),1,null)$$,'22023','invalid input','a cancellation without a reason is rejected');
 select extensions.throws_ok($$select public.cancel_inventory_transfer('e1030000-0000-0000-0000-000000000001',(select id from r1902_transfers where seq=2),2,'stale')$$,'P0001','stale version','a stale version is rejected on cancellation');
+select extensions.throws_ok($$select public.cancel_inventory_transfer('e1030000-0000-0000-0000-000000000002',(select id from r1902_transfers where seq=2),1,'forged source')$$,'42501','not authorized','only the source acting branch may cancel a pending transfer');
 select extensions.is((select status || ':' || version from public.inventory_transfers where id=(select id from r1902_transfers where seq=2)),'SENT:1','a rejected cancellation leaves the transfer SENT');
 select extensions.is((select status from public.cancel_inventory_transfer('e1030000-0000-0000-0000-000000000001',(select id from r1902_transfers where seq=2),1,'shipment not needed')),'CANCELLED','a SENT transfer can be cancelled');
 select extensions.is((select quantity_on_hand || ':' || version from public.list_inventory_stock('e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=2),false) limit 1),'5:3','cancelling reverses the source balance back to five');
@@ -247,6 +257,7 @@ select extensions.throws_ok($$select public.list_inventory_items('e1030000-0000-
 select extensions.throws_ok($$select public.list_inventory_stock('e1030000-0000-0000-0000-000000000001',null,false)$$,'42501','not authorized','a dentist without inventory.view cannot read stock');
 select extensions.throws_ok($$select public.list_inventory_movements('e1030000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','a dentist without inventory.view cannot read movements');
 select extensions.throws_ok($$select public.get_inventory_aggregate('e1030000-0000-0000-0000-000000000001')$$,'42501','not authorized','a dentist without inventory.view cannot read the aggregate');
+select extensions.throws_ok($$select public.list_inventory_transfers('e1030000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','a dentist without inventory.view cannot read transfers');
 select extensions.throws_ok($$select public.create_inventory_item('e1030000-0000-0000-0000-000000000001','DENTAL','Dental','CONSUMABLE','box',0,false)$$,'42501','not authorized','a dentist without inventory.manage cannot create items');
 select extensions.throws_ok($$select public.receive_stock('e1030000-0000-0000-0000-000000000001',(select id from r1902_items where seq=1),1,null,null)$$,'42501','not authorized','a dentist without inventory.manage cannot receive stock');
 select extensions.throws_ok($$select public.create_inventory_transfer('e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000001','e1030000-0000-0000-0000-000000000002',(select id from r1902_items where seq=1),1,'denied')$$,'42501','not authorized','a dentist without inventory.manage cannot create transfers');
@@ -276,6 +287,12 @@ drop function private.r1902_block_inventory_audit();
 select extensions.is((select count(*)::integer from public.inventory_stock where organization_id='e1020000-0000-0000-0000-000000000001' and item_id=(select id from r1902_items where seq=4)),0,'a blocked audit rolls back the stock row');
 select extensions.is((select count(*)::integer from public.inventory_movements where organization_id='e1020000-0000-0000-0000-000000000001' and item_id=(select id from r1902_items where seq=4)),0,'a blocked audit rolls back the movement ledger row');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='e1020000-0000-0000-0000-000000000001' and action='inventory.stock.received' and entity_id in (select id from public.inventory_stock where item_id=(select id from r1902_items where seq=4))),0,'a blocked audit rolls back its own audit row');
+
+-- Equipment remains separate from consumable stock at the database boundary.
+insert into public.inventory_items (id,organization_id,code,name,category,unit)
+values ('e1080000-0000-0000-0000-000000000001','e1020000-0000-0000-0000-000000000001','DENTAL_CHAIR','Dental Chair','EQUIPMENT','unit');
+select extensions.throws_ok($$select public.receive_stock('e1030000-0000-0000-0000-000000000001','e1080000-0000-0000-0000-000000000001',1,null,null)$$,'23514','stock is limited to consumable items','equipment cannot receive a consumable stock balance');
+select extensions.throws_ok($$update public.inventory_items set category='EQUIPMENT' where id=(select id from r1902_items where seq=1)$$,'23514','an item with stock history must remain consumable','a consumable with stock history cannot be reclassified as equipment');
 
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
 select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;

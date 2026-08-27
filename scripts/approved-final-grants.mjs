@@ -503,6 +503,8 @@ const clinicalRpcGrants = Object.freeze([
 
 const INVENTORY_RPCS_GRANTS_MIGRATION =
   "20260827014201_inventory_rpcs_grants.sql";
+const INVENTORY_TRANSFER_READ_GRANTS_MIGRATION =
+  "20260827014301_inventory_transfer_reads_grants.sql";
 
 const inventoryRpcGrants = Object.freeze([
   "public.create_inventory_item(uuid,text,text,text,text,integer,boolean)",
@@ -518,6 +520,17 @@ const inventoryRpcGrants = Object.freeze([
   "public.list_inventory_movements(uuid,uuid)",
   "public.get_inventory_aggregate(uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only inventory boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live inventory.manage (catalog, receipts, adjustments, issues, transfers) or inventory.view (bounded per-branch stock, movement ledger, and org aggregate). Stock balance changes run under a per-org-branch-item advisory lock and only ever post the matching append-only movement row in the same transaction; transfers stay SENT until the destination confirms receipt, which is the only moment the destination balance changes. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
+
+const inventoryTransferReadGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.list_inventory_transfers(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason: "The bounded inventory.view transfer projection required by the branch operations UI. It derives the tenant from the authenticated acting branch and returns only transfers where that branch is the source or destination, so pending destination receipts are actionable without any base-table grant or unrelated-branch exposure.",
+  },
+]);
 
 const RECALL_RPCS_GRANTS_MIGRATION =
   "20260827014001_recall_rpcs_grants.sql";
@@ -1058,6 +1071,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: INVENTORY_RPCS_GRANTS_MIGRATION,
     grants: inventoryRpcGrants,
+  }),
+  Object.freeze({
+    file: INVENTORY_TRANSFER_READ_GRANTS_MIGRATION,
+    grants: inventoryTransferReadGrants,
   }),
 ]);
 

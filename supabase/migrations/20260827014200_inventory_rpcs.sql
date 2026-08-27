@@ -763,6 +763,10 @@ begin
     raise invalid_parameter_value using message = 'invalid input';
   end if;
 
+  if p_source_branch_id <> p_acting_branch_id then
+    raise insufficient_privilege using message = 'not authorized';
+  end if;
+
   if p_reason is not null
      and (pg_catalog.btrim(p_reason) = '' or pg_catalog.length(p_reason) > 500) then
     raise invalid_parameter_value using message = 'invalid input';
@@ -990,6 +994,10 @@ begin
   for update;
 
   if not found then
+    raise insufficient_privilege using message = 'not authorized';
+  end if;
+
+  if v_transfer.source_branch_id <> p_acting_branch_id then
     raise insufficient_privilege using message = 'not authorized';
   end if;
 

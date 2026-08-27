@@ -251,6 +251,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_inventory_stock(uuid, uuid, boolean)",
     "public.list_inventory_movements(uuid, uuid)",
     "public.get_inventory_aggregate(uuid)",
+    "public.list_inventory_transfers(uuid, text)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1362,8 +1363,8 @@ describe("the grant-terminal boundary", () => {
   it("does not expect server-only service_role grants from a browser-role probe", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
-expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(175);
+    expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
+    expect(approved.size).toBe(176);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

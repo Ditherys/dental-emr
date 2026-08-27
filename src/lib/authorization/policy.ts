@@ -29,6 +29,8 @@ export const foundationPermissionCodes = [
   "intake.manage",
   "recall.read",
   "recall.manage",
+  "inventory.view",
+  "inventory.manage",
   "analytics.view",
 ] as const;
 

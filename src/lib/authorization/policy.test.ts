@@ -241,6 +241,21 @@ describe("recall permission vocabulary", () => {
   });
 });
 
+describe("inventory permission vocabulary", () => {
+  it("exposes the two bounded inventory permission codes", () => {
+    const inventoryView: PermissionCode = "inventory.view";
+    const inventoryManage: PermissionCode = "inventory.manage";
+
+    // @ts-expect-error inventory permissions are a closed contract.
+    const unknownInventoryPermission: PermissionCode = "inventory.delete";
+
+    expect(foundationPermissionCodes).toEqual(
+      expect.arrayContaining([inventoryView, inventoryManage]),
+    );
+    expect(unknownInventoryPermission).toBe("inventory.delete");
+  });
+});
+
 describe("organization membership selection", () => {
   it("derives the only active organization when no selector is supplied", () => {
     expect(selectActiveOrganizationMembership([orgA])).toEqual(orgA);

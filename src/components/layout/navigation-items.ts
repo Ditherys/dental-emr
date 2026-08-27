@@ -1,4 +1,4 @@
-import { BarChart3, BellRing, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, Globe, Inbox, LayoutDashboard, ListOrdered, MessageSquareText, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
+import { BarChart3, BellRing, Building2, CalendarDays, CalendarSync, ClipboardList, FileText, Globe, Inbox, LayoutDashboard, ListOrdered, MessageSquareText, Package, ShieldCheck, Stethoscope, Tags, UserCog, UsersRound } from "lucide-react";
 
 import type { PermissionCode } from "@/lib/authorization/policy";
 
@@ -55,6 +55,12 @@ export const navigationItems = [
     href: "/recalls",
     icon: BellRing,
     requiredPermission: "recall.read",
+  },
+  {
+    label: "Inventory",
+    href: "/inventory",
+    icon: Package,
+    requiredPermission: "inventory.view",
   },
   {
     label: "Booking requests",
