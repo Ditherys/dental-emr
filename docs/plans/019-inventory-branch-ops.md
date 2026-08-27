@@ -1,10 +1,9 @@
 # Phase 19 — Inventory & Branch Operations
 
-**Status:** Authored 2026-08-27 by the orchestrator under the project owner's
-explicit one-pass SDD directive (Phases 4–24). Derived strictly from
-`docs/MASTER_PRODUCT_PLAN.md` §Phase 19 plus accepted architecture
-(DATABASE_DESIGN §13 separates schedulable resources from consumable stock). No
-new product requirements are invented.
+**Status:** Accepted 2026-08-27 under the project owner's explicit one-pass SDD
+directive (Phases 4–24). Derived strictly from `docs/MASTER_PRODUCT_PLAN.md`
+§Phase 19 plus accepted architecture (DATABASE_DESIGN §13 separates schedulable
+resources from consumable stock). No new product requirements are invented.
 
 **Goal:** Consumable stock inventory that is traceable by branch, with receipts,
 reasoned manual adjustments and issues, branch-to-branch transfers that only
@@ -40,7 +39,7 @@ Schedulable equipment/resources stay in the Phase 6 `branch_resources` model
 
 ## Tasks
 
-- [ ] **P19-01: Inventory permission + schema**
+- [x] **P19-01: Inventory permission + schema**
   - `inventory.view` / `inventory.manage` permission rows + matrix;
     `PermissionCode` + policy test; pgTAP.
   - `inventory_items`: org, code, name, category (CONSUMABLE/EQUIPMENT — only
@@ -60,7 +59,7 @@ Schedulable equipment/resources stay in the Phase 6 `branch_resources` model
     created_by, confirmed_by/confirmed_at, timestamps. RLS + zero grants.
   - pgTAP.
 
-- [ ] **P19-02: Inventory RPCs**
+- [x] **P19-02: Inventory RPCs**
   - `private.has_inventory_permission_at_branch(acting_branch_id, code)` helper.
   - Catalog: `create_inventory_item` / `update_inventory_item` /
     `list_inventory_items` (inventory.manage; audit item.created/updated).
@@ -90,7 +89,7 @@ Schedulable equipment/resources stay in the Phase 6 `branch_resources` model
     aggregate with branch breakdown, ledger immutability trigger, audit per
     mutation + rollback, permission denials).
 
-- [ ] **P19-03: Server services + inventory UI**
+- [x] **P19-03: Server services + inventory UI**
   - `src/lib/inventory/` service layer + offline tests.
   - `/inventory` page (inventory.view): item catalog (dense table/phone),
     per-branch stock balances with low-stock emphasis, Receive/Adjust/Issue
@@ -99,7 +98,7 @@ Schedulable equipment/resources stay in the Phase 6 `branch_resources` model
     inventory.view; manage actions on inventory.manage. 44px, phone/desktop.
     Server actions recheck inventory.view/manage + branch. Tests.
 
-- [ ] **P19-04: Integration verification + phase review**
+- [x] **P19-04: Integration verification + phase review**
 
 ## Explicitly deferred
 
@@ -121,3 +120,9 @@ Schedulable equipment/resources stay in the Phase 6 `branch_resources` model
 
 - Full local db reset/provision/test; security migrations/secrets/audit;
   unit/lint/typecheck/build. Cloud TEST remains the deployment gate.
+
+Local acceptance evidence: clean database replay and all pgTAP/concurrency
+suites passed; migration privilege lint passed for 120 migrations and 194 exact
+approved privileges; 279 script tests and 1,212 unit tests passed; lint,
+typecheck, production build, and `git diff --check` passed. Cloud TEST remains
+mandatory before production deployment or patient use.

@@ -1,7 +1,51 @@
-# AI Handoff - Phase 18 complete, Phase 19 next
+# AI Handoff - Phase 19 complete, Phase 20 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 19 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 19 (Inventory & Branch Operations) is complete through commit `9e71568`
+(P19-03 services + UI and final boundary hardening), with
+`docs/plans/019-inventory-branch-ops.md` P19-01..P19-04 all `[x]`.
+
+- P19-01/02 `5c4f34d` added OWNER/ADMIN-only inventory.view/manage permissions,
+  organization item catalog, non-negative branch balances, append-only movement
+  ledger, destination-confirmed transfers, low-stock derivation, 12 public
+  mutation/read RPCs plus a private permission helper, exact terminal grants,
+  audit events, and pgTAP coverage.
+- P19-03 `9e71568` added the strict `src/lib/inventory/` server boundary and
+  `/inventory` UI: desktop tables and intentional phone lists, low-stock
+  emphasis, catalog management, receive/adjust/issue dialogs, branch transfer
+  create/confirm/cancel controls, bounded movement history, and organization
+  branch breakdowns. Server actions reauthorize every read/mutation.
+- The application-boundary review added a thirteenth public RPC,
+  `list_inventory_transfers(uuid,text)`, because browser base-table access stays
+  zero; it returns at most 200 transfers where the acting branch is source or
+  destination. Database triggers keep equipment out of consumable balances and
+  prevent stocked/history-bearing consumables from becoming equipment.
+- Transfer hardening requires submitted source branch = authenticated acting
+  branch in both Zod and PostgreSQL, permits only the source acting branch to
+  cancel, and permits only the destination acting branch to confirm. Negative
+  pgTAP and offline tests cover forged source, unrelated/foreign branches,
+  permission denial, stale versions, state transitions, and equipment stock.
+- Acceptance criteria met: stock and immutable movement history are traceable by
+  branch; adjustments/issues require reasons and audit atomically; destination
+  stock stays unchanged until confirmation; constraints and transactional locks
+  prevent negative stock; low-stock is evaluated per branch; organization
+  aggregates preserve branch breakdowns.
+- Inventory: 120 migration files, 42 grant terminals, 194 approved privileges;
+  tables 69, function declarations 238, SECURITY DEFINER declarations 202;
+  unit 115 files / 1,212 tests; scripts 279.
+- Verification: clean local reset/provision plus all pgTAP and five concurrency
+  probes passed; migration/security/secrets/audit gates passed; unit, scripts,
+  lint, typecheck, build, and `git diff --check` passed. Cloud TEST remains the
+  deployment gate.
+
+**Next:** Phase 20 (Analytics) per `docs/MASTER_PRODUCT_PLAN.md` §Phase 20.
+Author a bounded plan that documents metric definitions and source traces,
+keeps acquisition source distinct from booking channel, and gates analytics by
+role before implementing P20-01.. .
 
 ## Phase 18 checkpoint (2026-08-27) - ACCEPTED
 
