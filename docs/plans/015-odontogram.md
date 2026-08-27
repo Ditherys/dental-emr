@@ -37,7 +37,7 @@ future renderer. Printable legibility is proven by tests + print CSS.
 
 ## Tasks
 
-- [ ] **P15-01: Tooth condition schema**
+- [x] **P15-01: Tooth condition schema**
   - `tooth_conditions`: org, patient composite FK, tooth_code (FDI bounded,
     validated: permanent 11-48 or primary 51-85), surface (O/B/L/M/D/I/F or
     FULL/WHOLE for whole-tooth), status (ACTIVE/PLANNED/COMPLETED/REFERRED),
@@ -46,7 +46,7 @@ future renderer. Printable legibility is proven by tests + print CSS.
     RLS + zero base grants + indexes (org, patient). pgTAP (tooth/surface/status
     validators, tenant FKs).
 
-- [ ] **P15-02: Odontogram RPCs**
+- [x] **P15-02: Odontogram RPCs**
   - `private.has_clinical_permission_at_branch` reused (from P14).
   - `create_tooth_condition(acting_branch_id, patient_id, tooth_code, surface,
     status, finding_type, notes)` — clinical.write gated; validate tooth/surface/
@@ -64,7 +64,7 @@ future renderer. Printable legibility is proven by tests + print CSS.
     terminal status rejected/history preserved/tenant isolation/permission
     denials/audit rollback).
 
-- [ ] **P15-03: Server services + odontogram UI**
+- [x] **P15-03: Server services + odontogram UI**
   - `src/lib/odontogram/` service layer (schemas/types/errors/service) +
     offline tests.
   - Patient Clinical section "Odontogram" tab: self-built legible SVG/grid
@@ -76,7 +76,7 @@ future renderer. Printable legibility is proven by tests + print CSS.
     chart. Tests (renders canonical data, status legend, void/history preserved,
     print CSS, 44px, no clinical data outside the section).
 
-- [ ] **P15-04: Integration verification + phase review**
+- [x] **P15-04: Integration verification + phase review**
 
 ## Explicitly deferred
 

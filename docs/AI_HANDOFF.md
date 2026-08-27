@@ -1,7 +1,36 @@
-# AI Handoff - Phase 14 complete, Phase 15 next
+# AI Handoff - Phase 15 complete, Phase 16 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 15 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 15 (Odontogram / Dental Chart) complete through commit `5be9cca`
+(P15-03 chart UI) with `docs/plans/015-odontogram.md` P15-01..P15-04 all `[x]`.
+
+- P15-01/02 `c18dcba` tooth_conditions schema (FDI permanent 11-48 + primary
+  51-85 validated, surface O/B/L/M/D/I/F/FULL, status
+  ACTIVE/PLANNED/COMPLETED/REFERRED, finding types, void preserves history —
+  terminal statuses never voidable) + create/void/list RPCs (clinical gating
+  reused; audit per mutation; history preserved via voided_at + audit).
+  P15-03 `5be9cca` src/lib/odontogram services + patient Odontogram tab
+  (self-built semantic grid chart, 2 arches, 44px cells, status legend,
+  click-to-edit + void confirm, history view, print CSS seam). Canonical data
+  is renderer-independent; the controlled Ditherys/React-Odontogram-Modul fork
+  remains the documented preferred future renderer (self-built chart is a
+  deliberate bounded deviation — no third-party dependency added this phase).
+- Acceptance criteria met: FDI + status vocabulary validated (pgTAP + UI);
+  historical chart preserved (void + audit + history view); printable chart
+  legible (print CSS + tests).
+- Inventory: 103 migration files, 35 grant terminals, 148 approved privileges;
+  62 pgTAP suites + 5 concurrency probes; tables 54, functions 183,
+  security-definer 154; unit 100 files / 1028 tests; scripts 279.
+
+**Next:** Phase 16 (Treatment Plans & Discussion Canvas) per
+docs/MASTER_PRODUCT_PLAN.md §Phase 16. Author bounded plan
+docs/plans/016-treatment-plans.md then execute P16-01.. .
+
+## Phase 15 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 14 checkpoint (2026-08-27) - ACCEPTED
 
