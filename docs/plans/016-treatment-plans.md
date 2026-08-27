@@ -37,7 +37,7 @@ dentist/time/context, and a printable plan via the Phase 11 document seam.
 
 ## Tasks
 
-- [ ] **P16-01: Treatment plan schema**
+- [x] **P16-01: Treatment plan schema**
   - `treatment_plans`: org, patient composite FK, title bounded, status
     (DRAFT/PRESENTED/ACKNOWLEDGED), version, created_by, timestamps. RLS +
     zero grants + indexes. **Immutability trigger**: PRESENTED/ACKNOWLEDGED
@@ -54,7 +54,7 @@ dentist/time/context, and a printable plan via the Phase 11 document seam.
     renderer-independent), updated_by, updated_at, version. RLS + zero grants.
   - pgTAP for all.
 
-- [ ] **P16-02: Treatment plan RPCs**
+- [x] **P16-02: Treatment plan RPCs**
   - `create_treatment_plan` (clinical.write; status DRAFT; audit
     'treatment.plan.created' {}), `update_treatment_plan` (DRAFT only;
     versioned; audit), `present_treatment_plan` (DRAFT→PRESENTED; audit),
@@ -72,7 +72,7 @@ dentist/time/context, and a printable plan via the Phase 11 document seam.
     or direct SQL; drawing persists; discussion captures dentist/time/context;
     audit per mutation with rollback test; tenant isolation; reception denied).
 
-- [ ] **P16-03: Document integration + services + UI**
+- [x] **P16-03: Document integration + services + UI**
   - Extend Phase 11: add `TREATMENT_PLAN` to the documents document_type CHECK
     (additive ALTER + column CHECK replace) and to generate_document handling
     (snapshot = plan detail incl. items/alternatives/drawing reference) +
@@ -86,7 +86,7 @@ dentist/time/context, and a printable plan via the Phase 11 document seam.
     document snapshot print route. Gated on clinical.read/write; RECEPTIONIST
     sees nothing. 44px, phone/desktop, print CSS. Tests.
 
-- [ ] **P16-04: Integration verification + phase review**
+- [x] **P16-04: Integration verification + phase review**
 
 ## Explicitly deferred
 

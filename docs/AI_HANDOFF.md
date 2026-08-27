@@ -1,9 +1,33 @@
-# AI Handoff - Phase 16 treatment plans in progress, P16-03 complete
+# AI Handoff - Phase 16 complete, Phase 17 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
-## Phase 16 P16-03 checkpoint (2026-08-27) - READY FOR REVIEW
+## Phase 16 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 16 (Treatment Plans & Discussion Canvas) complete through commit
+`c7f7d57` (P16-03 services + UI + document integration) with
+`docs/plans/016-treatment-plans.md` P16-01..P16-04 all `[x]`.
+
+- P16-01/02 `e65e6a6` treatment_plans/items/alternatives/discussions/drawings
+  schema + immutable trigger (PRESENTED/ACKNOWLEDGED plans immutable, with the
+  single sanctioned PRESENTED→ACKNOWLEDGED transition) + 12 RPCs. P16-03
+  `c7f7d57` Phase-11 document extension (TREATMENT_PLAN snapshot incl. drawing;
+  never writes the plan), src/lib/treatment-plan services, patient Treatment
+  plan tab (DRAFT editable → ACKNOWLEDGED read-only, drawing canvas, discussion
+  history, print via document seam).
+- Acceptance criteria met: drawing persists; drawing in plan document snapshot;
+  original images unchanged; acknowledged plan immutable; discussion docs
+  include dentist/time/context.
+- Inventory: 107 migration files, 37 grant terminals, 161 approved privileges;
+  63 pgTAP suites + 5 concurrency probes; tables 59, functions 198,
+  security-definer 167; unit 103 files / 1077 tests; scripts 279.
+
+**Next:** Phase 17 (Digital Intake & Consent) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 17. Author bounded plan docs/plans/017-digital-intake-consent.md then
+execute P17-01.. .
+
+## Phase 16 P16-03 checkpoint (2026-08-27) - READY FOR REVIEW (historical)
 
 Phase 16 P16-03 (Document integration + services + UI) implemented on top of
 P16-01/02 (`e65e6a6` treatment plan schema + RPCs). Not committed.
