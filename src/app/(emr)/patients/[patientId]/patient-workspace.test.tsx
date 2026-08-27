@@ -93,6 +93,7 @@ describe("PatientWorkspace", () => {
     expect(screen.getByText(/Legal guardian/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Clinical" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("clinical-section")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Odontogram" })).not.toBeInTheDocument();
   });
 
   it("shows the Clinical section only to users with clinical read", () => {

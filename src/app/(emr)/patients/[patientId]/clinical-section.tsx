@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, MedicalRecord } from "@/lib/clinical/types";
+import type { ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 
 import {
@@ -25,6 +26,7 @@ import {
   type ClinicalDetailResult,
   type ClinicalMutationResult,
 } from "./clinical-actions";
+import { OdontogramSection } from "./odontogram-section";
 
 type Props = {
   patientId: string;
@@ -33,6 +35,7 @@ type Props = {
   initialEncounters: ClinicalEncounter[];
   initialMedicalRecords: MedicalRecord[];
   initialProviders?: ProviderListItem[];
+  initialToothConditions?: ToothCondition[];
   providersUnavailable?: boolean;
   loadFailed?: boolean;
 };
@@ -65,10 +68,11 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], providersUnavailable, loadFailed }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions = [], providersUnavailable, loadFailed }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<"records" | "odontogram">("records");
   const [details, setDetails] = useState<Record<string, ClinicalEncounterDetail>>({});
   const [expandedEncounterId, setExpandedEncounterId] = useState<string | null>(null);
   const [loadingEncounterId, setLoadingEncounterId] = useState<string | null>(null);
@@ -210,9 +214,11 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, i
   const dialogOpen = Boolean(openEncounterDialog || noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
 
   return <section id="clinical" className="border-t py-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, treatment history, and medical history.</p></div>{canWriteClinical && !providersUnavailable && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, dental chart, and medical history.</p></div>{canWriteClinical && !providersUnavailable && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
+    <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button></nav>
     {error && !dialogOpen && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
-    {providersUnavailable && canWriteClinical && <p className="mt-3 text-sm text-muted-foreground">The provider directory is unavailable, so new encounters cannot be opened here.</p>}
+    {tab === "odontogram" ? <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} initialConditions={initialToothConditions} loadFailed={loadFailed} />
+      : <>{providersUnavailable && canWriteClinical && <p className="mt-3 text-sm text-muted-foreground">The provider directory is unavailable, so new encounters cannot be opened here.</p>}
     {loadFailed ? <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
       <h3 className="mt-5 text-sm font-medium text-muted-foreground">Treatment history</h3>
       {initialEncounters.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No encounters recorded.</p> : <>
@@ -225,6 +231,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, i
       <div className="mt-3 grid gap-6 md:grid-cols-3">
         {RECORD_TYPES.map(({ value, label }) => <MedicalRecordList key={value} label={label} records={initialMedicalRecords.filter((record) => record.recordType === value)} canWrite={canWriteClinical} onAdd={() => setMedicalRecordDialog(value)} onVoid={setVoidRecord} />)}
       </div>
+    </>}
     </>}
     {openEncounterDialog && <OpenEncounterDialog providers={initialProviders} saving={saving} error={error} close={() => setOpenEncounterDialog(false)} save={openEncounter} />}
     {noteDialog && <NoteDialog state={noteDialog} saving={saving} error={error} close={() => setNoteDialog(null)} save={saveNote} />}

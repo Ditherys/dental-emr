@@ -6,6 +6,7 @@ import { hasSharedPatientPermission } from "@/lib/authorization/policy";
 import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
+import { OdontogramServiceError, listToothConditions } from "@/lib/odontogram/service";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
 import { listProviders } from "@/lib/providers/data";
@@ -55,17 +56,19 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
   const canWriteClinical = hasSharedPatientPermission(state, "patient.clinical.write");
   let clinicalEncounters: Awaited<ReturnType<typeof listClinicalEncounters>> = [];
   let medicalRecords: Awaited<ReturnType<typeof listPatientMedicalRecords>> = [];
+  let toothConditions: Awaited<ReturnType<typeof listToothConditions>> = [];
   let clinicalLoadFailed = false;
   let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
   let clinicalProvidersUnavailable = false;
   if (canReadClinical) {
     try {
-      [clinicalEncounters, medicalRecords] = await Promise.all([
+      [clinicalEncounters, medicalRecords, toothConditions] = await Promise.all([
         listClinicalEncounters({ actingBranchId, patientId }),
         listPatientMedicalRecords({ actingBranchId, patientId }),
+        listToothConditions({ actingBranchId, patientId }),
       ]);
     } catch (error) {
-      if (!(error instanceof ClinicalServiceError || error instanceof AuthorizationError)) throw error;
+      if (!(error instanceof ClinicalServiceError || error instanceof OdontogramServiceError || error instanceof AuthorizationError)) throw error;
       clinicalLoadFailed = true;
     }
     try { clinicalProviders = await listProviders({ actingBranchId }); }
@@ -74,5 +77,5 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
       clinicalProvidersUnavailable = true;
     }
   }
-  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} canReadClinical={canReadClinical} canWriteClinical={canWriteClinical} initialClinicalEncounters={clinicalEncounters} initialMedicalRecords={medicalRecords} initialProviders={clinicalProviders} clinicalLoadFailed={clinicalLoadFailed} clinicalProvidersUnavailable={clinicalProvidersUnavailable} />;
+  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} canReadClinical={canReadClinical} canWriteClinical={canWriteClinical} initialClinicalEncounters={clinicalEncounters} initialMedicalRecords={medicalRecords} initialToothConditions={toothConditions} initialProviders={clinicalProviders} clinicalLoadFailed={clinicalLoadFailed} clinicalProvidersUnavailable={clinicalProvidersUnavailable} />;
 }
