@@ -58,7 +58,7 @@ a review request instead of fake instant availability.
 
 ## Tasks
 
-- [ ] **P13-01: Booking permission + schema**
+- [x] **P13-01: Booking permission + schema**
   - `booking.review` permission + matrix; `PermissionCode` + policy test;
     pgTAP.
   - `booking_requests`: org, branch, requested_procedure (org FK), requested_
@@ -73,14 +73,14 @@ a review request instead of fake instant availability.
     by/reviewed_at, appointment_id (org FK nullable), created_at, version.
     RLS + zero base grants + indexes. pgTAP.
 
-- [ ] **P13-02: Public booking RPCs (anon, defensive)**
+- [x] **P13-02: Public booking RPCs (anon, defensive)**
   - `public_get_available_slots(p_org_slug text, p_procedure_code text default null, p_days_ahead integer default 7)` — anon; resolves org by slug; returns bounded slot starts for website-visible procedures (honoring provider availability rules, exceptions, ACTIVE reservations INCLUDING HOLD kind, minus a configurable lead buffer); never returns patient/internal data; limit 50; window <= 30 days. Zero clinical data.
   - `public_submit_booking_request(p_org_slug text, p_payload jsonb)` — anon; minimal allowlist (firstName, lastName, birthDate, mobile, email nullable, requestedProcedureCode, requestedProviderId nullable, requestedStartsAt, idempotencyKey, acquisitionSourceCode nullable); validates fields/bounds; resolves org by slug + active branch (first active branch); expires stale ACTIVE holds for the requested provider/slot; for instant-bookable procedures acquires a 5-minute ACTIVE HOLD reservation (exclusion backstop) and creates SUBMITTED; for request-only/specialist procedures creates SUBMITTED with NO hold; returns {requestId, managementToken (plaintext once), status}; idempotent by key; per-key active-hold cap; audit NOT applicable (anonymous) — instead the request row itself is the record; no patient search.
   - `public_get_booking_status(p_request_id uuid, p_management_token_hash text)` — anon; matches stored hash; returns bounded status + appointment state if CONVERTED; no PII beyond first/last name initial? Keep it minimal: status + created_at + appointment status if converted. No full PII.
   - `public_cancel_booking_request(p_request_id uuid, p_management_token_hash text)` — anon; SUBMITTED → CANCELLED-equivalent (add CANCELLED to the status domain) and releases any ACTIVE hold.
   - Terminal grants: these 4 → anon + authenticated; nothing else anon. pgTAP (no-leakage, idempotency, double-book rejection via exclusion, stale-hold expiry, request-only no-hold, token hash only, minimal fields).
 
-- [ ] **P13-03: Staff review RPCs**
+- [x] **P13-03: Staff review RPCs**
   - `private.has_booking_review_permission_at_branch(acting_branch_id, code)`
     helper.
   - `list_booking_requests(acting_branch_id, status)` — booking.review gated;
@@ -100,7 +100,7 @@ a review request instead of fake instant availability.
     hold→appointment reservation conversion; decline releases hold; spam;
     audit; tenant isolation.
 
-- [ ] **P13-04: Server services + staff UI + website booking UI**
+- [x] **P13-04: Server services + staff UI + website booking UI**
   - `src/lib/booking/` service layer (schemas/types/errors/service for public +
     staff RPCs) + offline tests.
   - Staff `/booking-requests` page (booking.review gated): review queue
@@ -113,7 +113,7 @@ a review request instead of fake instant availability.
     procedures show "we'll review" instead of slots; no patient search; mobile-
     first. Tests assert NO clinical data and minimal-fields-only.
 
-- [ ] **P13-05: Integration verification + phase review**
+- [x] **P13-05: Integration verification + phase review**
 
 ## Explicitly deferred
 

@@ -1,7 +1,47 @@
-# AI Handoff - Phase 12 complete, Phase 13 next
+# AI Handoff - Phase 13 complete, Phase 14 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 13 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 13 (Website Booking Integration — highest-risk public surface) complete
+through commit `a46ee97` (P13-04 booking services + staff/website UI) with
+`docs/plans/013-website-booking.md` P13-01..P13-05 all `[x]`.
+
+- P13-01 `dd62830` booking.review permission (OWNER/ADMIN/RECEPTIONIST) +
+  booking_requests table (minimal fields, SHA-256 token hash only, idempotency
+  unique key, referral_payload bounded, status incl. CANCELLED).
+  P13-02/03 `de0a801` 4 anon-granted public RPCs (available_slots, submit,
+  status, cancel) + 3 staff RPCs (list/review). Holds = ACTIVE provider_
+  reservations kind HOLD with 5-min expires_at (P6 constraint altered to allow
+  ACTIVE-HOLD expiry; ACTIVE non-HOLD still never expires) under the exclusion
+  backstop; stale-hold expiry by state transition; REQUEST_ONLY → no hold;
+  token plaintext once + hash stored; review APPROVE converts to a real
+  appointment + patient match/create + hold→APPOINTMENT reservation conversion,
+  and the existing P8/P9 triggers fire (automation follows same domain events).
+  **Deadlock in concurrent same-slot submissions was found by the new
+  booking_double_book concurrency probe and fixed with a per-(org,provider)
+  pg_advisory_xact_lock**; probe now passes (one wins, one SLOT_UNAVAILABLE,
+  exactly one HOLD).
+- P13-04 `a46ee97` src/lib/booking services + /booking-requests staff board +
+  /book public page + /api/public/booking(+slots) route handlers; minimal
+  allowlist (strict), no clinical data (test-proven), token shown once.
+- Acceptance criteria met: website+reception cannot double book (exclusion +
+  advisory lock + concurrency probe); online appointment appears immediately in
+  EMR (conversion creates real appointment in-transaction); calendar automation
+  follows same domain events (triggers fire); minimal patient info only; request-
+  only procedures create a review request (no fake slot).
+- Inventory: 96 migration files, 33 grant terminals, 132 approved privileges
+  (incl. 5 deliberate anon grants); 54 pgTAP suites + 5 concurrency probes
+  (incl. booking double-book); tables 47, functions 162, security-definer 137;
+  unit 94 files / 956 tests; scripts 279.
+
+**Next:** Phase 14 (Clinical Notes & Dental EMR) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 14. Author bounded plan docs/plans/014-clinical-notes.md then execute
+P14-01.. .
+
+## Phase 13 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 12 checkpoint (2026-08-27) - ACCEPTED
 
