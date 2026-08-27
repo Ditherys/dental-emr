@@ -209,6 +209,18 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.create_tooth_condition(uuid, uuid, text, text, text, text, text)",
     "public.void_tooth_condition(uuid, uuid, integer, text)",
     "public.list_tooth_conditions(uuid, uuid, boolean)",
+    "public.create_treatment_plan(uuid, uuid, text)",
+    "public.update_treatment_plan(uuid, uuid, integer, text)",
+    "public.present_treatment_plan(uuid, uuid, integer)",
+    "public.acknowledge_treatment_plan(uuid, uuid, integer)",
+    "public.add_treatment_plan_item(uuid, uuid, integer, uuid, text, text, numeric)",
+    "public.update_treatment_plan_item(uuid, uuid, uuid, integer, uuid, text, text, numeric)",
+    "public.remove_treatment_plan_item(uuid, uuid, uuid, integer)",
+    "public.add_treatment_plan_alternative(uuid, uuid, integer, text)",
+    "public.add_treatment_plan_discussion(uuid, uuid, uuid, text, text)",
+    "public.save_treatment_plan_drawing(uuid, uuid, integer, jsonb)",
+    "public.list_treatment_plans(uuid, uuid)",
+    "public.get_treatment_plan_detail(uuid, uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1307,7 +1319,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(131);
+    expect(approved.size).toBe(143);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

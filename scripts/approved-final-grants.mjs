@@ -467,6 +467,24 @@ const odontogramRpcGrants = Object.freeze([
   "public.list_tooth_conditions(uuid,uuid,boolean)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only odontogram/dental-chart boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projection). Conditions carry validated FDI tooth codes and bounded vocabularies, are versioned, and are voided rather than deleted; terminal COMPLETED/REFERRED rows are kept as history and refused for voiding. Every mutation appends one atomic bounded-metadata audit event while the list writes none." })));
 
+const TREATMENT_PLAN_RPCS_GRANTS_MIGRATION =
+  "20260827013401_treatment_plan_rpcs_grants.sql";
+
+const treatmentPlanRpcGrants = Object.freeze([
+  "public.create_treatment_plan(uuid,uuid,text)",
+  "public.update_treatment_plan(uuid,uuid,integer,text)",
+  "public.present_treatment_plan(uuid,uuid,integer)",
+  "public.acknowledge_treatment_plan(uuid,uuid,integer)",
+  "public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)",
+  "public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)",
+  "public.remove_treatment_plan_item(uuid,uuid,uuid,integer)",
+  "public.add_treatment_plan_alternative(uuid,uuid,integer,text)",
+  "public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)",
+  "public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)",
+  "public.list_treatment_plans(uuid,uuid)",
+  "public.get_treatment_plan_detail(uuid,uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only treatment-plan clinical boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Plans are versioned with an immutable PRESENTED/ACKNOWLEDGED state backed by a database trigger; discussions are append-only on any status and always capture provider, time, and context. Every mutation appends one atomic opaque audit event while the read projections write none." })));
+
 const clinicalRpcGrants = Object.freeze([
   "public.create_clinical_encounter(uuid,uuid,uuid,uuid)",
   "public.create_clinical_note(uuid,uuid,text,text)",
@@ -883,6 +901,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: ODONTOGRAM_RPCS_GRANTS_MIGRATION,
     grants: odontogramRpcGrants,
+  }),
+  Object.freeze({
+    file: TREATMENT_PLAN_RPCS_GRANTS_MIGRATION,
+    grants: treatmentPlanRpcGrants,
   }),
 ]);
 

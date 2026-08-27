@@ -304,6 +304,8 @@ const expectedSuites = [
       "specialist_request_rpcs.test.sql",
 "specialist_requests_foundation.test.sql",
       "tooth_conditions.test.sql",
+      "treatment_plan_rpcs.test.sql",
+      "treatment_plans.test.sql",
       "workforce_invitations.test.sql",
     ];
     const onDisk = readdirSync(testsDirectory)
