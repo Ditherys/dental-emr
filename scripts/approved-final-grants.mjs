@@ -455,6 +455,25 @@ const specialistRequestRpcGrants = Object.freeze([
   "public.list_specialist_requests(uuid,text)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only visiting/on-call specialist request boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live specialist.request. Requests carry only a minimal bounded non-clinical case summary; responses are SENT-only forward transitions by the requested provider linked user or an org role.manage holder; acceptance assigns the SPECIALIST provider and enqueues the existing calendar-sync CREATE and communication automation inside the same transaction; the list is a bounded 200-row projection exposing only the case summary." })));
 
+const CLINICAL_RPCS_GRANTS_MIGRATION =
+  "20260827013001_clinical_rpcs_grants.sql";
+
+const clinicalRpcGrants = Object.freeze([
+  "public.create_clinical_encounter(uuid,uuid,uuid,uuid)",
+  "public.create_clinical_note(uuid,uuid,text,text)",
+  "public.update_clinical_note(uuid,uuid,integer,text)",
+  "public.finalize_clinical_note(uuid,uuid,integer)",
+  "public.amend_clinical_note(uuid,uuid,integer,text)",
+  "public.finalize_clinical_encounter(uuid,uuid,integer)",
+  "public.create_patient_medical_record(uuid,uuid,text,jsonb)",
+  "public.void_patient_medical_record(uuid,uuid,integer)",
+  "public.list_clinical_encounters(uuid,uuid)",
+  "public.get_clinical_encounter_detail(uuid,uuid)",
+  "public.list_patient_medical_records(uuid,uuid,text)",
+  "public.create_prescription(uuid,uuid,jsonb)",
+  "public.finalize_prescription(uuid,uuid,integer)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
+
 const DOCUMENT_RPCS_GRANTS_MIGRATION =
   "20260827012201_document_rpcs_grants.sql";
 
@@ -847,6 +866,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: BOOKING_REVIEW_RPCS_GRANTS_MIGRATION,
     grants: bookingReviewRpcGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_RPCS_GRANTS_MIGRATION,
+    grants: clinicalRpcGrants,
   }),
 ]);
 

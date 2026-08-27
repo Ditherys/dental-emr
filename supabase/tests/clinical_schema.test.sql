@@ -1,0 +1,106 @@
+begin;
+
+select extensions.no_plan();
+
+-- Synthetic-only P14-02 graph. Direct inserts as the owner bypass RLS; the
+-- schema is deny-by-default with zero base grants and no browser policies.
+insert into public.organizations (id, legal_name, business_name, slug) values
+  ('b7200000-0000-0000-0000-000000000001','P1402 Synthetic A Inc.','P1402 A','p1402-a');
+insert into public.branches (id, organization_id, name, slug, code, address_line1, city, province) values
+  ('b7300000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','P1402 A Main','p1402-a-main','P1402-A','1 Synthetic St','Test City','Test Province');
+insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
+  ('b7500000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','P1402-A-1','Patient','A',date '1990-01-01','b7300000-0000-0000-0000-000000000001');
+insert into public.providers (id, organization_id, first_name, last_name, provider_type) values
+  ('c9100000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','Dentist','A1','REGULAR');
+insert into public.provider_branches (organization_id, provider_id, branch_id, is_active) values
+  ('b7200000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001',true);
+
+select extensions.columns_are('public','clinical_encounters',array['id','organization_id','branch_id','patient_id','appointment_id','treating_provider_id','status','version','created_by','created_at','updated_at','finalized_at'],'clinical_encounters has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.clinical_encounters'::regclass),'clinical_encounters has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.clinical_encounters',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no clinical_encounters privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='clinical_encounters'),0,'clinical_encounters is deny-by-default with no browser policies');
+select extensions.is((select count(*)::integer from pg_indexes where schemaname='public' and tablename='clinical_encounters' and indexname='clinical_encounters_organization_patient_status_idx'),1,'clinical_encounters indexes the org+patient+status access path');
+select extensions.is((select count(*)::integer from pg_indexes where schemaname='public' and tablename='clinical_encounters' and indexname='clinical_encounters_organization_branch_status_idx'),1,'clinical_encounters indexes the org+branch+status access path');
+
+select extensions.columns_are('public','clinical_notes',array['id','organization_id','encounter_id','parent_note_id','note_type','content','status','finalized_at','created_by','version','created_at','updated_at'],'clinical_notes has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.clinical_notes'::regclass),'clinical_notes has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.clinical_notes',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no clinical_notes privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='clinical_notes'),0,'clinical_notes is deny-by-default with no browser policies');
+
+select extensions.columns_are('public','patient_medical_conditions',array['id','organization_id','patient_id','condition_name','status','onset_date','resolved_date','notes','recorded_by','recorded_at','voided_at','version'],'patient_medical_conditions has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.patient_medical_conditions'::regclass),'patient_medical_conditions has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.patient_medical_conditions',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no patient_medical_conditions privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='patient_medical_conditions'),0,'patient_medical_conditions is deny-by-default with no browser policies');
+
+select extensions.columns_are('public','patient_allergies',array['id','organization_id','patient_id','allergen','reaction','severity','status','recorded_by','recorded_at','voided_at','version'],'patient_allergies has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.patient_allergies'::regclass),'patient_allergies has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.patient_allergies',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no patient_allergies privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='patient_allergies'),0,'patient_allergies is deny-by-default with no browser policies');
+
+select extensions.columns_are('public','patient_medications',array['id','organization_id','patient_id','medication_name','dose','frequency','status','start_date','end_date','notes','recorded_by','recorded_at','voided_at','version'],'patient_medications has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.patient_medications'::regclass),'patient_medications has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.patient_medications',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no patient_medications privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='patient_medications'),0,'patient_medications is deny-by-default with no browser policies');
+
+select extensions.columns_are('public','prescriptions',array['id','organization_id','encounter_id','patient_id','provider_id','items','status','finalized_at','created_by','version','created_at','updated_at'],'prescriptions has only the approved P14-02 fields');
+select extensions.ok((select relrowsecurity from pg_class where oid = 'public.prescriptions'::regclass),'prescriptions has RLS enabled');
+select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.prescriptions',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no prescriptions privileges');
+select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='prescriptions'),0,'prescriptions is deny-by-default with no browser policies');
+
+select extensions.ok(not exists (
+  select 1 from pg_proc as proc
+  where proc.oid in (
+    'private.protect_finalized_clinical_note()'::regprocedure,
+    'private.validate_clinical_note_amendment_scope()'::regprocedure,
+    'private.protect_finalized_prescription()'::regprocedure
+  ) and (
+    has_function_privilege('public', proc.oid, 'execute')
+    or has_function_privilege('anon', proc.oid, 'execute')
+    or has_function_privilege('authenticated', proc.oid, 'execute')
+    or has_function_privilege('service_role', proc.oid, 'execute')
+  )
+),'the three clinical immutability/amendment trigger functions are revoked from every role');
+select extensions.is((select count(*)::integer from pg_proc where oid in ('private.protect_finalized_clinical_note()'::regprocedure,'private.validate_clinical_note_amendment_scope()'::regprocedure,'private.protect_finalized_prescription()'::regprocedure) and proconfig = array['search_path=""']::text[]),3,'the three clinical trigger functions pin an empty search path');
+
+select extensions.lives_ok($$insert into public.clinical_encounters (id,organization_id,branch_id,patient_id,treating_provider_id,status) values ('d7100000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','OPEN')$$,'an OPEN encounter is accepted with an org-scoped provider and branch');
+select extensions.is((select status from public.clinical_encounters where id='d7100000-0000-0000-0000-000000000001'),'OPEN','encounters default to OPEN at version one');
+select extensions.throws_ok($$insert into public.clinical_encounters (organization_id,branch_id,patient_id,treating_provider_id,status,finalized_at) values ('b7200000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','FINALIZED',null)$$,'23514',null,'a FINALIZED encounter requires finalized_at');
+select extensions.throws_ok($$insert into public.clinical_encounters (organization_id,branch_id,patient_id,treating_provider_id,status) values ('b7200000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','LOCKED')$$,'23514',null,'encounter status is bounded to OPEN/FINALIZED');
+
+select extensions.lives_ok($$insert into public.clinical_notes (id,organization_id,encounter_id,note_type,content,status) values ('d7200000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','PROGRESS','Initial exam findings.','DRAFT')$$,'a DRAFT note is accepted on an OPEN encounter');
+select extensions.lives_ok($$update public.clinical_notes set content='Updated draft findings.', version=2 where id='d7200000-0000-0000-0000-000000000001'$$,'a DRAFT note remains editable');
+select extensions.lives_ok($$update public.clinical_notes set status='FINALIZED', finalized_at=statement_timestamp(), version=3 where id='d7200000-0000-0000-0000-000000000001'$$,'a DRAFT note transitions to FINALIZED with finalized_at');
+select extensions.throws_ok($$update public.clinical_notes set content='rewrite' where id='d7200000-0000-0000-0000-000000000001'$$,'23514','finalized clinical notes are immutable; create an amendment','a FINALIZED note rejects UPDATE by the immutable trigger');
+select extensions.throws_ok($$delete from public.clinical_notes where id='d7200000-0000-0000-0000-000000000001'$$,'23514','finalized clinical notes are immutable; create an amendment','a FINALIZED note rejects DELETE by the immutable trigger');
+select extensions.throws_ok($$insert into public.clinical_notes (organization_id,encounter_id,note_type,content,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','PROGRESS',repeat('n',20001),'DRAFT')$$,'23514',null,'note content is bounded to 20000 characters');
+select extensions.throws_ok($$insert into public.clinical_notes (organization_id,encounter_id,note_type,content,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','PROGRESS','   ','DRAFT')$$,'23514',null,'blank note content is rejected');
+select extensions.throws_ok($$insert into public.clinical_notes (organization_id,encounter_id,note_type,content,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','AMENDMENT','An amendment.','FINALIZED')$$,'23514',null,'an AMENDMENT note without a parent is rejected');
+
+select extensions.lives_ok($$insert into public.clinical_notes (id,organization_id,encounter_id,note_type,content,status) values ('d7200000-0000-0000-0000-000000000003','b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','PROGRESS','Draft under review.','DRAFT')$$,'a second DRAFT note is accepted for the amendment-scope probe');
+select extensions.throws_ok($$insert into public.clinical_notes (organization_id,encounter_id,parent_note_id,note_type,content,status,finalized_at) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000003','AMENDMENT','Amendment of a draft.','FINALIZED',statement_timestamp())$$,'23514','amendment parent must be finalized','an AMENDMENT child of a DRAFT parent is rejected by the amendment-scope trigger');
+select extensions.lives_ok($$insert into public.clinical_encounters (id,organization_id,branch_id,patient_id,treating_provider_id,status) values ('d7100000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','OPEN')$$,'a second encounter is accepted for the cross-encounter parent probe');
+select extensions.throws_ok($$insert into public.clinical_notes (organization_id,encounter_id,parent_note_id,note_type,content,status,finalized_at) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000002','d7200000-0000-0000-0000-000000000001','AMENDMENT','Amendment across encounters.','FINALIZED',statement_timestamp())$$,'23514','amendment parent must belong to the same encounter','an AMENDMENT child whose parent belongs to another encounter is rejected');
+select extensions.lives_ok($$insert into public.clinical_notes (id,organization_id,encounter_id,parent_note_id,note_type,content,status,finalized_at) values ('d7200000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000001','AMENDMENT','Amendment of the finalized note.','FINALIZED',statement_timestamp())$$,'a FINALIZED AMENDMENT child of a FINALIZED parent is accepted in the same encounter');
+select extensions.ok((select content='Updated draft findings.' from public.clinical_notes where id='d7200000-0000-0000-0000-000000000001'),'the amended parent note keeps its original content unchanged');
+select extensions.ok((select parent_note_id='d7200000-0000-0000-0000-000000000001' and status='FINALIZED' and version=1 from public.clinical_notes where id='d7200000-0000-0000-0000-000000000002'),'the AMENDMENT child stores the parent link and is finalized directly');
+
+select extensions.lives_ok($$insert into public.prescriptions (id,organization_id,encounter_id,patient_id,provider_id,items,status) values ('d7300000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','[{"medicationName":"Amoxicillin","dosage":"500mg","frequency":"3x daily"}]'::jsonb,'DRAFT')$$,'a DRAFT prescription is accepted for an encounter');
+select extensions.lives_ok($$update public.prescriptions set status='FINALIZED', finalized_at=statement_timestamp(), version=2 where id='d7300000-0000-0000-0000-000000000001'$$,'a DRAFT prescription transitions to FINALIZED');
+select extensions.throws_ok($$update public.prescriptions set items='[{"medicationName":"Other"}]'::jsonb where id='d7300000-0000-0000-0000-000000000001'$$,'23514','finalized prescriptions are immutable; create a new prescription','a FINALIZED prescription rejects UPDATE by the immutable trigger');
+select extensions.throws_ok($$delete from public.prescriptions where id='d7300000-0000-0000-0000-000000000001'$$,'23514','finalized prescriptions are immutable; create a new prescription','a FINALIZED prescription rejects DELETE by the immutable trigger');
+select extensions.throws_ok($$insert into public.prescriptions (organization_id,encounter_id,patient_id,provider_id,items,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','[{"medicationName":"A"}]'::jsonb,'FINALIZED')$$,'23514',null,'a FINALIZED prescription requires finalized_at');
+select extensions.throws_ok($$insert into public.prescriptions (organization_id,encounter_id,patient_id,provider_id,items,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','{"medicationName":"Not an array"}'::jsonb,'DRAFT')$$,'23514',null,'prescription items must be a JSON array');
+select extensions.throws_ok($$insert into public.prescriptions (organization_id,encounter_id,patient_id,provider_id,items,status) values ('b7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001',('[' || repeat('{"medicationName":"A"},',1200) || '{"medicationName":"B"}]')::jsonb,'DRAFT')$$,'23514',null,'prescription items are bounded to 16KB');
+
+select extensions.lives_ok($$insert into public.patient_medical_conditions (id,organization_id,patient_id,condition_name,status) values ('d7400000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Hypertension','active')$$,'an active medical condition is accepted');
+select extensions.throws_ok($$insert into public.patient_medical_conditions (organization_id,patient_id,condition_name,status,voided_at) values ('b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Hypertension','active',statement_timestamp())$$,'23514',null,'a voided_at stamp requires the voided status');
+select extensions.throws_ok($$insert into public.patient_medical_conditions (organization_id,patient_id,condition_name,status) values ('b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Hypertension','voided')$$,'23514',null,'the voided status requires voided_at');
+select extensions.lives_ok($$update public.patient_medical_conditions set status='voided', voided_at=statement_timestamp(), version=2 where id='d7400000-0000-0000-0000-000000000001'$$,'voiding a condition row stamps voided_at and flips status');
+select extensions.lives_ok($$insert into public.patient_allergies (organization_id,patient_id,allergen,severity) values ('b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Penicillin','SEVERE')$$,'an allergy with a bounded severity is accepted');
+select extensions.throws_ok($$insert into public.patient_allergies (organization_id,patient_id,allergen,severity) values ('b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Penicillin','MILD_BUT_WRONG')$$,'23514',null,'allergy severity is bounded to MILD/MODERATE/SEVERE');
+select extensions.lives_ok($$insert into public.patient_medications (organization_id,patient_id,medication_name,dose,frequency) values ('b7200000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Metformin','500mg','twice daily')$$,'a medication with bounded dose/frequency is accepted');
+
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;
+
+rollback;
