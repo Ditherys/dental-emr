@@ -464,6 +464,117 @@ const documentRpcGrants = Object.freeze([
   "public.get_document_snapshot(uuid,uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only document generation and read boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live document.generate (generate_document) or document.view (list/get snapshot). generate_document builds the immutable data snapshot server-side from only the authorized, allowlisted patient record sections and appends one audit event; list is a bounded 100-row projection without the snapshot body; get_document_snapshot returns the exact stored snapshot for reproducible re-render." })));
 
+const BOOKING_PUBLIC_RPCS_GRANTS_MIGRATION =
+  "20260827012601_booking_public_rpcs_grants.sql";
+
+const bookingPublicRpcGrants = Object.freeze([
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_get_available_slots(text,text,integer)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 2 of 5 (P13-02): unauthenticated visitors must read deterministic slot starts. It is SECURITY DEFINER with an empty search_path, requires no auth at all, resolves the active organization by slug plus its first website-visible branch, and returns only bounded (starts_at, ends_at) times for website-visible instant-bookable procedures with zero patient, clinical, or internal data.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_get_available_slots(text,text,integer)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous slot-read is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_submit_booking_request(text,jsonb)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 3 of 5 (P13-02): unauthenticated visitors must submit a minimal booking request. It accepts exactly the allowlisted keys with bounded values, validates every referenced tenant object server-side, stores only a SHA-256 management-token hash, acquires a 5-minute ACTIVE HOLD provider reservation for instant-bookable procedures under the exclusion backstop, and creates no clinical patient record or audit event.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_submit_booking_request(text,jsonb)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous submission is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_get_booking_status(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 4 of 5 (P13-02): status lookup matched by the stored management-token hash, returning only request id, status, created_at, and a converted flag. An unknown request or wrong hash returns no row, so it leaks neither existence nor any patient or clinical data.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_get_booking_status(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous status lookup is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+  {
+    grantee: "anon",
+    objectClass: "function",
+    object: "public.public_cancel_booking_request(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Deliberate public surface 5 of 5 (P13-02): anonymous cancellation matched by the stored management-token hash, moving a SUBMITTED/UNDER_REVIEW request to CANCELLED and releasing its ACTIVE HOLD provider reservation. A wrong or missing hash is denied indistinguishably from an unknown request and no audit event is written.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.public_cancel_booking_request(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The same bounded anonymous cancellation is also callable by signed-in users; the SECURITY DEFINER body performs no authentication-dependent branching.",
+  },
+]);
+
+const BOOKING_REVIEW_RPCS_GRANTS_MIGRATION =
+  "20260827012701_booking_review_rpcs_grants.sql";
+
+const bookingReviewRpcGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "private.has_booking_review_permission_at_branch(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The booking.review permission helper. It is granted to authenticated so a Data API session may evaluate it directly if ever needed, mirroring the private RLS-helper grant pattern; private schema USAGE remains revoked so it is not reachable as a public RPC, and the staff review RPCs call it inside their SECURITY DEFINER bodies.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.list_booking_requests(uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The booking.review-gated bounded 200-row review queue. It derives the organization from an active authenticated acting branch, requires live booking.review, filters to the acting organization and branch, and returns only the minimal submitted demographic fields and request labels -- never management_token_hash, referral_payload, or clinical data -- writing no audit event.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.review_booking_request(uuid,uuid,integer,text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only booking review mutation. It requires live booking.review at the acting branch, locks the request row with an optimistic version, and on APPROVE converts the request to a real appointment in the same transaction (resolving or minimally creating the patient server-side with demographics-write only when needed, converting the ACTIVE HOLD reservation to an APPOINTMENT reservation, and letting the existing appointment automation triggers fire) while DECLINE/SPAM release the hold. Each action appends one booking.request.reviewed audit event with bounded action metadata.",
+  },
+]);
+
 const SITE_RPCS_GRANTS_MIGRATION =
   "20260827012401_site_rpcs_grants.sql";
 
@@ -484,7 +595,7 @@ const siteRpcGrants = Object.freeze([
     privilege: "execute",
     columns: [],
     reason:
-      "THE SINGLE DELIBERATE PUBLIC GRANT in the entire system (plan 012 / P12-02): a public clinic website must be readable by unauthenticated visitors. This is the ONLY anon-reachable function and it returns only the bounded website-safe projection above, so the public surface cannot expose clinical or patient data.",
+      "The first deliberate public grant in the system (plan 012 / P12-02): a public clinic website must be readable by unauthenticated visitors. It returns only the bounded website-safe projection above, so the public surface cannot expose clinical or patient data. P13-02 adds the four booking RPCs as the second deliberate public surface.",
   },
   {
     grantee: "authenticated",
@@ -728,6 +839,14 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: SITE_RPCS_GRANTS_MIGRATION,
     grants: siteRpcGrants,
+  }),
+  Object.freeze({
+    file: BOOKING_PUBLIC_RPCS_GRANTS_MIGRATION,
+    grants: bookingPublicRpcGrants,
+  }),
+  Object.freeze({
+    file: BOOKING_REVIEW_RPCS_GRANTS_MIGRATION,
+    grants: bookingReviewRpcGrants,
   }),
 ]);
 

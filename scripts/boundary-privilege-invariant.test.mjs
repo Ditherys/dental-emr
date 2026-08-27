@@ -186,6 +186,13 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.get_public_site(text)",
     "public.get_public_site_settings(uuid)",
     "public.update_public_site_settings(uuid, integer, jsonb)",
+    "public.public_get_available_slots(text, text, integer)",
+    "public.public_submit_booking_request(text, jsonb)",
+    "public.public_get_booking_status(uuid, text)",
+    "public.public_cancel_booking_request(uuid, text)",
+    "private.has_booking_review_permission_at_branch(uuid, text)",
+    "public.list_booking_requests(uuid, text)",
+    "public.review_booking_request(uuid, uuid, integer, text, text)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -197,6 +204,34 @@ const APPROVED_FINAL_PRIVILEGES = [
     grantee: "anon",
     object_class: "function",
     object: "public.get_public_site(text)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_get_available_slots(text, text, integer)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_submit_booking_request(text, jsonb)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_get_booking_status(uuid, text)",
+    privilege: "execute",
+    column: null,
+  },
+  {
+    grantee: "anon",
+    object_class: "function",
+    object: "public.public_cancel_booking_request(uuid, text)",
     privilege: "execute",
     column: null,
   },
@@ -1256,7 +1291,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(104);
+    expect(approved.size).toBe(115);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

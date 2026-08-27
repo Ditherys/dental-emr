@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-expect(result.checked.files).toBe(92);
+expect(result.checked.files).toBe(96);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -341,7 +341,7 @@ expect(result.checked.files).toBe(92);
       created.filter((statement) => statement.objectClass === objectClass).length;
 
 expect(count("table")).toBe(47);
-    expect(count("function")).toBe(154);
+    expect(count("function")).toBe(162);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -349,7 +349,7 @@ expect(count("table")).toBe(47);
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(130);
+    ).toBe(137);
     expect(
       created.filter(
         (statement) =>
@@ -690,20 +690,52 @@ describe("the approved final privilege set", () => {
     ]);
   });
 
-  it("grants anon and PUBLIC exactly the one deliberate public-site exception", () => {
+  it("grants anon and PUBLIC exactly the five deliberate public RPCs", () => {
     const exposed = TERMINAL_MIGRATIONS.flatMap((terminal) => terminal.grants).filter(
       (grant) => ["anon", "public"].includes(grant.grantee),
     );
 
-    // P12-02: get_public_site is the single deliberate unauthenticated surface
-    // (plan 012). It is SECURITY DEFINER, returns only the bounded
-    // website-safe projection, and is the ONLY anon-reachable function in the
-    // whole system; PUBLIC still holds nothing at all.
+    // P12-02 get_public_site plus P13-02's four booking RPCs are the five
+    // deliberate public surfaces (plans 012/013). They are SECURITY DEFINER,
+    // return only the bounded public projections, and PUBLIC still holds
+    // nothing at all.
     expect(exposed).toEqual([
       {
         grantee: "anon",
         objectClass: "function",
         object: "public.get_public_site(text)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_get_available_slots(text,text,integer)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_submit_booking_request(text,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_get_booking_status(uuid,text)",
+        privilege: "execute",
+        columns: [],
+        reason: expect.any(String),
+      },
+      {
+        grantee: "anon",
+        objectClass: "function",
+        object: "public.public_cancel_booking_request(uuid,text)",
         privilege: "execute",
         columns: [],
         reason: expect.any(String),
