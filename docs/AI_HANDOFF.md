@@ -1,7 +1,42 @@
-# AI Handoff - Phase 21 complete, Phase 22 next
+# AI Handoff - Phase 22 complete, Phase 23 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 22 checkpoint (2026-08-27) - ACCEPTED (boundary only)
+
+Phase 22 (Messenger Integration) is complete with
+`docs/plans/022-messenger-integration.md` P22-01..P22-04 all `[x]`. Per
+`MASTER_PRODUCT_PLAN.md` §Phase 22, implementation happens only after Meta
+app/business requirements are understood; they are not yet confirmed, so this
+phase delivered the boundary and gated design, not a live connection.
+
+- `docs/discovery/022-messenger-requirements.md` documents the owner
+  confirmation items, the Meta concepts to verify (app/Page connection, app
+  review, webhook verification, conversation-based messaging rules, opt-in,
+  template approval, patient-initiated conversations), and a bounded design
+  that adds Messenger as a `MESSENGER` channel behind the Phase 8
+  `communications` outbox/history (idempotency, retries, delivery state), uses
+  a single signature-verified webhook with append-only inbound history, keeps
+  only appointment utility content in chat (no clinical text by construction),
+  gates staff handoff server-side by role, and defers the optional guided
+  booking assistant.
+- `docs/decisions/ADR-023-messenger-integration-boundary.md` records the
+  boundary: no implementation in this phase, single communication boundary,
+  no clinical disclosure through chat, no credentials in the repository, and
+  Cloud TEST as the only integration-test target after the owner configures
+  the connection.
+- Implementation gate: owner confirmation + Meta requirements verified + design
+  approved + ADR confirmed + a bounded implementation plan reviewed. This phase
+  made no schema/migration/application change; verification is the review.
+
+**Next:** Phase 23 (Advanced Operations) per `MASTER_PRODUCT_PLAN.md` §Phase
+23. This is explicitly a potential/options list (waitlist automation, HMO,
+advanced finance, patient portal, schedule optimization, no-show prediction).
+Do not implement from a menu: select only items that are confirmed product
+requirements, author a bounded plan per item, and keep each one within the
+approved phase process. Phase 24 (AI/MCP) is gated on a mature
+authorization/audit architecture per the master plan's own wording.
 
 ## Phase 21 checkpoint (2026-08-27) - ACCEPTED (discovery only)
 
