@@ -1,6 +1,6 @@
 # Phase 20 — Analytics
 
-**Status:** Authored 2026-08-27 by the orchestrator under the project owner's
+**Status:** Accepted 2026-08-27 by the orchestrator under the project owner's
 explicit one-pass SDD directive (Phases 4–24). Derived strictly from
 `docs/MASTER_PRODUCT_PLAN.md` §Phase 20 and TECHNICAL_ARCHITECTURE §24. No new
 product requirements are invented.
@@ -50,7 +50,7 @@ booking, provider/resource load, communications, and current low stock.
 
 ## Tasks
 
-- [ ] **P20-01: Analytics contract + query indexes**
+- [x] **P20-01: Analytics contract + query indexes**
   - Update the `analytics.view` description from the Phase 5 acquisition-only
     wording to the accepted operational aggregate scope without changing its
     OWNER/ADMIN role matrix.
@@ -58,7 +58,7 @@ booking, provider/resource load, communications, and current low stock.
     communication, provider-reservation, and resource-reservation aggregation.
   - pgTAP keeps the role matrix exact and proves no new base-table grants.
 
-- [ ] **P20-02: Aggregate analytics RPCs**
+- [x] **P20-02: Aggregate analytics RPCs**
   - `private.has_analytics_permission_at_branch(acting_branch_id)` derives the
     organization from an active branch and requires the existing organization-
     wide analytics permission.
@@ -77,7 +77,7 @@ booking, provider/resource load, communications, and current low stock.
     tenant isolation, forged/foreign branch filters, invalid windows,
     permission denial, bounded rows, and zero patient-level fields.
 
-- [ ] **P20-03: Server service + role-aware operational dashboard**
+- [x] **P20-03: Server service + role-aware operational dashboard**
   - `src/lib/analytics/` strict schemas, safe errors, exact RPC bindings, types,
     and offline tests. Inputs accept no organization identifier.
   - Replace the dashboard placeholder. OWNER/ADMIN users with `analytics.view`
@@ -90,7 +90,7 @@ booking, provider/resource load, communications, and current low stock.
   - 44px controls, loading/error/empty states, and tests for role gating,
     branch/window submission, source/channel distinction, and responsive views.
 
-- [ ] **P20-04: Integration verification + phase review**
+- [x] **P20-04: Integration verification + phase review**
 
 ## Explicitly Deferred
 
@@ -113,3 +113,10 @@ booking, provider/resource load, communications, and current low stock.
 - Full local database reset/provision/test; security migrations/secrets/audit;
   unit/lint/typecheck/build; final tenant/privacy/diff review. Cloud TEST remains
   the deployment gate.
+
+Local acceptance evidence: clean database replay and all 69 pgTAP suites plus
+five concurrency probes passed; migration privilege lint passed for 123
+migrations and 196 exact approved privileges with zero analytics base-table
+grants; 279 script tests and 1,225 unit tests passed; lint, typecheck,
+production build, and `git diff --check` passed. Cloud TEST remains mandatory
+before production deployment or patient use.

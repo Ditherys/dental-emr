@@ -1,7 +1,56 @@
-# AI Handoff - Phase 19 complete, Phase 20 next
+# AI Handoff - Phase 20 complete, Phase 21 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 20 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 20 (Analytics) is complete through commit `9d40360` (P20-03 services +
+role-aware dashboard), with `docs/plans/020-analytics.md` P20-01..P20-04 all
+`[x]`.
+
+- P20-01/02 `b41fdae` broadened the existing OWNER/ADMIN `analytics.view`
+  permission description to the full aggregate scope, added only the tenant/time
+  indexes the query layer needs, and added the private
+  `has_analytics_permission_at_branch` helper plus two SECURITY DEFINER RPCs:
+  `get_operational_analytics_summary(uuid,uuid,integer)` and
+  `list_operational_analytics_breakdown(uuid,uuid,integer)`.
+- Metrics are aggregate-only with exact terminal grants to authenticated and no
+  service-role/anon grant. Definitions: new patients, appointment volume,
+  completion, no-show rate, confirmation rate, acquisition source, initial
+  booking channel, referral activity, website conversion, provider booked load,
+  resource booked load, communication delivery, and current low stock.
+- Provider/resource utilization is reported as booked appointment count and
+  booked minutes, deliberately not a capacity percentage (resource capacity
+  hours are not canonical). The optional branch filter must be an active branch
+  in the acting organization; windows are exactly 30/90/365 days. No patient
+  rows, contact, clinical fields, exports, or read audit events.
+- P20-03 `9d40360` added strict `src/lib/analytics/` schemas/errors/service and
+  replaced the dashboard placeholder with a role-aware page: owners/admins with
+  live analytics.view get the aggregate dashboard (branch/window filters,
+  concise operational summary, dense desktop tables plus intentional phone
+  lists, and metric-definition source trace); other roles get only
+  permission-derived links to already-authorized domain screens and never
+  receive analytics data. Server actions reauthorize analytics.view at the
+  acting branch before loading.
+- Acceptance criteria met: metric definitions documented and consistent; every
+  metric traces to canonical source tables; acquisition source and initial
+  booking channel stay independent dimensions; analytics access is enforced in
+  server code and PostgreSQL.
+- Inventory: 123 migration files, 43 grant terminals, 196 approved privileges;
+  tables 69, function declarations 241, SECURITY DEFINER declarations 205;
+  unit 119 files / 1,225 tests; scripts 279; 69 pgTAP suites + 5 concurrency
+  probes.
+- Verification: clean local reset/provision plus all pgTAP/concurrency suites
+  passed; migration/security/secrets/audit gates passed; unit, scripts, lint,
+  typecheck, build, and `git diff --check` passed. Cloud TEST remains the
+  deployment gate.
+
+**Next:** Phase 21 (Billing Enhancement / BIR-Compliant Invoicing Discovery) per
+`docs/MASTER_PRODUCT_PLAN.md` §Phase 21. This is a discovery phase: confirm the
+clinic taxpayer/system status and accountant/BIR rules and document requirements
+before designing compliant invoice numbering/data/reporting; do not build
+regulated invoice functionality from assumptions.
 
 ## Phase 19 checkpoint (2026-08-27) - ACCEPTED
 
