@@ -27,6 +27,7 @@ const router = { refresh: vi.fn() };
 
 vi.mock("./actions", () => actions);
 vi.mock("./files/actions", () => fileActions);
+vi.mock("./clinical-section", () => ({ ClinicalSection: () => <div data-testid="clinical-section" /> }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import { PatientWorkspace } from "./patient-workspace";
@@ -63,6 +64,14 @@ function renderWorkspace() {
   );
 }
 
+function renderClinicalWorkspace() {
+  return render(
+    <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
+      <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit canReadClinical canWriteClinical />
+    </BranchContextProvider>,
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   Object.values(actions).forEach((action) => action.mockResolvedValue({ ok: true }));
@@ -83,6 +92,14 @@ describe("PatientWorkspace", () => {
     expect(screen.getByText("Google Search")).toBeVisible();
     expect(screen.getByText(/Legal guardian/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Clinical" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("clinical-section")).not.toBeInTheDocument();
+  });
+
+  it("shows the Clinical section only to users with clinical read", () => {
+    renderClinicalWorkspace();
+
+    expect(screen.getByRole("link", { name: "Clinical" })).toBeVisible();
+    expect(screen.getByTestId("clinical-section")).toBeInTheDocument();
   });
 
   it("keeps a duplicate demographics edit for explicit confirmation and preserves it when cancelled", async () => {

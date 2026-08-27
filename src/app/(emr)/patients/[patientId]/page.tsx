@@ -3,10 +3,13 @@ import type { Metadata } from "next";
 import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasSharedPatientPermission } from "@/lib/authorization/policy";
+import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
+import { listProviders } from "@/lib/providers/data";
+import { ProviderServiceError } from "@/lib/providers/service";
 
 import { PatientWorkspace } from "./patient-workspace";
 
@@ -48,5 +51,28 @@ export default async function PatientPage({ params }: { params: Promise<{ patien
     if (!(error instanceof AcquisitionServiceError || error instanceof AuthorizationError)) throw error;
     referralsUnavailable = true;
   }
-  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} />;
+  const canReadClinical = hasSharedPatientPermission(state, "patient.clinical.read");
+  const canWriteClinical = hasSharedPatientPermission(state, "patient.clinical.write");
+  let clinicalEncounters: Awaited<ReturnType<typeof listClinicalEncounters>> = [];
+  let medicalRecords: Awaited<ReturnType<typeof listPatientMedicalRecords>> = [];
+  let clinicalLoadFailed = false;
+  let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
+  let clinicalProvidersUnavailable = false;
+  if (canReadClinical) {
+    try {
+      [clinicalEncounters, medicalRecords] = await Promise.all([
+        listClinicalEncounters({ actingBranchId, patientId }),
+        listPatientMedicalRecords({ actingBranchId, patientId }),
+      ]);
+    } catch (error) {
+      if (!(error instanceof ClinicalServiceError || error instanceof AuthorizationError)) throw error;
+      clinicalLoadFailed = true;
+    }
+    try { clinicalProviders = await listProviders({ actingBranchId }); }
+    catch (error) {
+      if (!(error instanceof ProviderServiceError || error instanceof AuthorizationError)) throw error;
+      clinicalProvidersUnavailable = true;
+    }
+  }
+  return <PatientWorkspace patient={patient} initialActingBranchId={actingBranchId} canEdit={hasSharedPatientPermission(state, "patient.demographics.write")} initialFiles={files} filesUnavailable={filesUnavailable} initialReferrals={referrals} referralsUnavailable={referralsUnavailable} canReadClinical={canReadClinical} canWriteClinical={canWriteClinical} initialClinicalEncounters={clinicalEncounters} initialMedicalRecords={medicalRecords} initialProviders={clinicalProviders} clinicalLoadFailed={clinicalLoadFailed} clinicalProvidersUnavailable={clinicalProvidersUnavailable} />;
 }

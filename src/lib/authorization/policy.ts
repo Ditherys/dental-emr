@@ -32,7 +32,10 @@ export const foundationPermissionCodes = [
 export type PermissionCode = (typeof foundationPermissionCodes)[number];
 export type PatientPermissionCode = Extract<
   PermissionCode,
-  "patient.demographics.read" | "patient.demographics.write"
+  | "patient.demographics.read"
+  | "patient.demographics.write"
+  | "patient.clinical.read"
+  | "patient.clinical.write"
 >;
 
 export type ActiveOrganizationMembership = {
