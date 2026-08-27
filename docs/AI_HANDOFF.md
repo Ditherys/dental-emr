@@ -1,7 +1,35 @@
-# AI Handoff - Phase 17 complete, Phase 18 next
+# AI Handoff - Phase 18 complete, Phase 19 next
 
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
+
+## Phase 18 checkpoint (2026-08-27) - ACCEPTED
+
+Phase 18 (Recall & Follow-up Automation) complete through commit `7ae9c39`
+(P18-03 recall services + UI) with `docs/plans/018-recall-followup.md`
+P18-01..P18-04 all `[x]`.
+
+- P18-01/02 `399ef08` recall.read/manage permission (manage OWNER/ADMIN/DENTIST;
+  read + RECEPTIONIST) + recall_rules (branch-null clinic-wide config),
+  patient_recall_preferences (opt-out), recalls (SCHEDULED/OVERDUE derived/
+  COMPLETED/CANCELLED/OPTED_OUT) + 12 RPCs + **encounter-finalize automation
+  trigger** (completed treatment creates recalls). Opt-outs respected at
+  enqueue (skip without increment/audit; individual OPTED_OUT; channel NONE;
+  no contact); reminders reuse Phase 8 worker; booked recall links org-scoped
+  appointment. P18-03 `7ae9c39` src/lib/recall services + /recalls page
+  (overdue-first list, retention summary, rule management, enqueue/complete/
+  cancel/opt-out/link actions, opt-out-aware enqueue skip note).
+- Acceptance criteria met: rules dentist/clinic configured; completed treatment
+  creates recall (trigger); booked recall links correctly; opt-outs respected.
+- Inventory: 115 migration files, 40 grant terminals, 181 approved privileges;
+  68 pgTAP suites + 5 concurrency probes; tables 65, functions 220,
+  security-definer 188; unit 112 files / 1188 tests; scripts 279.
+
+**Next:** Phase 19 (Inventory & Branch Operations) per docs/MASTER_PRODUCT_PLAN.md
+§Phase 19. Author bounded plan docs/plans/019-inventory-branch-ops.md then
+execute P19-01.. .
+
+## Phase 18 checkpoint (2026-08-27) - IN PROGRESS (historical)
 
 ## Phase 17 checkpoint (2026-08-27) - ACCEPTED
 

@@ -33,7 +33,7 @@ patient opt-out/preferences respected.
 
 ## Tasks
 
-- [ ] **P18-01: Recall permission + schema**
+- [x] **P18-01: Recall permission + schema**
   - `recall.manage` / `recall.read` permission rows + matrix; `PermissionCode`
     + policy test; pgTAP.
   - `recall_rules`: org, branch nullable, name bounded, interval_months int
@@ -48,7 +48,7 @@ patient opt-out/preferences respected.
     org, patient).
   - pgTAP.
 
-- [ ] **P18-02: Recall RPCs + automation trigger**
+- [x] **P18-02: Recall RPCs + automation trigger**
   - `private.has_recall_permission_at_branch(acting_branch_id, code)` helper.
   - `create_recall_rule` / `update_recall_rule` / `list_recall_rules`
     (recall.manage; branch-scoped or clinic-wide; audit 'recall.rule.created/
@@ -88,7 +88,7 @@ patient opt-out/preferences respected.
     aggregate, permission denials, audit per mutation + rollback, tenant
     isolation).
 
-- [ ] **P18-03: Server services + UI**
+- [x] **P18-03: Server services + UI**
   - `src/lib/recall/` service layer + offline tests.
   - `/recalls` page (recall.read gated; overdue list first, dense table/phone):
     create recall, enqueue reminder, complete/cancel, link to appointment,
@@ -96,7 +96,7 @@ patient opt-out/preferences respected.
     counts, patient opt-out toggle. Server actions recheck recall.read/manage
     + branch. Tests.
 
-- [ ] **P18-04: Integration verification + phase review**
+- [x] **P18-04: Integration verification + phase review**
 
 ## Explicitly deferred
 
