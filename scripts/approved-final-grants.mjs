@@ -501,6 +501,24 @@ const clinicalRpcGrants = Object.freeze([
   "public.finalize_prescription(uuid,uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
 
+const INVENTORY_RPCS_GRANTS_MIGRATION =
+  "20260827014201_inventory_rpcs_grants.sql";
+
+const inventoryRpcGrants = Object.freeze([
+  "public.create_inventory_item(uuid,text,text,text,text,integer,boolean)",
+  "public.update_inventory_item(uuid,uuid,integer,text,text,text,integer,boolean,boolean)",
+  "public.list_inventory_items(uuid,boolean)",
+  "public.receive_stock(uuid,uuid,integer,text,date)",
+  "public.adjust_stock(uuid,uuid,integer,integer,text)",
+  "public.issue_stock(uuid,uuid,integer,integer,text)",
+  "public.create_inventory_transfer(uuid,uuid,uuid,uuid,integer,text)",
+  "public.confirm_transfer_receipt(uuid,uuid,integer)",
+  "public.cancel_inventory_transfer(uuid,uuid,integer,text)",
+  "public.list_inventory_stock(uuid,uuid,boolean)",
+  "public.list_inventory_movements(uuid,uuid)",
+  "public.get_inventory_aggregate(uuid)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only inventory boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live inventory.manage (catalog, receipts, adjustments, issues, transfers) or inventory.view (bounded per-branch stock, movement ledger, and org aggregate). Stock balance changes run under a per-org-branch-item advisory lock and only ever post the matching append-only movement row in the same transaction; transfers stay SENT until the destination confirms receipt, which is the only moment the destination balance changes. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
+
 const RECALL_RPCS_GRANTS_MIGRATION =
   "20260827014001_recall_rpcs_grants.sql";
 
@@ -1036,6 +1054,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: RECALL_RPCS_GRANTS_MIGRATION,
     grants: recallRpcGrants,
+  }),
+  Object.freeze({
+    file: INVENTORY_RPCS_GRANTS_MIGRATION,
+    grants: inventoryRpcGrants,
   }),
 ]);
 

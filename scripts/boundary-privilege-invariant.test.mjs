@@ -239,6 +239,18 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_recalls(uuid, uuid, text)",
     "public.get_recall_retention_summary(uuid)",
     "public.mark_recall_opted_out(uuid, uuid, integer)",
+    "public.create_inventory_item(uuid, text, text, text, text, integer, boolean)",
+    "public.update_inventory_item(uuid, uuid, integer, text, text, text, integer, boolean, boolean)",
+    "public.list_inventory_items(uuid, boolean)",
+    "public.receive_stock(uuid, uuid, integer, text, date)",
+    "public.adjust_stock(uuid, uuid, integer, integer, text)",
+    "public.issue_stock(uuid, uuid, integer, integer, text)",
+    "public.create_inventory_transfer(uuid, uuid, uuid, uuid, integer, text)",
+    "public.confirm_transfer_receipt(uuid, uuid, integer)",
+    "public.cancel_inventory_transfer(uuid, uuid, integer, text)",
+    "public.list_inventory_stock(uuid, uuid, boolean)",
+    "public.list_inventory_movements(uuid, uuid)",
+    "public.get_inventory_aggregate(uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1351,7 +1363,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(163);
+    expect(approved.size).toBe(175);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {
