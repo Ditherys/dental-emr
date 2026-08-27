@@ -82,6 +82,7 @@ const PROVISIONING_SENTINEL_COMMAND = Object.freeze([
 export const DATABASE_TEST_SUITES = Object.freeze([
   "schema.test.sql",
   "foundation_rls.test.sql",
+  "odontogram_rpcs.test.sql",
   "workforce_invitations.test.sql",
   "patient_authorization.test.sql",
   "patient_identity.test.sql",
@@ -132,6 +133,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "specialist_permission_contract.test.sql",
   "specialist_request_rpcs.test.sql",
   "specialist_requests_foundation.test.sql",
+  "tooth_conditions.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
   "booking_permission_contract.test.sql",

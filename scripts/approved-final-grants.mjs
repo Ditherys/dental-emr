@@ -458,6 +458,15 @@ const specialistRequestRpcGrants = Object.freeze([
 const CLINICAL_RPCS_GRANTS_MIGRATION =
   "20260827013001_clinical_rpcs_grants.sql";
 
+const ODONTOGRAM_RPCS_GRANTS_MIGRATION =
+  "20260827013201_odontogram_rpcs_grants.sql";
+
+const odontogramRpcGrants = Object.freeze([
+  "public.create_tooth_condition(uuid,uuid,text,text,text,text,text)",
+  "public.void_tooth_condition(uuid,uuid,integer,text)",
+  "public.list_tooth_conditions(uuid,uuid,boolean)",
+].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only odontogram/dental-chart boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projection). Conditions carry validated FDI tooth codes and bounded vocabularies, are versioned, and are voided rather than deleted; terminal COMPLETED/REFERRED rows are kept as history and refused for voiding. Every mutation appends one atomic bounded-metadata audit event while the list writes none." })));
+
 const clinicalRpcGrants = Object.freeze([
   "public.create_clinical_encounter(uuid,uuid,uuid,uuid)",
   "public.create_clinical_note(uuid,uuid,text,text)",
@@ -870,6 +879,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_RPCS_GRANTS_MIGRATION,
     grants: clinicalRpcGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_RPCS_GRANTS_MIGRATION,
+    grants: odontogramRpcGrants,
   }),
 ]);
 

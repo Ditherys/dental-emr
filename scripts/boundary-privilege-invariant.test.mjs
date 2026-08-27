@@ -206,6 +206,9 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_patient_medical_records(uuid, uuid, text)",
     "public.create_prescription(uuid, uuid, jsonb)",
     "public.finalize_prescription(uuid, uuid, integer)",
+    "public.create_tooth_condition(uuid, uuid, text, text, text, text, text)",
+    "public.void_tooth_condition(uuid, uuid, integer, text)",
+    "public.list_tooth_conditions(uuid, uuid, boolean)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1304,7 +1307,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
 expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(128);
+    expect(approved.size).toBe(131);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

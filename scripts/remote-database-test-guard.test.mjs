@@ -272,6 +272,7 @@ const expectedSuites = [
       "file_read_rpcs.test.sql",
       "file_upload_rpcs.test.sql",
       "foundation_rls.test.sql",
+      "odontogram_rpcs.test.sql",
       "patient_attribution_columns.test.sql",
       "patient_attribution_rpcs.test.sql",
       "patient_authorization.test.sql",
@@ -301,7 +302,8 @@ const expectedSuites = [
       "site_rpcs.test.sql",
       "specialist_permission_contract.test.sql",
       "specialist_request_rpcs.test.sql",
-      "specialist_requests_foundation.test.sql",
+"specialist_requests_foundation.test.sql",
+      "tooth_conditions.test.sql",
       "workforce_invitations.test.sql",
     ];
     const onDisk = readdirSync(testsDirectory)
