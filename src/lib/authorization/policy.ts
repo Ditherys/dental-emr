@@ -8,7 +8,7 @@ export const foundationPermissionCodes = [
   "role.manage",
   "security.manage",
   "audit.read",
-"patient.demographics.read",
+  "patient.demographics.read",
   "patient.demographics.write",
   "patient.clinical.read",
   "patient.clinical.write",
@@ -32,6 +32,14 @@ export const foundationPermissionCodes = [
   "inventory.view",
   "inventory.manage",
   "analytics.view",
+  "billing.read",
+  "billing.charge",
+  "payment.record",
+  "billing.adjust",
+  "billing.attribution.override",
+  "compensation.manage",
+  "compensation.own.read",
+  "financial.analytics.read",
 ] as const;
 
 export type PermissionCode = (typeof foundationPermissionCodes)[number];

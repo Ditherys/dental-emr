@@ -155,6 +155,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "inventory_rpcs.test.sql",
 "operational_analytics.test.sql",
   "owner_full_access.test.sql",
+  "billing_permission_contract.test.sql",
 ]);
 
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;

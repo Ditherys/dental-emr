@@ -586,7 +586,12 @@ patient.clinical.write
 appointment.read
 appointment.write
 billing.read
-billing.write
+  billing.charge
+  billing.adjust
+  billing.attribution.override
+  compensation.manage
+  compensation.own.read
+  financial.analytics.read
 inventory.read
 inventory.write
 user.manage

@@ -29,6 +29,31 @@ integration specification/plan. The durable acceptance record is
 - **Never use:** Cloud TEST/DEV/production commands, hosted credentials, direct
   SQL, real data, or local reset for this scope.
 
+## Billing B1 — permission and pure-money contracts (2026-08-28)
+
+- Added forward migration `20260828010000_billing_permission_contract.sql` and
+  registered `billing_permission_contract.test.sql`. The exact granular
+  financial catalog and system-role defaults are now explicit; no ledger table,
+  base-table financial grant, or RPC was introduced.
+- Added pure `src/lib/billing/` centavo/rate contracts. They use `bigint` values
+  without floating point or ES2020 bigint-literal syntax because this project
+  remains TypeScript ES2017; forms/JSON remain digit strings. Tests cover bounds,
+  formatting, half-up rate rounding, gross/net costs, installments, and signed
+  earning deltas.
+- Updated client permission vocabulary and security role documentation. The old
+  broad `billing.write` example is removed; operational `analytics.view` is
+  deliberately separate from `financial.analytics.read`.
+- **Evidence:** focused Vitest 87 tests passed; `npm run typecheck` and
+  `npm run security:migrations` passed. `db:start:local` and the guarded
+  forward-only `db:migrate:local` ran locally. Direct local pgTAP execution of
+  `billing_permission_contract.test.sql` passed 3/3.
+- **Known local-suite residual:** `npm run test:db:local` stops at the existing
+  `odontogram_rpcs.test.sql` before B1. Direct reproduction shows only its
+  global audit-count assertion 44 fails (expects 6, sees 7) because the
+  persistent local database already contains a prior odontogram audit row. Do
+  not reset under ADR-027. This unrelated fixture-isolation defect must be
+  fixed with a bounded test change before claiming a full local database suite.
+
 ## UI/UX revamp checkpoint (2026-08-28) - COMPLETE
 
 A cross-application UI/UX audit and implementation pass on the current `main`

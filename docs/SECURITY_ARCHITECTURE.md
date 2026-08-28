@@ -788,8 +788,13 @@ appointment.read
 appointment.write
 appointment.override_conflict
 billing.read
-billing.write
+billing.charge
 payment.record
+billing.adjust
+billing.attribution.override
+compensation.manage
+compensation.own.read
+financial.analytics.read
 inventory.read
 inventory.write
 inventory.adjust
@@ -909,14 +914,28 @@ Default:
 
 Allowed:
 
-- charges;
-- payments;
-- statements;
-- financial reports needed for work.
+- `billing.read`, `billing.charge`, and `payment.record` at authorized branch
+  scope; bounded charge/payment reconciliation and statements;
+- no adjustment, attribution override, compensation-management, provider-
+  earnings analytics, or unrelated operational analytics permission.
 
 Not automatically allowed:
 
 - unrelated medical/dental history.
+
+### Financial role boundaries
+
+- OWNER has all granular financial permissions organization-wide under ADR-025.
+- ADMIN has all granular financial permissions but gains no clinical access by
+  that fact alone.
+- A DENTIST has authorized-patient `billing.read`, clinical-completion-only
+  `billing.charge`, and `compensation.own.read`; provider identity is resolved
+  server-side rather than selected by the browser.
+- A RECEPTIONIST has `billing.read` and `payment.record` only.
+- DENTAL_ASSISTANT and VISITING_SPECIALIST have no financial permission by
+  default. Suspended and foreign-tenant actors have none.
+- `analytics.view` remains operational analytics. It is not a substitute for
+  `financial.analytics.read`.
 
 ## 9.5 Break-glass access
 

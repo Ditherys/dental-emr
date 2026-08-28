@@ -241,6 +241,27 @@ describe("recall permission vocabulary", () => {
   });
 });
 
+describe("billing permission vocabulary", () => {
+  it("exposes the granular financial permission contract", () => {
+    const expected: PermissionCode[] = [
+      "billing.read",
+      "billing.charge",
+      "payment.record",
+      "billing.adjust",
+      "billing.attribution.override",
+      "compensation.manage",
+      "compensation.own.read",
+      "financial.analytics.read",
+    ];
+
+    // @ts-expect-error The former broad code must never become a client contract.
+    const legacyBillingWrite: PermissionCode = "billing.write";
+
+    expect(foundationPermissionCodes).toEqual(expect.arrayContaining(expected));
+    expect(legacyBillingWrite).toBe("billing.write");
+  });
+});
+
 describe("inventory permission vocabulary", () => {
   it("exposes the two bounded inventory permission codes", () => {
     const inventoryView: PermissionCode = "inventory.view";
