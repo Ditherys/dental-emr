@@ -253,6 +253,8 @@ describe("registered database suites", () => {
 "audit_foundation.test.sql",
       "billing_attribution.test.sql",
       "billing_charge_ledger.test.sql",
+      "billing_corrections.test.sql",
+      "billing_payment_allocations.test.sql",
       "billing_permission_contract.test.sql",
       "booking_permission_contract.test.sql",
       "booking_public_rpcs.test.sql",

@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-expect(result.checked.files).toBe(129);
+expect(result.checked.files).toBe(131);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,8 +340,8 @@ expect(result.checked.files).toBe(129);
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-expect(count("table")).toBe(77);
-    expect(count("function")).toBe(245);
+expect(count("table")).toBe(83);
+    expect(count("function")).toBe(252);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only

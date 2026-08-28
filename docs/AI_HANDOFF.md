@@ -3,6 +3,41 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Billing B3 — payment, allocation, refund, and reversal ledger (2026-08-28)
+
+- `20260828010200_payment_allocation_ledger.sql`: immutable payments (positive
+  centavo principal, PHP, bounded reference, org-scoped idempotency, PDC source
+  slot for B5), append-only payment_allocations (with a trigger enforcing that
+  the allocation patient matches both the payment and charge patient),
+  payment_allocation_reversals (positive source amount, MANUAL/REFUND/VOID
+  cause, one-to-one refund-component link with exactly-equal amount enforced by
+  trigger, exactly one equal REFUND reversal per component via unique source
+  link), payment_refunds, payment_refund_allocations (either an original
+  allocation or unallocated credit), payment_voids (unique terminal per
+  payment), all with RLS on, zero grants, and append-only triggers, plus the
+  private derived-balance helpers `payment_availability`,
+  `charge_adjusted_amount`, `charge_net_allocated`, `charge_due`, and
+  `patient_account_balance` (empty search path, revoked).
+- `20260828010201_charges_append_only.sql`: forward correction adding the
+  missing append-only trigger on charges so a POSTED charge snapshot can never
+  be rewritten (VOIDED stays derived from charge_voids).
+- Tests: `billing_payment_allocations.test.sql` (30 assertions) and
+  `billing_corrections.test.sql` (15 assertions), registered in the guard
+  registry and expected-suite list. Extends `src/lib/billing` with payment/
+  allocation/reversal/refund input schemas (digit-string centavo amounts, no
+  number coercion), types, and 10 new unit tests.
+- `billing_allocation_concurrency.local.mjs` authored (two-client
+  allocate_payment probe); it becomes runnable and is registered when the B6
+  `allocate_payment` RPC exists. Cumulative under-lock consumption caps and
+  over-allocation denial are B6 RPC behavior.
+- **Evidence:** direct local pgTAP billing_payment_allocations 30/30,
+  billing_corrections 15/15, and all prior billing suites pass; `npm run
+  test:unit` 123 files / 1271 tests pass; `security:migrations` 131 files / 196
+  approved privileges pass; lint, typecheck, `git diff --check` clean;
+  migration-privilege-lint baseline updated (tables 83, functions 252, secdef
+  205 unchanged). `db:migrate:local` applied both migrations forward.
+- **Residual local-only:** unchanged `seed_security_fixtures` blocker from B2.
+
 ## Billing B2 — procedure pricing and charge ledger (2026-08-28)
 
 B2 completes the additive catalog and immutable charge-ledger foundation with
