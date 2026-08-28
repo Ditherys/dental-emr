@@ -13,7 +13,8 @@ import { listProviders } from "@/lib/providers/data";
 import { ProviderServiceError } from "@/lib/providers/service";
 import { TreatmentPlanServiceError, listTreatmentPlans } from "@/lib/treatment-plan/service";
 import { IntakeServiceError, listConsentTemplates, listIntakeForms } from "@/lib/intake/service";
-import { BillingServiceError, listPatientAccount, listPaymentMethods } from "@/lib/billing/service";
+import { BillingServiceError, listPatientAccount, listPaymentMethods, summarizeProcedureCharges } from "@/lib/billing/service";
+import type { ProcedurePaymentSummary } from "@/lib/billing/types";
 
 import { PatientWorkspace } from "./patient-workspace";
 import { isPatientSection, type PatientSectionKey } from "./patient-sections";
@@ -136,6 +137,7 @@ export default async function PatientPage({
   let accountRows: Awaited<ReturnType<typeof listPatientAccount>> = [];
   let paymentMethods: Awaited<ReturnType<typeof listPaymentMethods>> = [];
   let accountLoadFailed = false;
+  const procedureSummaries: Record<string, ProcedurePaymentSummary> = {};
 
   if (section === "account" && canReadBilling) {
     try {
@@ -192,6 +194,22 @@ export default async function PatientPage({
       if (!(error instanceof ProviderServiceError || error instanceof AuthorizationError)) throw error;
       clinicalProvidersUnavailable = true;
     }
+    if (canReadBilling) {
+      const procedureIds = new Set<string>();
+      for (const encounter of clinicalEncounters) if (encounter.appointmentId) procedureIds.add(encounter.appointmentId);
+      for (const plan of treatmentPlans) {
+        try {
+          const detail = await (await import("@/lib/treatment-plan/service")).getTreatmentPlanDetail({ actingBranchId, planId: plan.planId });
+          for (const item of detail.items) procedureIds.add(item.itemId);
+        } catch { /* missing plans stay excluded */ }
+      }
+      await Promise.all(Array.from(procedureIds).map(async (procedureId) => {
+        try {
+          const summary = await summarizeProcedureCharges({ branchId: actingBranchId, patientId, procedureId });
+          procedureSummaries[procedureId] = summary;
+        } catch { /* procedure without activity stays empty */ }
+      }));
+    }
   }
 
   if (section === "intake" && canManageIntake) {
@@ -242,6 +260,7 @@ export default async function PatientPage({
       initialAccountRows={accountRows}
       paymentMethods={paymentMethods}
       accountLoadFailed={accountLoadFailed}
+      initialProcedureSummaries={procedureSummaries}
     />
   );
 }

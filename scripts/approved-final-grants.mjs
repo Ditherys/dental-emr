@@ -823,6 +823,7 @@ const siteRpcGrants = Object.freeze([
  */
 const BILLING_RPCS_GRANTS_MIGRATION = "20260828010501_billing_rpcs_grants.sql";
 const BILLING_RPC_CORRECTIONS_GRANTS_MIGRATION = "20260828010503_billing_rpcs_corrections_grants.sql";
+const BILLING_PROCEDURE_SUMMARY_GRANTS_MIGRATION = "20260828010601_billing_procedure_summary_rpc_grants.sql";
 const BILLING_PROCEDURE_CONFIGURATION_RPCS_GRANTS_MIGRATION = "20260828010505_billing_procedure_configuration_rpcs_grants.sql";
 const billingRpcGrants = Object.freeze([
   "public.list_patient_account(uuid,uuid)",
@@ -1162,6 +1163,20 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: BILLING_PROCEDURE_CONFIGURATION_RPCS_GRANTS_MIGRATION,
     grants: billingProcedureConfigurationRpcGrants,
+  }),
+  Object.freeze({
+    file: BILLING_PROCEDURE_SUMMARY_GRANTS_MIGRATION,
+    grants: [
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.summarize_procedure_charges(uuid,uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "The bounded per-procedure patient payment projection derives tenant and actor server-side, requires billing.read at the charge-origin branch, and returns only the agreed five-column DTO plus the payment status without mutating any ledger table.",
+      },
+    ],
   }),
 ]);
 

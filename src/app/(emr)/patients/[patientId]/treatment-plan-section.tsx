@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan, TreatmentPlanDetail, TreatmentPlanDrawingCanvas, TreatmentPlanItem, TreatmentPlanStatus } from "@/lib/treatment-plan/types";
 
+import { ProcedurePaymentSummaryCard } from "./procedure-payment-summary";
 import {
   acknowledgeTreatmentPlanAction,
   addTreatmentPlanAlternativeAction,
@@ -48,6 +49,8 @@ type Props = {
   initialPlans: TreatmentPlan[];
   initialProviders?: ProviderListItem[];
   loadFailed?: boolean;
+  canReadBilling?: boolean;
+  initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
 };
 
 function message(result: TreatmentPlanMutationResult | TreatmentPlanDetailResult) {
@@ -71,7 +74,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinical, canGenerateDocuments, initialPlans, initialProviders = [], loadFailed }: Props) {
+export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinical, canGenerateDocuments, initialPlans, initialProviders = [], loadFailed, canReadBilling = false, initialProcedureSummaries = {} }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -251,7 +254,7 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
 
   return <div>
     {error && !dialogOpen && <p role="alert" className="mb-4 border-y py-3 text-sm text-destructive">{error}</p>}
-    {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Treatment plans could not be loaded. Refresh to try again.</p> : openPlanId && openDetail ? <PlanDetailView plan={openDetail} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} saving={saving} providerName={providerName} back={() => { setOpenPlanId(null); setError(null); }} editTitle={saveTitle} requestPresent={setConfirmPresent} requestAcknowledge={setConfirmAcknowledge} openItem={setItemDialog} openAlternative={setAlternativeDialog} openDiscussion={setDiscussionDialog} requestRemoveItem={setRemoveItem} saveDrawing={(drawing) => saveDrawing(openDetail, drawing)} printPlan={() => printPlan(openDetail)} />
+    {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Treatment plans could not be loaded. Refresh to try again.</p> : openPlanId && openDetail ? <PlanDetailView plan={openDetail} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} saving={saving} providerName={providerName} back={() => { setOpenPlanId(null); setError(null); }} editTitle={saveTitle} requestPresent={setConfirmPresent} requestAcknowledge={setConfirmAcknowledge} openItem={setItemDialog} openAlternative={setAlternativeDialog} openDiscussion={setDiscussionDialog} requestRemoveItem={setRemoveItem} saveDrawing={(drawing) => saveDrawing(openDetail, drawing)} printPlan={() => printPlan(openDetail)} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} patientId={patientId} actingBranchId={actingBranchId} />
       : <>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">Plans are versioned; an acknowledged plan becomes part of the permanent record and can no longer be changed.</p>
@@ -280,7 +283,35 @@ function nullableNumeric(form: FormData, name: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, providerName, back, editTitle, requestPresent, requestAcknowledge, openItem, openAlternative, openDiscussion, requestRemoveItem, saveDrawing, printPlan }: {
+function ItemRow({ item, editable, saving, openItem, requestRemoveItem, canReadBilling, initialSummary, patientId, actingBranchId }: {
+  item: TreatmentPlanItem;
+  editable: boolean;
+  saving: boolean;
+  openItem(): void;
+  requestRemoveItem(): void;
+  canReadBilling?: boolean;
+  initialSummary: import("@/lib/billing/types").ProcedurePaymentSummary | null;
+  patientId: string;
+  actingBranchId: string;
+}) {
+  return <tr className="border-b last:border-0 align-top"><td className="px-3 py-3 tabular-nums">{item.lineNo}</td><td className="px-3 py-3">{item.toothCode ?? "—"}</td><td className="px-3 py-3"><p>{item.description}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</td><td className="px-3 py-3 tabular-nums">{item.estimatedFee === null ? "—" : formatFee(item.estimatedFee)}</td>{editable && <td className="px-3 py-3"><div className="flex gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /> <span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div></td>}</tr>;
+}
+
+function ItemCard({ item, editable, saving, openItem, requestRemoveItem, canReadBilling, initialSummary, patientId, actingBranchId }: {
+  item: TreatmentPlanItem;
+  editable: boolean;
+  saving: boolean;
+  openItem(): void;
+  requestRemoveItem(): void;
+  canReadBilling?: boolean;
+  initialSummary: import("@/lib/billing/types").ProcedurePaymentSummary | null;
+  patientId: string;
+  actingBranchId: string;
+}) {
+  return <li className="py-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{item.description}</p>{editable && <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /><span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div>}</div><p className="mt-1 text-xs text-muted-foreground">Line {item.lineNo}{item.toothCode ? ` · Tooth ${item.toothCode}` : ""} · {item.estimatedFee === null ? "No fee" : formatFee(item.estimatedFee)}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</li>;
+}
+
+function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, providerName, back, editTitle, requestPresent, requestAcknowledge, openItem, openAlternative, openDiscussion, requestRemoveItem, saveDrawing, printPlan, canReadBilling = false, initialProcedureSummaries = {}, patientId, actingBranchId }: {
   plan: TreatmentPlanDetail;
   canWriteClinical: boolean;
   canGenerateDocuments: boolean;
@@ -296,6 +327,10 @@ function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, 
   requestRemoveItem(entry: { plan: TreatmentPlanDetail; item: TreatmentPlanItem }): void;
   saveDrawing(drawing: TreatmentPlanDrawingCanvas): Promise<void>;
   printPlan(): Promise<void>;
+  canReadBilling?: boolean;
+  initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
+  patientId: string;
+  actingBranchId: string;
 }) {
   const status = plan.plan.status;
   const draft = status === "DRAFT";
@@ -319,8 +354,10 @@ function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, 
 
     <div className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-sm font-medium">Proposed items</h4>{editable && <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openItem({ plan })}><Plus aria-hidden="true" /> Add item</Button>}</div>
-      {plan.items.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No items proposed.</p> : <div className="mt-2 hidden overflow-x-auto border md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/30 text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Line</th><th className="px-3 py-2 font-medium">Tooth</th><th className="px-3 py-2 font-medium">Description</th><th className="px-3 py-2 font-medium">Estimated fee</th>{editable && <th className="px-3 py-2 font-medium">Action</th>}</tr></thead><tbody>{plan.items.map((item) => <tr key={item.itemId} className="border-b last:border-0"><td className="px-3 py-3 tabular-nums">{item.lineNo}</td><td className="px-3 py-3">{item.toothCode ?? "—"}</td><td className="px-3 py-3">{item.description}</td><td className="px-3 py-3 tabular-nums">{item.estimatedFee === null ? "—" : formatFee(item.estimatedFee)}</td>{editable && <td className="px-3 py-3"><div className="flex gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openItem({ plan, item })}><Pencil aria-hidden="true" /> <span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => requestRemoveItem({ plan, item })}>Remove</Button></div></td>}</tr>)}</tbody></table></div>}
-      <ul className="mt-2 divide-y border-y md:hidden">{plan.items.map((item) => <li key={item.itemId} className="py-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{item.description}</p>{editable && <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openItem({ plan, item })}><Pencil aria-hidden="true" /><span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => requestRemoveItem({ plan, item })}>Remove</Button></div>}</div><p className="mt-1 text-xs text-muted-foreground">Line {item.lineNo}{item.toothCode ? ` · Tooth ${item.toothCode}` : ""} · {item.estimatedFee === null ? "No fee" : formatFee(item.estimatedFee)}</p></li>)}</ul>
+      {plan.items.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No items proposed.</p> : <>
+        <div className="mt-2 hidden overflow-x-auto border md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/30 text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Line</th><th className="px-3 py-2 font-medium">Tooth</th><th className="px-3 py-2 font-medium">Description</th><th className="px-3 py-2 font-medium">Estimated fee</th>{editable && <th className="px-3 py-2 font-medium">Action</th>}</tr></thead><tbody>{plan.items.map((item) => <ItemRow key={item.itemId} item={item} editable={editable} saving={saving} openItem={() => openItem({ plan, item })} requestRemoveItem={() => requestRemoveItem({ plan, item })} canReadBilling={canReadBilling} initialSummary={initialProcedureSummaries?.[item.itemId] ?? null} patientId={patientId} actingBranchId={actingBranchId} />)}</tbody></table></div>
+        <ul className="mt-2 divide-y border-y md:hidden">{plan.items.map((item) => <ItemCard key={item.itemId} item={item} editable={editable} saving={saving} openItem={() => openItem({ plan, item })} requestRemoveItem={() => requestRemoveItem({ plan, item })} canReadBilling={canReadBilling} initialSummary={initialProcedureSummaries?.[item.itemId] ?? null} patientId={patientId} actingBranchId={actingBranchId} />)}</ul>
+      </>}
     </div>
 
     <div className="mt-6">

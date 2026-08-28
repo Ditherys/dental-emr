@@ -282,6 +282,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.create_procedure_direct_cost_default(uuid, uuid, text, text, bigint)",
     "public.update_procedure_direct_cost_default(uuid, uuid, integer, text, text, bigint)",
     "public.deactivate_procedure_direct_cost_default(uuid, uuid, integer)",
+    "public.summarize_procedure_charges(uuid, uuid, uuid)",
   ].map((object) => ({
     grantee: "authenticated",
     object_class: "function",
@@ -1394,7 +1395,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(206);
+    expect(approved.size).toBe(207);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

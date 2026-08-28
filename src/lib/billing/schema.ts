@@ -162,3 +162,13 @@ export const paymentMethodRowSchema = z.object({ method_id: databaseUuid, code: 
 export const unresolvedChargeCompensationRowSchema = z.object({ charge_id: databaseUuid, patient_id: databaseUuid, branch_id: databaseUuid, provider_id: databaseUuid.nullable(), service_date: dateOnlySchema, amount_centavos: z.number().int(), net_allocated_centavos: z.number().int(), resolution_state: z.string() }).strict();
 export const providerEarningRowSchema = z.object({ provider_id: databaseUuid, charge_id: databaseUuid, entry_type: z.string(), cause: z.string(), service_date: dateOnlySchema, earning_centavos: z.number().int(), rate_bps: z.number().int(), occurred_at: timestampSchema }).strict();
 export const procedureDirectCostDefaultRowSchema = z.object({ direct_cost_default_id: databaseUuid, cost_type: z.enum(["LAB", "MATERIAL", "OTHER"]), description: z.string(), amount_centavos: z.number().int().nonnegative(), active: z.boolean(), version: z.number().int().positive() }).strict();
+export const summarizeProcedureChargesInputSchema = z.object({ branchId: databaseUuid, patientId: databaseUuid, procedureId: databaseUuid }).strict();
+export const procedurePaymentSummaryRowSchema = z.object({
+  procedure_id: databaseUuid, patient_id: databaseUuid, branch_id: databaseUuid,
+  charged_centavos: z.number().int().nonnegative(),
+  adjusted_centavos: z.number().int(),
+  paid_centavos: z.number().int().nonnegative(),
+  pending_pdc_centavos: z.number().int().nonnegative(),
+  remaining_centavos: z.number().int().nonnegative(),
+  payment_status: z.enum(["UNPAID", "PARTIAL", "PAID"]),
+}).strict();

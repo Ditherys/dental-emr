@@ -23,6 +23,20 @@ export type ProcedureDirectCostDefaultRow = {
   version: number;
 };
 
+export type ProcedurePaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
+
+export type ProcedurePaymentSummary = {
+  procedureId: string;
+  patientId: string;
+  branchId: string;
+  chargedCentavos: number;
+  adjustedCentavos: number;
+  paidCentavos: number;
+  pendingPdcCentavos: number;
+  remainingCentavos: number;
+  paymentStatus: ProcedurePaymentStatus;
+};
+
 export type ProcedureConfigurationMutationResult = {
   id: string;
   version: number;

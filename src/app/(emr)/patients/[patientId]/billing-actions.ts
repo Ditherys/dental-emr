@@ -9,7 +9,9 @@ import {
   postChargeAdjustment,
   recordPayment,
   recordPostdatedCheque,
+  summarizeProcedureCharges,
 } from "@/lib/billing/service";
+import type { ProcedurePaymentSummary } from "@/lib/billing/types";
 
 type Result = { ok: true } | { ok: false; message: string };
 
@@ -69,4 +71,17 @@ export async function recordPostdatedChequeAction(input: unknown): Promise<Resul
     refresh(value.patientId);
     return { ok: true };
   } catch { return failed(); }
+}
+
+type SummaryResult = { ok: true; summary: ProcedurePaymentSummary | null } | { ok: false; message: string };
+
+export async function summarizeProcedureChargesAction(input: unknown): Promise<SummaryResult> {
+  try {
+    const value = input as { branchId: string; patientId: string; procedureId: string };
+    await requirePermission({ permission: "billing.read", branchId: value.branchId });
+    const summary = await summarizeProcedureCharges(input);
+    return { ok: true, summary };
+  } catch {
+    return { ok: false, message: "The procedure summary could not be loaded." };
+  }
 }

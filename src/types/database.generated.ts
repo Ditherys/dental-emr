@@ -7536,6 +7536,24 @@ export type Database = {
         }
         Returns: string
       }
+      summarize_procedure_charges: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_procedure_id: string
+        }
+        Returns: {
+          adjusted_centavos: number
+          branch_id: string
+          charged_centavos: number
+          paid_centavos: number
+          patient_id: string
+          payment_status: string
+          pending_pdc_centavos: number
+          procedure_id: string
+          remaining_centavos: number
+        }[]
+      }
       transition_postdated_cheque: {
         Args: {
           p_acting_branch_id: string

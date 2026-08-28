@@ -28,6 +28,7 @@ import {
   type ClinicalMutationResult,
 } from "./clinical-actions";
 import { OdontogramSection } from "./odontogram-section";
+import { ProcedurePaymentSummaryCard } from "./procedure-payment-summary";
 import { TreatmentPlanSection } from "./treatment-plan-section";
 
 type Props = {
@@ -42,6 +43,8 @@ type Props = {
   canGenerateDocuments?: boolean;
   providersUnavailable?: boolean;
   loadFailed?: boolean;
+  canReadBilling?: boolean;
+  initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
 };
 
 type NoteDialogState = { mode: "create"; encounterId: string } | { mode: "edit"; encounterId: string; note: ClinicalNote } | null;
@@ -72,7 +75,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions = [], initialTreatmentPlans = [], canGenerateDocuments = false, providersUnavailable, loadFailed }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions = [], initialTreatmentPlans = [], canGenerateDocuments = false, providersUnavailable, loadFailed, canReadBilling = false, initialProcedureSummaries = {} }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -222,7 +225,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, i
     <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button><button type="button" onClick={() => setTab("treatment-plans")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "treatment-plans" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Treatment plan</button></nav>
     {error && !dialogOpen && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
     {tab === "odontogram" ? <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} initialConditions={initialToothConditions} loadFailed={loadFailed} />
-      : tab === "treatment-plans" ? <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} />
+      : tab === "treatment-plans" ? <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />
       : <>{providersUnavailable && canWriteClinical && <p className="mt-3 text-sm text-muted-foreground">The provider directory is unavailable, so new encounters cannot be opened here.</p>}
     {loadFailed ? <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
       <h3 className="mt-5 text-sm font-medium text-muted-foreground">Treatment history</h3>
@@ -231,7 +234,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, i
         <ul className="mt-3 divide-y border-y md:hidden">{initialEncounters.map((encounter) => <li key={encounter.encounterId} className="py-3"><div className="flex items-center justify-between gap-3"><p className="font-medium text-sm">{encounter.status} encounter</p><p className="text-xs text-muted-foreground">{encounter.createdAt.slice(0, 10)}</p></div><p className="mt-1 text-sm text-muted-foreground">{providerName(encounter.treatingProviderId)}</p><div className="mt-2"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></div></li>)}</ul>
       </>}
       {loadingEncounterId && <p className="mt-3 text-sm text-muted-foreground">Loading encounter…</p>}
-      {expandedDetail && <EncounterDetail detail={expandedDetail} canWriteClinical={canWriteClinical} saving={saving} openNote={(encounterId) => setNoteDialog({ mode: "create", encounterId })} editNote={(encounterId, note) => setNoteDialog({ mode: "edit", encounterId, note })} openAmend={(encounterId, note) => setAmendNote({ encounterId, note })} openPrescriptions={(encounterId) => setPrescriptionEncounterId(encounterId)} finalizeNote={finalizeNote} finalizePrescription={finalizePrescription} requestFinalizeEncounter={setFinalizeEncounter} />}
+      {expandedDetail && <EncounterDetail detail={expandedDetail} canWriteClinical={canWriteClinical} saving={saving} openNote={(encounterId) => setNoteDialog({ mode: "create", encounterId })} editNote={(encounterId, note) => setNoteDialog({ mode: "edit", encounterId, note })} openAmend={(encounterId, note) => setAmendNote({ encounterId, note })} openPrescriptions={(encounterId) => setPrescriptionEncounterId(encounterId)} finalizeNote={finalizeNote} finalizePrescription={finalizePrescription} requestFinalizeEncounter={setFinalizeEncounter} initialProcedureSummaries={initialProcedureSummaries} canReadBilling={canReadBilling} patientId={patientId} actingBranchId={actingBranchId} />}
       <h3 className="mt-8 text-sm font-medium text-muted-foreground">Medical history</h3>
       <div className="mt-3 grid gap-6 md:grid-cols-3">
         {RECORD_TYPES.map(({ value, label }) => <MedicalRecordList key={value} label={label} records={initialMedicalRecords.filter((record) => record.recordType === value)} canWrite={canWriteClinical} onAdd={() => setMedicalRecordDialog(value)} onVoid={setVoidRecord} />)}
@@ -277,7 +280,7 @@ function medicalRecordPayload(recordType: ClinicalRecordType, data: FormData) {
   };
 }
 
-function EncounterDetail({ detail, canWriteClinical, saving, openNote, editNote, openAmend, openPrescriptions, finalizeNote, finalizePrescription, requestFinalizeEncounter }: {
+function EncounterDetail({ detail, canWriteClinical, saving, openNote, editNote, openAmend, openPrescriptions, finalizeNote, finalizePrescription, requestFinalizeEncounter, initialProcedureSummaries, canReadBilling, patientId, actingBranchId }: {
   detail: ClinicalEncounterDetail;
   canWriteClinical: boolean;
   saving: boolean;
@@ -288,10 +291,15 @@ function EncounterDetail({ detail, canWriteClinical, saving, openNote, editNote,
   finalizeNote(encounterId: string, note: ClinicalNote): Promise<void>;
   finalizePrescription(encounterId: string, prescription: { prescriptionId: string; version: number }): Promise<void>;
   requestFinalizeEncounter(encounter: ClinicalEncounter): void;
+  initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
+  canReadBilling?: boolean;
+  patientId: string;
+  actingBranchId: string;
 }) {
   const encounter = detail.encounter;
   return <div className="mt-4 border-l-2 border-primary/40 pl-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-sm font-medium">Encounter notes</h4><p className="mt-1 text-xs text-muted-foreground">{encounter.status}{encounter.finalizedAt ? ` · Finalized ${encounter.finalizedAt.slice(0, 10)}` : ""}</p></div>{canWriteClinical && <div className="flex flex-wrap gap-2">{encounter.status === "OPEN" && <><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openNote(encounter.encounterId)}><Plus aria-hidden="true" /> Add note</Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openPrescriptions(encounter.encounterId)}><Plus aria-hidden="true" /> Add prescription</Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => requestFinalizeEncounter(encounter)}>Finalize encounter</Button></>}</div>}</div>
+    {canReadBilling && encounter.appointmentId && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={encounter.appointmentId} initialSummary={initialProcedureSummaries?.[encounter.appointmentId] ?? null} />}
     {detail.notes.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No notes for this encounter.</p> : <ul className="mt-3 divide-y border-y">{detail.notes.map((note) => <NoteItem key={note.noteId} note={note} canWrite={canWriteClinical && encounter.status === "OPEN"} saving={saving} edit={() => editNote(encounter.encounterId, note)} amend={() => openAmend(encounter.encounterId, note)} finalize={() => finalizeNote(encounter.encounterId, note)} />)}</ul>}
     {detail.prescriptions.length > 0 && <div className="mt-5"><h4 className="text-sm font-medium">Prescriptions</h4><ul className="mt-2 divide-y border-y">{detail.prescriptions.map((prescription) => <li key={prescription.prescriptionId} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><p className="text-sm font-medium">{prescription.items.map((item) => item.medicationName).join(", ")}</p><p className="mt-1 text-xs text-muted-foreground">{prescription.status}{prescription.finalizedAt ? ` · Finalized ${prescription.finalizedAt.slice(0, 10)}` : ""}</p></div>{canWriteClinical && prescription.status === "DRAFT" && <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => finalizePrescription(encounter.encounterId, prescription)}>Finalize</Button>}</li>)}</ul></div>}
   </div>;

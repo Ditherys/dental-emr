@@ -98,6 +98,7 @@ type Props = {
   initialAccountRows?: z.infer<typeof patientAccountRowSchema>[];
   paymentMethods?: z.infer<typeof paymentMethodRowSchema>[];
   accountLoadFailed?: boolean;
+  initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
 };
 
 function availableSections(canReadClinical: boolean, canManageIntake: boolean, canReadBilling: boolean) {
@@ -141,6 +142,7 @@ export function PatientWorkspace({
   initialAccountRows = [],
   paymentMethods = [],
   accountLoadFailed = false,
+  initialProcedureSummaries = {},
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -388,6 +390,8 @@ export function PatientWorkspace({
             initialProviders={initialProviders}
             providersUnavailable={clinicalProvidersUnavailable}
             loadFailed={clinicalLoadFailed}
+            canReadBilling={canReadBilling}
+            initialProcedureSummaries={initialProcedureSummaries}
           />
         )}
         {section === "intake" && canManageIntake && (
