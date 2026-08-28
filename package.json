@@ -21,6 +21,7 @@
     "test:db": "node scripts/run-remote-database-tests.mjs",
     "db:start:local": "node scripts/run-local-supabase-command.mjs start",
     "db:stop:local": "node scripts/run-local-supabase-command.mjs stop",
+    "db:migrate:local": "node scripts/run-local-supabase-command.mjs migrate",
     "storage:start:local": "node scripts/run-local-minio.mjs start",
     "storage:stop:local": "node scripts/run-local-minio.mjs stop",
     "storage:status:local": "node scripts/run-local-minio.mjs status",

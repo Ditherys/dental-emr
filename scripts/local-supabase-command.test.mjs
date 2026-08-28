@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertLocalSupabaseCommand,
+  assertLocalSupabaseInvocation,
   assertLocalDockerDatabaseCommand,
   assertLocalDockerContext,
   assertLocalDockerEndpoint,
@@ -38,6 +39,11 @@ describe("local Supabase command allowlist", () => {
   it("returns only the exact reviewed local lifecycle commands", () => {
     expect(resolveLocalSupabaseCommand("start")).toEqual(["start"]);
     expect(resolveLocalSupabaseCommand("stop")).toEqual(["stop"]);
+    expect(resolveLocalSupabaseCommand("migrate")).toEqual([
+      "db",
+      "push",
+      "--local",
+    ]);
     expect(resolveLocalSupabaseCommand("reset")).toEqual([
       "db",
       "reset",
@@ -61,6 +67,20 @@ describe("local Supabase command allowlist", () => {
     );
     expect(() => resolveLocalSupabaseCommand("constructor")).toThrow(
       /allowlisted local Supabase command/,
+    );
+  });
+
+  it.each([
+    ["migrate", ["--linked"]],
+    ["migrate", ["--project-ref", "cloud-project"]],
+    ["migrate", ["--db-url", "postgresql://cloud.example.invalid/postgres"]],
+    ["cloud", []],
+    ["dev", []],
+    ["test", []],
+    ["production", []],
+  ])("rejects ambiguous or hosted local command invocation %s", (commandName, arguments_) => {
+    expect(() => assertLocalSupabaseInvocation(commandName, arguments_)).toThrow(
+      /allowlisted local Supabase command|does not accept additional arguments/,
     );
   });
 
@@ -240,6 +260,7 @@ describe("local Supabase package interface", () => {
     expect(packageJson.scripts).toMatchObject({
       "db:start:local": "node scripts/run-local-supabase-command.mjs start",
       "db:stop:local": "node scripts/run-local-supabase-command.mjs stop",
+      "db:migrate:local": "node scripts/run-local-supabase-command.mjs migrate",
       "db:reset:local": "node scripts/run-local-supabase-command.mjs reset",
       "db:provision:local":
         "node scripts/run-local-supabase-command.mjs provision-test-tooling",

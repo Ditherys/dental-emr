@@ -3,6 +3,32 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Billing and odontogram foundation — B0 in progress (2026-08-28)
+
+The project owner explicitly accepted the independently reviewed billing ledger
+and provider compensation specification/plan and the customized odontogram
+integration specification/plan. The durable acceptance record is
+`docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`.
+
+- **Authorized sequence:** Execute billing B0-B11 on `main`, then odontogram
+  O0-O4 only, in order. Do not create a branch or worktree.
+- **Environment boundary:** The owner expressly deferred all Cloud TEST activity
+  through O4. This is not a production waiver: guarded Cloud TEST remains
+  mandatory before production. Do not run O5 or later without new owner
+  authorization.
+- **B0 changes so far:** ADR-026 records the relational append-only PHP-centavo
+  charge/payment/allocation/provider-earning boundary. ADR-027 extends guarded
+  synthetic local verification to B0-B11/O0-O4, prohibits `db:reset:local` for
+  this scope, and adds only forward `db:migrate:local` (`db push --local`).
+- **Guard test evidence:** The new tests were intentionally RED before the
+  allowlist/runner implementation. Final GREEN evidence:
+  `npx vitest run scripts/local-supabase-command.test.mjs` — 1 file, 33 tests
+  passed. `npm run test:unit -- scripts` — 13 files, 286 tests passed. A direct
+  hostile invocation, `node scripts/run-local-supabase-command.mjs migrate
+  --linked`, was refused before Docker or the Supabase CLI was reached.
+- **Never use:** Cloud TEST/DEV/production commands, hosted credentials, direct
+  SQL, real data, or local reset for this scope.
+
 ## UI/UX revamp checkpoint (2026-08-28) - COMPLETE
 
 A cross-application UI/UX audit and implementation pass on the current `main`

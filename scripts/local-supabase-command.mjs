@@ -8,6 +8,7 @@ const repositoryRoot = resolve(scriptDirectory, "..");
 const LOCAL_SUPABASE_COMMANDS = Object.freeze({
   start: Object.freeze(["start"]),
   stop: Object.freeze(["stop"]),
+  migrate: Object.freeze(["db", "push", "--local"]),
   reset: Object.freeze(["db", "reset", "--local", "--yes"]),
   "provision-test-tooling": Object.freeze([
     "db",
@@ -180,6 +181,14 @@ export function resolveLocalSupabaseCommand(commandName) {
   const command = [...LOCAL_SUPABASE_COMMANDS[commandName]];
   assertLocalSupabaseCommand(command);
   return command;
+}
+
+export function assertLocalSupabaseInvocation(commandName, additionalArguments) {
+  resolveLocalSupabaseCommand(commandName);
+
+  if (!Array.isArray(additionalArguments) || additionalArguments.length !== 0) {
+    throw new Error("An allowlisted local Supabase command does not accept additional arguments.");
+  }
 }
 
 export function resolveLocalSupabaseCommands(commandName) {

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertLocalDockerContext,
   assertLocalDockerEndpoint,
+  assertLocalSupabaseInvocation,
   redactLocalSupabaseOutput,
   resolveLocalDockerEnvironment,
   resolveLocalCommandResultSentinel,
@@ -50,6 +51,7 @@ function assertLocalDockerEndpointIsSafe(environment) {
 
 try {
   const commandName = process.argv[2];
+  assertLocalSupabaseInvocation(commandName, process.argv.slice(3));
   const commands = resolveLocalSupabaseCommands(commandName);
   const dockerEnvironment = resolveLocalDockerEnvironment(process.env);
   assertLocalDockerEndpointIsSafe(dockerEnvironment);

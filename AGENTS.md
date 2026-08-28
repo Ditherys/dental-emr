@@ -26,14 +26,17 @@ Read the smallest relevant set before reviewing or implementing:
 Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 2026-08-19. Execute only its ordered task/checkpoint currently authorized.
 
-## Current Phase: Phase 3 Provider, Specialty & Procedure Foundation — Accepted
+## Current Phase: Billing ledger and odontogram foundation — Accepted, bounded execution
 
-Phase 3 is accepted by the project owner as recorded in
-`docs/PHASE3_ACCEPTANCE_REVIEW.md`. The accepted plan is in
-`docs/plans/003-provider-specialty-procedure-foundation.md`. ADR-021 extends
-ADR-020's guarded local verification boundary to the accepted Phase 3 plan.
-Guarded Cloud TEST remains mandatory before production deployment; local
-acceptance does not authorize production provider or patient use.
+The project owner accepted the billing and odontogram plans on 2026-08-28, as
+recorded in `docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`. Execute billing
+tasks B0-B11 first, then odontogram tasks O0-O4 only, on `main` without a
+branch or worktree. ADR-027 extends the guarded local verification boundary to
+this scope and authorizes forward-only local migrations; it explicitly
+prohibits using `db:reset:local` for it. No Cloud TEST activity is authorized
+before O4, and O5 onward requires separate owner authorization. Guarded Cloud
+TEST remains mandatory before production deployment; local acceptance never
+authorizes production provider or patient use.
 
 Do not begin a later product phase until its bounded plan has been independently
 reviewed and explicitly approved.
