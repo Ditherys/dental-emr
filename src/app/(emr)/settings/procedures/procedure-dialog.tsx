@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import type { ProcedureDetail } from "@/lib/procedures/types";
 import type { ProviderListItem, Specialty } from "@/lib/providers/types";
+import type { ProcedureDirectCostDefaultRow } from "@/lib/billing/types";
 
+import { ProcedureBillingDefaults } from "./procedure-billing-defaults";
 import { ProcedureForm } from "./procedure-form";
 
 export function ProcedureDialog({
@@ -20,12 +22,16 @@ export function ProcedureDialog({
   procedure,
   specialties,
   providers,
+  canManageBillingDefaults = false,
+  directCostDefaults = [],
 }: {
   actingBranchId: string;
   children: ReactNode;
   procedure?: ProcedureDetail;
   specialties: Specialty[];
   providers: ProviderListItem[];
+  canManageBillingDefaults?: boolean;
+  directCostDefaults?: ProcedureDirectCostDefaultRow[];
 }) {
   const [open, setOpen] = useState(false);
   const title = procedure ? `Edit ${procedure.name}` : "Add procedure";
@@ -45,6 +51,7 @@ export function ProcedureDialog({
           specialties={specialties}
           providers={providers}
         />
+        {procedure && canManageBillingDefaults && <ProcedureBillingDefaults actingBranchId={actingBranchId} procedure={procedure} directCostDefaults={directCostDefaults} />}
       </DialogContent>
     </Dialog>
   );

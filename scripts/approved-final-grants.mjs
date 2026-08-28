@@ -823,6 +823,7 @@ const siteRpcGrants = Object.freeze([
  */
 const BILLING_RPCS_GRANTS_MIGRATION = "20260828010501_billing_rpcs_grants.sql";
 const BILLING_RPC_CORRECTIONS_GRANTS_MIGRATION = "20260828010503_billing_rpcs_corrections_grants.sql";
+const BILLING_PROCEDURE_CONFIGURATION_RPCS_GRANTS_MIGRATION = "20260828010505_billing_procedure_configuration_rpcs_grants.sql";
 const billingRpcGrants = Object.freeze([
   "public.list_patient_account(uuid,uuid)",
   "public.post_charge(uuid,uuid,uuid,uuid,bigint,uuid,boolean,text,text)",
@@ -854,6 +855,21 @@ const billingRpcGrants = Object.freeze([
   privilege: "execute",
   columns: [],
   reason: "The narrow B6 billing boundary derives tenant and actor server-side, reauthorizes every operation, keeps base-table access denied, and writes the bounded audit event atomically with each mutation.",
+})));
+
+const billingProcedureConfigurationRpcGrants = Object.freeze([
+  "public.set_procedure_default_fee(uuid,uuid,integer,bigint)",
+  "public.list_procedure_direct_cost_defaults(uuid,uuid,boolean)",
+  "public.create_procedure_direct_cost_default(uuid,uuid,text,text,bigint)",
+  "public.update_procedure_direct_cost_default(uuid,uuid,integer,text,text,bigint)",
+  "public.deactivate_procedure_direct_cost_default(uuid,uuid,integer)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason: "The B6/B7 corrective procedure financial-configuration boundary derives the organization from the active acting branch, requires live billing.adjust, locks versioned same-tenant targets, keeps base-table access denied, and records bounded audit metadata atomically for mutations.",
 })));
 
 export const TERMINAL_MIGRATIONS = Object.freeze([
@@ -1142,6 +1158,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         "public.clear_postdated_cheque(uuid,uuid,text)",
       ].includes(grant.object),
     ),
+  }),
+  Object.freeze({
+    file: BILLING_PROCEDURE_CONFIGURATION_RPCS_GRANTS_MIGRATION,
+    grants: billingProcedureConfigurationRpcGrants,
   }),
 ]);
 

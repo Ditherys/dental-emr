@@ -6,8 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 
 import { BillingServiceError, mapBillingRpcError } from "./errors";
 import {
-  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, listPatientAccountInputSchema, listPaymentMethodsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProviderCompensationAgreementInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
+  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, createProcedureDirectCostDefaultInputSchema, deactivateProcedureDirectCostDefaultInputSchema, listPatientAccountInputSchema, listPaymentMethodsInputSchema, listProcedureDirectCostDefaultsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, procedureDirectCostDefaultRowSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProcedureDefaultFeeInputSchema, setProviderCompensationAgreementInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, updateProcedureDirectCostDefaultInputSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
 } from "./schema";
+import type { ProcedureConfigurationMutationResult } from "./types";
 
 const resultSchema = z.array(z.record(z.string(), z.unknown())).min(1);
 const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() });
@@ -27,6 +28,16 @@ async function billingProjection(rpcName: string, args: Record<string, unknown>)
   const response = rpcResponseSchema.parse(await (supabase.rpc as unknown as Rpc)(rpcName, args));
   if (response.error) throw mapBillingRpcError(response.error);
   return response.data;
+}
+
+async function procedureConfigurationMutation(rpcName: string, args: Record<string, unknown>, resultKey: string): Promise<ProcedureConfigurationMutationResult> {
+  const supabase = await createClient();
+  const response = rpcResponseSchema.parse(await (supabase.rpc as unknown as Rpc)(rpcName, args));
+  if (response.error) throw mapBillingRpcError(response.error);
+  const result = resultSchema.parse(response.data)[0];
+  const id = result[resultKey];
+  if (typeof id !== "string" || typeof result.version !== "number" || !Number.isInteger(result.version) || result.version < 1) throw new BillingServiceError("FAILED");
+  return { id, version: result.version };
 }
 
 export async function recordPayment(input: unknown): Promise<string> {
@@ -68,5 +79,10 @@ export async function setProviderCompensationAgreement(input: unknown): Promise<
 export async function listUnresolvedChargeCompensation(input: unknown) { const value = listUnresolvedChargeCompensationInputSchema.parse(input); return z.array(unresolvedChargeCompensationRowSchema).parse(await billingProjection("list_unresolved_charge_compensation", { p_acting_branch_id: value.branchId, p_patient_id: value.patientId })); }
 export async function resolveChargeCompensation(input: unknown): Promise<string> { const value = resolveChargeCompensationInputSchema.parse(input); return billingMutation("resolve_charge_compensation", { p_acting_branch_id: value.branchId, p_charge_id: value.chargeId, p_reason: value.reason, p_idempotency_key: value.idempotencyKey }, "resolution_id"); }
 export async function listProviderEarnings(input: unknown) { const value = listProviderEarningsInputSchema.parse(input); return z.array(providerEarningRowSchema).parse(await billingProjection("list_provider_earnings", { p_acting_branch_id: value.branchId, p_provider_id: value.providerId, p_from: value.from, p_to: value.to })); }
+export async function setProcedureDefaultFee(input: unknown) { const value = setProcedureDefaultFeeInputSchema.parse(input); return procedureConfigurationMutation("set_procedure_default_fee", { p_acting_branch_id: value.branchId, p_procedure_id: value.procedureId, p_expected_version: value.expectedVersion, p_default_fee_centavos: value.defaultFeeCentavos }, "procedure_id"); }
+export async function listProcedureDirectCostDefaults(input: unknown) { const value = listProcedureDirectCostDefaultsInputSchema.parse(input); return z.array(procedureDirectCostDefaultRowSchema).parse(await billingProjection("list_procedure_direct_cost_defaults", { p_acting_branch_id: value.branchId, p_procedure_id: value.procedureId, p_include_inactive: value.includeInactive })); }
+export async function createProcedureDirectCostDefault(input: unknown) { const value = createProcedureDirectCostDefaultInputSchema.parse(input); return procedureConfigurationMutation("create_procedure_direct_cost_default", { p_acting_branch_id: value.branchId, p_procedure_id: value.procedureId, p_cost_type: value.costType, p_description: value.description, p_amount_centavos: value.amountCentavos }, "direct_cost_default_id"); }
+export async function updateProcedureDirectCostDefault(input: unknown) { const value = updateProcedureDirectCostDefaultInputSchema.parse(input); return procedureConfigurationMutation("update_procedure_direct_cost_default", { p_acting_branch_id: value.branchId, p_direct_cost_default_id: value.directCostDefaultId, p_expected_version: value.expectedVersion, p_cost_type: value.costType, p_description: value.description, p_amount_centavos: value.amountCentavos }, "direct_cost_default_id"); }
+export async function deactivateProcedureDirectCostDefault(input: unknown) { const value = deactivateProcedureDirectCostDefaultInputSchema.parse(input); return procedureConfigurationMutation("deactivate_procedure_direct_cost_default", { p_acting_branch_id: value.branchId, p_direct_cost_default_id: value.directCostDefaultId, p_expected_version: value.expectedVersion }, "direct_cost_default_id"); }
 
 export { BillingServiceError };

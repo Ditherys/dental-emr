@@ -17,6 +17,18 @@ import {
   setProcedureSpecialtiesSchema,
   updateProcedureSchema,
 } from "@/lib/procedures/schema";
+import {
+  createProcedureDirectCostDefaultInputSchema,
+  deactivateProcedureDirectCostDefaultInputSchema,
+  setProcedureDefaultFeeInputSchema,
+  updateProcedureDirectCostDefaultInputSchema,
+} from "@/lib/billing/schema";
+import {
+  createProcedureDirectCostDefault,
+  deactivateProcedureDirectCostDefault,
+  setProcedureDefaultFee,
+  updateProcedureDirectCostDefault,
+} from "@/lib/billing/service";
 
 export type ProcedureActionState = {
   success?: boolean;
@@ -121,4 +133,53 @@ export async function setProcedureAssociationsAction(_previous: ProcedureActionS
   } catch {
     return errorState();
   }
+}
+
+async function requireProcedureBillingConfiguration(branchId: string) {
+  await requirePermission({ permission: "provider.manage", branchId });
+  await requirePermission({ permission: "billing.adjust", branchId });
+}
+
+export async function setProcedureDefaultFeeAction(input: unknown): Promise<ProcedureActionState> {
+  const parsed = setProcedureDefaultFeeInputSchema.safeParse(input);
+  if (!parsed.success) return errorState();
+  try {
+    await requireProcedureBillingConfiguration(parsed.data.branchId);
+    await setProcedureDefaultFee(parsed.data);
+    revalidatePath(procedurePath);
+    return { success: true, message: "Default fee saved." };
+  } catch { return errorState(); }
+}
+
+export async function createProcedureDirectCostDefaultAction(input: unknown): Promise<ProcedureActionState> {
+  const parsed = createProcedureDirectCostDefaultInputSchema.safeParse(input);
+  if (!parsed.success) return errorState();
+  try {
+    await requireProcedureBillingConfiguration(parsed.data.branchId);
+    await createProcedureDirectCostDefault(parsed.data);
+    revalidatePath(procedurePath);
+    return { success: true, message: "Direct-cost default added." };
+  } catch { return errorState(); }
+}
+
+export async function updateProcedureDirectCostDefaultAction(input: unknown): Promise<ProcedureActionState> {
+  const parsed = updateProcedureDirectCostDefaultInputSchema.safeParse(input);
+  if (!parsed.success) return errorState();
+  try {
+    await requireProcedureBillingConfiguration(parsed.data.branchId);
+    await updateProcedureDirectCostDefault(parsed.data);
+    revalidatePath(procedurePath);
+    return { success: true, message: "Direct-cost default saved." };
+  } catch { return errorState(); }
+}
+
+export async function deactivateProcedureDirectCostDefaultAction(input: unknown): Promise<ProcedureActionState> {
+  const parsed = deactivateProcedureDirectCostDefaultInputSchema.safeParse(input);
+  if (!parsed.success) return errorState();
+  try {
+    await requireProcedureBillingConfiguration(parsed.data.branchId);
+    await deactivateProcedureDirectCostDefault(parsed.data);
+    revalidatePath(procedurePath);
+    return { success: true, message: "Direct-cost default deactivated." };
+  } catch { return errorState(); }
 }

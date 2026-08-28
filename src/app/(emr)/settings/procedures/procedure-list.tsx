@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { ProcedureDetail, ProcedureListItem } from "@/lib/procedures/types";
 import type { ProviderListItem, Specialty } from "@/lib/providers/types";
+import type { ProcedureDirectCostDefaultRow } from "@/lib/billing/types";
 
 import { archiveProcedureAction, type ProcedureActionState } from "./actions";
 import { ProcedureDialog } from "./procedure-dialog";
@@ -50,10 +51,10 @@ function ArchiveProcedure({ procedure, actingBranchId, canManage }: { procedure:
   );
 }
 
-function EditProcedureButton({ actingBranchId, procedure, specialties, providers, canManage }: { actingBranchId: string; procedure: ProcedureDetail; specialties: Specialty[]; providers: ProviderListItem[]; canManage: boolean }) {
+function EditProcedureButton({ actingBranchId, procedure, specialties, providers, canManage, canManageBillingDefaults, directCostDefaults }: { actingBranchId: string; procedure: ProcedureDetail; specialties: Specialty[]; providers: ProviderListItem[]; canManage: boolean; canManageBillingDefaults: boolean; directCostDefaults: ProcedureDirectCostDefaultRow[] }) {
   if (!canManage) return null;
   return (
-    <ProcedureDialog actingBranchId={actingBranchId} procedure={procedure} specialties={specialties} providers={providers}>
+    <ProcedureDialog actingBranchId={actingBranchId} procedure={procedure} specialties={specialties} providers={providers} canManageBillingDefaults={canManageBillingDefaults} directCostDefaults={directCostDefaults}>
       <Button type="button" size="sm" variant="outline" aria-label={`Edit procedure ${procedure.name}`}>
         <Pencil aria-hidden="true" />
         Edit
@@ -62,7 +63,7 @@ function EditProcedureButton({ actingBranchId, procedure, specialties, providers
   );
 }
 
-export function ProcedureList({ procedures, details, actingBranchId, specialties, providers, canManage = true }: { procedures: ProcedureListItem[]; details: ProcedureDetail[]; actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[]; canManage?: boolean }) {
+export function ProcedureList({ procedures, details, actingBranchId, specialties, providers, canManage = true, canManageBillingDefaults = false, directCostDefaultsByProcedure = {} }: { procedures: ProcedureListItem[]; details: ProcedureDetail[]; actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[]; canManage?: boolean; canManageBillingDefaults?: boolean; directCostDefaultsByProcedure?: Record<string, ProcedureDirectCostDefaultRow[]> }) {
   const detailById = new Map(details.map((procedure) => [procedure.procedureId, procedure]));
   const addTrigger = (
     <Button type="button" size="lg" className="h-11">
@@ -116,7 +117,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                       <td className="px-3 py-3 text-muted-foreground">{procedure.preBufferMinutes} / {procedure.postBufferMinutes} min</td>
                       <td className="px-3 py-3 text-muted-foreground">{procedure.specialtyCount} specialties, {procedure.eligibleProviderCount} providers</td>
                       <td className="px-3 py-3"><StatusBadge variant={procedure.status === "active" ? "success" : "neutral"}>{procedure.status}</StatusBadge></td>
-                      {canManage && <td className="px-3 py-3">{procedure.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}</td>}
+                       {canManage && <td className="px-3 py-3">{procedure.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} canManageBillingDefaults={canManageBillingDefaults} directCostDefaults={directCostDefaultsByProcedure[detail.procedureId] ?? []} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}</td>}
                     </tr>
                   );
                 })}
@@ -150,7 +151,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                       <dd>{procedure.specialtyCount} specialties, {procedure.eligibleProviderCount} providers</dd>
                     </div>
                   </dl>
-                  {canManage && procedure.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}
+                   {canManage && procedure.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} canManageBillingDefaults={canManageBillingDefaults} directCostDefaults={directCostDefaultsByProcedure[detail.procedureId] ?? []} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}
                 </article>
               );
             })}

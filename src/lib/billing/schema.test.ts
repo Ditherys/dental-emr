@@ -9,6 +9,8 @@ import {
   refundPaymentInputSchema,
   reversePaymentAllocationInputSchema,
   setProviderCompensationAgreementInputSchema,
+  setProcedureDefaultFeeInputSchema,
+  createProcedureDirectCostDefaultInputSchema,
   upsertPaymentMethodInputSchema,
 } from "./schema";
 
@@ -149,5 +151,19 @@ describe("remaining B6 schemas", () => {
     expect(upsertPaymentMethodInputSchema.safeParse({ branchId: paymentInput.branchId, code: "cash", name: "Cash", active: true, paymentMethodId: null, expectedVersion: null, idempotencyKey: "method-1" }).success).toBe(false);
     expect(setProviderCompensationAgreementInputSchema.safeParse({ branchId: paymentInput.branchId, providerId: paymentInput.patientId, effectiveFrom: "2026-09-01", effectiveTo: "2026-08-01", defaultRateBps: 5000, basis: "GROSS", idempotencyKey: "agreement-1" }).success).toBe(false);
     expect(listProviderEarningsInputSchema.safeParse({ branchId: paymentInput.branchId, providerId: null, from: "2026-09-01", to: "2026-08-01" }).success).toBe(false);
+  });
+});
+
+describe("procedure billing configuration schemas", () => {
+  it("keeps fee and direct-cost money as bounded digit strings", () => {
+    const fee = setProcedureDefaultFeeInputSchema.parse({ branchId: paymentInput.branchId, procedureId: paymentInput.patientId, expectedVersion: 1, defaultFeeCentavos: "150000" });
+    expect(fee.defaultFeeCentavos).toBe("150000");
+    expect(setProcedureDefaultFeeInputSchema.safeParse({ ...fee, defaultFeeCentavos: "1500.00" }).success).toBe(false);
+    expect(createProcedureDirectCostDefaultInputSchema.safeParse({ branchId: paymentInput.branchId, procedureId: paymentInput.patientId, costType: "LAB", description: "Lab fee", amountCentavos: 150000 }).success).toBe(false);
+  });
+
+  it("allows only a nullable fee reset and strict direct-cost fields", () => {
+    expect(setProcedureDefaultFeeInputSchema.safeParse({ branchId: paymentInput.branchId, procedureId: paymentInput.patientId, expectedVersion: 1, defaultFeeCentavos: null }).success).toBe(true);
+    expect(createProcedureDirectCostDefaultInputSchema.safeParse({ branchId: paymentInput.branchId, procedureId: paymentInput.patientId, costType: "OTHER", description: " ", amountCentavos: "1", forged: true }).success).toBe(false);
   });
 });

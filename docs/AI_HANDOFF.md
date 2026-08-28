@@ -9,6 +9,17 @@
 
 ## Billing B7 — patient account and configuration UI (2026-08-28)
 
+### B7 corrective procedure financial configuration (2026-08-28)
+
+- Added local forward migrations `20260828010504` through `10506` for
+  `billing.adjust`-gated procedure default-fee and direct-cost-default RPCs,
+  terminal grants, and the required bounded audit-metadata correction.
+- Procedure settings now expose those configuration values only through strict
+  server actions/adapters; no browser base-table access was introduced.
+- Evidence: procedure configuration authorization pgTAP 15/15; focused billing,
+  procedure-settings, and script tests 339/339; lint, typecheck, and migration
+  privilege lint pass. Local generated types refreshed.
+
 - Added the permission-gated Patient Account tab. The page calls the B6
   `list_patient_account` and `list_payment_methods` adapters only when `account`
   is selected and `billing.read` is present at the acting branch. The client gets

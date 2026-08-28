@@ -6179,6 +6179,19 @@ export type Database = {
           version: number
         }[]
       }
+      create_procedure_direct_cost_default: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_cost_type: string
+          p_description: string
+          p_procedure_id: string
+        }
+        Returns: {
+          direct_cost_default_id: string
+          version: number
+        }[]
+      }
       create_provider: {
         Args: { p_acting_branch_id: string; p_provider: Json }
         Returns: {
@@ -6265,6 +6278,17 @@ export type Database = {
         }
         Returns: {
           queue_entry_id: string
+          version: number
+        }[]
+      }
+      deactivate_procedure_direct_cost_default: {
+        Args: {
+          p_acting_branch_id: string
+          p_direct_cost_default_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          direct_cost_default_id: string
           version: number
         }[]
       }
@@ -6864,6 +6888,21 @@ export type Database = {
           name: string
         }[]
       }
+      list_procedure_direct_cost_defaults: {
+        Args: {
+          p_acting_branch_id: string
+          p_include_inactive?: boolean
+          p_procedure_id: string
+        }
+        Returns: {
+          active: boolean
+          amount_centavos: number
+          cost_type: string
+          description: string
+          direct_cost_default_id: string
+          version: number
+        }[]
+      }
       list_procedures: {
         Args: { p_acting_branch_id: string }
         Returns: {
@@ -7404,6 +7443,18 @@ export type Database = {
         }
         Returns: string
       }
+      set_procedure_default_fee: {
+        Args: {
+          p_acting_branch_id: string
+          p_default_fee_centavos: number
+          p_expected_version: number
+          p_procedure_id: string
+        }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
       set_procedure_eligible_providers: {
         Args: {
           p_acting_branch_id: string
@@ -7646,6 +7697,20 @@ export type Database = {
         }
         Returns: {
           procedure_id: string
+          version: number
+        }[]
+      }
+      update_procedure_direct_cost_default: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_cost_type: string
+          p_description: string
+          p_direct_cost_default_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          direct_cost_default_id: string
           version: number
         }[]
       }

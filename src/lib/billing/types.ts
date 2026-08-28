@@ -14,6 +14,20 @@ export type PaymentMethodRow = {
   active: boolean;
 };
 
+export type ProcedureDirectCostDefaultRow = {
+  direct_cost_default_id: string;
+  cost_type: "LAB" | "MATERIAL" | "OTHER";
+  description: string;
+  amount_centavos: number;
+  active: boolean;
+  version: number;
+};
+
+export type ProcedureConfigurationMutationResult = {
+  id: string;
+  version: number;
+};
+
 export type ChargeBalanceInput = {
   chargeCentavos: bigint;
   allocatedCentavos: bigint;

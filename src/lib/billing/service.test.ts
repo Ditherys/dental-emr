@@ -12,7 +12,9 @@ import {
   postCharge, postChargeAdjustment, postChargeWithAttributionOverride, recordPayment,
   recordPostdatedCheque, refundPayment, resolveChargeCompensation, reverseChargeAdjustment,
   reverseChargeDirectCost, reversePaymentAllocation, setProviderCompensationAgreement,
-  transitionPostdatedCheque, upsertPaymentMethod, voidCharge, voidPayment,
+  transitionPostdatedCheque, upsertPaymentMethod, voidCharge, voidPayment, setProcedureDefaultFee,
+  createProcedureDirectCostDefault, updateProcedureDirectCostDefault, deactivateProcedureDirectCostDefault,
+  listProcedureDirectCostDefaults,
 } from "./service";
 
 const branchId = "b6000000-0000-0000-0000-000000000001";
@@ -90,5 +92,23 @@ describe("billing service boundary", () => {
     rpc.mockResolvedValueOnce({ data: [{ provider_id: providerId, charge_id: chargeId, entry_type: "ACCRUAL", cause: "REALLOCATION", service_date: "2026-08-28", earning_centavos: 50, rate_bps: 5000, occurred_at: "2026-08-28T00:00:00+00:00" }], error: null });
     await expect(listProviderEarnings({ branchId, providerId: null, from: null, to: null })).resolves.toHaveLength(1);
     expect(rpc).toHaveBeenLastCalledWith("list_provider_earnings", { p_acting_branch_id: branchId, p_provider_id: null, p_from: null, p_to: null });
+  });
+
+  it("maps procedure billing defaults only to the corrective RPCs", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ procedure_id: chargeId, version: 2 }], error: null });
+    await expect(setProcedureDefaultFee({ branchId, procedureId: chargeId, expectedVersion: 1, defaultFeeCentavos: "150000" })).resolves.toEqual({ id: chargeId, version: 2 });
+    expect(rpc).toHaveBeenLastCalledWith("set_procedure_default_fee", { p_acting_branch_id: branchId, p_procedure_id: chargeId, p_expected_version: 1, p_default_fee_centavos: "150000" });
+    rpc.mockResolvedValueOnce({ data: [], error: null });
+    await expect(listProcedureDirectCostDefaults({ branchId, procedureId: chargeId, includeInactive: false })).resolves.toEqual([]);
+    expect(rpc).toHaveBeenLastCalledWith("list_procedure_direct_cost_defaults", { p_acting_branch_id: branchId, p_procedure_id: chargeId, p_include_inactive: false });
+    rpc.mockResolvedValueOnce({ data: [{ direct_cost_default_id: allocationId, version: 1 }], error: null });
+    await createProcedureDirectCostDefault({ branchId, procedureId: chargeId, costType: "LAB", description: "Lab", amountCentavos: "100" });
+    expect(rpc).toHaveBeenLastCalledWith("create_procedure_direct_cost_default", { p_acting_branch_id: branchId, p_procedure_id: chargeId, p_cost_type: "LAB", p_description: "Lab", p_amount_centavos: "100" });
+    rpc.mockResolvedValueOnce({ data: [{ direct_cost_default_id: allocationId, version: 2 }], error: null });
+    await updateProcedureDirectCostDefault({ branchId, directCostDefaultId: allocationId, expectedVersion: 1, costType: "MATERIAL", description: "Material", amountCentavos: "200" });
+    expect(rpc).toHaveBeenLastCalledWith("update_procedure_direct_cost_default", { p_acting_branch_id: branchId, p_direct_cost_default_id: allocationId, p_expected_version: 1, p_cost_type: "MATERIAL", p_description: "Material", p_amount_centavos: "200" });
+    rpc.mockResolvedValueOnce({ data: [{ direct_cost_default_id: allocationId, version: 3 }], error: null });
+    await deactivateProcedureDirectCostDefault({ branchId, directCostDefaultId: allocationId, expectedVersion: 2 });
+    expect(rpc).toHaveBeenLastCalledWith("deactivate_procedure_direct_cost_default", { p_acting_branch_id: branchId, p_direct_cost_default_id: allocationId, p_expected_version: 2 });
   });
 });
