@@ -3,6 +3,38 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Billing B5 — post-dated cheques (2026-08-28)
+
+- `20260828010400_postdated_cheques.sql`: postdated_cheques (HELD/DEPOSITED/
+  CLEARED/BOUNCED/CANCELLED/REPLACED, cheque number/bank stored as protected
+  financial data, org-scoped idempotency), separate proposed
+  postdated_cheque_allocations (patient-scope trigger), and the append-only
+  postdated_cheque_status_events chain. The cheque's current state is a
+  database-maintained projection: a BEFORE validator checks existence,
+  terminal-state, current-state, and the legal HELD->DEPOSITED/CANCELLED/
+  REPLACED, DEPOSITED->CLEARED/BOUNCED/CANCELLED/REPLACED, BOUNCED->REPLACED
+  transitions (so a second clear is impossible), and an AFTER trigger moves the
+  projection and records current_status_event_id in the same transaction.
+  payments gains the tenant-safe PDC source FK to postdated_cheques.
+- `20260828010401_postdated_cheque_guard_split.sql`: forward correction that
+  splits the original combined AFTER trigger into the BEFORE validator +
+  AFTER projector so transition rejections surface precise reasons instead of
+  being masked by the table CHECK.
+- Tests: `postdated_cheques.test.sql` (26 assertions) registered in the guard
+  registry and expected-suite list, covering every legal transition, illegal
+  transitions, stale-from, terminal rejection incl. duplicate clear, proposed-
+  allocation patient scope, PDC payment link tenant safety, and projection
+  reconciliation.
+- `postdated_cheque_clearance_concurrency.local.mjs` authored (two-client
+  clear_postdated_cheque probe); becomes runnable and is registered when the B6
+  RPC exists.
+- **Evidence:** direct local pgTAP postdated_cheques 26/26 and all prior billing
+  suites pass; `security:migrations` 134 files / 196 approved privileges pass;
+  guard and migration-privilege-lint tests pass (tables 90, functions 260,
+  secdef 205); lint, typecheck clean. `db:migrate:local` applied both migrations
+  forward.
+- **Residual local-only:** unchanged `seed_security_fixtures` blocker from B2.
+
 ## Billing B4 — provider compensation ledger (2026-08-28)
 
 - `20260828010300_provider_compensation.sql`: effective-dated
