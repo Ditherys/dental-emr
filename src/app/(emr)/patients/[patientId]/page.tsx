@@ -13,6 +13,7 @@ import { listProviders } from "@/lib/providers/data";
 import { ProviderServiceError } from "@/lib/providers/service";
 import { TreatmentPlanServiceError, listTreatmentPlans } from "@/lib/treatment-plan/service";
 import { IntakeServiceError, listConsentTemplates, listIntakeForms } from "@/lib/intake/service";
+import { BillingServiceError, listPatientAccount, listPaymentMethods } from "@/lib/billing/service";
 
 import { PatientWorkspace } from "./patient-workspace";
 import { isPatientSection, type PatientSectionKey } from "./patient-sections";
@@ -102,12 +103,19 @@ export default async function PatientPage({
   const canEdit = hasSharedPatientPermission(state, "patient.demographics.write");
   const canGenerateDocuments = hasPermission(state, "document.generate", actingBranchId);
   const canManageIntake = hasPermission(state, "intake.manage", actingBranchId);
+  const canReadBilling = hasPermission(state, "billing.read", actingBranchId);
+  const canRecordPayment = hasPermission(state, "payment.record", actingBranchId);
+  const canAdjustBilling = hasPermission(state, "billing.adjust", actingBranchId);
+  const canPostCharge = hasPermission(state, "billing.charge", actingBranchId);
 
   if (section === "clinical" && !canReadClinical) {
     return <PermissionDenied description="Your current access does not include the clinical record." />;
   }
   if (section === "intake" && !canManageIntake) {
     return <PermissionDenied description="Your current access does not include intake management." />;
+  }
+  if (section === "account" && !canReadBilling) {
+    return <PermissionDenied description="Your current access does not include this patient account." />;
   }
 
   let initialReferrals: Awaited<ReturnType<typeof listPatientReferrals>> = [];
@@ -125,6 +133,21 @@ export default async function PatientPage({
   let intakeLoadFailed = false;
   let consentTemplates: Awaited<ReturnType<typeof listConsentTemplates>> = [];
   let consentTemplatesUnavailable = false;
+  let accountRows: Awaited<ReturnType<typeof listPatientAccount>> = [];
+  let paymentMethods: Awaited<ReturnType<typeof listPaymentMethods>> = [];
+  let accountLoadFailed = false;
+
+  if (section === "account" && canReadBilling) {
+    try {
+      [accountRows, paymentMethods] = await Promise.all([
+        listPatientAccount({ branchId: actingBranchId, patientId }),
+        listPaymentMethods({ branchId: actingBranchId }),
+      ]);
+    } catch (error) {
+      if (!(error instanceof BillingServiceError || error instanceof AuthorizationError)) throw error;
+      accountLoadFailed = true;
+    }
+  }
 
   if (section === "referrals") {
     try {
@@ -212,6 +235,13 @@ export default async function PatientPage({
       intakeLoadFailed={intakeLoadFailed}
       consentTemplates={consentTemplates}
       consentTemplatesUnavailable={consentTemplatesUnavailable}
+      canReadBilling={canReadBilling}
+      canPostCharge={canPostCharge}
+      canRecordPayment={canRecordPayment}
+      canAdjustBilling={canAdjustBilling}
+      initialAccountRows={accountRows}
+      paymentMethods={paymentMethods}
+      accountLoadFailed={accountLoadFailed}
     />
   );
 }

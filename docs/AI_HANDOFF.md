@@ -7,6 +7,33 @@
 
 ## Billing B6 — RPC, authorization, and audit boundary (locally complete, 2026-08-28)
 
+## Billing B7 — patient account and configuration UI (2026-08-28)
+
+- Added the permission-gated Patient Account tab. The page calls the B6
+  `list_patient_account` and `list_payment_methods` adapters only when `account`
+  is selected and `billing.read` is present at the acting branch. The client gets
+  only bounded ledger/payment-method DTOs; read-only roles receive no mutation
+  controls.
+- Account actions reauthorize independently and delegate only to strict B6
+  adapters for a non-clinical charge, payment, explicit payment allocation,
+  adjustment, and post-dated cheque. The ledger has dense desktop and phone
+  compositions, and allocations require explicit payment/charge selection.
+- Added `/settings/billing` for organization payment methods and effective-dated
+  provider compensation agreements. Compensation is isolated from the provider
+  identity editor and rendered only with `compensation.manage`; payment-method
+  mutation needs `billing.adjust`.
+- No direct-cost-default editor was added: the B2 table has no approved B6
+  adapter/RPC, and the pre-existing procedure configuration RPC rejects the
+  `defaultFeeCentavos` schema field. This checkpoint does not bypass the
+  server/RPC authorization boundary with a browser or base-table write.
+- **Evidence:** B7 focused Vitest 7/7, lint, typecheck, build, and `git diff
+  --check` pass. The full unit suite runs 127 files / 1285 tests, with five
+  pre-existing failures in `scripts/boundary-privilege-invariant.test.mjs`: its
+  fixture omits the B6 approved terminal RPC grants while
+  `approved-final-grants.mjs` correctly includes them. This must be reconciled
+  in a separately reviewed B6 boundary/test correction; it is unrelated to B7
+  UI files. Cloud TEST remains mandatory before production.
+
 - Applied locally, forward-only: `20260828010500_billing_rpcs.sql`, terminal
   grants `20260828010501_billing_rpcs_grants.sql`, authority/PDC-principal
   correction `20260828010502_billing_rpcs_corrections.sql`, and its terminal

@@ -7,6 +7,13 @@ export const ADJUSTMENT_REASON_MAX_LENGTH = 500;
 
 export type CompensationBasis = "GROSS" | "NET_DIRECT_COST";
 
+export type PaymentMethodRow = {
+  method_id: string;
+  code: string;
+  name: string;
+  active: boolean;
+};
+
 export type ChargeBalanceInput = {
   chargeCentavos: bigint;
   allocatedCentavos: bigint;

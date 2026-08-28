@@ -39,6 +39,8 @@ import type { ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 import type { ConsentTemplateOption, IntakeFormSummary } from "@/lib/intake/types";
+import type { z } from "zod";
+import type { patientAccountRowSchema, paymentMethodRowSchema } from "@/lib/billing/schema";
 
 import {
   findDuplicateCandidatesAction,
@@ -51,6 +53,7 @@ import { PatientOverview } from "./patient-overview";
 import { FilesSection } from "./files/files-section";
 import { ReferralsSection } from "./referrals-section";
 import { IntakeSection } from "./intake-section";
+import { BillingSection } from "./billing-section";
 import {
   patientDisplayName,
   patientMutationMessage,
@@ -88,12 +91,20 @@ type Props = {
   intakeLoadFailed?: boolean;
   consentTemplates?: ConsentTemplateOption[];
   consentTemplatesUnavailable?: boolean;
+  canReadBilling?: boolean;
+  canPostCharge?: boolean;
+  canRecordPayment?: boolean;
+  canAdjustBilling?: boolean;
+  initialAccountRows?: z.infer<typeof patientAccountRowSchema>[];
+  paymentMethods?: z.infer<typeof paymentMethodRowSchema>[];
+  accountLoadFailed?: boolean;
 };
 
-function availableSections(canReadClinical: boolean, canManageIntake: boolean) {
+function availableSections(canReadClinical: boolean, canManageIntake: boolean, canReadBilling: boolean) {
   return patientSectionKeys.filter((section) => {
     if (section === "clinical") return canReadClinical;
     if (section === "intake") return canManageIntake;
+    if (section === "account") return canReadBilling;
     return true;
   });
 }
@@ -123,6 +134,13 @@ export function PatientWorkspace({
   intakeLoadFailed,
   consentTemplates = [],
   consentTemplatesUnavailable = false,
+  canReadBilling = false,
+  canPostCharge = false,
+  canRecordPayment = false,
+  canAdjustBilling = false,
+  initialAccountRows = [],
+  paymentMethods = [],
+  accountLoadFailed = false,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +212,7 @@ export function PatientWorkspace({
     router.refresh();
   }
 
-  const sections = availableSections(canReadClinical, canManageIntake);
+  const sections = availableSections(canReadClinical, canManageIntake, canReadBilling);
   const age = ageFromBirthDate(patient.birthDate);
   const primaryContact = patient.contacts.find((contact) => contact.isPrimary) ?? patient.contacts[0];
 
@@ -302,6 +320,18 @@ export function PatientWorkspace({
             patient={patient}
             actingBranchId={actingBranchId}
             canEdit={canEdit}
+          />
+        )}
+        {section === "account" && canReadBilling && (
+          <BillingSection
+            patientId={patient.patientId}
+            actingBranchId={actingBranchId}
+            rows={initialAccountRows}
+            paymentMethods={paymentMethods}
+            canPostCharge={canPostCharge}
+            canRecordPayment={canRecordPayment}
+            canAdjustBilling={canAdjustBilling}
+            loadFailed={accountLoadFailed}
           />
         )}
         {section === "demographics" && (

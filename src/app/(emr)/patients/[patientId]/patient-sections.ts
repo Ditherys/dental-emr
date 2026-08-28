@@ -2,6 +2,7 @@ import type { PatientDetail } from "@/lib/patients/types";
 
 export const patientSectionKeys = [
   "overview",
+  "account",
   "demographics",
   "contacts",
   "relationships",
@@ -22,6 +23,7 @@ export function isPatientSection(value: unknown): value is PatientSectionKey {
 
 export const patientSectionLabels: Record<PatientSectionKey, string> = {
   overview: "Overview",
+  account: "Account",
   demographics: "Demographics",
   contacts: "Contacts",
   relationships: "Relationships",
