@@ -4,6 +4,7 @@ import { useActionState, useEffect, useEffectEvent, useRef } from "react";
 import { Archive, ClipboardList, Pencil, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { ProcedureDetail, ProcedureListItem } from "@/lib/procedures/types";
 import type { ProviderListItem, Specialty } from "@/lib/providers/types";
 
@@ -12,7 +13,7 @@ import { ProcedureDialog } from "./procedure-dialog";
 
 const initialState: ProcedureActionState = {};
 
-function ArchiveProcedure({ procedure, actingBranchId }: { procedure: ProcedureDetail; actingBranchId: string }) {
+function ArchiveProcedure({ procedure, actingBranchId, canManage }: { procedure: ProcedureDetail; actingBranchId: string; canManage: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [state, action, pending] = useActionState(archiveProcedureAction, initialState);
@@ -24,6 +25,7 @@ function ArchiveProcedure({ procedure, actingBranchId }: { procedure: ProcedureD
   useEffect(() => {
     if (state.success) closeAfterSuccess();
   }, [state.success]);
+  if (!canManage) return null;
   return (
     <>
       <Button ref={triggerRef} type="button" size="sm" variant="outline" onClick={() => dialogRef.current?.showModal()}>
@@ -48,7 +50,8 @@ function ArchiveProcedure({ procedure, actingBranchId }: { procedure: ProcedureD
   );
 }
 
-function EditProcedureButton({ actingBranchId, procedure, specialties, providers }: { actingBranchId: string; procedure: ProcedureDetail; specialties: Specialty[]; providers: ProviderListItem[] }) {
+function EditProcedureButton({ actingBranchId, procedure, specialties, providers, canManage }: { actingBranchId: string; procedure: ProcedureDetail; specialties: Specialty[]; providers: ProviderListItem[]; canManage: boolean }) {
+  if (!canManage) return null;
   return (
     <ProcedureDialog actingBranchId={actingBranchId} procedure={procedure} specialties={specialties} providers={providers}>
       <Button type="button" size="sm" variant="outline" aria-label={`Edit procedure ${procedure.name}`}>
@@ -59,7 +62,7 @@ function EditProcedureButton({ actingBranchId, procedure, specialties, providers
   );
 }
 
-export function ProcedureList({ procedures, details, actingBranchId, specialties, providers }: { procedures: ProcedureListItem[]; details: ProcedureDetail[]; actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[] }) {
+export function ProcedureList({ procedures, details, actingBranchId, specialties, providers, canManage = true }: { procedures: ProcedureListItem[]; details: ProcedureDetail[]; actingBranchId: string; specialties: Specialty[]; providers: ProviderListItem[]; canManage?: boolean }) {
   const detailById = new Map(details.map((procedure) => [procedure.procedureId, procedure]));
   const addTrigger = (
     <Button type="button" size="lg" className="h-11">
@@ -75,7 +78,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
           <h2 id="procedure-list-title" className="text-lg font-semibold">Procedure catalog</h2>
           <p className="mt-1 text-sm text-muted-foreground">{procedures.length} {procedures.length === 1 ? "procedure" : "procedures"}</p>
         </div>
-        <ProcedureDialog actingBranchId={actingBranchId} specialties={specialties} providers={providers}>{addTrigger}</ProcedureDialog>
+        {canManage && <ProcedureDialog actingBranchId={actingBranchId} specialties={specialties} providers={providers}>{addTrigger}</ProcedureDialog>}
       </div>
 
       {procedures.length === 0 ? (
@@ -97,7 +100,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                   <th scope="col" className="px-3 py-2.5 font-medium">Buffers</th>
                   <th scope="col" className="px-3 py-2.5 font-medium">Requirements</th>
                   <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
+                  {canManage && <th scope="col" className="px-3 py-2.5 font-medium"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -112,8 +115,8 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                       <td className="px-3 py-3 text-muted-foreground">{procedure.defaultDurationMinutes ? `${procedure.defaultDurationMinutes} min` : "Not set"}</td>
                       <td className="px-3 py-3 text-muted-foreground">{procedure.preBufferMinutes} / {procedure.postBufferMinutes} min</td>
                       <td className="px-3 py-3 text-muted-foreground">{procedure.specialtyCount} specialties, {procedure.eligibleProviderCount} providers</td>
-                      <td className="px-3 py-3">{procedure.status}</td>
-                      <td className="px-3 py-3">{procedure.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} /></div>}</td>
+                      <td className="px-3 py-3"><StatusBadge variant={procedure.status === "active" ? "success" : "neutral"}>{procedure.status}</StatusBadge></td>
+                      {canManage && <td className="px-3 py-3">{procedure.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}</td>}
                     </tr>
                   );
                 })}
@@ -131,7 +134,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                       <h3 className="font-medium">{procedure.name}</h3>
                       <p className="mt-0.5 font-mono text-xs text-muted-foreground">{procedure.code}</p>
                     </div>
-                    <span className="shrink-0 text-xs font-medium">{procedure.status}</span>
+                    <StatusBadge variant={procedure.status === "active" ? "success" : "neutral"}>{procedure.status}</StatusBadge>
                   </div>
                   <dl className="mt-2 grid gap-1 text-sm text-muted-foreground">
                     <div className="grid grid-cols-[5.5rem_1fr] gap-2">
@@ -147,7 +150,7 @@ export function ProcedureList({ procedures, details, actingBranchId, specialties
                       <dd>{procedure.specialtyCount} specialties, {procedure.eligibleProviderCount} providers</dd>
                     </div>
                   </dl>
-                  {procedure.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} /></div>}
+                  {canManage && procedure.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProcedureButton actingBranchId={actingBranchId} procedure={detail} specialties={specialties} providers={providers} canManage={canManage} /><ArchiveProcedure procedure={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}
                 </article>
               );
             })}

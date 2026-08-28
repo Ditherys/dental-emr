@@ -6,14 +6,17 @@ import { Archive, Pencil, Plus, UsersRound } from "lucide-react";
 import { archiveProviderAction, type ProviderActionState } from "./actions";
 import { ProviderDialog } from "./provider-dialog";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { ProviderDetail, ProviderListItem, Specialty } from "@/lib/providers/types";
 
 const initialState: ProviderActionState = {};
 
 type Branch = { id: string; name: string };
 
-function ArchiveProvider({ provider, actingBranchId }: { provider: ProviderDetail; actingBranchId: string }) {
+function ArchiveProvider({ provider, actingBranchId, canManage }: { provider: ProviderDetail; actingBranchId: string; canManage: boolean }) {
   const [state, action, pending] = useActionState(archiveProviderAction, initialState);
+
+  if (!canManage) return null;
 
   return (
     <form action={action}>
@@ -29,7 +32,8 @@ function ArchiveProvider({ provider, actingBranchId }: { provider: ProviderDetai
   );
 }
 
-function EditProviderButton({ actingBranchId, branches, provider, specialties }: { actingBranchId: string; branches: Branch[]; provider: ProviderDetail; specialties: Specialty[] }) {
+function EditProviderButton({ actingBranchId, branches, provider, specialties, canManage }: { actingBranchId: string; branches: Branch[]; provider: ProviderDetail; specialties: Specialty[]; canManage: boolean }) {
+  if (!canManage) return null;
   const name = `${provider.firstName} ${provider.lastName}`;
 
   return (
@@ -42,7 +46,7 @@ function EditProviderButton({ actingBranchId, branches, provider, specialties }:
   );
 }
 
-export function ProviderDirectory({ providers, details, actingBranchId, branches, specialties }: { providers: ProviderListItem[]; details: ProviderDetail[]; actingBranchId: string; branches: Branch[]; specialties: Specialty[] }) {
+export function ProviderDirectory({ providers, details, actingBranchId, branches, specialties, canManage = true }: { providers: ProviderListItem[]; details: ProviderDetail[]; actingBranchId: string; branches: Branch[]; specialties: Specialty[]; canManage?: boolean }) {
   const detailById = new Map(details.map((provider) => [provider.providerId, provider]));
   const addTrigger = (
     <Button type="button" size="lg" className="h-11">
@@ -53,12 +57,12 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
 
   return (
     <section aria-labelledby="provider-directory-title">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 id="provider-directory-title" className="text-lg font-semibold">Provider directory</h2>
           <p className="mt-1 text-sm text-muted-foreground">{providers.length} {providers.length === 1 ? "provider" : "providers"}</p>
         </div>
-        <ProviderDialog actingBranchId={actingBranchId} branches={branches} specialties={specialties}>{addTrigger}</ProviderDialog>
+        {canManage && <ProviderDialog actingBranchId={actingBranchId} branches={branches} specialties={specialties}>{addTrigger}</ProviderDialog>}
       </div>
 
       {providers.length === 0 ? (
@@ -80,7 +84,7 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
                   <th scope="col" className="px-3 py-2.5 font-medium">Specialty</th>
                   <th scope="col" className="px-3 py-2.5 font-medium">Branches</th>
                   <th scope="col" className="px-3 py-2.5 font-medium">Status</th>
-                  <th scope="col" className="px-3 py-2.5 font-medium"><span className="sr-only">Actions</span></th>
+                  {canManage && <th scope="col" className="px-3 py-2.5 font-medium"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -91,8 +95,8 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
                     <td className="px-3 py-3 text-muted-foreground">{provider.providerType.replaceAll("_", " ")}</td>
                     <td className="px-3 py-3 text-muted-foreground">{provider.primarySpecialtyLabel ?? "Not set"}</td>
                     <td className="px-3 py-3 text-muted-foreground">{provider.branchCount}</td>
-                    <td className="px-3 py-3">{provider.status}</td>
-                    <td className="px-3 py-3">{provider.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} /></div>}</td>
+                    <td className="px-3 py-3"><StatusBadge variant={provider.status === "active" ? "success" : "neutral"}>{provider.status}</StatusBadge></td>
+                    {canManage && <td className="px-3 py-3">{provider.status !== "archived" && detail && <div className="flex justify-end gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} canManage={canManage} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}</td>}
                   </tr>;
                 })}
               </tbody>
@@ -102,9 +106,9 @@ export function ProviderDirectory({ providers, details, actingBranchId, branches
             {providers.map((provider) => {
               const detail = detailById.get(provider.providerId);
               return <li key={provider.providerId} className="px-3 py-4">
-                <div className="flex items-center justify-between gap-3"><div className="min-w-0 font-medium"><span className="truncate">{provider.displayName}</span></div><span className="shrink-0 text-sm">{provider.status}</span></div>
+                <div className="flex items-center justify-between gap-3"><div className="min-w-0 font-medium"><span className="truncate">{provider.displayName}</span></div><StatusBadge variant={provider.status === "active" ? "success" : "neutral"}>{provider.status}</StatusBadge></div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-muted-foreground"><div><dt className="sr-only">Type</dt><dd>{provider.providerType.replaceAll("_", " ")}</dd></div><div><dt className="sr-only">Specialty</dt><dd>{provider.primarySpecialtyLabel ?? "Not set"}</dd></div><div><dt className="sr-only">Branches</dt><dd>{provider.branchCount} branches</dd></div></dl>
-                {provider.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} /></div>}
+                {canManage && provider.status !== "archived" && detail && <div className="mt-3 flex gap-2"><EditProviderButton actingBranchId={actingBranchId} branches={branches} provider={detail} specialties={specialties} canManage={canManage} /><ArchiveProvider provider={detail} actingBranchId={actingBranchId} canManage={canManage} /></div>}
               </li>;
             })}
           </ul>

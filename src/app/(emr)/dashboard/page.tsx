@@ -105,7 +105,7 @@ export default async function DashboardPage() {
           title="Dashboard"
           description="Role-relevant clinic operations and aggregate analytics."
         />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Dashboard analytics could not be loaded. Refresh to try again." />
       </div>
     );
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
             : "Your authorized operational workspaces."
         }
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       {canViewAnalytics ? (
         <AnalyticsDashboard
           actingBranchId={actingBranchId}

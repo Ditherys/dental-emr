@@ -91,13 +91,13 @@ describe("SiteSettingsForm", () => {
     expect(screen.getByDisplayValue("https://facebook.com/exampleclinic")).toBeInTheDocument();
   });
 
-  it("keeps 44px touch targets on inputs and action controls", () => {
+  it("uses the shared compact control height with 44px touch targets via the coarse-pointer stylesheet", () => {
     renderForm();
 
     for (const id of ["site-hero-heading", "site-hero-subtext", "site-about-text", "site-contact-phone", "site-contact-email", "site-address-override", "site-booking-link", "site-messenger-link", "site-privacy-notice"]) {
       const control = document.getElementById(id);
       expect(control).toBeInTheDocument();
-      if (control instanceof HTMLInputElement) expect(control).toHaveClass("h-11");
+      if (control instanceof HTMLInputElement) expect(control).toHaveClass("h-10");
     }
     expect(screen.getByRole("button", { name: "Save website settings" })).toHaveClass("min-h-11");
     expect(screen.getAllByRole("button", { name: "Add Operating hours" })[0]).toHaveClass("min-h-11");

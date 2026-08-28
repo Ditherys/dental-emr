@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BranchContextProvider } from "@/components/layout/branch-context";
@@ -32,6 +33,7 @@ vi.mock("./intake-section", () => ({ IntakeSection: () => <div data-testid="inta
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 import { PatientWorkspace } from "./patient-workspace";
+import type { PatientSectionKey } from "./patient-sections";
 
 const branchId = "32000000-0000-0000-0000-000000000001";
 const patient: PatientDetail = {
@@ -57,26 +59,17 @@ const patient: PatientDetail = {
   relationships: [{ relationshipId: "52000000-0000-0000-0000-000000000001", relatedPatientId: null, relatedPatientDisplayName: null, externalContactName: "Synthetic Guardian", externalMobile: null, externalEmail: null, relationshipType: "GUARDIAN", isLegalGuardian: true, canReceiveCommunications: true, canConsent: true, version: 1 }],
 };
 
-function renderWorkspace() {
+function renderWorkspace(overrides: {
+  section?: PatientSectionKey;
+  canReadClinical?: boolean;
+  canWriteClinical?: boolean;
+  canManageIntake?: boolean;
+  initialEditingDemographics?: boolean;
+} = {}) {
+  const { section = "overview", ...props } = overrides;
   return render(
     <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
-      <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit />
-    </BranchContextProvider>,
-  );
-}
-
-function renderClinicalWorkspace() {
-  return render(
-    <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
-      <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit canReadClinical canWriteClinical />
-    </BranchContextProvider>,
-  );
-}
-
-function renderIntakeWorkspace() {
-  return render(
-    <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
-      <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit canManageIntake />
+      <PatientWorkspace patient={patient} actingBranchId={branchId} canEdit section={section} {...props} />
     </BranchContextProvider>,
   );
 }
@@ -99,17 +92,18 @@ describe("PatientWorkspace", () => {
     expect(screen.getByRole("link", { name: "Relationships" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Referrals" })).toBeVisible();
     expect(screen.getByText("Google Search")).toBeVisible();
-    expect(screen.getByText(/Legal guardian/)).toBeVisible();
+    expect(screen.getByText(/Legal guardians/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Clinical" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("clinical-section")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Odontogram" })).not.toBeInTheDocument();
   });
 
-  it("shows the Clinical section only to users with clinical read", () => {
-    renderClinicalWorkspace();
+  it("shows the Clinical section only to users with clinical read and only when selected", () => {
+    renderWorkspace({ canReadClinical: true, canWriteClinical: true, section: "clinical" });
 
     expect(screen.getByRole("link", { name: "Clinical" })).toBeVisible();
     expect(screen.getByTestId("clinical-section")).toBeInTheDocument();
+    expect(screen.queryByTestId("intake-section")).not.toBeInTheDocument();
   });
 
   it("hides the Intake section without intake.manage", () => {
@@ -119,8 +113,8 @@ describe("PatientWorkspace", () => {
     expect(screen.queryByTestId("intake-section")).not.toBeInTheDocument();
   });
 
-  it("shows the Intake section only to users with intake.manage", () => {
-    renderIntakeWorkspace();
+  it("shows the Intake section only to users with intake.manage and only when selected", () => {
+    renderWorkspace({ canManageIntake: true, section: "intake" });
 
     expect(screen.getByRole("link", { name: "Intake" })).toBeVisible();
     expect(screen.getByTestId("intake-section")).toBeInTheDocument();
@@ -129,8 +123,9 @@ describe("PatientWorkspace", () => {
   it("keeps a duplicate demographics edit for explicit confirmation and preserves it when cancelled", async () => {
     actions.updatePatientAction.mockResolvedValueOnce({ ok: false, code: "DUPLICATE_REVIEW_REQUIRED" });
     actions.findDuplicateCandidatesAction.mockResolvedValue({ ok: true, review: { candidates: [{ patientId: "22000000-0000-0000-0000-000000000002", patientNumber: "P-000002", displayName: "Synthetic Match", birthDate: "1991-01-01", status: "active", matchedSignals: ["NAME_DOB"] }], truncated: false } });
-    renderWorkspace();
+    renderWorkspace({ section: "demographics" });
 
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("Preferred name"), { target: { value: "P2-11" } });
     fireEvent.click(screen.getByRole("button", { name: "Save demographics" }));
 
@@ -142,8 +137,9 @@ describe("PatientWorkspace", () => {
 
   it("shows stale-edit recovery instead of treating a stale mutation as saved", async () => {
     actions.updatePatientAction.mockResolvedValue({ ok: false, code: "STALE_VERSION" });
-    renderWorkspace();
+    renderWorkspace({ section: "demographics" });
 
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
     fireEvent.change(screen.getByLabelText("Preferred name"), { target: { value: "P2-11" } });
     fireEvent.click(screen.getByRole("button", { name: "Save demographics" }));
 
@@ -151,12 +147,21 @@ describe("PatientWorkspace", () => {
     expect(router.refresh).not.toHaveBeenCalled();
   });
 
-  it("confirms archive before using the AAL2-gated lifecycle action", async () => {
+  it("opens demographics directly in edit mode when requested", () => {
+    renderWorkspace({ section: "demographics", initialEditingDemographics: true });
+
+    expect(screen.getByLabelText("Preferred name")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save demographics" })).toBeVisible();
+  });
+
+  it("confirms archive from the More menu before using the AAL2-gated lifecycle action", async () => {
+    const user = userEvent.setup();
     renderWorkspace();
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive patient" }));
+    await user.click(screen.getByRole("button", { name: "More patient actions" }));
+    await user.click(screen.getByRole("menuitem", { name: "Archive patient" }));
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("requires your current AAL2 session");
+    expect(dialog).toHaveTextContent("requires a fresh security verification");
     fireEvent.click(within(dialog).getByRole("button", { name: "Archive patient" }));
 
     await waitFor(() => expect(actions.lifecyclePatientAction).toHaveBeenCalledWith({ patientId: patient.patientId, actingBranchId: branchId, expectedVersion: 1 }, "archive"));

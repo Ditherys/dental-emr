@@ -192,8 +192,8 @@ describe("CalendarSettings", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Connect" })[0]);
     expect(screen.getByRole("dialog")).toHaveAccessibleName("Connect a calendar");
-    expect(screen.getByLabelText("Provider")).toHaveClass("h-11");
-    expect(screen.getByLabelText("Calendar id")).toHaveClass("h-11");
+    expect(screen.getByLabelText("Provider")).toHaveClass("h-10");
+    expect(screen.getByLabelText("Calendar id")).toHaveClass("h-10");
   });
 
   it("connects a provider calendar through the connect action with the acting branch and calendar id", async () => {

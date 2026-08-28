@@ -20,7 +20,7 @@ export default async function AccountPage() {
         title="Account and security"
         description="Manage security controls for your individual workforce identity. Clinic roles and branch access are administered separately."
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <section className="max-w-2xl" aria-labelledby="mfa-heading">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-md bg-brand-navy-50 text-brand-navy-800">

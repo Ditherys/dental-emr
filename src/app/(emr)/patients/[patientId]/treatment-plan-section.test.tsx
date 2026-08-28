@@ -363,7 +363,7 @@ fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
   it("hides the whole clinical section — including the treatment plan tab — from a user without clinical.read", () => {
     render(
       <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
-        <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit />
+        <PatientWorkspace patient={patient} actingBranchId={branchId} canEdit section="overview" />
       </BranchContextProvider>,
     );
 
@@ -375,7 +375,7 @@ fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
   it("shows the treatment plan tab to a clinical reader", async () => {
     render(
       <BranchContextProvider model={{ organization: { id: "org-a", name: "Synthetic Dental" }, branches: [{ id: branchId, name: "Main" }], allowAllBranches: false }}>
-        <PatientWorkspace patient={patient} initialActingBranchId={branchId} canEdit canReadClinical initialTreatmentPlans={[draftPlan]} />
+        <PatientWorkspace patient={patient} actingBranchId={branchId} canEdit canReadClinical section="clinical" initialTreatmentPlans={[draftPlan]} />
       </BranchContextProvider>,
     );
 

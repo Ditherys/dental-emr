@@ -6,8 +6,9 @@ import { Menu } from "lucide-react";
 
 import { AppBrand } from "@/components/layout/app-brand";
 import {
-  visibleNavigationItems,
+  groupedNavigationItems,
   type NavigationHref,
+  type NavigationIcon,
 } from "@/components/layout/navigation-items";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +22,20 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
+function isActiveItem(pathname: string, href: string) {
+  return (
+    pathname === href ||
+    (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+  );
+}
+
 export function MobileNavigation({
   visibleHrefs,
 }: {
   visibleHrefs: readonly NavigationHref[];
 }) {
   const pathname = usePathname();
+  const { ungrouped, groups } = groupedNavigationItems(visibleHrefs);
 
   return (
     <Sheet>
@@ -47,38 +56,72 @@ export function MobileNavigation({
         <SheetHeader className="border-b px-4 py-4 text-left">
           <SheetTitle className="sr-only">Primary navigation</SheetTitle>
           <SheetDescription className="sr-only">
-            Navigate between the available foundation screens.
+            Navigate between the available application screens.
           </SheetDescription>
           <AppBrand href="/dashboard" />
         </SheetHeader>
-        <nav aria-label="Primary navigation" className="space-y-1 p-3">
-          {visibleNavigationItems(visibleHrefs).map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" &&
-                pathname.startsWith(`${item.href}/`));
-            const Icon = item.icon;
-
-            return (
-              <SheetClose asChild key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-background",
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden="true" />
-                  {item.label}
-                </Link>
-              </SheetClose>
-            );
-          })}
-        </nav>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <nav aria-label="Primary navigation" className="space-y-1">
+            {ungrouped.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={isActiveItem(pathname, item.href)}
+              />
+            ))}
+            {groups.map(({ group, items }) => (
+              <div key={group} className="pt-3 first:pt-0">
+                <p className="px-3 pb-1 text-[0.6875rem] font-semibold tracking-wider text-muted-foreground/80 uppercase">
+                  {group}
+                </p>
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      active={isActiveItem(pathname, item.href)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: NavigationIcon;
+  active: boolean;
+}) {
+  return (
+    <SheetClose asChild>
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground hover:bg-background",
+        )}
+      >
+        <Icon className="size-5 shrink-0" aria-hidden="true" />
+        <span>{label}</span>
+      </Link>
+    </SheetClose>
   );
 }

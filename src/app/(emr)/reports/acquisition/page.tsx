@@ -48,7 +48,7 @@ export default async function AcquisitionReportPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Acquisition report" description="Counts of patients by discovery source, category, and first-booking channel." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="The report could not be loaded. Refresh to try again." />
       </div>
     );
@@ -57,7 +57,7 @@ export default async function AcquisitionReportPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Acquisition report" description="Counts of patients by discovery source, category, and first-booking channel. Aggregate numbers only." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <AcquisitionReport actingBranchId={actingBranchId} initialRows={rows} />
     </div>
   );

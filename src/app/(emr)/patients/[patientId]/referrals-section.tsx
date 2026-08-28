@@ -11,7 +11,7 @@ import type { PatientReferral } from "@/lib/acquisition/types";
 import { createPatientReferralAction, type PatientMutationResult, updatePatientReferralStatusAction } from "./actions";
 
 type Props = { patientId: string; actingBranchId: string; canManage: boolean; referrals: PatientReferral[]; loadFailed?: boolean };
-const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
+const inputClass = "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 
 function message(result: PatientMutationResult) {
   if (result.ok) return null;

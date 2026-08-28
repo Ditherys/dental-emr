@@ -101,7 +101,7 @@ describe("FilesSection", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Archive" })[0]);
     const dialog = await screen.findByRole("alertdialog");
-    expect(dialog).toHaveTextContent("requires your current AAL2 session");
+    expect(dialog).toHaveTextContent("requires a fresh security verification");
     fireEvent.click(within(dialog).getByRole("button", { name: "Archive file" }));
 
     await waitFor(() => expect(actions.archiveFileAction).toHaveBeenCalledWith({ actingBranchId: branchId, fileId: available.fileId, expectedVersion: 3 }));

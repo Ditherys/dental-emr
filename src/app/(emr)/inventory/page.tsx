@@ -53,12 +53,12 @@ export default async function InventoryPage() {
   }
 
   if (denied) return <PermissionDenied description={actingBranchId ? undefined : "An active branch is required to view inventory."} />;
-  if (failed) return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Inventory" description="Branch stock, transfers, and movement history." /><Separator className="my-6" /><PageError description="Inventory could not be loaded. Refresh to try again." /></div>;
+  if (failed) return <div className="mx-auto w-full max-w-7xl"><PageHeader title="Inventory" description="Branch stock, transfers, and movement history." /><Separator className="my-4" /><PageError description="Inventory could not be loaded. Refresh to try again." /></div>;
 
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Inventory" description="Track consumable stock by branch, receive and issue materials, and confirm branch transfers." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <InventoryBoard actingBranchId={actingBranchId} branches={branches} canManage={canManage} initialItems={items} initialStock={stock} initialAggregate={aggregate} initialTransfers={transfers} />
     </div>
   );

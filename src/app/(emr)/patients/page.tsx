@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { AuthorizationError, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasSharedPatientPermission } from "@/lib/authorization/policy";
 
@@ -54,10 +56,22 @@ export default async function PatientsPage() {
     return <PermissionDenied description="Your current branch or role does not include access to the patient directory." />;
   }
 
+  const canRegister = hasSharedPatientPermission(state, "patient.demographics.write");
+
   return (
     <div className="mx-auto w-full max-w-7xl">
-      <PageHeader title="Patients" description="Find organization-wide patient records using the current working branch." />
-      <PatientList initialResult={initialResult} initialActingBranchId={actingBranchId} canViewArchived={hasSharedPatientPermission(state, "patient.demographics.write")} />
+      <PageHeader
+        title="Patients"
+        description="Find organization-wide patient records using the current working branch."
+        actions={
+          canRegister ? (
+            <Button asChild>
+              <Link href="/patients/new">Register patient</Link>
+            </Button>
+          ) : undefined
+        }
+      />
+      <PatientList initialResult={initialResult} initialActingBranchId={actingBranchId} canViewArchived={canRegister} />
     </div>
   );
 }

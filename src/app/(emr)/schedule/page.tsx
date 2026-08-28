@@ -99,7 +99,7 @@ export default async function SchedulePage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Schedule" description="Appointments by day or week for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="The schedule could not be loaded. Refresh to try again." />
       </div>
     );
@@ -108,7 +108,7 @@ export default async function SchedulePage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Schedule" description="Appointments by day or week for the acting branch. Patients can be booked without a provider while awaiting a specialist." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <ScheduleCalendar
         actingBranchId={actingBranchId}
         canWrite={canWrite}

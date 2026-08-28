@@ -64,7 +64,7 @@ export default async function SpecialistsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Specialists" description="Visiting and on-call specialist availability requests for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Specialist requests could not be loaded. Refresh to try again." />
       </div>
     );
@@ -73,7 +73,7 @@ export default async function SpecialistsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Specialists" description="Request availability from visiting and on-call specialists. Only a minimal case summary is shared — never clinical history." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <SpecialistsBoard
         actingBranchId={actingBranchId}
         canRespond

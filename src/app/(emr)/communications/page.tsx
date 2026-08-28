@@ -61,7 +61,7 @@ export default async function CommunicationsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Communications" description="Outbound appointment messages for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Communications could not be loaded. Refresh to try again." />
       </div>
     );
@@ -70,7 +70,7 @@ export default async function CommunicationsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Communications" description="Appointment confirmations, reminders, and notices sent by the acting branch. Recipients are masked to protect contact details." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <CommunicationsBoard
         actingBranchId={actingBranchId}
         canSend={canSend}

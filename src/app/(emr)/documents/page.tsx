@@ -75,7 +75,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Documents" description="Generated, printable records for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Documents could not be loaded. Refresh to try again." />
       </div>
     );
@@ -84,7 +84,7 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Documents" description="View and generate clinic-branded, A4-printable documents. Each document is a finalized, reproducible snapshot of only the sections you select." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <DocumentsBoard
         actingBranchId={actingBranchId}
         canGenerate={canGenerate}

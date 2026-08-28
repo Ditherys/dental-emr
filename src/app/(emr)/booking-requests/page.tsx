@@ -51,7 +51,7 @@ export default async function BookingRequestsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Booking requests" description="Public website booking requests for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Booking requests could not be loaded. Refresh to try again." />
       </div>
     );
@@ -63,7 +63,7 @@ export default async function BookingRequestsPage() {
         title="Booking requests"
         description="Review public website bookings. Only the minimal submitted contact details are shown — never clinical information."
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <BookingRequestsBoard actingBranchId={actingBranchId} initialRows={rows} />
     </div>
   );

@@ -109,7 +109,7 @@ export function PatientRegistrationForm({ initialActingBranchId, submitPatient =
     setReferrerCandidates(result.rows.map(({ patientId, displayName, patientNumber }) => ({ patientId, displayName, patientNumber })));
   }
 
-  const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
+  const inputClass = "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20";
   const fieldError = (name: keyof RegistrationValues) => form.formState.errors[name]?.message;
 
   return (

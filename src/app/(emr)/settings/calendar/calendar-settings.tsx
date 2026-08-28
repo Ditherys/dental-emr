@@ -31,7 +31,7 @@ import {
 } from "./actions";
 
 const controlClasses =
-  "h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 
 type Props = {
   actingBranchId: string;
@@ -468,7 +468,9 @@ export function CalendarSettings({ actingBranchId, initialIntegrations, initialS
       <section aria-labelledby="calendar-integrations-title">
         <h2 id="calendar-integrations-title" className="text-base font-semibold">Provider integrations</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Per-provider calendar connections for the acting branch. A connection stores state only; Google authorization is not wired in this release.
+          Per-provider calendar connections for the acting branch. A connection
+          stores connection state only; live Google sync is enabled when a
+          connection is available in your environment.
         </p>
 
         <div className="mt-3 hidden overflow-x-auto border-y md:block">

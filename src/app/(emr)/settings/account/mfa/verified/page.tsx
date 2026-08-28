@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { requireAal2 } from "@/lib/auth/mfa";
 
 export const metadata: Metadata = {
-  title: "AAL2 security check",
+  title: "Security check complete",
 };
 
 export default async function Aal2VerifiedPage() {
@@ -17,23 +17,22 @@ export default async function Aal2VerifiedPage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <PageHeader
-        title="AAL2 security check"
-        description="This route is rendered only after the server verifies a current AAL2 session and confirms that a verified factor remains enrolled."
+        title="Security check complete"
+        description="Your session was re-verified with your security factor before this page was shown."
       />
-      <Separator className="my-6" />
-      <section className="max-w-2xl" aria-labelledby="aal2-confirmed-heading">
+      <Separator className="my-4" />
+      <section className="max-w-2xl" aria-labelledby="security-confirmed-heading">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-md bg-success-soft text-success">
             <ShieldCheck className="size-5" aria-hidden="true" />
           </span>
           <div>
-            <h2 id="aal2-confirmed-heading" className="text-base font-semibold">
-              Current session verified at AAL2
+            <h2 id="security-confirmed-heading" className="text-base font-semibold">
+              Current session verified
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Future high-risk actions can call the same server helper before any
-              protected mutation. This checkpoint does not add those later-domain
-              operations.
+              You are ready for security-sensitive actions such as archiving
+              records or changing your account settings.
             </p>
           </div>
         </div>

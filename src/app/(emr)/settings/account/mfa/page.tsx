@@ -46,7 +46,7 @@ export default async function MfaSettingsPage({
         title="Multi-factor authentication"
         description="Protect your individual workforce account with a time-based code from an authenticator app. MFA is required before patient-data-capable access is enabled."
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <MfaSettings
         factors={factors.map((factor) => ({
           id: factor.id,

@@ -60,7 +60,7 @@ export default async function CalendarSettingsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Calendar sync" description="Provider calendar connections and sync activity for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Calendar sync settings could not be loaded. Refresh to try again." />
       </div>
     );
@@ -69,7 +69,7 @@ export default async function CalendarSettingsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Calendar sync" description="Per-provider Google Calendar connections and sync status for the acting branch. The EMR appointment remains authoritative and a failed sync never changes it; Google event details are never shown here." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <CalendarSettings
         actingBranchId={actingBranchId}
         initialIntegrations={integrations}

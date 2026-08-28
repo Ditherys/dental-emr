@@ -73,7 +73,7 @@ export default async function RecallsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Recalls" description="Recall tracking, reminders, and retention analytics for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="Recalls could not be loaded. Refresh to try again." />
       </div>
     );
@@ -82,7 +82,7 @@ export default async function RecallsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Recalls" description="Track scheduled and overdue recall visits, send reminders, and manage recall rules for the acting branch. Reminders respect each patient&apos;s opt-out preference." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <RecallsBoard
         actingBranchId={actingBranchId}
         branches={branches}

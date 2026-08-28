@@ -50,7 +50,7 @@ export default async function SiteSettingsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Website" description="The public website content for the acting organization." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="The website settings could not be loaded. Refresh to try again." />
       </div>
     );
@@ -59,7 +59,7 @@ export default async function SiteSettingsPage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Website" description="The public website content for the acting organization." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="The website settings could not be loaded. Refresh to try again." />
       </div>
     );
@@ -71,7 +71,7 @@ export default async function SiteSettingsPage() {
         title="Website"
         description="Edit the public clinic website content: hero, about, contact details, operating hours, booking and Messenger links, and the privacy notice. Only website-safe fields are shown here and no patient or clinical content is ever exposed."
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <SiteSettingsForm actingBranchId={actingBranchId} initialSettings={settings} />
     </div>
   );

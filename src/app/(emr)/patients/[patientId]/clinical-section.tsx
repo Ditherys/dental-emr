@@ -47,7 +47,7 @@ type Props = {
 type NoteDialogState = { mode: "create"; encounterId: string } | { mode: "edit"; encounterId: string; note: ClinicalNote } | null;
 type PrescriptionDraft = { key: string; medicationName: string; dosage: string; frequency: string };
 
-const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
+const inputClass = "h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 const textareaClass = "min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
 const NOTE_TYPES = ["PROGRESS", "CONSULTATION", "PROCEDURE", "POST_OP", "REFERRAL", "FREE_FORM"];
 const RECORD_TYPES: Array<{ value: ClinicalRecordType; label: string }> = [

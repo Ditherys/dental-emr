@@ -7,6 +7,9 @@ import Link from "next/link";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useBranchContext, ALL_BRANCHES_VALUE } from "@/components/layout/branch-context";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { PatientListActionResult } from "./actions";
 import { searchPatientsAction } from "./actions";
 import type { PatientListItem, PatientListQuery } from "@/lib/patients/types";
@@ -74,49 +77,42 @@ export function PatientList({
   const changePage = (nextPage: number) => setPage(Math.min(Math.max(1, nextPage), totalPages));
 
   return (
-    <section aria-labelledby="patient-directory-title" className="mt-6">
-      <div className="border-y py-4 sm:py-3">
-        {canViewArchived && (
-          <div className="mb-3 flex justify-end">
-            <Button asChild className="min-h-11 sm:min-h-9">
-              <Link href="/patients/new">Register patient</Link>
-            </Button>
-          </div>
-        )}
+    <section aria-labelledby="patient-directory-title" className="mt-4">
+      <div className="border-y py-3">
         <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_10rem_11rem_12rem] lg:items-end">
           <label className="grid gap-1.5 text-sm font-medium" htmlFor="patient-search">
             Find a patient
             <span className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-              <input id="patient-search" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} className="h-10 w-full rounded-md border bg-background py-2 pr-3 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" placeholder="Name, number, mobile, or email" />
+              <Input id="patient-search" value={query} onChange={(event) => { setPage(1); setQuery(event.target.value); }} className="pl-9" placeholder="Name, number, mobile, or email" />
             </span>
           </label>
           <label className="grid gap-1.5 text-sm font-medium" htmlFor="patient-birth-date">
             Birth date
-            <input id="patient-birth-date" type="date" value={birthDate} onChange={(event) => { setPage(1); setBirthDate(event.target.value); }} className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" />
+            <Input id="patient-birth-date" type="date" value={birthDate} onChange={(event) => { setPage(1); setBirthDate(event.target.value); }} />
           </label>
           <label className="grid gap-1.5 text-sm font-medium" htmlFor="patient-sort">
             Sort by
-            <select id="patient-sort" value={sort} onChange={(event) => { setPage(1); setSort(event.target.value as PatientListQuery["sort"]); }} className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30">
+            <Select id="patient-sort" value={sort} onChange={(event) => { setPage(1); setSort(event.target.value as PatientListQuery["sort"]); }}>
               <option value="name_asc">Name, A to Z</option>
               <option value="name_desc">Name, Z to A</option>
               <option value="patient_number_asc">Patient number</option>
               <option value="updated_desc">Recently updated</option>
-            </select>
+            </Select>
           </label>
           {canViewArchived && (
             <label className="grid gap-1.5 text-sm font-medium" htmlFor="patient-status">
               Status
-              <select id="patient-status" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value as typeof status); }} className="h-10 rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30">
+              <Select id="patient-status" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value as typeof status); }}>
                 <option value="">Active</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="archived">Archived</option>
-              </select>
+              </Select>
             </label>
           )}
         </div>
-        <p className="mt-3 text-xs leading-5 text-muted-foreground">Patient records are shared across the organization. The selected branch provides workflow context and does not filter this directory.</p>
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">Patient records are shared across the organization. The selected branch provides workflow context and does not filter this directory.</p>
       </div>
 
       {error ? (
@@ -125,16 +121,16 @@ export function PatientList({
         <EmptyState icon={UsersRound} title="No patients found" description="Try a different name, patient number, contact detail, birth date, or status." />
       ) : (
         <>
-          <p id="patient-directory-title" className="py-3 text-sm text-muted-foreground" aria-live="polite">
+          <p id="patient-directory-title" className="py-2.5 text-sm text-muted-foreground" aria-live="polite">
             {isLoading ? "Updating patient results" : `${result.total} patient${result.total === 1 ? "" : "s"} found`}
           </p>
           <div className="hidden overflow-x-auto border-y md:block">
             <table className="w-full min-w-[48rem] text-left text-sm">
-              <thead className="bg-subtle-surface text-xs font-medium text-muted-foreground"><tr><th className="px-4 py-3">Patient</th><th className="px-4 py-3">Number</th><th className="px-4 py-3">Birth date</th><th className="px-4 py-3">Primary contact</th><th className="px-4 py-3">Status</th></tr></thead>
-              <tbody>{result.rows.map((patient) => <tr key={patient.patientId} className="border-t"><td className="px-4 py-3 font-medium text-foreground"><Link className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/patients/${patient.patientId}`}>{patient.displayName}</Link></td><td className="px-4 py-3 font-mono text-xs">{patient.patientNumber}</td><td className="px-4 py-3">{patient.birthDate}</td><td className="px-4 py-3 text-muted-foreground">{contactSummary(patient)}</td><td className="px-4 py-3 capitalize">{patient.status}</td></tr>)}</tbody>
+              <thead className="bg-subtle-surface text-xs font-medium text-muted-foreground"><tr><th className="px-4 py-2.5">Patient</th><th className="px-4 py-2.5">Number</th><th className="px-4 py-2.5">Birth date</th><th className="px-4 py-2.5">Primary contact</th><th className="px-4 py-2.5">Status</th></tr></thead>
+              <tbody>{result.rows.map((patient) => <tr key={patient.patientId} className="border-t"><td className="px-4 py-2.5 font-medium text-foreground"><Link className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`/patients/${patient.patientId}`}>{patient.displayName}</Link></td><td className="px-4 py-2.5 font-mono text-xs">{patient.patientNumber}</td><td className="px-4 py-2.5">{patient.birthDate}</td><td className="px-4 py-2.5 text-muted-foreground">{contactSummary(patient)}</td><td className="px-4 py-2.5"><StatusBadge variant={patient.status === "active" ? "success" : patient.status === "archived" ? "neutral" : "warning"}>{patient.status}</StatusBadge></td></tr>)}</tbody>
             </table>
           </div>
-          <ul className="divide-y border-y md:hidden" aria-label="Patient results">{result.rows.map((patient) => <li key={patient.patientId}><Link href={`/patients/${patient.patientId}`} className="block px-4 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><p className="font-medium">{patient.displayName}</p><p className="mt-1 font-mono text-xs text-muted-foreground">{patient.patientNumber}</p><p className="mt-2 text-sm">Born {patient.birthDate}</p><p className="mt-1 text-sm text-muted-foreground">{contactSummary(patient)}</p><p className="mt-2 text-xs font-medium capitalize text-muted-foreground">Status: {patient.status}</p></Link></li>)}</ul>
+          <ul className="divide-y border-y md:hidden" aria-label="Patient results">{result.rows.map((patient) => <li key={patient.patientId}><Link href={`/patients/${patient.patientId}`} className="block px-4 py-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><p className="font-medium">{patient.displayName}</p><p className="mt-1 font-mono text-xs text-muted-foreground">{patient.patientNumber}</p><p className="mt-2 text-sm">Born {patient.birthDate}</p><p className="mt-1 text-sm text-muted-foreground">{contactSummary(patient)}</p><p className="mt-2 text-xs font-medium capitalize text-muted-foreground">Status: {patient.status}</p></Link></li>)}</ul>
         </>
       )}
 

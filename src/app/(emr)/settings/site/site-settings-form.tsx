@@ -10,7 +10,7 @@ import type { PublicSiteSettings } from "@/lib/site/types";
 import { updatePublicSiteSettingsAction, type SiteSettingsActionState } from "./actions";
 
 const initialState: SiteSettingsActionState = {};
-const controlClasses = "h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
+const controlClasses = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 const textareaClasses = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-none outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 
 type RecordRow = { key: string; value: string };
@@ -61,8 +61,8 @@ function RecordEditor({ prefix, label, hint, initial }: { prefix: string; label:
       <div className="space-y-2">
         {rows.map((row, index) => (
           <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-            <input name={`${prefix}-key-${index}`} value={row.key} onChange={(event) => updateRow(index, "key", event.target.value)} placeholder="Label" className={controlClasses} />
-            <input name={`${prefix}-value-${index}`} value={row.value} onChange={(event) => updateRow(index, "value", event.target.value)} placeholder="Value" className={controlClasses} />
+            <input name={`${prefix}-key-${index}`} value={row.key} onChange={(event) => updateRow(index, "key", event.target.value)} placeholder="Label" aria-label={`${label} label`} className={controlClasses} />
+            <input name={`${prefix}-value-${index}`} value={row.value} onChange={(event) => updateRow(index, "value", event.target.value)} placeholder="Value" aria-label={`${label} value`} className={controlClasses} />
             <Button type="button" variant="outline" className="min-h-11" onClick={() => setRows((current) => current.filter((_, i) => i !== index))} aria-label={`Remove ${label} row`}>
               <Minus aria-hidden="true" />
             </Button>

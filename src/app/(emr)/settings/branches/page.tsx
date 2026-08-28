@@ -37,7 +37,7 @@ export default async function BranchesPage() {
             title="Branches"
             description="Review and add operating locations for the current organization."
           />
-          <Separator className="my-6" />
+          <Separator className="my-4" />
           <PermissionDenied description="Your current access does not include branch settings. Contact an organization administrator if you believe this is a mistake." />
         </div>
       );
@@ -50,7 +50,7 @@ export default async function BranchesPage() {
             title="Branches"
             description="Review and add operating locations for the current organization."
           />
-          <Separator className="my-6" />
+          <Separator className="my-4" />
           <PageError description="Branch settings could not be loaded. Refresh the page to try again." />
         </div>
       );
@@ -65,7 +65,7 @@ export default async function BranchesPage() {
         title="Branches"
         description={`Review and add operating locations for ${organizationName}. New locations begin without copied staff access or later-phase operational setup.`}
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <BranchList branches={branches} />
     </div>
   );

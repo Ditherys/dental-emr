@@ -1,105 +1,449 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle, Pencil, Plus } from "lucide-react";
+import { Ellipsis, Pencil } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { ALL_BRANCHES_VALUE, useBranchContext } from "@/components/layout/branch-context";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { FileListItem } from "@/lib/files/types";
 import type { PatientReferral } from "@/lib/acquisition/types";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import type { DuplicateReview, PatientContactDetail, PatientDetail, PatientRelationshipDetail } from "@/lib/patients/types";
-
-import {
-  archiveContactAction, archiveRelationshipAction, createContactAction, createRelationshipAction,
-  findDuplicateCandidatesAction, lifecyclePatientAction, updateContactAction, updatePatientAction, updateRelationshipAction,
-  type PatientMutationResult,
-} from "./actions";
-import { ClinicalSection } from "./clinical-section";
-import { FilesSection } from "./files/files-section";
-import { ReferralsSection } from "./referrals-section";
+import type { DuplicateReview, PatientDetail } from "@/lib/patients/types";
 import type { ClinicalEncounter, MedicalRecord } from "@/lib/clinical/types";
 import type { ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 import type { ConsentTemplateOption, IntakeFormSummary } from "@/lib/intake/types";
 
+import {
+  findDuplicateCandidatesAction,
+  lifecyclePatientAction,
+} from "./actions";
+import { ClinicalSection } from "./clinical-section";
+import { ContactsSection, RelationshipsSection } from "./patient-contacts-relationships";
+import { PatientDemographics } from "./patient-demographics";
+import { PatientOverview } from "./patient-overview";
+import { FilesSection } from "./files/files-section";
+import { ReferralsSection } from "./referrals-section";
 import { IntakeSection } from "./intake-section";
+import {
+  patientDisplayName,
+  patientMutationMessage,
+  patientSectionHref,
+  patientSectionLabels,
+  patientSectionKeys,
+  ageFromBirthDate,
+  formatBirthDate,
+  type DuplicateRequest,
+  type PatientSectionKey,
+} from "./patient-sections";
 
-type Props = { patient: PatientDetail; initialActingBranchId: string; canEdit: boolean; initialFiles?: FileListItem[]; filesUnavailable?: boolean; initialReferrals?: PatientReferral[]; referralsUnavailable?: boolean; canReadClinical?: boolean; canWriteClinical?: boolean; initialClinicalEncounters?: ClinicalEncounter[]; initialMedicalRecords?: MedicalRecord[]; initialToothConditions?: ToothCondition[]; initialTreatmentPlans?: TreatmentPlan[]; canGenerateDocuments?: boolean; initialProviders?: ProviderListItem[]; clinicalLoadFailed?: boolean; clinicalProvidersUnavailable?: boolean; canManageIntake?: boolean; initialIntakeForms?: IntakeFormSummary[]; intakeLoadFailed?: boolean; consentTemplates?: ConsentTemplateOption[]; consentTemplatesUnavailable?: boolean };
-type Pending = { kind: "demographics" | "contact"; submit: (confirmed: boolean) => Promise<void>; reviewInput: Record<string, unknown> };
-const inputClass = "h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
+type Props = {
+  patient: PatientDetail;
+  actingBranchId: string;
+  canEdit: boolean;
+  section: PatientSectionKey;
+  initialEditingDemographics?: boolean;
+  initialReferrals?: PatientReferral[];
+  referralsUnavailable?: boolean;
+  initialFiles?: FileListItem[];
+  filesUnavailable?: boolean;
+  canReadClinical?: boolean;
+  canWriteClinical?: boolean;
+  initialClinicalEncounters?: ClinicalEncounter[];
+  initialMedicalRecords?: MedicalRecord[];
+  initialToothConditions?: ToothCondition[];
+  initialTreatmentPlans?: TreatmentPlan[];
+  canGenerateDocuments?: boolean;
+  initialProviders?: ProviderListItem[];
+  clinicalLoadFailed?: boolean;
+  clinicalProvidersUnavailable?: boolean;
+  canManageIntake?: boolean;
+  initialIntakeForms?: IntakeFormSummary[];
+  intakeLoadFailed?: boolean;
+  consentTemplates?: ConsentTemplateOption[];
+  consentTemplatesUnavailable?: boolean;
+};
 
-function message(result: PatientMutationResult) {
-  if (result.ok) return null;
-  if (result.code === "STALE_VERSION") return "This record changed while you were editing. Reload it before making further changes.";
-  if (result.code === "NOT_AUTHORIZED") return "Your access or selected branch changed. Return to the patient directory and try again.";
-  if (result.code === "INVALID_STATE") return "This action is no longer available for the current record state.";
-  return "The change could not be saved. Review the fields and try again.";
+function availableSections(canReadClinical: boolean, canManageIntake: boolean) {
+  return patientSectionKeys.filter((section) => {
+    if (section === "clinical") return canReadClinical;
+    if (section === "intake") return canManageIntake;
+    return true;
+  });
 }
-function displayName(patient: PatientDetail) { return [patient.firstName, patient.middleName, patient.lastName, patient.suffix].filter(Boolean).join(" "); }
-function candidateInput(patient: PatientDetail, branchId: string, mobile?: string, email?: string) {
-  return { actingBranchId: branchId, firstName: patient.firstName, middleName: patient.middleName ?? undefined, lastName: patient.lastName, suffix: patient.suffix ?? undefined, preferredName: patient.preferredName ?? undefined, birthDate: patient.birthDate, sexAtRegistration: patient.sexAtRegistration ?? undefined, addressLine1: patient.addressLine1 ?? undefined, addressLine2: patient.addressLine2 ?? undefined, city: patient.city ?? undefined, province: patient.province ?? undefined, postalCode: patient.postalCode ?? undefined, initialMobile: mobile, initialEmail: email };
-}
 
-export function PatientWorkspace({ patient, initialActingBranchId, canEdit, initialFiles, filesUnavailable, initialReferrals, referralsUnavailable, canReadClinical = false, canWriteClinical = false, initialClinicalEncounters = [], initialMedicalRecords = [], initialToothConditions = [], initialTreatmentPlans = [], canGenerateDocuments = false, initialProviders = [], clinicalLoadFailed, clinicalProvidersUnavailable, canManageIntake = false, initialIntakeForms = [], intakeLoadFailed, consentTemplates = [], consentTemplatesUnavailable = false }: Props) {
-  const router = useRouter(); const { selection } = useBranchContext();
-  const [error, setError] = useState<string | null>(null); const [pending, setPending] = useState<Pending | null>(null);
-  const [review, setReview] = useState<DuplicateReview | null>(null); const [contact, setContact] = useState<PatientContactDetail | null>(null); const [relationship, setRelationship] = useState<PatientRelationshipDetail | null>(null); const [lifecycle, setLifecycle] = useState<"archive" | "reactivate" | null>(null); const [saving, setSaving] = useState(false); const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const actingBranchId = selection && selection !== ALL_BRANCHES_VALUE ? selection : initialActingBranchId;
-  useEffect(() => { const warn = (event: BeforeUnloadEvent) => { if (saving || hasUnsavedChanges) { event.preventDefault(); event.returnValue = ""; } }; addEventListener("beforeunload", warn); return () => removeEventListener("beforeunload", warn); }, [hasUnsavedChanges, saving]);
+export function PatientWorkspace({
+  patient,
+  actingBranchId,
+  canEdit,
+  section,
+  initialEditingDemographics = false,
+  initialReferrals,
+  referralsUnavailable,
+  initialFiles,
+  filesUnavailable,
+  canReadClinical = false,
+  canWriteClinical = false,
+  initialClinicalEncounters = [],
+  initialMedicalRecords = [],
+  initialToothConditions = [],
+  initialTreatmentPlans = [],
+  canGenerateDocuments = false,
+  initialProviders = [],
+  clinicalLoadFailed,
+  clinicalProvidersUnavailable,
+  canManageIntake = false,
+  initialIntakeForms = [],
+  intakeLoadFailed,
+  consentTemplates = [],
+  consentTemplatesUnavailable = false,
+}: Props) {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lifecycle, setLifecycle] = useState<"archive" | "reactivate" | null>(null);
+  const [review, setReview] = useState<DuplicateReview | null>(null);
+  const [reviewRequest, setReviewRequest] = useState<DuplicateRequest | null>(null);
+
   useEffect(() => {
-    // React resets uncontrolled action forms after completion; duplicate review must retain them.
-    const preserve = (event: Event) => event.preventDefault();
-    document.addEventListener("reset", preserve);
-    return () => document.removeEventListener("reset", preserve);
-  }, []);
-  async function complete(result: PatientMutationResult) { if (result.ok) { setError(null); setHasUnsavedChanges(false); setContact(null); setRelationship(null); router.refresh(); } else setError(message(result)); }
-  async function reviewDuplicate(next: Pending): Promise<void> { setSaving(true); const result = await findDuplicateCandidatesAction(next.reviewInput); setSaving(false); if (!result.ok || !("review" in result)) return void setError(message(result)); setPending(next); setReview(result.review); }
-  async function confirmDuplicate() { if (!pending) return; setReview(null); await pending.submit(true); setPending(null); }
-  async function saveDemographics(data: FormData, confirmed = false): Promise<void> {
-    const updated = { ...candidateInput(patient, actingBranchId), firstName: String(data.get("firstName")), middleName: String(data.get("middleName")) || null, lastName: String(data.get("lastName")), suffix: String(data.get("suffix")) || null, preferredName: String(data.get("preferredName")) || null, birthDate: String(data.get("birthDate")), sexAtRegistration: String(data.get("sexAtRegistration")) || null, addressLine1: String(data.get("addressLine1")) || null, addressLine2: String(data.get("addressLine2")) || null, city: String(data.get("city")) || null, province: String(data.get("province")) || null, postalCode: String(data.get("postalCode")) || null };
-    const input = { ...updated, patientId: patient.patientId, expectedVersion: patient.version, duplicateConfirmed: confirmed };
-    setSaving(true); const result = await updatePatientAction(input); setSaving(false);
-    if (!result.ok && result.code === "DUPLICATE_REVIEW_REQUIRED" && !confirmed) return reviewDuplicate({ kind: "demographics", reviewInput: { ...updated, initialMobile: undefined, initialEmail: undefined }, submit: (value) => saveDemographics(data, value) });
-    await complete(result);
-  }
-  async function saveContact(data: FormData, item: PatientContactDetail | null, confirmed = false): Promise<void> {
-    const type = String(data.get("contactType")) as PatientContactDetail["contactType"]; const value = String(data.get("value"));
-    const input = { patientId: patient.patientId, actingBranchId, contactType: type, label: String(data.get("label")) || undefined, value, isPrimary: data.get("isPrimary") === "on", duplicateConfirmed: confirmed, ...(item ? { contactId: item.contactId, expectedVersion: item.version } : {}) };
-    setSaving(true); const result = item ? await updateContactAction(input) : await createContactAction(input); setSaving(false);
-    if (!result.ok && result.code === "DUPLICATE_REVIEW_REQUIRED" && !confirmed) return reviewDuplicate({ kind: "contact", reviewInput: candidateInput(patient, actingBranchId, type === "MOBILE" ? value : undefined, type === "EMAIL" ? value : undefined), submit: (confirmedValue) => saveContact(data, item, confirmedValue) });
-    await complete(result);
-  }
-  async function saveRelationship(data: FormData, item: PatientRelationshipDetail | null) {
-    const input = { patientId: patient.patientId, actingBranchId, relatedPatientId: String(data.get("relatedPatientId")) || undefined, externalContactName: String(data.get("externalContactName")) || undefined, externalMobile: String(data.get("externalMobile")) || undefined, externalEmail: String(data.get("externalEmail")) || undefined, relationshipType: String(data.get("relationshipType")), isLegalGuardian: data.get("isLegalGuardian") === "on", canReceiveCommunications: data.get("canReceiveCommunications") === "on", canConsent: data.get("canConsent") === "on", ...(item ? { relationshipId: item.relationshipId, expectedVersion: item.version } : {}) };
-    setSaving(true); await complete(item ? await updateRelationshipAction(input) : await createRelationshipAction(input)); setSaving(false);
-  }
-  return <main className="mx-auto w-full max-w-6xl">
-    <header className="border-b pb-5"><p className="font-mono text-xs text-muted-foreground">{patient.patientNumber}</p><div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1"><h1 className="text-xl font-semibold tracking-[-0.015em] sm:text-2xl">{displayName(patient)}</h1><span className="text-sm capitalize text-muted-foreground">{patient.status}</span></div><p className="mt-2 text-sm text-muted-foreground">Born {patient.birthDate}{patient.preferredName ? ` · Prefers ${patient.preferredName}` : ""}{patient.preferredBranch ? ` · Preferred branch: ${patient.preferredBranch.name}` : ""}</p></header>
-    {error && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
-    <nav className="mt-4 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Patient workspace sections"><a href="#overview" className="shrink-0 border-b-2 border-primary px-1 py-3">Overview</a><a href="#demographics" className="shrink-0 px-1 py-3">Demographics</a><a href="#contacts" className="shrink-0 px-1 py-3">Contacts</a><a href="#relationships" className="shrink-0 px-1 py-3">Relationships</a><a href="#referrals" className="shrink-0 px-1 py-3">Referrals</a>{canReadClinical && <a href="#clinical" className="shrink-0 px-1 py-3">Clinical</a>}{canManageIntake && <a href="#intake" className="shrink-0 px-1 py-3">Intake</a>}<a href="#files" className="shrink-0 px-1 py-3">Files</a></nav>
-    <section id="overview" className="grid gap-6 py-6 lg:grid-cols-[minmax(0,1fr)_18rem]"><div><h2 className="text-base font-semibold">Overview</h2><dl className="mt-3 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2"><Fact label="Address" value={[patient.addressLine1, patient.addressLine2, patient.city, patient.province, patient.postalCode].filter(Boolean).join(", ") || "Not recorded"} /><Fact label="Sex at registration" value={patient.sexAtRegistration?.replaceAll("_", " ") ?? "Not recorded"} /></dl></div><div className="border-t pt-5 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0"><h2 className="text-base font-semibold">Record availability</h2><p className="mt-2 text-sm text-muted-foreground">Archive removes the record from default search results. Reactivation restores it.</p>{canEdit && <Button type="button" variant="outline" className="mt-4 min-h-11 w-full" onClick={() => setLifecycle(patient.status === "archived" ? "reactivate" : "archive")}>{patient.status === "archived" ? "Reactivate patient" : "Archive patient"}</Button>}</div></section>
-    <section id="demographics" className="border-t py-6"><div className="flex items-center justify-between gap-3"><div><h2 className="text-base font-semibold">Demographics</h2><p className="mt-1 text-sm text-muted-foreground">Identity and address information.</p></div>{canEdit && <Button type="button" variant="outline" className="min-h-11" onClick={() => document.getElementById("demographics-form")?.scrollIntoView({ behavior: "smooth" })}><Pencil aria-hidden="true" /> Edit</Button>}</div>{canEdit ? <form id="demographics-form" action={saveDemographics} onChange={() => setHasUnsavedChanges(true)} className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><Field name="firstName" label="First name" value={patient.firstName} required /><Field name="middleName" label="Middle name" value={patient.middleName ?? ""} /><Field name="lastName" label="Last name" value={patient.lastName} required /><Field name="suffix" label="Suffix" value={patient.suffix ?? ""} /><Field name="preferredName" label="Preferred name" value={patient.preferredName ?? ""} /><Field name="birthDate" label="Birth date" value={patient.birthDate} type="date" required /><SelectField name="sexAtRegistration" label="Sex at registration" value={patient.sexAtRegistration ?? ""} /><Field name="addressLine1" label="Address line 1" value={patient.addressLine1 ?? ""} /><Field name="addressLine2" label="Address line 2" value={patient.addressLine2 ?? ""} /><Field name="city" label="City" value={patient.city ?? ""} /><Field name="province" label="Province" value={patient.province ?? ""} /><Field name="postalCode" label="Postal code" value={patient.postalCode ?? ""} /><div className="md:col-span-2 xl:col-span-3"><Button type="submit" className="min-h-11" disabled={saving}>{saving && <LoaderCircle className="animate-spin" />}Save demographics</Button></div></form> : <p className="mt-4 text-sm text-muted-foreground">You have read-only access to this record.</p>}</section>
-    <section id="contacts" className="border-t py-6"><SectionHead title="Contacts" action={canEdit ? () => setContact({ contactId: "", contactType: "MOBILE", label: null, value: "", isPrimary: false, version: 0 }) : undefined} /><ul className="mt-4 divide-y border-y">{patient.contacts.map((item) => <li key={item.contactId} className="flex items-center justify-between gap-3 py-3"><div><p className="font-medium text-sm">{item.value}</p><p className="mt-1 text-xs text-muted-foreground">{item.contactType}{item.label ? ` · ${item.label}` : ""}{item.isPrimary ? " · Primary" : ""}</p></div>{canEdit && <Button type="button" variant="outline" className="min-h-11" onClick={() => setContact(item)}>Edit</Button>}</li>)}</ul></section>
-    <section id="relationships" className="border-t py-6"><SectionHead title="Relationships" action={canEdit ? () => setRelationship({ relationshipId: "", relatedPatientId: null, relatedPatientDisplayName: null, externalContactName: null, externalMobile: null, externalEmail: null, relationshipType: "GUARDIAN", isLegalGuardian: false, canReceiveCommunications: false, canConsent: false, version: 0 }) : undefined} /><ul className="mt-4 divide-y border-y">{patient.relationships.map((item) => <li key={item.relationshipId} className="flex items-center justify-between gap-3 py-3"><div><p className="font-medium text-sm">{item.relatedPatientDisplayName ?? item.externalContactName}</p><p className="mt-1 text-xs text-muted-foreground">{item.relationshipType.replaceAll("_", " ")}{item.isLegalGuardian ? " · Legal guardian" : ""}{item.canConsent ? " · Can consent" : ""}</p></div>{canEdit && <Button type="button" variant="outline" className="min-h-11" onClick={() => setRelationship(item)}>Edit</Button>}</li>)}</ul></section>
-    <section className="border-t py-6" aria-labelledby="attribution-heading"><h2 id="attribution-heading" className="text-base font-semibold">Acquisition attribution</h2><p className="mt-1 text-sm text-muted-foreground">Recorded at registration. This information is read-only here.</p><dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2"><Fact label="Discovery source" value={patient.attribution.acquisitionSource?.name ?? "Not recorded"} /><Fact label="Initial booking channel" value={patient.attribution.initialBookingChannel?.name ?? "Not recorded"} /><Fact label="Referrer" value={patient.attribution.referrerPatient?.displayName ?? patient.attribution.externalReferrer.name ?? "Not recorded"} />{patient.attribution.externalReferrer.organization && <Fact label="External organization" value={patient.attribution.externalReferrer.organization} />}</dl></section>
-    <ReferralsSection patientId={patient.patientId} actingBranchId={actingBranchId} canManage={canEdit} referrals={initialReferrals ?? []} loadFailed={referralsUnavailable} />
-    {canReadClinical && <ClinicalSection patientId={patient.patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} initialEncounters={initialClinicalEncounters} initialMedicalRecords={initialMedicalRecords} initialToothConditions={initialToothConditions} initialTreatmentPlans={initialTreatmentPlans} canGenerateDocuments={canGenerateDocuments} initialProviders={initialProviders} providersUnavailable={clinicalProvidersUnavailable} loadFailed={clinicalLoadFailed} />}
-    {canManageIntake && <IntakeSection patientId={patient.patientId} actingBranchId={actingBranchId} canManageIntake initialForms={initialIntakeForms} loadFailed={intakeLoadFailed} consentTemplates={consentTemplates} consentTemplatesUnavailable={consentTemplatesUnavailable} />}
-    <FilesSection patientId={patient.patientId} actingBranchId={actingBranchId} canManage={canEdit} initialFiles={initialFiles} loadFailed={filesUnavailable} />
-    <ContactDialog item={contact} close={() => setContact(null)} saving={saving} save={saveContact} archive={async (item) => { setSaving(true); await complete(await archiveContactAction(item.contactId, { patientId: patient.patientId, actingBranchId, expectedVersion: item.version })); setSaving(false); }} />
-    <RelationshipDialog item={relationship} close={() => setRelationship(null)} saving={saving} save={saveRelationship} archive={async (item) => { setSaving(true); await complete(await archiveRelationshipAction(item.relationshipId, { patientId: patient.patientId, actingBranchId, expectedVersion: item.version })); setSaving(false); }} />
-    <Dialog open={Boolean(review)} onOpenChange={(open) => !open && setReview(null)}><DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"><DialogHeader><DialogTitle>Review possible duplicate</DialogTitle><DialogDescription>No change has been made. These records share an exact identity or contact signal.</DialogDescription></DialogHeader><ul className="divide-y border-y">{review?.candidates.map((item) => <li key={item.patientId} className="py-3"><p className="font-medium">{item.displayName}</p><p className="font-mono text-xs text-muted-foreground">{item.patientNumber} · Born {item.birthDate}</p><p className="mt-1 text-xs text-muted-foreground">Match: {item.matchedSignals.join(", ")}</p></li>)}</ul><DialogFooter><Button type="button" variant="outline" onClick={() => setReview(null)}>Continue editing</Button><Button type="button" onClick={confirmDuplicate} disabled={saving}>Save as a distinct record</Button></DialogFooter></DialogContent></Dialog>
-    <AlertDialog open={Boolean(lifecycle)} onOpenChange={(open) => !open && setLifecycle(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{lifecycle === "archive" ? "Archive patient?" : "Reactivate patient?"}</AlertDialogTitle><AlertDialogDescription>{lifecycle === "archive" ? "This requires your current AAL2 session and can be reversed by reactivating the record." : "This requires your current AAL2 session and returns the record to default search results."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={async () => { if (!lifecycle) return; setSaving(true); await complete(await lifecyclePatientAction({ patientId: patient.patientId, actingBranchId, expectedVersion: patient.version }, lifecycle)); setSaving(false); setLifecycle(null); }} disabled={saving}>{lifecycle === "archive" ? "Archive patient" : "Reactivate patient"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-  </main>;
-}
+    const warn = (event: BeforeUnloadEvent) => {
+      if (saving || hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges, saving]);
 
-function Fact({ label, value }: { label: string; value: string }) { return <div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-1 capitalize">{value}</dd></div>; }
-function SectionHead({ title, action }: { title: string; action?: () => void }) { return <div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold">{title}</h2>{action && <Button type="button" variant="outline" className="min-h-11" onClick={action}><Plus aria-hidden="true" /> Add</Button>}</div>; }
-function Field({ name, label, value, type = "text", required = false }: { name: string; label: string; value: string; type?: string; required?: boolean }) { return <label className="grid gap-1.5 text-sm font-medium">{label}<input name={name} defaultValue={value} type={type} required={required} className={inputClass} /></label>; }
-function SelectField({ name, label, value }: { name: string; label: string; value: string }) { return <label className="grid gap-1.5 text-sm font-medium">{label}<select name={name} defaultValue={value} className={inputClass}><option value="">Not recorded</option><option value="female">Female</option><option value="male">Male</option><option value="intersex">Intersex</option><option value="unknown">Unknown</option><option value="not_recorded">Not recorded</option></select></label>; }
-function ContactDialog({ item, close, saving, save, archive }: { item: PatientContactDetail | null; close(): void; saving: boolean; save(data: FormData, item: PatientContactDetail | null): Promise<void>; archive(item: PatientContactDetail): Promise<void> }) { const isNew = item?.contactId === ""; return <Dialog open={Boolean(item)} onOpenChange={(open) => !open && close()}><DialogContent><DialogHeader><DialogTitle>{isNew ? "Add contact" : "Edit contact"}</DialogTitle><DialogDescription>Mobile and email changes are checked for possible duplicates before they are saved.</DialogDescription></DialogHeader><form action={async (data) => { if (item) await save(data, isNew ? null : item); }} className="grid gap-4"><label className="grid gap-1.5 text-sm font-medium">Type<select name="contactType" defaultValue={item?.contactType} className={inputClass}><option value="MOBILE">Mobile</option><option value="EMAIL">Email</option><option value="LANDLINE">Landline</option><option value="OTHER">Other</option></select></label><Field name="value" label="Value" value={item?.value ?? ""} required /><Field name="label" label="Label" value={item?.label ?? ""} /><label className="flex min-h-11 items-center gap-2 text-sm"><input name="isPrimary" type="checkbox" defaultChecked={item?.isPrimary} /> Primary contact</label><DialogFooter>{!isNew && item && <Button type="button" variant="destructive" onClick={() => archive(item)} disabled={saving}>Archive</Button>}<Button type="submit" disabled={saving}>{saving && <LoaderCircle className="animate-spin" />}Save contact</Button></DialogFooter></form></DialogContent></Dialog>; }
-function RelationshipDialog({ item, close, saving, save, archive }: { item: PatientRelationshipDetail | null; close(): void; saving: boolean; save(data: FormData, item: PatientRelationshipDetail | null): Promise<void>; archive(item: PatientRelationshipDetail): Promise<void> }) { const isNew = item?.relationshipId === ""; const related = item?.relatedPatientId; return <Dialog open={Boolean(item)} onOpenChange={(open) => !open && close()}><DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto"><DialogHeader><DialogTitle>{isNew ? "Add relationship" : "Edit relationship"}</DialogTitle><DialogDescription>Record an external guardian or contact. Existing related-patient links retain their linked patient.</DialogDescription></DialogHeader><form action={async (data) => { if (item) await save(data, isNew ? null : item); }} className="grid gap-4">{related ? <><input type="hidden" name="relatedPatientId" value={related} /><p className="text-sm">Related patient: {item?.relatedPatientDisplayName}</p></> : <><Field name="externalContactName" label="External contact name" value={item?.externalContactName ?? ""} required /><Field name="externalMobile" label="Mobile" value={item?.externalMobile ?? ""} /><Field name="externalEmail" label="Email" value={item?.externalEmail ?? ""} /></>}<label className="grid gap-1.5 text-sm font-medium">Relationship<select name="relationshipType" defaultValue={item?.relationshipType ?? "GUARDIAN"} className={inputClass}>{["PARENT", "GUARDIAN", "CHILD", "SPOUSE", "DEPENDENT", "EMERGENCY_CONTACT", "HOUSEHOLD_CONTACT", "OTHER"].map((type) => <option key={type} value={type}>{type.replaceAll("_", " ")}</option>)}</select></label><label className="flex min-h-11 items-center gap-2 text-sm"><input name="isLegalGuardian" type="checkbox" defaultChecked={item?.isLegalGuardian} /> Legal guardian</label><label className="flex min-h-11 items-center gap-2 text-sm"><input name="canReceiveCommunications" type="checkbox" defaultChecked={item?.canReceiveCommunications} /> Can receive communications</label><label className="flex min-h-11 items-center gap-2 text-sm"><input name="canConsent" type="checkbox" defaultChecked={item?.canConsent} /> Can consent</label><DialogFooter>{!isNew && item && <Button type="button" variant="destructive" onClick={() => archive(item)} disabled={saving}>Archive</Button>}<Button type="submit" disabled={saving}>Save relationship</Button></DialogFooter></form></DialogContent></Dialog>; }
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const interceptNavigation = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const anchor = target?.closest?.("a[href]");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || /^(https?:|mailto:|tel:)/.test(href)) return;
+      if (window.confirm("You have unsaved changes. Leave this page?")) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    document.addEventListener("click", interceptNavigation, true);
+    return () => document.removeEventListener("click", interceptNavigation, true);
+  }, [hasUnsavedChanges]);
+
+  async function requestDuplicateReview(request: DuplicateRequest) {
+    setSaving(true);
+    const result = await findDuplicateCandidatesAction(request.reviewInput);
+    setSaving(false);
+    if (!result.ok) {
+      return void setError(patientMutationMessage(result.code));
+    }
+    if (!("review" in result)) return;
+    setError(null);
+    setReviewRequest(request);
+    setReview(result.review);
+  }
+
+  async function confirmDuplicate() {
+    if (!reviewRequest) return;
+    const submit = reviewRequest.submit;
+    setReview(null);
+    setReviewRequest(null);
+    await submit(true);
+  }
+
+  async function runLifecycle() {
+    if (!lifecycle) return;
+    setSaving(true);
+    const result = await lifecyclePatientAction(
+      { patientId: patient.patientId, actingBranchId, expectedVersion: patient.version },
+      lifecycle,
+    );
+    setSaving(false);
+    if (!result.ok) return void setError(patientMutationMessage(result.code));
+    setError(null);
+    setLifecycle(null);
+    router.refresh();
+  }
+
+  const sections = availableSections(canReadClinical, canManageIntake);
+  const age = ageFromBirthDate(patient.birthDate);
+  const primaryContact = patient.contacts.find((contact) => contact.isPrimary) ?? patient.contacts[0];
+
+  return (
+    <main className="mx-auto w-full max-w-7xl">
+      <div className="border-b pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">
+              <Link
+                href="/patients"
+                className="font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+              >
+                Patient directory
+              </Link>
+              <span aria-hidden="true"> · </span>
+              <span className="font-mono">{patient.patientNumber}</span>
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="text-xl font-semibold tracking-[-0.015em] text-foreground">
+                {patientDisplayName(patient)}
+              </h1>
+              <StatusBadge
+                variant={patient.status === "archived" ? "neutral" : "success"}
+              >
+                {patient.status}
+              </StatusBadge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatBirthDate(patient.birthDate)}
+              {age !== null ? ` (${age} years old)` : ""}
+              {patient.sexAtRegistration
+                ? ` · ${patient.sexAtRegistration.replaceAll("_", " ")}`
+                : ""}
+              {primaryContact ? ` · ${primaryContact.value}` : ""}
+              {patient.preferredBranch ? ` · ${patient.preferredBranch.name}` : ""}
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            {canEdit && (
+              <Button asChild variant="outline">
+                <Link
+                  href={patientSectionHref(patient.patientId, "demographics", actingBranchId, true)}
+                >
+                  <Pencil aria-hidden="true" />
+                  Edit patient
+                </Link>
+              </Button>
+            )}
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" aria-label="More patient actions">
+                    <Ellipsis aria-hidden="true" />
+                    More
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setError(null);
+                      setLifecycle(patient.status === "archived" ? "reactivate" : "archive");
+                    }}
+                  >
+                    {patient.status === "archived" ? "Reactivate patient" : "Archive patient"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-3 border-y py-2.5 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
+      <nav
+        aria-label="Patient sections"
+        className="flex gap-1 overflow-x-auto border-b text-sm font-medium"
+      >
+        {sections.map((key) => {
+          const active = section === key;
+          return (
+            <Link
+              key={key}
+              href={patientSectionHref(patient.patientId, key, actingBranchId)}
+              aria-current={active ? "page" : undefined}
+              className={`shrink-0 border-b-2 px-2.5 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 ${
+                active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {patientSectionLabels[key]}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="py-5">
+        {section === "overview" && (
+          <PatientOverview
+            patient={patient}
+            actingBranchId={actingBranchId}
+            canEdit={canEdit}
+          />
+        )}
+        {section === "demographics" && (
+          <PatientDemographics
+            patient={patient}
+            actingBranchId={actingBranchId}
+            canEdit={canEdit}
+            initialEditing={initialEditingDemographics}
+            saving={saving}
+            setSaving={setSaving}
+            setHasUnsavedChanges={setHasUnsavedChanges}
+            onDuplicateRequired={requestDuplicateReview}
+          />
+        )}
+        {section === "contacts" && (
+          <ContactsSection
+            patient={patient}
+            actingBranchId={actingBranchId}
+            canEdit={canEdit}
+            saving={saving}
+            setSaving={setSaving}
+            onDuplicateRequired={requestDuplicateReview}
+          />
+        )}
+        {section === "relationships" && (
+          <RelationshipsSection
+            patient={patient}
+            actingBranchId={actingBranchId}
+            canEdit={canEdit}
+            saving={saving}
+            setSaving={setSaving}
+            onDuplicateRequired={requestDuplicateReview}
+          />
+        )}
+        {section === "referrals" && (
+          <ReferralsSection
+            patientId={patient.patientId}
+            actingBranchId={actingBranchId}
+            canManage={canEdit}
+            referrals={initialReferrals ?? []}
+            loadFailed={referralsUnavailable}
+          />
+        )}
+        {section === "clinical" && canReadClinical && (
+          <ClinicalSection
+            patientId={patient.patientId}
+            actingBranchId={actingBranchId}
+            canWriteClinical={canWriteClinical}
+            initialEncounters={initialClinicalEncounters}
+            initialMedicalRecords={initialMedicalRecords}
+            initialToothConditions={initialToothConditions}
+            initialTreatmentPlans={initialTreatmentPlans}
+            canGenerateDocuments={canGenerateDocuments}
+            initialProviders={initialProviders}
+            providersUnavailable={clinicalProvidersUnavailable}
+            loadFailed={clinicalLoadFailed}
+          />
+        )}
+        {section === "intake" && canManageIntake && (
+          <IntakeSection
+            patientId={patient.patientId}
+            actingBranchId={actingBranchId}
+            canManageIntake
+            initialForms={initialIntakeForms}
+            loadFailed={intakeLoadFailed}
+            consentTemplates={consentTemplates}
+            consentTemplatesUnavailable={consentTemplatesUnavailable}
+          />
+        )}
+        {section === "files" && (
+          <FilesSection
+            patientId={patient.patientId}
+            actingBranchId={actingBranchId}
+            canManage={canEdit}
+            initialFiles={initialFiles}
+            loadFailed={filesUnavailable}
+          />
+        )}
+      </div>
+
+      <Dialog open={Boolean(review)} onOpenChange={(open) => !open && setReview(null)}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Review possible duplicate</DialogTitle>
+            <DialogDescription>
+              No change has been made. These records share an exact identity or
+              contact signal.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y border-y">
+            {review?.candidates.map((item) => (
+              <li key={item.patientId} className="py-3">
+                <p className="font-medium">{item.displayName}</p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {item.patientNumber} · Born {item.birthDate}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Match: {item.matchedSignals.join(", ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setReview(null)}>
+              Continue editing
+            </Button>
+            <Button type="button" onClick={() => void confirmDuplicate()} disabled={saving}>
+              Save as a distinct record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={Boolean(lifecycle)}
+        onOpenChange={(open) => !open && setLifecycle(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {lifecycle === "archive" ? "Archive patient?" : "Reactivate patient?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {lifecycle === "archive"
+                ? "This requires a fresh security verification and can be reversed by reactivating the record."
+                : "This requires a fresh security verification and returns the record to default search results."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void runLifecycle();
+              }}
+              disabled={saving}
+            >
+              {lifecycle === "archive" ? "Archive patient" : "Reactivate patient"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </main>
+  );
+}

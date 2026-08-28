@@ -22,7 +22,7 @@ export default async function InviteWorkforcePage() {
         title="Invite workforce member"
         description="Issue individual staff access with an intended organization role and optional branch scope. The recipient must verify and complete the invitation before membership becomes active."
       />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       {options.length === 0 ? (
         <PermissionDenied description="An active membership with workforce invitation permission is required for this action." />
       ) : (

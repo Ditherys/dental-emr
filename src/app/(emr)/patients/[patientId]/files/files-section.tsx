@@ -126,7 +126,7 @@ function ArchiveFileButton({ file, actingBranchId, busy }: { file: FileListItem;
     <AlertDialogContent>
       <AlertDialogHeader>
         <AlertDialogTitle>Archive this file?</AlertDialogTitle>
-        <AlertDialogDescription>The file is removed from this record and its stored object is deleted. This requires your current AAL2 session and cannot be undone from this screen.</AlertDialogDescription>
+        <AlertDialogDescription>The file is removed from this record and its stored object is deleted. This requires a fresh security verification and cannot be undone from this screen.</AlertDialogDescription>
       </AlertDialogHeader>
       {error && <p role="alert" className="border-y border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
       <AlertDialogFooter>

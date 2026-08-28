@@ -3,6 +3,55 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## UI/UX revamp checkpoint (2026-08-28) - COMPLETE
+
+A cross-application UI/UX audit and implementation pass on the current `main`
+checkout (no branch/worktree). UI-only; no schema, RLS, authorization, audit,
+mutation, or API-contract change. Recorded in `docs/UI_UX_REVAMP_AUDIT.md`.
+
+- **Patient record rebuilt.** `/patients/[patientId]` now validates `?section=`
+  and `?branch=` search params server-side, loads only the active section's
+  data, gates Clinical/Intake sections by permission, and renders only the
+  selected section. Back/forward, refresh, direct deep links, and
+  `?section=demographics&edit=1` all work. `patient-workspace.tsx` is a compact
+  persistent header (number, name, status badge, DOB/age/sex/contact) + tab nav
+  with `aria-current`; Archive/Reactivate moved to a More menu. Demographics is
+  a dense view mode with explicit Edit/Save/Cancel. Contacts/Relationships and
+  Overview were extracted to their own sections; Overview is now a summary, not
+  a copy of the form. The workspace no longer overrides the server-resolved
+  acting branch with client storage, so server-loaded data and mutations agree.
+- **Shell/navigation.** Sidebar destinations grouped (Dashboard + CLINICAL /
+  ENGAGEMENT / OPERATIONS / CONFIGURATION / REPORTING / ADMINISTRATION); Staff
+  (`/settings/users/invite`, `user.invite`) added to navigation; sidebar is
+  viewport-bounded and scrollable; mobile sheet body scrolls; skip link +
+  `main#main-content` added; org context preserved when collapsed.
+- **Shared primitives.** `ui/input|textarea|select|form-field|status-badge|description-list`,
+  `layout/section-header`, `page-header` `actions` slot, and a shared labeled
+  `patients/patient-picker` (reused by Schedule, Queue, Recalls, Specialists,
+  Documents) replace duplicated control strings and fix unlabeled patient-search
+  inputs.
+- **Module migration.** Providers/Specialties/Procedures hide Add/Edit/Archive
+  without live `provider.manage` (server checks unchanged); `my-6` separators →
+  `my-4`; control heights standardized to the 40px fine-pointer baseline (44px
+  coarse-pointer remains enforced by `globals.css`); statuses use `StatusBadge`;
+  public-facing jargon removed (AAL2 dialogs now say "fresh security
+  verification").
+- **Verification.** `npm run typecheck` clean, `npm run lint` clean, `npm run
+  build` passes (all routes emitted), `npm run test:unit` 120 files / 1227 tests
+  pass. Dev-server smoke on `/login`: 200, heading renders, no horizontal
+  overflow, no console errors.
+- **Residual / not runnable here.** The Playwright responsive/axe E2E suite
+  requires the designated hosted test environment (`APP_ENVIRONMENT`), which is
+  not configured in this session; authenticated-screen visual review remains a
+  Cloud TEST obligation. Deferred (documented in the audit): branch-selector
+  drives Schedule/Queue/Inventory/Documents data, recall appointment-linking
+  selector, calendar-sync first-integration creation, schedule provider
+  assignment + date navigation.
+
+**Next:** Cloud TEST remains the deployment gate; authenticated responsive/axe
+E2E must be run there. The deferred branch-context and schedule items are
+candidates for separately reviewed bounded slices.
+
 ## Authorization model change (2026-08-27) - OWNER full access (ADR-025)
 
 The project owner decided OWNER is the highest-authority organization principal

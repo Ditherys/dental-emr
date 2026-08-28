@@ -74,7 +74,7 @@ export default async function QueuePage() {
     return (
       <div className="mx-auto w-full max-w-7xl">
         <PageHeader title="Queue" description="Walk-in and waiting queue for the acting branch." />
-        <Separator className="my-6" />
+        <Separator className="my-4" />
         <PageError description="The queue could not be loaded. Refresh to try again." />
       </div>
     );
@@ -83,7 +83,7 @@ export default async function QueuePage() {
   return (
     <div className="mx-auto w-full max-w-7xl">
       <PageHeader title="Queue" description="Walk-in patients awaiting care at the acting branch. A walk-in is a queue entry, not an appointment." />
-      <Separator className="my-6" />
+      <Separator className="my-4" />
       <QueueBoard
         actingBranchId={actingBranchId}
         canManage={canManage}

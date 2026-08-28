@@ -41,7 +41,7 @@ type MfaSettingsProps = {
 };
 
 const inputClasses =
-  "mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20";
+  "mt-1.5 h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20";
 
 export function MfaSettings({ factors, isAal2, nextPath }: MfaSettingsProps) {
   const router = useRouter();

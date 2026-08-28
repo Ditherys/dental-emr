@@ -351,7 +351,7 @@ function CreateLinkDialog({
               <select
                 value={formType}
                 onChange={(event) => { setFormType(event.target.value as IntakeFormType); setConsentTemplateId(""); }}
-                className="h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
               >
                 {(["MEDICAL_HISTORY", "DENTAL_HISTORY", "CONSENT"] as const).map((type) => (
                   <option key={type} value={type}>{formTypeLabels[type]}</option>
@@ -367,7 +367,7 @@ function CreateLinkDialog({
                   <select
                     value={consentTemplateId}
                     onChange={(event) => setConsentTemplateId(event.target.value)}
-                    className="h-11 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+                    className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
                   >
                     <option value="">Choose a template</option>
                     {consentOptions.map((template) => (
