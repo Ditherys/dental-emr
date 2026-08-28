@@ -3,6 +3,38 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Billing B4 — provider compensation ledger (2026-08-28)
+
+- `20260828010300_provider_compensation.sql`: effective-dated
+  provider_compensation_agreements (default rate/basis GROSS or
+  NET_DIRECT_COST, ACTIVE/ENDED, version, and a `btree_gist` exclusion
+  constraint rejecting overlapping ACTIVE ranges per provider),
+  agreement-scoped provider_procedure_compensation_rates (optional basis
+  override; trigger requires the override provider to match the agreement
+  provider; unique per agreement+procedure), append-only
+  provider_earning_entries (signed `earning_centavos`, positive eligible
+  basis/net approved cost snapshot, rate snapshot, ACCRUAL/REVERSAL with
+  cause DIRECT_COST/ATTRIBUTION/REFUND/VOID/REALLOCATION, reversal link,
+  org-scoped idempotency), and append-only charge_compensation_resolutions
+  (RESOLVED or NO_ACTIVE_AGREEMENT with a consistency check: resolved
+  resolutions carry an agreement/rate/basis snapshot, no-agreement ones carry
+  none; one append-only chain per charge; current resolution is the latest
+  event). Private helpers `private.earning_cumulative_target`
+  (`(basis*bps+5000)/10000`) and `private.resolve_compensation_rate` (effective
+  agreement + procedure override by service date; returns no row when out of
+  range) with empty search paths, revoked. RLS on, zero grants.
+- Tests: `provider_compensation.test.sql` (24 assertions) registered in the
+  guard registry and expected-suite list: overlapping-ACTIVE rejection, foreign
+  provider denial, override-provider mismatch denial, rate bound, service-date
+  resolution incl. override-basis and out-of-range, half-up cumulative target,
+  net-recovery-first, append-only earnings, and resolution state consistency.
+- **Evidence:** direct local pgTAP provider_compensation 24/24 and all prior
+  billing suites pass; focused billing/procedure Vitest 43 tests pass;
+  `security:migrations` 132 files / 196 approved privileges pass; guard and
+  migration-privilege-lint tests pass (tables 87, functions 255, secdef 205);
+  lint and typecheck clean. `db:migrate:local` applied forward.
+- **Residual local-only:** unchanged `seed_security_fixtures` blocker from B2.
+
 ## Billing B3 — payment, allocation, refund, and reversal ledger (2026-08-28)
 
 - `20260828010200_payment_allocation_ledger.sql`: immutable payments (positive

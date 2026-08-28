@@ -160,6 +160,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 "billing_attribution.test.sql",
   "billing_payment_allocations.test.sql",
   "billing_corrections.test.sql",
+  "provider_compensation.test.sql",
 ]);
 
 const PROJECT_ID_PATTERN = /^[a-z0-9]{8,40}$/;
