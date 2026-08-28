@@ -162,6 +162,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 "billing_attribution.test.sql",
   "billing_payment_allocations.test.sql",
   "billing_corrections.test.sql",
+  "billing_procedure_configuration_authorization.test.sql",
   "provider_compensation.test.sql",
   "postdated_cheques.test.sql",
 ]);
