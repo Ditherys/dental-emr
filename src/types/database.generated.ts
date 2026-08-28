@@ -6475,6 +6475,28 @@ export type Database = {
           version: number
         }[]
       }
+      get_financial_summary: {
+        Args: {
+          p_acting_branch_id: string
+          p_branch_id?: string
+          p_from?: string
+          p_to?: string
+        }
+        Returns: {
+          branch_id: string
+          clinic_contribution_centavos: number
+          collection_centavos: number
+          metric_code: string
+          metric_label: string
+          payment_method_code: string
+          pending_pdc_centavos: number
+          period: string
+          procedure_id: string
+          production_centavos: number
+          provider_id: string
+          unresolved_compensation_centavos: number
+        }[]
+      }
       get_inventory_aggregate: {
         Args: { p_acting_branch_id: string }
         Returns: {
@@ -6886,6 +6908,20 @@ export type Database = {
           code: string
           method_id: string
           name: string
+        }[]
+      }
+      list_pending_pdc: {
+        Args: { p_acting_branch_id: string; p_branch_id?: string }
+        Returns: {
+          amount_centavos: number
+          bank_name: string
+          branch_id: string
+          cheque_id: string
+          cheque_number: string
+          date_due: string
+          days_until_due: number
+          patient_id: string
+          status: string
         }[]
       }
       list_procedure_direct_cost_defaults: {

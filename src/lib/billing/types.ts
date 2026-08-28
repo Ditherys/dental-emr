@@ -88,3 +88,30 @@ export type PaymentRefundInput = {
   reason: string;
   idempotencyKey: string;
 };
+
+export type FinancialSummaryRow = {
+  period: string;
+  metricCode: string;
+  metricLabel: string;
+  branchId: string | null;
+  providerId: string | null;
+  procedureId: string | null;
+  paymentMethodCode: string | null;
+  productionCentavos: number;
+  collectionCentavos: number;
+  pendingPdcCentavos: number;
+  clinicContributionCentavos: number;
+  unresolvedCompensationCentavos: number;
+};
+
+export type PendingPdcRow = {
+  chequeId: string;
+  patientId: string;
+  branchId: string;
+  amountCentavos: number;
+  dateDue: string;
+  status: string;
+  bankName: string;
+  chequeNumber: string;
+  daysUntilDue: number;
+};

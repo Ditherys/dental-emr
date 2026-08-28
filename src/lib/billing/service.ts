@@ -8,9 +8,9 @@ import { createClient } from "@/lib/supabase/server";
 
 import { BillingServiceError, mapBillingRpcError } from "./errors";
 import {
-  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, createProcedureDirectCostDefaultInputSchema, deactivateProcedureDirectCostDefaultInputSchema, listPatientAccountInputSchema,   listPaymentMethodsInputSchema, listProcedureDirectCostDefaultsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, procedureDirectCostDefaultRowSchema, procedurePaymentSummaryRowSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProcedureDefaultFeeInputSchema, setProviderCompensationAgreementInputSchema, summarizeProcedureChargesInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, updateProcedureDirectCostDefaultInputSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
+  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, createProcedureDirectCostDefaultInputSchema, deactivateProcedureDirectCostDefaultInputSchema, financialSummaryInputSchema, financialSummaryRowSchema, listPatientAccountInputSchema, listPaymentMethodsInputSchema, listPendingPdcInputSchema, listProcedureDirectCostDefaultsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, pendingPdcRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, procedureDirectCostDefaultRowSchema, procedurePaymentSummaryRowSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProcedureDefaultFeeInputSchema, setProviderCompensationAgreementInputSchema, summarizeProcedureChargesInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, updateProcedureDirectCostDefaultInputSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
 } from "./schema";
-import type { ProcedureConfigurationMutationResult, ProcedurePaymentSummary } from "./types";
+import type { FinancialSummaryRow, PendingPdcRow, ProcedureConfigurationMutationResult, ProcedurePaymentSummary } from "./types";
 
 const procedurePaymentSummaryDomainSchema = z.object({
   procedureId: databaseUuid, patientId: databaseUuid, branchId: databaseUuid,
@@ -110,6 +110,49 @@ export async function summarizeProcedureCharges(input: unknown): Promise<Procedu
     remainingCentavos: row.remaining_centavos,
     paymentStatus: row.payment_status,
   });
+}
+
+export async function getFinancialSummary(input: unknown): Promise<FinancialSummaryRow[]> {
+  const value = financialSummaryInputSchema.parse(input);
+  const rows = z.array(financialSummaryRowSchema).parse(await billingProjection("get_financial_summary", {
+    p_acting_branch_id: value.branchId,
+    p_branch_id: value.filterBranchId,
+    p_from: value.from,
+    p_to: value.to,
+  }));
+  return rows.map((row) => ({
+    period: row.period,
+    metricCode: row.metric_code,
+    metricLabel: row.metric_label,
+    branchId: row.branch_id,
+    providerId: row.provider_id,
+    procedureId: row.procedure_id,
+    paymentMethodCode: row.payment_method_code,
+    productionCentavos: row.production_centavos,
+    collectionCentavos: row.collection_centavos,
+    pendingPdcCentavos: row.pending_pdc_centavos,
+    clinicContributionCentavos: row.clinic_contribution_centavos,
+    unresolvedCompensationCentavos: row.unresolved_compensation_centavos,
+  }));
+}
+
+export async function listPendingPdc(input: unknown): Promise<PendingPdcRow[]> {
+  const value = listPendingPdcInputSchema.parse(input);
+  const rows = z.array(pendingPdcRowSchema).parse(await billingProjection("list_pending_pdc", {
+    p_acting_branch_id: value.branchId,
+    p_branch_id: value.filterBranchId,
+  }));
+  return rows.map((row) => ({
+    chequeId: row.cheque_id,
+    patientId: row.patient_id,
+    branchId: row.branch_id,
+    amountCentavos: row.amount_centavos,
+    dateDue: row.date_due,
+    status: row.status,
+    bankName: row.bank_name,
+    chequeNumber: row.cheque_number,
+    daysUntilDue: row.days_until_due,
+  }));
 }
 
 export { BillingServiceError };

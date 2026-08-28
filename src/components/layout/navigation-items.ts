@@ -150,6 +150,20 @@ export const navigationItems = [
     requiredPermission: "analytics.view",
   },
   {
+    label: "Finance report",
+    href: "/reports/finance",
+    icon: BarChart3,
+    group: "REPORTING",
+    requiredPermission: "financial.analytics.read",
+  },
+  {
+    label: "My earnings",
+    href: "/earnings",
+    icon: BarChart3,
+    group: "REPORTING",
+    requiredPermission: "compensation.own.read",
+  },
+  {
     label: "Account & security",
     href: "/settings/account",
     icon: ShieldCheck,

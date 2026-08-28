@@ -824,6 +824,7 @@ const siteRpcGrants = Object.freeze([
 const BILLING_RPCS_GRANTS_MIGRATION = "20260828010501_billing_rpcs_grants.sql";
 const BILLING_RPC_CORRECTIONS_GRANTS_MIGRATION = "20260828010503_billing_rpcs_corrections_grants.sql";
 const BILLING_PROCEDURE_SUMMARY_GRANTS_MIGRATION = "20260828010601_billing_procedure_summary_rpc_grants.sql";
+const FINANCIAL_ANALYTICS_GRANTS_MIGRATION = "20260828010701_financial_analytics_rpcs_grants.sql";
 const BILLING_PROCEDURE_CONFIGURATION_RPCS_GRANTS_MIGRATION = "20260828010505_billing_procedure_configuration_rpcs_grants.sql";
 const billingRpcGrants = Object.freeze([
   "public.list_patient_account(uuid,uuid)",
@@ -1174,7 +1175,30 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         privilege: "execute",
         columns: [],
         reason:
-          "The bounded per-procedure patient payment projection derives tenant and actor server-side, requires billing.read at the charge-origin branch, and returns only the agreed five-column DTO plus the payment status without mutating any ledger table.",
+          "The bounded per-procedure patient payment projection derives tenant and actor server-side, requires billing.read at the charge-origin branch, and returns only the agreed five-amount DTO plus the payment status without mutating any ledger table.",
+      },
+    ],
+  }),
+  Object.freeze({
+    file: FINANCIAL_ANALYTICS_GRANTS_MIGRATION,
+    grants: [
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.get_financial_summary(uuid,uuid,date,date)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "The bounded signed event-period financial summary derives tenant and actor server-side, requires financial.analytics.read (or compensation.manage) at the acting branch, and returns only the agreed metric/amount DTOs without mutating any ledger table.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.list_pending_pdc(uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "The bounded pending PDC report derives tenant and actor server-side, requires billing.read at the acting branch, and returns only the agreed cheque DTO for the same organization.",
       },
     ],
   }),

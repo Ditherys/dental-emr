@@ -172,3 +172,33 @@ export const procedurePaymentSummaryRowSchema = z.object({
   remaining_centavos: z.number().int().nonnegative(),
   payment_status: z.enum(["UNPAID", "PARTIAL", "PAID"]),
 }).strict();
+export const financialSummaryInputSchema = z.object({
+  branchId: databaseUuid,
+  filterBranchId: databaseUuid.nullable(),
+  from: dateOnlySchema.nullable(),
+  to: dateOnlySchema.nullable(),
+}).strict().refine((value) => value.from === null || value.to === null || value.from <= value.to, { path: ["to"] });
+export const financialSummaryRowSchema = z.object({
+  period: z.string(),
+  metric_code: z.string(),
+  metric_label: z.string(),
+  branch_id: databaseUuid.nullable(),
+  provider_id: databaseUuid.nullable(),
+  procedure_id: databaseUuid.nullable(),
+  payment_method_code: z.string().nullable(),
+  production_centavos: z.number().int(),
+  collection_centavos: z.number().int(),
+  pending_pdc_centavos: z.number().int(),
+  clinic_contribution_centavos: z.number().int(),
+  unresolved_compensation_centavos: z.number().int(),
+}).strict();
+export const listPendingPdcInputSchema = z.object({ branchId: databaseUuid, filterBranchId: databaseUuid.nullable() }).strict();
+export const pendingPdcRowSchema = z.object({
+  cheque_id: databaseUuid, patient_id: databaseUuid, branch_id: databaseUuid,
+  amount_centavos: z.number().int().nonnegative(),
+  date_due: dateOnlySchema,
+  status: z.string(),
+  bank_name: z.string(),
+  cheque_number: z.string(),
+  days_until_due: z.number().int(),
+}).strict();
