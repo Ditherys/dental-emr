@@ -82,7 +82,7 @@
     "@vitejs/plugin-react": "^6.0.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
-    "jsdom": "^29.0.1",
+    "jsdom": "^30.0.1",
     "secretlint": "13.0.4",
     "supabase": "2.113.0",
     "tailwindcss": "^4",
