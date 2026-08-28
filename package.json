@@ -44,6 +44,7 @@
     "db:lint:test": "node scripts/run-guarded-supabase-command.mjs db-lint",
     "db:advisors:test": "node scripts/run-guarded-supabase-command.mjs db-advisors",
     "db:types": "node scripts/generate-database-types.mjs",
+    "db:types:local": "node scripts/generate-database-types.mjs --local",
     "db:types:check": "node scripts/generate-database-types.mjs --check",
     "db:types:check:test": "node scripts/generate-database-types.mjs --check --require-test-target"
   },

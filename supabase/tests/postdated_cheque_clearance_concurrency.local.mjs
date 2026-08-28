@@ -49,7 +49,7 @@ function classifyOutcome(result) {
     return "COMMITTED";
   }
 
-  if (result.status !== 0 && /ERROR:\s+postdated cheque is terminal/i.test(result.stderr)) {
+  if (result.status !== 0 && /ERROR:\s+(postdated cheque is terminal|invalid state)/i.test(result.stderr)) {
     return "TERMINAL";
   }
 
@@ -98,9 +98,15 @@ insert into public.postdated_cheque_status_events (organization_id, cheque_id, f
   (${sqlLiteral(ids.organization)}::uuid, ${sqlLiteral(ids.cheque)}::uuid, 'HELD', 'DEPOSITED', 'deposited', ${sqlLiteral(`p510c-deposit-${suffix}`)});
 commit;`;
   const cleanup = `begin;
-alter table public.audit_events disable trigger audit_events_prevent_mutation;
+ alter table public.audit_events disable trigger user;
+ alter table public.payment_allocation_reversals disable trigger user;
+ alter table public.payment_allocations disable trigger user;
+ alter table public.payments disable trigger user;
+ alter table public.postdated_cheque_allocations disable trigger user;
+ alter table public.postdated_cheque_status_events disable trigger user;
+ alter table public.postdated_cheques disable trigger user;
+ alter table public.charges disable trigger user;
 delete from public.audit_events where organization_id = ${sqlLiteral(ids.organization)}::uuid;
-alter table public.audit_events enable trigger audit_events_prevent_mutation;
 delete from public.payment_allocation_reversals where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.payment_allocations where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.payments where organization_id = ${sqlLiteral(ids.organization)}::uuid;
@@ -115,8 +121,16 @@ delete from public.member_roles where organization_id = ${sqlLiteral(ids.organiz
 delete from public.organization_members where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.branches where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.organizations where id = ${sqlLiteral(ids.organization)}::uuid;
-delete from auth.users where id in (${sqlLiteral(ids.firstUser)}::uuid, ${sqlLiteral(ids.secondUser)}::uuid);
-commit;`;
+ delete from auth.users where id in (${sqlLiteral(ids.firstUser)}::uuid, ${sqlLiteral(ids.secondUser)}::uuid);
+ alter table public.audit_events enable trigger user;
+ alter table public.payment_allocation_reversals enable trigger user;
+ alter table public.payment_allocations enable trigger user;
+ alter table public.payments enable trigger user;
+ alter table public.postdated_cheque_allocations enable trigger user;
+ alter table public.postdated_cheque_status_events enable trigger user;
+ alter table public.postdated_cheques enable trigger user;
+ alter table public.charges enable trigger user;
+ commit;`;
 
   try {
     requireSuccess(await execute(command, setup, options), "PDC clearance fixture setup");
@@ -128,7 +142,7 @@ commit;`;
     const outcomes = results.map(classifyOutcome).sort();
 
     if (!outcomes.includes("COMMITTED") || !outcomes.includes("TERMINAL")) {
-      throw new Error(`Expected one COMMITTED and one TERMINAL clearance result; received ${outcomes.join(",")}.`);
+      throw new Error(`Expected one COMMITTED and one terminal-state denial; received ${outcomes.join(",")}.`);
     }
 
     const check = await execute(

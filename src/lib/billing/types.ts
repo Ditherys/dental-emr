@@ -29,6 +29,7 @@ export type PaymentRecordInput = {
 };
 
 export type PaymentAllocationInput = {
+  branchId: string;
   paymentId: string;
   chargeId: string;
   patientId: string;
@@ -37,14 +38,15 @@ export type PaymentAllocationInput = {
 };
 
 export type PaymentAllocationReversalInput = {
+  branchId: string;
   allocationId: string;
   amountCentavos: bigint;
-  cause: "MANUAL" | "REFUND" | "VOID";
   reason: string;
   idempotencyKey: string;
 };
 
 export type PaymentRefundInput = {
+  branchId: string;
   paymentId: string;
   patientId: string;
   amountCentavos: bigint;

@@ -5,6 +5,33 @@
 
 ## Billing B5 — post-dated cheques (2026-08-28)
 
+## Billing B6 — RPC, authorization, and audit boundary (locally complete, 2026-08-28)
+
+- Applied locally, forward-only: `20260828010500_billing_rpcs.sql`, terminal
+  grants `20260828010501_billing_rpcs_grants.sql`, authority/PDC-principal
+  correction `20260828010502_billing_rpcs_corrections.sql`, and its terminal
+  grants `20260828010503_billing_rpcs_corrections_grants.sql`.
+- `billing_authorization.test.sql` is registered and passes 6/6 directly:
+  exact authenticated-only grants, empty SECURITY DEFINER search paths, private
+  helper/base-table denial, bounded audit metadata, and unaffiliated actor denial.
+- Allocation and PDC-clearance local concurrency probes are registered and pass.
+  Their fixture cleanup temporarily disables only user append-only triggers in
+  its own synthetic cleanup transaction.
+- Added local-only `npm run db:types:local`. It refuses linked/project/database
+  URL targets, verifies the Docker Desktop endpoint, then runs `supabase gen
+  types --local`; generated types were refreshed from the migrated local schema.
+- Strict server adapters and schemas now cover all 23 B6 public RPCs: account
+  reads; charge, attribution, adjustment, cost, and void mutations; payment,
+  allocation, reversal, refund, and PDC operations; payment-method management;
+  compensation management/resolution; and provider-earning reads. Every money
+  argument remains a validated digit string over the RPC transport, and safe
+  error mapping hides database internals.
+- **Evidence:** direct authorization pgTAP 6/6; both concurrency probes pass;
+  focused billing Vitest 42/42; focused billing/guard/migration-lint Vitest
+  110/110 before adapter completion; local generated-types freshness check,
+  lint, typecheck, and `security:migrations` pass. Full `test:db:local` remains blocked at the
+  existing seed-security-fixtures residual and is not B6 evidence.
+
 - `20260828010400_postdated_cheques.sql`: postdated_cheques (HELD/DEPOSITED/
   CLEARED/BOUNCED/CANCELLED/REPLACED, cheque number/bank stored as protected
   financial data, org-scoped idempotency), separate proposed

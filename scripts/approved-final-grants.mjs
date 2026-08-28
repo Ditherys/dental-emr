@@ -821,6 +821,41 @@ const siteRpcGrants = Object.freeze([
  * needs new privileges, register its final file here together with its exact
  * approved grant set — that registration is the review gate.
  */
+const BILLING_RPCS_GRANTS_MIGRATION = "20260828010501_billing_rpcs_grants.sql";
+const BILLING_RPC_CORRECTIONS_GRANTS_MIGRATION = "20260828010503_billing_rpcs_corrections_grants.sql";
+const billingRpcGrants = Object.freeze([
+  "public.list_patient_account(uuid,uuid)",
+  "public.post_charge(uuid,uuid,uuid,uuid,bigint,uuid,boolean,text,text)",
+  "public.post_charge_with_attribution_override(uuid,uuid,uuid,date,uuid,uuid,bigint,uuid,boolean,text,text,text)",
+  "public.correct_charge_attribution(uuid,uuid,uuid,date,text,text)",
+  "public.void_charge(uuid,uuid,text,text)",
+  "public.approve_charge_direct_cost(uuid,uuid,text,bigint,text,text)",
+  "public.reverse_charge_direct_cost(uuid,uuid,text,text)",
+  "public.post_charge_adjustment(uuid,uuid,text,bigint,text,text)",
+  "public.reverse_charge_adjustment(uuid,uuid,text,text)",
+  "public.record_payment(uuid,uuid,uuid,bigint,text,text)",
+  "public.void_payment(uuid,uuid,text,text)",
+  "public.allocate_payment(uuid,uuid,uuid,uuid,bigint,text)",
+  "public.reverse_payment_allocation(uuid,uuid,bigint,text,text)",
+  "public.refund_payment(uuid,uuid,uuid,bigint,text,jsonb,text)",
+  "public.record_postdated_cheque(uuid,uuid,text,text,bigint,date,jsonb,text)",
+  "public.transition_postdated_cheque(uuid,uuid,text,text,text)",
+  "public.clear_postdated_cheque(uuid,uuid,text)",
+  "public.list_payment_methods(uuid)",
+  "public.upsert_payment_method(uuid,text,text,boolean,uuid,integer,text)",
+  "public.set_provider_compensation_agreement(uuid,uuid,date,date,integer,text,text)",
+  "public.list_unresolved_charge_compensation(uuid,uuid)",
+  "public.resolve_charge_compensation(uuid,uuid,text,text)",
+  "public.list_provider_earnings(uuid,uuid,date,date)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason: "The narrow B6 billing boundary derives tenant and actor server-side, reauthorizes every operation, keeps base-table access denied, and writes the bounded audit event atomically with each mutation.",
+})));
+
 export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: FINAL_GRANTS_MIGRATION,
@@ -1094,6 +1129,19 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: OPERATIONAL_ANALYTICS_GRANTS_MIGRATION,
     grants: operationalAnalyticsGrants,
+  }),
+  Object.freeze({
+    file: BILLING_RPCS_GRANTS_MIGRATION,
+    grants: billingRpcGrants,
+  }),
+  Object.freeze({
+    file: BILLING_RPC_CORRECTIONS_GRANTS_MIGRATION,
+    grants: billingRpcGrants.filter((grant) =>
+      [
+        "public.post_charge(uuid,uuid,uuid,uuid,bigint,uuid,boolean,text,text)",
+        "public.clear_postdated_cheque(uuid,uuid,text)",
+      ].includes(grant.object),
+    ),
   }),
 ]);
 

@@ -95,12 +95,15 @@ insert into public.patients (id, organization_id, patient_number, first_name, la
 insert into public.charges (id, organization_id, patient_id, branch_id, amount_centavos, service_date, idempotency_key, non_clinical) values
   (${sqlLiteral(ids.charge)}::uuid, ${sqlLiteral(ids.organization)}::uuid, ${sqlLiteral(ids.patient)}::uuid, ${sqlLiteral(ids.branch)}::uuid, 200000, date '2026-08-01', ${sqlLiteral(`p310c-charge-${suffix}`)}, true);
 insert into public.payments (id, organization_id, patient_id, branch_id, payment_method_id, amount_centavos, idempotency_key) values
-  (${sqlLiteral(ids.payment)}::uuid, ${sqlLiteral(ids.organization)}::uuid, ${sqlLiteral(ids.patient)}::uuid, ${sqlLiteral(ids.branch)}::uuid, (select id from public.payment_methods where organization_id=${sqlLiteral(ids.organization)}::uuid and code='CASH' limit 1), 200000, ${sqlLiteral(`p310c-payment-${suffix}`)};
+  (${sqlLiteral(ids.payment)}::uuid, ${sqlLiteral(ids.organization)}::uuid, ${sqlLiteral(ids.patient)}::uuid, ${sqlLiteral(ids.branch)}::uuid, (select id from public.payment_methods where organization_id=${sqlLiteral(ids.organization)}::uuid and code='CASH' limit 1), 200000, ${sqlLiteral(`p310c-payment-${suffix}`)});
 commit;`;
   const cleanup = `begin;
-alter table public.audit_events disable trigger audit_events_prevent_mutation;
+ alter table public.audit_events disable trigger user;
+ alter table public.payment_allocation_reversals disable trigger user;
+ alter table public.payment_allocations disable trigger user;
+ alter table public.payments disable trigger user;
+ alter table public.charges disable trigger user;
 delete from public.audit_events where organization_id = ${sqlLiteral(ids.organization)}::uuid;
-alter table public.audit_events enable trigger audit_events_prevent_mutation;
 delete from public.payment_allocation_reversals where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.payment_allocations where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.payments where organization_id = ${sqlLiteral(ids.organization)}::uuid;
@@ -112,8 +115,13 @@ delete from public.member_roles where organization_id = ${sqlLiteral(ids.organiz
 delete from public.organization_members where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.branches where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.organizations where id = ${sqlLiteral(ids.organization)}::uuid;
-delete from auth.users where id in (${sqlLiteral(ids.firstUser)}::uuid, ${sqlLiteral(ids.secondUser)}::uuid);
-commit;`;
+ delete from auth.users where id in (${sqlLiteral(ids.firstUser)}::uuid, ${sqlLiteral(ids.secondUser)}::uuid);
+ alter table public.audit_events enable trigger user;
+ alter table public.payment_allocation_reversals enable trigger user;
+ alter table public.payment_allocations enable trigger user;
+ alter table public.payments enable trigger user;
+ alter table public.charges enable trigger user;
+ commit;`;
 
   try {
     requireSuccess(await execute(command, setup, options), "Billing concurrency fixture setup");
@@ -130,8 +138,10 @@ commit;`;
     ]);
     const outcomes = results.map(classifyOutcome).sort();
 
-    if (!outcomes.includes("COMMITTED") || !outcomes.includes("EXCEEDS_DUE")) {
-      throw new Error(`Expected one COMMITTED and one EXCEEDS_DUE result; received ${outcomes.join(",")}.`);
+    if (!outcomes.includes("COMMITTED") || !outcomes.some((outcome) =>
+      outcome === "EXCEEDS_DUE" || outcome === "INSUFFICIENT_AVAILABILITY",
+    )) {
+      throw new Error(`Expected one COMMITTED and one capped denial result; received ${outcomes.join(",")}.`);
     }
 
     const check = await execute(

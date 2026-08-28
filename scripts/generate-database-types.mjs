@@ -12,6 +12,10 @@ import {
   readLinkedProjectId,
   validateRemoteDatabaseTestEnvironment,
 } from "./remote-database-test-guard.mjs";
+import {
+  assertLocalDockerEndpointIsSafe,
+  resolveLocalDockerEnvironment,
+} from "./local-supabase-command.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const generatedTypesPath = join(
@@ -29,6 +33,7 @@ const supabaseCliPath = join(
 );
 const checkOnly = process.argv.includes("--check");
 const requireTestTarget = process.argv.includes("--require-test-target");
+const localOnly = process.argv.includes("--local");
 const projectId = process.env.SUPABASE_PROJECT_ID?.trim();
 const testDatabaseUrl = process.env.SUPABASE_TEST_DB_URL?.trim();
 const linkedProjectFile = join(
@@ -41,6 +46,20 @@ const linkedProjectFile = join(
 if (!existsSync(supabaseCliPath)) {
   console.error("Supabase CLI is not installed. Run `npm ci` first.");
   process.exit(1);
+}
+
+if (localOnly && (requireTestTarget || projectId || testDatabaseUrl)) {
+  console.error("Local type generation refuses linked, project, and database URL targets.");
+  process.exit(1);
+}
+
+if (localOnly) {
+  try {
+    assertLocalDockerEndpointIsSafe(resolveLocalDockerEnvironment(process.env));
+  } catch (error) {
+    console.error(`Local type generation refused to continue: ${error instanceof Error ? error.message : "Unknown failure."}`);
+    process.exit(1);
+  }
 }
 
 if (requireTestTarget) {
@@ -67,7 +86,9 @@ if (requireTestTarget) {
 }
 
 const projectArguments =
-  requireTestTarget && testDatabaseUrl
+  localOnly
+    ? ["--local"]
+    : requireTestTarget && testDatabaseUrl
     ? ["--db-url", testDatabaseUrl]
     : projectId
       ? ["--project-id", projectId]
@@ -130,6 +151,7 @@ const generated = execFileSync(
     cwd: repositoryRoot,
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
+    env: localOnly ? resolveLocalDockerEnvironment(process.env) : process.env,
     stdio: ["ignore", "pipe", "inherit"],
   },
 );

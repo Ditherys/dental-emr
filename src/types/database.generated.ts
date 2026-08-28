@@ -12,6 +12,310 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      acquisition_sources: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acquisition_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_providers: {
+        Row: {
+          appointment_id: string
+          assignment_status: string
+          created_at: string
+          id: string
+          organization_id: string
+          provider_id: string
+          provider_role: string
+        }
+        Insert: {
+          appointment_id: string
+          assignment_status?: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          provider_id: string
+          provider_role: string
+        }
+        Update: {
+          appointment_id?: string
+          assignment_status?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          provider_id?: string
+          provider_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_providers_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "appointment_providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_providers_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      appointment_resources: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          organization_id: string
+          purpose: string | null
+          resource_id: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          purpose?: string | null
+          resource_id: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          purpose?: string | null
+          resource_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_resources_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "appointment_resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_resources_organization_resource_fk"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "branch_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      appointment_status_history: {
+        Row: {
+          appointment_id: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_value: string
+          old_value: string | null
+          organization_id: string
+          reason: string | null
+          status_dimension: string
+        }
+        Insert: {
+          appointment_id: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value: string
+          old_value?: string | null
+          organization_id: string
+          reason?: string | null
+          status_dimension: string
+        }
+        Update: {
+          appointment_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value?: string
+          old_value?: string | null
+          organization_id?: string
+          reason?: string | null
+          status_dimension?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_status_history_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "appointment_status_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointments: {
+        Row: {
+          booking_channel_code: string | null
+          branch_id: string
+          cancelled_at: string | null
+          chief_complaint: string | null
+          completed_at: string | null
+          confirmation_status: string
+          created_at: string
+          created_by: string | null
+          encounter_status: string
+          ends_at: string
+          id: string
+          internal_scheduling_notes: string | null
+          organization_id: string
+          patient_id: string
+          patient_visible_notes: string | null
+          procedure_id: string | null
+          scheduling_status: string
+          starts_at: string
+          title: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          booking_channel_code?: string | null
+          branch_id: string
+          cancelled_at?: string | null
+          chief_complaint?: string | null
+          completed_at?: string | null
+          confirmation_status?: string
+          created_at?: string
+          created_by?: string | null
+          encounter_status?: string
+          ends_at: string
+          id?: string
+          internal_scheduling_notes?: string | null
+          organization_id: string
+          patient_id: string
+          patient_visible_notes?: string | null
+          procedure_id?: string | null
+          scheduling_status?: string
+          starts_at: string
+          title?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          booking_channel_code?: string | null
+          branch_id?: string
+          cancelled_at?: string | null
+          chief_complaint?: string | null
+          completed_at?: string | null
+          confirmation_status?: string
+          created_at?: string
+          created_by?: string | null
+          encounter_status?: string
+          ends_at?: string
+          id?: string
+          internal_scheduling_notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          patient_visible_notes?: string | null
+          procedure_id?: string | null
+          scheduling_status?: string
+          starts_at?: string
+          title?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_booking_channel_code_fkey"
+            columns: ["booking_channel_code"]
+            isOneToOne: false
+            referencedRelation: "booking_channels"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "appointments_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "appointments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "appointments_organization_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       audit_events: {
         Row: {
           action: string
@@ -88,6 +392,150 @@ export type Database = {
           },
         ]
       }
+      booking_channels: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      booking_requests: {
+        Row: {
+          acquisition_source_code: string | null
+          appointment_id: string | null
+          birth_date: string | null
+          booking_channel_code: string
+          branch_id: string
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          idempotency_key: string
+          last_name: string
+          management_token_hash: string | null
+          mobile: string
+          organization_id: string
+          referral_payload: Json | null
+          request_status: string
+          requested_ends_at: string | null
+          requested_procedure_id: string | null
+          requested_provider_id: string | null
+          requested_starts_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          acquisition_source_code?: string | null
+          appointment_id?: string | null
+          birth_date?: string | null
+          booking_channel_code?: string
+          branch_id: string
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          idempotency_key: string
+          last_name: string
+          management_token_hash?: string | null
+          mobile: string
+          organization_id: string
+          referral_payload?: Json | null
+          request_status?: string
+          requested_ends_at?: string | null
+          requested_procedure_id?: string | null
+          requested_provider_id?: string | null
+          requested_starts_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          acquisition_source_code?: string | null
+          appointment_id?: string | null
+          birth_date?: string | null
+          booking_channel_code?: string
+          branch_id?: string
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          idempotency_key?: string
+          last_name?: string
+          management_token_hash?: string | null
+          mobile?: string
+          organization_id?: string
+          referral_payload?: Json | null
+          request_status?: string
+          requested_ends_at?: string | null
+          requested_procedure_id?: string | null
+          requested_provider_id?: string | null
+          requested_starts_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_requests_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_requests_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_organization_procedure_fk"
+            columns: ["organization_id", "requested_procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "booking_requests_organization_provider_fk"
+            columns: ["organization_id", "requested_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       branch_memberships: {
         Row: {
           access_status: string
@@ -136,6 +584,76 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organization_members"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      branch_resources: {
+        Row: {
+          archived_at: string | null
+          branch_id: string
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          online_booking_eligible: boolean
+          organization_id: string
+          resource_type_id: string
+          serial_number: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          branch_id: string
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          online_booking_eligible?: boolean
+          organization_id: string
+          resource_type_id: string
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          branch_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          online_booking_eligible?: boolean
+          organization_id?: string
+          resource_type_id?: string
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_resources_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "branch_resources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_resources_resource_type_id_fkey"
+            columns: ["resource_type_id"]
+            isOneToOne: false
+            referencedRelation: "resource_types"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -216,6 +734,1520 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_event_links: {
+        Row: {
+          appointment_id: string
+          attempts: number
+          created_at: string
+          external_event_id: string
+          id: string
+          last_error: string | null
+          last_synced_at: string | null
+          operation: string
+          organization_id: string
+          provider_id: string
+          sync_status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          appointment_id: string
+          attempts?: number
+          created_at?: string
+          external_event_id: string
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          operation: string
+          organization_id: string
+          provider_id: string
+          sync_status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          appointment_id?: string
+          attempts?: number
+          created_at?: string
+          external_event_id?: string
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          operation?: string
+          organization_id?: string
+          provider_id?: string
+          sync_status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_links_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calendar_event_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_links_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      calendar_integrations: {
+        Row: {
+          calendar_id: string | null
+          connection_status: string
+          created_at: string
+          google_account_ref: string | null
+          id: string
+          last_synced_at: string | null
+          organization_id: string
+          privacy_mode: string
+          provider_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          calendar_id?: string | null
+          connection_status?: string
+          created_at?: string
+          google_account_ref?: string | null
+          id?: string
+          last_synced_at?: string | null
+          organization_id: string
+          privacy_mode?: string
+          provider_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          calendar_id?: string | null
+          connection_status?: string
+          created_at?: string
+          google_account_ref?: string | null
+          id?: string
+          last_synced_at?: string | null
+          organization_id?: string
+          privacy_mode?: string
+          provider_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_integrations_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: true
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      calendar_sync_jobs: {
+        Row: {
+          appointment_id: string
+          attempts: number
+          created_at: string
+          external_event_id: string | null
+          id: string
+          idempotency_key: string
+          max_attempts: number
+          next_attempt_at: string
+          operation: string
+          organization_id: string
+          provider_id: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          attempts?: number
+          created_at?: string
+          external_event_id?: string | null
+          id?: string
+          idempotency_key: string
+          max_attempts?: number
+          next_attempt_at?: string
+          operation: string
+          organization_id: string
+          provider_id: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          attempts?: number
+          created_at?: string
+          external_event_id?: string | null
+          id?: string
+          idempotency_key?: string
+          max_attempts?: number
+          next_attempt_at?: string
+          operation?: string
+          organization_id?: string
+          provider_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_sync_jobs_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_sync_jobs_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      charge_adjustment_reversals: {
+        Row: {
+          adjustment_id: string
+          created_by: string | null
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          adjustment_id: string
+          created_by?: string | null
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          adjustment_id?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_adjustment_reversals_adjustment_fk"
+            columns: ["organization_id", "adjustment_id"]
+            isOneToOne: true
+            referencedRelation: "charge_adjustments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_adjustment_reversals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charge_adjustments: {
+        Row: {
+          amount_centavos: number
+          charge_id: string
+          created_by: string | null
+          direction: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+        }
+        Insert: {
+          amount_centavos: number
+          charge_id: string
+          created_by?: string | null
+          direction: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+        }
+        Update: {
+          amount_centavos?: number
+          charge_id?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_adjustments_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_adjustments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charge_attribution_corrections: {
+        Row: {
+          charge_id: string
+          corrected_branch_id: string | null
+          corrected_by: string | null
+          corrected_provider_id: string | null
+          corrected_service_date: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          previous_branch_id: string | null
+          previous_provider_id: string | null
+          previous_service_date: string
+          reason: string
+        }
+        Insert: {
+          charge_id: string
+          corrected_branch_id?: string | null
+          corrected_by?: string | null
+          corrected_provider_id?: string | null
+          corrected_service_date: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          previous_branch_id?: string | null
+          previous_provider_id?: string | null
+          previous_service_date: string
+          reason: string
+        }
+        Update: {
+          charge_id?: string
+          corrected_branch_id?: string | null
+          corrected_by?: string | null
+          corrected_provider_id?: string | null
+          corrected_service_date?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          previous_branch_id?: string | null
+          previous_provider_id?: string | null
+          previous_service_date?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_attribution_corrections_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_attribution_corrections_corrected_branch_fk"
+            columns: ["organization_id", "corrected_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_attribution_corrections_corrected_provider_fk"
+            columns: ["organization_id", "corrected_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_attribution_corrections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_attribution_corrections_previous_branch_fk"
+            columns: ["organization_id", "previous_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_attribution_corrections_previous_provider_fk"
+            columns: ["organization_id", "previous_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      charge_compensation_resolutions: {
+        Row: {
+          agreement_id: string | null
+          authoritative_service_date: string
+          basis: string | null
+          charge_id: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          rate_bps: number | null
+          reason: string
+          resolved_by: string | null
+          state: string
+        }
+        Insert: {
+          agreement_id?: string | null
+          authoritative_service_date: string
+          basis?: string | null
+          charge_id: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          rate_bps?: number | null
+          reason: string
+          resolved_by?: string | null
+          state: string
+        }
+        Update: {
+          agreement_id?: string | null
+          authoritative_service_date?: string
+          basis?: string | null
+          charge_id?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          rate_bps?: number | null
+          reason?: string
+          resolved_by?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_compensation_resolutions_agreement_fk"
+            columns: ["organization_id", "agreement_id"]
+            isOneToOne: false
+            referencedRelation: "provider_compensation_agreements"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_compensation_resolutions_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_compensation_resolutions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charge_direct_costs: {
+        Row: {
+          amount_centavos: number
+          charge_id: string
+          cost_type: string
+          created_by: string | null
+          event_type: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+          reversal_of_id: string | null
+        }
+        Insert: {
+          amount_centavos: number
+          charge_id: string
+          cost_type: string
+          created_by?: string | null
+          event_type: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+          reversal_of_id?: string | null
+        }
+        Update: {
+          amount_centavos?: number
+          charge_id?: string
+          cost_type?: string
+          created_by?: string | null
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+          reversal_of_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_direct_costs_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_direct_costs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_direct_costs_reversal_fk"
+            columns: ["organization_id", "reversal_of_id"]
+            isOneToOne: false
+            referencedRelation: "charge_direct_costs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      charge_voids: {
+        Row: {
+          charge_id: string
+          id: string
+          organization_id: string
+          reason: string
+          voided_at: string
+          voided_by: string | null
+        }
+        Insert: {
+          charge_id: string
+          id?: string
+          organization_id: string
+          reason: string
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Update: {
+          charge_id?: string
+          id?: string
+          organization_id?: string
+          reason?: string
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_voids_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: true
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charge_voids_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charges: {
+        Row: {
+          amount_centavos: number
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          id: string
+          idempotency_key: string
+          non_clinical: boolean
+          organization_id: string
+          patient_id: string
+          posted_at: string
+          procedure_id: string | null
+          provider_id: string | null
+          service_date: string
+          treatment_plan_item_id: string | null
+          version: number
+          zero_amount_reason: string | null
+        }
+        Insert: {
+          amount_centavos: number
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          id?: string
+          idempotency_key: string
+          non_clinical?: boolean
+          organization_id: string
+          patient_id: string
+          posted_at?: string
+          procedure_id?: string | null
+          provider_id?: string | null
+          service_date: string
+          treatment_plan_item_id?: string | null
+          version?: number
+          zero_amount_reason?: string | null
+        }
+        Update: {
+          amount_centavos?: number
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          id?: string
+          idempotency_key?: string
+          non_clinical?: boolean
+          organization_id?: string
+          patient_id?: string
+          posted_at?: string
+          procedure_id?: string | null
+          provider_id?: string | null
+          service_date?: string
+          treatment_plan_item_id?: string | null
+          version?: number
+          zero_amount_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charges_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charges_plan_item_fk"
+            columns: ["organization_id", "treatment_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charges_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "charges_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      clinical_encounters: {
+        Row: {
+          appointment_id: string | null
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          finalized_at: string | null
+          id: string
+          organization_id: string
+          patient_id: string
+          status: string
+          treating_provider_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
+          id?: string
+          organization_id: string
+          patient_id: string
+          status?: string
+          treating_provider_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          finalized_at?: string | null
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          treating_provider_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_encounters_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_encounters_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_encounters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_encounters_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_encounters_organization_provider_fk"
+            columns: ["organization_id", "treating_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      clinical_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          encounter_id: string
+          finalized_at: string | null
+          id: string
+          note_type: string
+          organization_id: string
+          parent_note_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          encounter_id: string
+          finalized_at?: string | null
+          id?: string
+          note_type: string
+          organization_id: string
+          parent_note_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          encounter_id?: string
+          finalized_at?: string | null
+          id?: string
+          note_type?: string
+          organization_id?: string
+          parent_note_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_notes_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_notes_organization_parent_note_fk"
+            columns: ["organization_id", "parent_note_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_notes"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      communications: {
+        Row: {
+          appointment_id: string | null
+          attempts: number
+          body: string
+          branch_id: string | null
+          cancelled_at: string | null
+          channel: string
+          created_at: string
+          delivered_at: string | null
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string
+          patient_id: string | null
+          provider_id: string | null
+          provider_message_id: string | null
+          recipient: string
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          template_type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempts?: number
+          body: string
+          branch_id?: string | null
+          cancelled_at?: string | null
+          channel: string
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id: string
+          patient_id?: string | null
+          provider_id?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template_type: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          attempts?: number
+          body?: string
+          branch_id?: string | null
+          cancelled_at?: string | null
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string
+          patient_id?: string | null
+          provider_id?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template_type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communications_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communications_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "communications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      consent_templates: {
+        Row: {
+          body: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          body: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          body?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          branch_id: string
+          created_at: string
+          data_snapshot: Json
+          document_type: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          include_set: Json
+          organization_id: string
+          patient_id: string
+          status: string
+          template_version: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          data_snapshot: Json
+          document_type: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          include_set?: Json
+          organization_id: string
+          patient_id: string
+          status?: string
+          template_version: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          data_snapshot?: Json
+          document_type?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          include_set?: Json
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          template_version?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      file_objects: {
+        Row: {
+          archived_at: string | null
+          checksum_sha256: string | null
+          created_at: string
+          id: string
+          mime_type: string
+          object_key: string
+          organization_id: string
+          patient_id: string
+          size_bytes: number | null
+          status: string
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          id?: string
+          mime_type: string
+          object_key: string
+          organization_id: string
+          patient_id: string
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          checksum_sha256?: string | null
+          created_at?: string
+          id?: string
+          mime_type?: string
+          object_key?: string
+          organization_id?: string
+          patient_id?: string
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_objects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "file_objects_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "file_objects_organization_uploaded_by_fk"
+            columns: ["organization_id", "uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+        ]
+      }
+      intake_forms: {
+        Row: {
+          answers: Json
+          branch_id: string
+          consent_template_id: string | null
+          created_at: string
+          created_by: string | null
+          form_type: string
+          id: string
+          organization_id: string
+          patient_id: string
+          privacy_acknowledged: boolean
+          signed_at: string | null
+          signed_by: string | null
+          status: string
+          submitted_at: string | null
+          submitted_via: string | null
+          template_version: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          answers?: Json
+          branch_id: string
+          consent_template_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          form_type: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          privacy_acknowledged?: boolean
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_via?: string | null
+          template_version: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          answers?: Json
+          branch_id?: string
+          consent_template_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          form_type?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          privacy_acknowledged?: boolean
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_via?: string | null
+          template_version?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_forms_consent_template_fk"
+            columns: ["consent_template_id"]
+            isOneToOne: false
+            referencedRelation: "consent_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_forms_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "intake_forms_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_forms_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      intake_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          intake_form_id: string
+          organization_id: string
+          patient_id: string
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          intake_form_id: string
+          organization_id: string
+          patient_id: string
+          status?: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intake_form_id?: string
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_links_organization_form_fk"
+            columns: ["organization_id", "intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "intake_forms"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "intake_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_links_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          lot_tracking: boolean
+          name: string
+          organization_id: string
+          reorder_level: number
+          unit: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lot_tracking?: boolean
+          name: string
+          organization_id: string
+          reorder_level?: number
+          unit: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lot_tracking?: boolean
+          name?: string
+          organization_id?: string
+          reorder_level?: number
+          unit?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          branch_id: string
+          expiry_date: string | null
+          id: string
+          item_id: string
+          lot_number: string | null
+          movement_type: string
+          organization_id: string
+          quantity_delta: number
+          reason: string | null
+          recorded_at: string
+          recorded_by: string | null
+          transfer_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          expiry_date?: string | null
+          id?: string
+          item_id: string
+          lot_number?: string | null
+          movement_type: string
+          organization_id: string
+          quantity_delta: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          transfer_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          expiry_date?: string | null
+          id?: string
+          item_id?: string
+          lot_number?: string | null
+          movement_type?: string
+          organization_id?: string
+          quantity_delta?: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          transfer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_organization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_organization_transfer_fk"
+            columns: ["organization_id", "transfer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transfers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      inventory_stock: {
+        Row: {
+          branch_id: string
+          id: string
+          item_id: string
+          organization_id: string
+          quantity_on_hand: number
+          reorder_level_override: number | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          branch_id: string
+          id?: string
+          item_id: string
+          organization_id: string
+          quantity_on_hand?: number
+          reorder_level_override?: number | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          branch_id?: string
+          id?: string
+          item_id?: string
+          organization_id?: string
+          quantity_on_hand?: number
+          reorder_level_override?: number | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_stock_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_organization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      inventory_transfers: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          destination_branch_id: string
+          id: string
+          item_id: string
+          organization_id: string
+          quantity: number
+          reason: string | null
+          source_branch_id: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_branch_id: string
+          id?: string
+          item_id: string
+          organization_id: string
+          quantity: number
+          reason?: string | null
+          source_branch_id: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_branch_id?: string
+          id?: string
+          item_id?: string
+          organization_id?: string
+          quantity?: number
+          reason?: string | null
+          source_branch_id?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transfers_organization_destination_branch_fk"
+            columns: ["organization_id", "destination_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_organization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "inventory_transfers_organization_source_branch_fk"
+            columns: ["organization_id", "source_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -361,6 +2393,63 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_allergies: {
+        Row: {
+          allergen: string
+          id: string
+          organization_id: string
+          patient_id: string
+          reaction: string | null
+          recorded_at: string
+          recorded_by: string | null
+          severity: string | null
+          status: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          allergen: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          reaction?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          severity?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          allergen?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          reaction?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+          severity?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_allergies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_allergies_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       patient_contacts: {
         Row: {
           archived_at: string | null
@@ -421,6 +2510,238 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      patient_medical_conditions: {
+        Row: {
+          condition_name: string
+          id: string
+          notes: string | null
+          onset_date: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at: string
+          recorded_by: string | null
+          resolved_date: string | null
+          status: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          condition_name: string
+          id?: string
+          notes?: string | null
+          onset_date?: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          resolved_date?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          condition_name?: string
+          id?: string
+          notes?: string | null
+          onset_date?: string | null
+          organization_id?: string
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          resolved_date?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_medical_conditions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medical_conditions_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      patient_medications: {
+        Row: {
+          dose: string | null
+          end_date: string | null
+          frequency: string | null
+          id: string
+          medication_name: string
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at: string
+          recorded_by: string | null
+          start_date: string | null
+          status: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          dose?: string | null
+          end_date?: string | null
+          frequency?: string | null
+          id?: string
+          medication_name: string
+          notes?: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          start_date?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          dose?: string | null
+          end_date?: string | null
+          frequency?: string | null
+          id?: string
+          medication_name?: string
+          notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          start_date?: string | null
+          status?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_medications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_medications_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      patient_recall_preferences: {
+        Row: {
+          organization_id: string
+          patient_id: string
+          recall_opt_out: boolean
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          patient_id: string
+          recall_opt_out?: boolean
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          patient_id?: string
+          recall_opt_out?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_recall_preferences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_recall_preferences_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      patient_referrals: {
+        Row: {
+          created_at: string
+          direction: string
+          external_party_contact: string | null
+          external_party_name: string | null
+          external_party_organization: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          patient_id: string
+          required_specialty_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          direction: string
+          external_party_contact?: string | null
+          external_party_name?: string | null
+          external_party_organization?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          patient_id: string
+          required_specialty_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          external_party_contact?: string | null
+          external_party_name?: string | null
+          external_party_organization?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          patient_id?: string
+          required_specialty_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_referrals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_referrals_org_id_patient_id_fk"
+            columns: ["org_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "patient_referrals_required_specialty_id_fkey"
+            columns: ["required_specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -505,6 +2826,7 @@ export type Database = {
       }
       patients: {
         Row: {
+          acquisition_source_id: string | null
           address_line1: string | null
           address_line2: string | null
           archived_at: string | null
@@ -512,8 +2834,12 @@ export type Database = {
           city: string | null
           created_at: string
           created_by_user_id: string | null
+          external_referrer_contact: string | null
+          external_referrer_name: string | null
+          external_referrer_organization: string | null
           first_name: string
           id: string
+          initial_booking_channel_code: string | null
           last_name: string
           middle_name: string | null
           normalized_first_name: string | null
@@ -526,6 +2852,7 @@ export type Database = {
           preferred_branch_id: string | null
           preferred_name: string | null
           province: string | null
+          referrer_patient_id: string | null
           sex_at_registration: string | null
           status: string
           suffix: string | null
@@ -533,6 +2860,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          acquisition_source_id?: string | null
           address_line1?: string | null
           address_line2?: string | null
           archived_at?: string | null
@@ -540,8 +2868,12 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          external_referrer_contact?: string | null
+          external_referrer_name?: string | null
+          external_referrer_organization?: string | null
           first_name: string
           id?: string
+          initial_booking_channel_code?: string | null
           last_name: string
           middle_name?: string | null
           normalized_first_name?: string | null
@@ -554,6 +2886,7 @@ export type Database = {
           preferred_branch_id?: string | null
           preferred_name?: string | null
           province?: string | null
+          referrer_patient_id?: string | null
           sex_at_registration?: string | null
           status?: string
           suffix?: string | null
@@ -561,6 +2894,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          acquisition_source_id?: string | null
           address_line1?: string | null
           address_line2?: string | null
           archived_at?: string | null
@@ -568,8 +2902,12 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by_user_id?: string | null
+          external_referrer_contact?: string | null
+          external_referrer_name?: string | null
+          external_referrer_organization?: string | null
           first_name?: string
           id?: string
+          initial_booking_channel_code?: string | null
           last_name?: string
           middle_name?: string | null
           normalized_first_name?: string | null
@@ -582,6 +2920,7 @@ export type Database = {
           preferred_branch_id?: string | null
           preferred_name?: string | null
           province?: string | null
+          referrer_patient_id?: string | null
           sex_at_registration?: string | null
           status?: string
           suffix?: string | null
@@ -589,6 +2928,20 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "patients_acquisition_source_id_fkey"
+            columns: ["acquisition_source_id"]
+            isOneToOne: false
+            referencedRelation: "acquisition_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_initial_booking_channel_code_fkey"
+            columns: ["initial_booking_channel_code"]
+            isOneToOne: false
+            referencedRelation: "booking_channels"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "patients_organization_id_fkey"
             columns: ["organization_id"]
@@ -601,6 +2954,423 @@ export type Database = {
             columns: ["organization_id", "preferred_branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "patients_organization_referrer_patient_fk"
+            columns: ["organization_id", "referrer_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payment_allocation_reversals: {
+        Row: {
+          allocation_id: string
+          amount_centavos: number
+          cause: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          payment_refund_allocation_id: string | null
+          reason: string
+          reversed_at: string
+          reversed_by: string | null
+        }
+        Insert: {
+          allocation_id: string
+          amount_centavos: number
+          cause: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          payment_refund_allocation_id?: string | null
+          reason: string
+          reversed_at?: string
+          reversed_by?: string | null
+        }
+        Update: {
+          allocation_id?: string
+          amount_centavos?: number
+          cause?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          payment_refund_allocation_id?: string | null
+          reason?: string
+          reversed_at?: string
+          reversed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocation_reversals_allocation_fk"
+            columns: ["organization_id", "allocation_id"]
+            isOneToOne: false
+            referencedRelation: "payment_allocations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_allocation_reversals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocation_reversals_refund_component_fk"
+            columns: ["organization_id", "payment_refund_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "payment_refund_allocations"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          allocated_at: string
+          allocated_by: string | null
+          amount_centavos: number
+          charge_id: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_id: string
+        }
+        Insert: {
+          allocated_at?: string
+          allocated_by?: string | null
+          amount_centavos: number
+          charge_id: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_id: string
+        }
+        Update: {
+          allocated_at?: string
+          allocated_by?: string | null
+          amount_centavos?: number
+          charge_id?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          patient_id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_fk"
+            columns: ["organization_id", "payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_refund_allocations: {
+        Row: {
+          allocation_id: string | null
+          amount_centavos: number
+          id: string
+          organization_id: string
+          payment_id: string
+          refund_id: string
+        }
+        Insert: {
+          allocation_id?: string | null
+          amount_centavos: number
+          id?: string
+          organization_id: string
+          payment_id: string
+          refund_id: string
+        }
+        Update: {
+          allocation_id?: string | null
+          amount_centavos?: number
+          id?: string
+          organization_id?: string
+          payment_id?: string
+          refund_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_refund_allocations_allocation_fk"
+            columns: ["organization_id", "allocation_id"]
+            isOneToOne: false
+            referencedRelation: "payment_allocations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_refund_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refund_allocations_payment_fk"
+            columns: ["organization_id", "payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_refund_allocations_refund_fk"
+            columns: ["organization_id", "refund_id"]
+            isOneToOne: false
+            referencedRelation: "payment_refunds"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payment_refunds: {
+        Row: {
+          amount_centavos: number
+          id: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_id: string
+          reason: string
+          refunded_at: string
+          refunded_by: string | null
+        }
+        Insert: {
+          amount_centavos: number
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_id: string
+          reason: string
+          refunded_at?: string
+          refunded_by?: string | null
+        }
+        Update: {
+          amount_centavos?: number
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          patient_id?: string
+          payment_id?: string
+          reason?: string
+          refunded_at?: string
+          refunded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_refunds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_payment_fk"
+            columns: ["organization_id", "payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payment_voids: {
+        Row: {
+          id: string
+          organization_id: string
+          payment_id: string
+          reason: string
+          voided_at: string
+          voided_by: string | null
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          payment_id: string
+          reason: string
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          payment_id?: string
+          reason?: string
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_voids_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_voids_payment_fk"
+            columns: ["organization_id", "payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_centavos: number
+          branch_id: string
+          created_at: string
+          currency_code: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_method_id: string
+          postdated_cheque_id: string | null
+          received_at: string
+          received_by: string | null
+          reference: string | null
+          version: number
+        }
+        Insert: {
+          amount_centavos: number
+          branch_id: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          payment_method_id: string
+          postdated_cheque_id?: string | null
+          received_at?: string
+          received_by?: string | null
+          reference?: string | null
+          version?: number
+        }
+        Update: {
+          amount_centavos?: number
+          branch_id?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          patient_id?: string
+          payment_method_id?: string
+          postdated_cheque_id?: string | null
+          received_at?: string
+          received_by?: string | null
+          reference?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_method_fk"
+            columns: ["organization_id", "payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "payments_postdated_cheque_fk"
+            columns: ["organization_id", "postdated_cheque_id"]
+            isOneToOne: false
+            referencedRelation: "postdated_cheques"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -625,6 +3395,495 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      postdated_cheque_allocations: {
+        Row: {
+          amount_centavos: number
+          charge_id: string
+          cheque_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          patient_id: string
+        }
+        Insert: {
+          amount_centavos: number
+          charge_id: string
+          cheque_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          patient_id: string
+        }
+        Update: {
+          amount_centavos?: number
+          charge_id?: string
+          cheque_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postdated_cheque_allocations_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "postdated_cheque_allocations_cheque_fk"
+            columns: ["organization_id", "cheque_id"]
+            isOneToOne: false
+            referencedRelation: "postdated_cheques"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "postdated_cheque_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postdated_cheque_allocations_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      postdated_cheque_status_events: {
+        Row: {
+          actor: string | null
+          cheque_id: string
+          from_status: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          reason: string
+          to_status: string
+        }
+        Insert: {
+          actor?: string | null
+          cheque_id: string
+          from_status: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          reason: string
+          to_status: string
+        }
+        Update: {
+          actor?: string | null
+          cheque_id?: string
+          from_status?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postdated_cheque_status_events_cheque_fk"
+            columns: ["organization_id", "cheque_id"]
+            isOneToOne: false
+            referencedRelation: "postdated_cheques"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "postdated_cheque_status_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postdated_cheques: {
+        Row: {
+          amount_centavos: number
+          bank_name: string
+          branch_id: string
+          cheque_number: string
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          current_status_event_id: string | null
+          date_due: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          amount_centavos: number
+          bank_name: string
+          branch_id: string
+          cheque_number: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          current_status_event_id?: string | null
+          date_due: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          patient_id: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          amount_centavos?: number
+          bank_name?: string
+          branch_id?: string
+          cheque_number?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          current_status_event_id?: string | null
+          date_due?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postdated_cheques_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "postdated_cheques_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postdated_cheques_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      prescriptions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          encounter_id: string
+          finalized_at: string | null
+          id: string
+          items: Json
+          organization_id: string
+          patient_id: string
+          provider_id: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          encounter_id: string
+          finalized_at?: string | null
+          id?: string
+          items: Json
+          organization_id: string
+          patient_id: string
+          provider_id: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          encounter_id?: string
+          finalized_at?: string | null
+          id?: string
+          items?: Json
+          organization_id?: string
+          patient_id?: string
+          provider_id?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "prescriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "prescriptions_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      procedure_direct_cost_defaults: {
+        Row: {
+          active: boolean
+          amount_centavos: number
+          cost_type: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          organization_id: string
+          procedure_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active?: boolean
+          amount_centavos: number
+          cost_type: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          organization_id: string
+          procedure_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active?: boolean
+          amount_centavos?: number
+          cost_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          organization_id?: string
+          procedure_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_direct_cost_defaults_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_direct_cost_defaults_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      procedure_eligible_providers: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          procedure_id: string
+          provider_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          procedure_id: string
+          provider_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          procedure_id?: string
+          provider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_eligible_providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_eligible_providers_organization_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_eligible_providers_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      procedure_specialties: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          procedure_id: string
+          requirement_level: string
+          specialty_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          procedure_id: string
+          requirement_level: string
+          specialty_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          procedure_id?: string
+          requirement_level?: string
+          specialty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_specialties_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_specialties_organization_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedures: {
+        Row: {
+          archived_at: string | null
+          booking_mode: string
+          code: string
+          created_at: string
+          currency_code: string
+          default_duration_minutes: number | null
+          default_fee_centavos: number | null
+          description: string | null
+          id: string
+          name: string
+          online_booking_enabled: boolean
+          organization_id: string
+          post_buffer_minutes: number
+          pre_buffer_minutes: number
+          status: string
+          updated_at: string
+          version: number
+          website_visible: boolean
+        }
+        Insert: {
+          archived_at?: string | null
+          booking_mode?: string
+          code: string
+          created_at?: string
+          currency_code?: string
+          default_duration_minutes?: number | null
+          default_fee_centavos?: number | null
+          description?: string | null
+          id?: string
+          name: string
+          online_booking_enabled?: boolean
+          organization_id: string
+          post_buffer_minutes?: number
+          pre_buffer_minutes?: number
+          status?: string
+          updated_at?: string
+          version?: number
+          website_visible?: boolean
+        }
+        Update: {
+          archived_at?: string | null
+          booking_mode?: string
+          code?: string
+          created_at?: string
+          currency_code?: string
+          default_duration_minutes?: number | null
+          default_fee_centavos?: number | null
+          description?: string | null
+          id?: string
+          name?: string
+          online_booking_enabled?: boolean
+          organization_id?: string
+          post_buffer_minutes?: number
+          pre_buffer_minutes?: number
+          status?: string
+          updated_at?: string
+          version?: number
+          website_visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -658,6 +3917,1076 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      provider_availability_rules: {
+        Row: {
+          active: boolean
+          branch_id: string
+          created_at: string
+          ends_at_local: string
+          id: string
+          organization_id: string
+          provider_id: string
+          starts_at_local: string
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+          version: number
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          branch_id: string
+          created_at?: string
+          ends_at_local: string
+          id?: string
+          organization_id: string
+          provider_id: string
+          starts_at_local: string
+          updated_at?: string
+          valid_from: string
+          valid_to?: string | null
+          version?: number
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          branch_id?: string
+          created_at?: string
+          ends_at_local?: string
+          id?: string
+          organization_id?: string
+          provider_id?: string
+          starts_at_local?: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+          version?: number
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_rules_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_availability_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_availability_rules_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_branches: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          organization_id: string
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_branches_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_branches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_branches_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_compensation_agreements: {
+        Row: {
+          basis: string
+          created_at: string
+          created_by: string | null
+          default_rate_bps: number
+          effective_from: string
+          effective_to: string | null
+          id: string
+          organization_id: string
+          provider_id: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          basis?: string
+          created_at?: string
+          created_by?: string | null
+          default_rate_bps: number
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          organization_id: string
+          provider_id: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          basis?: string
+          created_at?: string
+          created_by?: string | null
+          default_rate_bps?: number
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          organization_id?: string
+          provider_id?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_compensation_agreements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_compensation_agreements_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_earning_entries: {
+        Row: {
+          allocation_id: string | null
+          cause: string | null
+          charge_id: string
+          created_by: string | null
+          earning_centavos: number
+          eligible_basis_centavos: number
+          entry_type: string
+          id: string
+          idempotency_key: string
+          net_approved_cost_centavos: number | null
+          occurred_at: string
+          organization_id: string
+          provider_id: string
+          rate_bps: number
+          reversal_of_id: string | null
+        }
+        Insert: {
+          allocation_id?: string | null
+          cause?: string | null
+          charge_id: string
+          created_by?: string | null
+          earning_centavos: number
+          eligible_basis_centavos: number
+          entry_type: string
+          id?: string
+          idempotency_key: string
+          net_approved_cost_centavos?: number | null
+          occurred_at?: string
+          organization_id: string
+          provider_id: string
+          rate_bps: number
+          reversal_of_id?: string | null
+        }
+        Update: {
+          allocation_id?: string | null
+          cause?: string | null
+          charge_id?: string
+          created_by?: string | null
+          earning_centavos?: number
+          eligible_basis_centavos?: number
+          entry_type?: string
+          id?: string
+          idempotency_key?: string
+          net_approved_cost_centavos?: number | null
+          occurred_at?: string
+          organization_id?: string
+          provider_id?: string
+          rate_bps?: number
+          reversal_of_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_earning_entries_allocation_fk"
+            columns: ["organization_id", "allocation_id"]
+            isOneToOne: false
+            referencedRelation: "payment_allocations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_earning_entries_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_earning_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_earning_entries_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_earning_entries_reversal_fk"
+            columns: ["organization_id", "reversal_of_id"]
+            isOneToOne: false
+            referencedRelation: "provider_earning_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_procedure_compensation_rates: {
+        Row: {
+          agreement_id: string
+          basis: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          procedure_id: string
+          provider_id: string
+          rate_bps: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          agreement_id: string
+          basis?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          procedure_id: string
+          provider_id: string
+          rate_bps: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          agreement_id?: string
+          basis?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          procedure_id?: string
+          provider_id?: string
+          rate_bps?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_procedure_compensation_rates_agreement_fk"
+            columns: ["organization_id", "agreement_id"]
+            isOneToOne: false
+            referencedRelation: "provider_compensation_agreements"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_procedure_compensation_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_procedure_compensation_rates_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_procedure_compensation_rates_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_reservations: {
+        Row: {
+          appointment_id: string | null
+          branch_id: string
+          created_at: string
+          ends_at: string
+          expires_at: string | null
+          id: string
+          organization_id: string
+          provider_id: string
+          reservation_kind: string
+          reservation_status: string
+          starts_at: string
+          timespan: unknown
+        }
+        Insert: {
+          appointment_id?: string | null
+          branch_id: string
+          created_at?: string
+          ends_at: string
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          provider_id: string
+          reservation_kind?: string
+          reservation_status?: string
+          starts_at: string
+          timespan?: unknown
+        }
+        Update: {
+          appointment_id?: string | null
+          branch_id?: string
+          created_at?: string
+          ends_at?: string
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          provider_id?: string
+          reservation_kind?: string
+          reservation_status?: string
+          starts_at?: string
+          timespan?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_reservations_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_reservations_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_reservations_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_schedule_exceptions: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          exception_type: string
+          id: string
+          organization_id: string
+          provider_id: string
+          reason: string | null
+          starts_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          exception_type: string
+          id?: string
+          organization_id: string
+          provider_id: string
+          reason?: string | null
+          starts_at: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          exception_type?: string
+          id?: string
+          organization_id?: string
+          provider_id?: string
+          reason?: string | null
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_schedule_exceptions_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_schedule_exceptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_schedule_exceptions_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      provider_specialties: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_primary: boolean
+          organization_id: string
+          provider_id: string
+          specialty_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          organization_id: string
+          provider_id: string
+          specialty_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_primary?: boolean
+          organization_id?: string
+          provider_id?: string
+          specialty_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_specialties_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_specialties_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "provider_specialties_specialty_fk"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      providers: {
+        Row: {
+          archived_at: string | null
+          bio: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          license_number: string | null
+          linked_user_id: string | null
+          middle_name: string | null
+          organization_id: string
+          professional_title: string | null
+          provider_type: string
+          status: string
+          suffix: string | null
+          updated_at: string
+          version: number
+          website_visible: boolean
+        }
+        Insert: {
+          archived_at?: string | null
+          bio?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          license_number?: string | null
+          linked_user_id?: string | null
+          middle_name?: string | null
+          organization_id: string
+          professional_title?: string | null
+          provider_type: string
+          status?: string
+          suffix?: string | null
+          updated_at?: string
+          version?: number
+          website_visible?: boolean
+        }
+        Update: {
+          archived_at?: string | null
+          bio?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          license_number?: string | null
+          linked_user_id?: string | null
+          middle_name?: string | null
+          organization_id?: string
+          professional_title?: string | null
+          provider_type?: string
+          status?: string
+          suffix?: string | null
+          updated_at?: string
+          version?: number
+          website_visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "providers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "providers_organization_linked_user_fk"
+            columns: ["organization_id", "linked_user_id"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+        ]
+      }
+      public_site_settings: {
+        Row: {
+          about_text: string | null
+          address_override: string | null
+          booking_link: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          hero_heading: string | null
+          hero_subtext: string | null
+          messenger_link: string | null
+          operating_hours: Json
+          organization_id: string
+          privacy_notice: string | null
+          social_links: Json
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          about_text?: string | null
+          address_override?: string | null
+          booking_link?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          hero_heading?: string | null
+          hero_subtext?: string | null
+          messenger_link?: string | null
+          operating_hours?: Json
+          organization_id: string
+          privacy_notice?: string | null
+          social_links?: Json
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          about_text?: string | null
+          address_override?: string | null
+          booking_link?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          hero_heading?: string | null
+          hero_subtext?: string | null
+          messenger_link?: string | null
+          operating_hours?: Json
+          organization_id?: string
+          privacy_notice?: string | null
+          social_links?: Json
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_site_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      queue_entries: {
+        Row: {
+          arrived_at: string
+          branch_id: string
+          chief_complaint: string | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          left_at: string | null
+          organization_id: string
+          patient_id: string
+          provider_id: string | null
+          resource_id: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          arrived_at?: string
+          branch_id: string
+          chief_complaint?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          left_at?: string | null
+          organization_id: string
+          patient_id: string
+          provider_id?: string | null
+          resource_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          arrived_at?: string
+          branch_id?: string
+          chief_complaint?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          left_at?: string | null
+          organization_id?: string
+          patient_id?: string
+          provider_id?: string | null
+          resource_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_entries_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "queue_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_entries_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "queue_entries_organization_provider_fk"
+            columns: ["organization_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "queue_entries_organization_resource_fk"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "branch_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      recall_rules: {
+        Row: {
+          branch_id: string | null
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          interval_months: number
+          is_active: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          branch_id?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interval_months: number
+          is_active?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          branch_id?: string | null
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interval_months?: number
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recall_rules_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "recall_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recalls: {
+        Row: {
+          appointment_id: string | null
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          organization_id: string
+          patient_id: string
+          recall_rule_id: string
+          reminder_sent_at: string | null
+          reminders_sent: number
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          recall_rule_id: string
+          reminder_sent_at?: string | null
+          reminders_sent?: number
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          recall_rule_id?: string
+          reminder_sent_at?: string | null
+          reminders_sent?: number
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recalls_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "recalls_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "recalls_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recalls_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "recalls_organization_rule_fk"
+            columns: ["organization_id", "recall_rule_id"]
+            isOneToOne: false
+            referencedRelation: "recall_rules"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      resource_reservations: {
+        Row: {
+          appointment_id: string | null
+          branch_id: string
+          created_at: string
+          ends_at: string
+          expires_at: string | null
+          id: string
+          organization_id: string
+          reservation_kind: string
+          reservation_status: string
+          resource_id: string
+          starts_at: string
+          timespan: unknown
+        }
+        Insert: {
+          appointment_id?: string | null
+          branch_id: string
+          created_at?: string
+          ends_at: string
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          reservation_kind?: string
+          reservation_status?: string
+          resource_id: string
+          starts_at: string
+          timespan?: unknown
+        }
+        Update: {
+          appointment_id?: string | null
+          branch_id?: string
+          created_at?: string
+          ends_at?: string
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          reservation_kind?: string
+          reservation_status?: string
+          resource_id?: string
+          starts_at?: string
+          timespan?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_reservations_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_reservations_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "resource_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_reservations_organization_resource_fk"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "branch_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      resource_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          schedulable: boolean
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          schedulable?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          schedulable?: boolean
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_unavailability: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          organization_id: string
+          reason: string | null
+          resource_id: string
+          starts_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+          resource_id: string
+          starts_at: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          resource_id?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_unavailability_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resource_unavailability_organization_resource_fk"
+            columns: ["organization_id", "resource_id"]
+            isOneToOne: false
+            referencedRelation: "branch_resources"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {
@@ -730,6 +5059,521 @@ export type Database = {
           },
         ]
       }
+      specialist_request_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_value: string
+          old_value: string | null
+          organization_id: string
+          reason: string | null
+          specialist_request_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value: string
+          old_value?: string | null
+          organization_id: string
+          reason?: string | null
+          specialist_request_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_value?: string
+          old_value?: string | null
+          organization_id?: string
+          reason?: string | null
+          specialist_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialist_request_history_organization_request_fk"
+            columns: ["organization_id", "specialist_request_id"]
+            isOneToOne: false
+            referencedRelation: "specialist_requests"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "specialist_request_status_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialist_requests: {
+        Row: {
+          appointment_id: string | null
+          branch_id: string
+          case_summary: string
+          created_at: string
+          expires_at: string
+          id: string
+          organization_id: string
+          patient_id: string
+          request_channel: string
+          requested_ends_at: string | null
+          requested_provider_id: string | null
+          requested_starts_at: string | null
+          required_specialty_id: string | null
+          response_message: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          branch_id: string
+          case_summary: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          request_channel: string
+          requested_ends_at?: string | null
+          requested_provider_id?: string | null
+          requested_starts_at?: string | null
+          required_specialty_id?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          appointment_id?: string | null
+          branch_id?: string
+          case_summary?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          request_channel?: string
+          requested_ends_at?: string | null
+          requested_provider_id?: string | null
+          requested_starts_at?: string | null
+          required_specialty_id?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialist_requests_organization_appointment_fk"
+            columns: ["organization_id", "appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "specialist_requests_organization_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "specialist_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specialist_requests_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "specialist_requests_organization_provider_fk"
+            columns: ["organization_id", "requested_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "specialist_requests_organization_specialty_fk"
+            columns: ["required_specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specialties: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specialties_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tooth_conditions: {
+        Row: {
+          created_at: string
+          finding_type: string
+          id: string
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at: string
+          recorded_by: string | null
+          status: string
+          surface: string
+          tooth_code: string
+          updated_at: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          finding_type?: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          patient_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          status?: string
+          surface?: string
+          tooth_code: string
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          finding_type?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          status?: string
+          surface?: string
+          tooth_code?: string
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooth_conditions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tooth_conditions_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_alternatives: {
+        Row: {
+          alternative_no: number
+          created_at: string
+          id: string
+          organization_id: string
+          plan_id: string
+          summary: string
+        }
+        Insert: {
+          alternative_no: number
+          created_at?: string
+          id?: string
+          organization_id: string
+          plan_id: string
+          summary: string
+        }
+        Update: {
+          alternative_no?: number
+          created_at?: string
+          id?: string
+          organization_id?: string
+          plan_id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_alternatives_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_alternatives_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_discussions: {
+        Row: {
+          context: string
+          created_at: string
+          discussed_at: string
+          discussed_by: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          plan_id: string
+          treating_provider_id: string | null
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          discussed_at: string
+          discussed_by?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          plan_id: string
+          treating_provider_id?: string | null
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          discussed_at?: string
+          discussed_by?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          plan_id?: string
+          treating_provider_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_discussions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_discussions_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_discussions_organization_provider_fk"
+            columns: ["organization_id", "treating_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_drawings: {
+        Row: {
+          drawing: Json
+          id: string
+          organization_id: string
+          plan_id: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          drawing: Json
+          id?: string
+          organization_id: string
+          plan_id: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          drawing?: Json
+          id?: string
+          organization_id?: string
+          plan_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_drawings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_drawings_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: true
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_items: {
+        Row: {
+          created_at: string
+          description: string
+          estimated_fee: number | null
+          estimated_fee_centavos: number | null
+          id: string
+          line_no: number
+          organization_id: string
+          plan_id: string
+          procedure_id: string | null
+          tooth_code: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          estimated_fee?: number | null
+          estimated_fee_centavos?: number | null
+          id?: string
+          line_no: number
+          organization_id: string
+          plan_id: string
+          procedure_id?: string | null
+          tooth_code?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          estimated_fee?: number | null
+          estimated_fee_centavos?: number | null
+          id?: string
+          line_no?: number
+          organization_id?: string
+          plan_id?: string
+          procedure_id?: string | null
+          tooth_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_items_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_items_organization_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          patient_id: string
+          status: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          patient_id: string
+          status?: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plans_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -743,7 +5587,144 @@ export type Database = {
         }
         Returns: string
       }
+      acknowledge_calendar_sync: {
+        Args: {
+          p_acting_branch_id: string
+          p_external_event_id: string
+          p_sync_job_id: string
+        }
+        Returns: {
+          status: string
+          sync_job_id: string
+        }[]
+      }
+      acknowledge_communication: {
+        Args: {
+          p_acting_branch_id: string
+          p_communication_id: string
+          p_provider_message_id?: string
+        }
+        Returns: {
+          communication_id: string
+          status: string
+        }[]
+      }
+      acknowledge_treatment_plan: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_plan_id: string
+        }
+        Returns: {
+          plan_id: string
+          version: number
+        }[]
+      }
+      add_treatment_plan_alternative: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_plan_id: string
+          p_summary: string
+        }
+        Returns: {
+          alternative_id: string
+          alternative_no: number
+        }[]
+      }
+      add_treatment_plan_discussion: {
+        Args: {
+          p_acting_branch_id: string
+          p_context?: string
+          p_notes?: string
+          p_plan_id: string
+          p_treating_provider_id?: string
+        }
+        Returns: {
+          discussed_at: string
+          discussion_id: string
+        }[]
+      }
+      add_treatment_plan_item: {
+        Args: {
+          p_acting_branch_id: string
+          p_description?: string
+          p_estimated_fee?: number
+          p_expected_version: number
+          p_plan_id: string
+          p_procedure_id?: string
+          p_tooth_code?: string
+        }
+        Returns: {
+          item_id: string
+          line_no: number
+        }[]
+      }
+      adjust_stock: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_item_id: string
+          p_quantity_delta: number
+          p_reason: string
+        }
+        Returns: {
+          branch_id: string
+          item_id: string
+          quantity_on_hand: number
+          version: number
+        }[]
+      }
+      allocate_payment: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_charge_id: string
+          p_idempotency_key: string
+          p_patient_id: string
+          p_payment_id: string
+        }
+        Returns: {
+          allocation_id: string
+        }[]
+      }
+      amend_clinical_note: {
+        Args: {
+          p_acting_branch_id: string
+          p_content: string
+          p_expected_version: number
+          p_note_id: string
+        }
+        Returns: {
+          note_id: string
+          version: number
+        }[]
+      }
+      approve_charge_direct_cost: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_charge_id: string
+          p_cost_type: string
+          p_description: string
+          p_idempotency_key: string
+        }
+        Returns: {
+          direct_cost_id: string
+        }[]
+      }
       archive_branch: { Args: { target_branch_id: string }; Returns: string }
+      archive_file: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_file_id: string
+        }
+        Returns: {
+          file_id: string
+          version: number
+        }[]
+      }
       archive_patient: {
         Args: {
           p_acting_branch_id: string
@@ -779,6 +5760,203 @@ export type Database = {
           version: number
         }[]
       }
+      archive_procedure: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_procedure_id: string
+        }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
+      archive_provider: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_provider_id: string
+        }
+        Returns: {
+          provider_id: string
+          version: number
+        }[]
+      }
+      cancel_appointment: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_expected_version: number
+          p_reason: string
+        }
+        Returns: {
+          appointment_id: string
+          version: number
+        }[]
+      }
+      cancel_communication: {
+        Args: {
+          p_acting_branch_id: string
+          p_communication_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          communication_id: string
+          status: string
+        }[]
+      }
+      cancel_inventory_transfer: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_reason: string
+          p_transfer_id: string
+        }
+        Returns: {
+          status: string
+          transfer_id: string
+          version: number
+        }[]
+      }
+      cancel_recall: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_recall_id: string
+        }
+        Returns: {
+          recall_id: string
+          status: string
+          version: number
+        }[]
+      }
+      cancel_specialist_request: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: {
+          request_id: string
+          version: number
+        }[]
+      }
+      claim_due_calendar_syncs: {
+        Args: { p_acting_branch_id: string; p_limit?: number }
+        Returns: {
+          appointment_id: string
+          operation: string
+          provider_id: string
+          sync_job_id: string
+        }[]
+      }
+      claim_due_communications: {
+        Args: { p_acting_branch_id: string; p_limit?: number }
+        Returns: {
+          appointment_id: string
+          body: string
+          channel: string
+          communication_id: string
+          recipient: string
+          scheduled_for: string
+          template_type: string
+        }[]
+      }
+      clear_postdated_cheque: {
+        Args: {
+          p_acting_branch_id: string
+          p_cheque_id: string
+          p_idempotency_key: string
+        }
+        Returns: {
+          payment_id: string
+        }[]
+      }
+      complete_recall: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_recall_id: string
+        }
+        Returns: {
+          recall_id: string
+          status: string
+          version: number
+        }[]
+      }
+      confirm_file_upload:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_expected_version: number
+              p_file_id: string
+            }
+            Returns: {
+              file_id: string
+              version: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_expected_version: number
+              p_file_id: string
+              p_verified_size_bytes: number
+            }
+            Returns: {
+              file_id: string
+              version: number
+            }[]
+          }
+      confirm_transfer_receipt: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_transfer_id: string
+        }
+        Returns: {
+          status: string
+          transfer_id: string
+          version: number
+        }[]
+      }
+      connect_calendar: {
+        Args: {
+          p_acting_branch_id: string
+          p_calendar_id: string
+          p_google_account_ref: string
+          p_provider_id: string
+        }
+        Returns: {
+          integration_id: string
+          version: number
+        }[]
+      }
+      correct_charge_attribution: {
+        Args: {
+          p_acting_branch_id: string
+          p_charge_id: string
+          p_corrected_provider_id: string
+          p_corrected_service_date: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          correction_id: string
+        }[]
+      }
+      create_appointment: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_payload: Json
+        }
+        Returns: {
+          appointment_id: string
+          version: number
+        }[]
+      }
       create_branch: {
         Args: {
           branch_address_line1: string
@@ -800,31 +5978,133 @@ export type Database = {
         }
         Returns: string
       }
-      create_patient: {
+      create_clinical_encounter: {
         Args: {
           p_acting_branch_id: string
-          p_address_line1: string | null
-          p_address_line2: string | null
-          p_birth_date: string
-          p_city: string | null
-          p_duplicate_confirmed: boolean
-          p_first_name: string
-          p_initial_email: string | null
-          p_initial_mobile: string | null
-          p_last_name: string
-          p_middle_name: string | null
-          p_postal_code: string | null
-          p_preferred_branch_id: string | null
-          p_preferred_name: string | null
-          p_province: string | null
-          p_sex_at_registration: string | null
-          p_suffix: string | null
+          p_appointment_id?: string
+          p_patient_id: string
+          p_treating_provider_id?: string
         }
         Returns: {
-          patient_id: string
+          encounter_id: string
           version: number
         }[]
       }
+      create_clinical_note: {
+        Args: {
+          p_acting_branch_id: string
+          p_content: string
+          p_encounter_id: string
+          p_note_type: string
+        }
+        Returns: {
+          note_id: string
+          version: number
+        }[]
+      }
+      create_file_upload: {
+        Args: {
+          p_acting_branch_id: string
+          p_mime_type: string
+          p_patient_id: string
+          p_size_bytes?: number
+        }
+        Returns: {
+          file_id: string
+          object_key: string
+          version: number
+        }[]
+      }
+      create_intake_form: {
+        Args: {
+          p_acting_branch_id: string
+          p_consent_template_id?: string
+          p_form_type: string
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      create_inventory_item: {
+        Args: {
+          p_acting_branch_id: string
+          p_category: string
+          p_code: string
+          p_lot_tracking?: boolean
+          p_name: string
+          p_reorder_level?: number
+          p_unit: string
+        }
+        Returns: {
+          item_id: string
+          version: number
+        }[]
+      }
+      create_inventory_transfer: {
+        Args: {
+          p_acting_branch_id: string
+          p_destination_branch_id: string
+          p_item_id: string
+          p_quantity: number
+          p_reason: string
+          p_source_branch_id: string
+        }
+        Returns: {
+          transfer_id: string
+          version: number
+        }[]
+      }
+      create_patient:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_address_line1: string | null
+              p_address_line2: string | null
+              p_birth_date: string
+              p_city: string | null
+              p_duplicate_confirmed: boolean
+              p_first_name: string
+              p_initial_email: string | null
+              p_initial_mobile: string | null
+              p_last_name: string
+              p_middle_name: string | null
+              p_postal_code: string | null
+              p_preferred_branch_id: string | null
+              p_preferred_name: string | null
+              p_province: string | null
+              p_sex_at_registration: string | null
+              p_suffix: string | null
+            }
+            Returns: {
+              patient_id: string
+              version: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_address_line1: string | null
+              p_address_line2: string | null
+              p_attribution: Json
+              p_birth_date: string
+              p_city: string | null
+              p_duplicate_confirmed: boolean
+              p_first_name: string
+              p_initial_email: string | null
+              p_initial_mobile: string | null
+              p_last_name: string
+              p_middle_name: string | null
+              p_postal_code: string | null
+              p_preferred_branch_id: string | null
+              p_preferred_name: string | null
+              p_province: string | null
+              p_sex_at_registration: string | null
+              p_suffix: string | null
+            }
+            Returns: {
+              patient_id: string
+              version: number
+            }[]
+          }
       create_patient_contact: {
         Args: {
           p_acting_branch_id: string
@@ -837,6 +6117,29 @@ export type Database = {
         }
         Returns: {
           contact_id: string
+          version: number
+        }[]
+      }
+      create_patient_medical_record: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_payload: Json
+          p_record_type: string
+        }
+        Returns: {
+          record_id: string
+          version: number
+        }[]
+      }
+      create_patient_referral: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_referral: Json
+        }
+        Returns: {
+          referral_id: string
           version: number
         }[]
       }
@@ -858,9 +6161,214 @@ export type Database = {
           version: number
         }[]
       }
+      create_prescription: {
+        Args: {
+          p_acting_branch_id: string
+          p_encounter_id: string
+          p_items: Json
+        }
+        Returns: {
+          prescription_id: string
+          version: number
+        }[]
+      }
+      create_procedure: {
+        Args: { p_acting_branch_id: string; p_procedure: Json }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
+      create_provider: {
+        Args: { p_acting_branch_id: string; p_provider: Json }
+        Returns: {
+          provider_id: string
+          version: number
+        }[]
+      }
+      create_recall: {
+        Args: {
+          p_acting_branch_id: string
+          p_due_date?: string
+          p_patient_id: string
+          p_rule_id: string
+        }
+        Returns: {
+          recall_id: string
+          version: number
+        }[]
+      }
+      create_recall_rule: {
+        Args: {
+          p_acting_branch_id: string
+          p_branch_id?: string
+          p_channel: string
+          p_interval_months: number
+          p_name: string
+        }
+        Returns: {
+          rule_id: string
+          version: number
+        }[]
+      }
+      create_specialist_request: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_payload: Json
+        }
+        Returns: {
+          request_id: string
+          version: number
+        }[]
+      }
+      create_specialty: {
+        Args: { p_acting_branch_id: string; p_code: string; p_name: string }
+        Returns: {
+          specialty_id: string
+          version: number
+        }[]
+      }
+      create_tooth_condition: {
+        Args: {
+          p_acting_branch_id: string
+          p_finding_type?: string
+          p_notes?: string
+          p_patient_id: string
+          p_status?: string | null
+          p_surface?: string
+          p_tooth_code: string
+        }
+        Returns: {
+          condition_id: string
+          version: number
+        }[]
+      }
+      create_treatment_plan: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_title: string
+        }
+        Returns: {
+          plan_id: string
+          version: number
+        }[]
+      }
+      create_walkin_entry: {
+        Args: {
+          p_acting_branch_id: string
+          p_chief_complaint: string
+          p_patient_id: string
+          p_provider_id?: string
+          p_resource_id?: string
+        }
+        Returns: {
+          queue_entry_id: string
+          version: number
+        }[]
+      }
+      disconnect_calendar: {
+        Args: { p_acting_branch_id: string; p_provider_id: string }
+        Returns: {
+          integration_id: string
+          version: number
+        }[]
+      }
+      enqueue_calendar_sync: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_operation: string
+          p_provider_id: string
+        }
+        Returns: {
+          status: string
+          sync_job_id: string
+        }[]
+      }
+      enqueue_communication: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_body: string
+          p_channel: string
+          p_idempotency_key: string
+          p_recipient: string
+          p_scheduled_for?: string
+          p_template_type: string
+        }
+        Returns: {
+          communication_id: string
+          status: string
+        }[]
+      }
+      enqueue_recall_reminder: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_recall_id: string
+        }
+        Returns: {
+          recall_id: string
+          status: string
+          version: number
+        }[]
+      }
+      fail_calendar_sync: {
+        Args: {
+          p_acting_branch_id: string
+          p_error?: string
+          p_sync_job_id: string
+        }
+        Returns: {
+          status: string
+          sync_job_id: string
+        }[]
+      }
+      fail_communication: {
+        Args: { p_acting_branch_id: string; p_communication_id: string }
+        Returns: {
+          communication_id: string
+          status: string
+        }[]
+      }
       fail_workforce_invitation: {
         Args: { p_invitation_id: string }
         Returns: undefined
+      }
+      finalize_clinical_encounter: {
+        Args: {
+          p_acting_branch_id: string
+          p_encounter_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          encounter_id: string
+          version: number
+        }[]
+      }
+      finalize_clinical_note: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_note_id: string
+        }
+        Returns: {
+          note_id: string
+          version: number
+        }[]
+      }
+      finalize_prescription: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_prescription_id: string
+        }
+        Returns: {
+          prescription_id: string
+          version: number
+        }[]
       }
       finalize_workforce_invitation: {
         Args: {
@@ -869,6 +6377,20 @@ export type Database = {
           p_invitation_id: string
         }
         Returns: string
+      }
+      find_available_slots: {
+        Args: {
+          p_acting_branch_id: string
+          p_duration_minutes: number
+          p_max_slots?: number
+          p_provider_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: {
+          ends_at: string
+          starts_at: string
+        }[]
       }
       find_duplicate_candidates: {
         Args: {
@@ -881,17 +6403,713 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_document: {
+        Args: {
+          p_acting_branch_id: string
+          p_document_type: string
+          p_include_set?: Json
+          p_patient_id: string
+        }
+        Returns: {
+          document_id: string
+          version: number
+        }[]
+      }
+      get_acquisition_summary: {
+        Args: { p_acting_branch_id: string; p_window_days: number }
+        Returns: {
+          code: string
+          group_type: string
+          name: string
+          patient_count: number
+        }[]
+      }
+      get_clinical_encounter_detail: {
+        Args: { p_acting_branch_id: string; p_encounter_id: string }
+        Returns: Json
+      }
+      get_document_snapshot: {
+        Args: { p_acting_branch_id: string; p_document_id: string }
+        Returns: {
+          data_snapshot: Json
+          document_id: string
+          document_type: string
+          template_version: string
+          version: number
+        }[]
+      }
+      get_file_metadata: {
+        Args: { p_acting_branch_id: string; p_file_id: string }
+        Returns: {
+          created_at: string
+          file_id: string
+          mime_type: string
+          object_key: string
+          size_bytes: number
+          status: string
+          uploaded_by: string
+          version: number
+        }[]
+      }
+      get_inventory_aggregate: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          branches: Json
+          item_code: string
+          item_id: string
+          item_name: string
+          total_on_hand: number
+        }[]
+      }
+      get_operational_analytics_summary: {
+        Args: {
+          p_acting_branch_id: string
+          p_branch_id?: string
+          p_window_days?: number
+        }
+        Returns: {
+          denominator: number
+          metric_code: string
+          numerator: number
+        }[]
+      }
       get_patient_detail: {
         Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_procedure_configuration: {
+        Args: { p_acting_branch_id: string; p_procedure_id: string }
+        Returns: Json
+      }
+      get_provider_configuration: {
+        Args: { p_acting_branch_id: string; p_provider_id: string }
+        Returns: Json
+      }
+      get_public_site: { Args: { p_org_slug: string }; Returns: Json }
+      get_public_site_settings: {
+        Args: { p_acting_branch_id: string }
+        Returns: Json
+      }
+      get_recall_retention_summary: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          recall_count: number
+          recall_rule_name: string
+          status: string
+        }[]
+      }
+      get_treatment_plan_detail: {
+        Args: { p_acting_branch_id: string; p_plan_id: string }
         Returns: Json
       }
       get_workforce_invitation_summary: {
         Args: { p_auth_user_id: string }
         Returns: Json
       }
+      issue_stock: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_item_id: string
+          p_quantity: number
+          p_reason: string
+        }
+        Returns: {
+          branch_id: string
+          item_id: string
+          quantity_on_hand: number
+          version: number
+        }[]
+      }
+      link_recall_appointment: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_expected_version: number
+          p_recall_id: string
+        }
+        Returns: {
+          appointment_id: string
+          recall_id: string
+          version: number
+        }[]
+      }
+      list_acquisition_sources: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          category: string
+          code: string
+          name: string
+          source_id: string
+        }[]
+      }
+      list_appointments: {
+        Args: {
+          p_acting_branch_id: string
+          p_encounter_status: string
+          p_end_at: string
+          p_provider_id: string
+          p_start_at: string
+        }
+        Returns: {
+          appointment_id: string
+          confirmation_status: string
+          encounter_status: string
+          ends_at: string
+          patient_display_name: string
+          patient_id: string
+          procedure_id: string
+          procedure_name: string
+          provider_ids: Json
+          resource_ids: Json
+          scheduling_status: string
+          starts_at: string
+          version: number
+        }[]
+      }
+      list_availability: {
+        Args: {
+          p_acting_branch_id: string
+          p_end_date: string
+          p_provider_id: string
+          p_start_date: string
+        }
+        Returns: {
+          availability_date: string
+          ends_at: string
+          source: string
+          starts_at: string
+        }[]
+      }
+      list_booking_channels: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          code: string
+          name: string
+        }[]
+      }
+      list_booking_requests: {
+        Args: { p_acting_branch_id: string; p_status?: string | null }
+        Returns: {
+          birth_date: string
+          created_at: string
+          email: string
+          first_name: string
+          last_name: string
+          mobile: string
+          request_id: string
+          request_status: string
+          requested_ends_at: string
+          requested_procedure_id: string
+          requested_procedure_name: string
+          requested_provider_display_name: string
+          requested_provider_id: string
+          requested_starts_at: string
+          version: number
+        }[]
+      }
+      list_calendar_integrations: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          calendar_id: string
+          connection_status: string
+          integration_id: string
+          last_synced_at: string
+          privacy_mode: string
+          provider_display_name: string
+          provider_id: string
+          version: number
+        }[]
+      }
+      list_calendar_syncs: {
+        Args: { p_acting_branch_id: string; p_appointment_id?: string }
+        Returns: {
+          appointment_id: string
+          attempts: number
+          created_at: string
+          external_event_id: string
+          next_attempt_at: string
+          operation: string
+          provider_display_name: string
+          provider_id: string
+          status: string
+          sync_job_id: string
+          version: number
+        }[]
+      }
+      list_clinical_encounters: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          appointment_id: string
+          created_at: string
+          encounter_id: string
+          finalized_at: string
+          status: string
+          treating_provider_id: string
+          version: number
+        }[]
+      }
+      list_communications: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id?: string
+          p_status?: string | null
+        }
+        Returns: {
+          attempts: number
+          cancelled_at: string
+          channel: string
+          communication_id: string
+          created_at: string
+          delivered_at: string
+          failed_at: string
+          next_attempt_at: string
+          recipient_masked: string
+          sent_at: string
+          status: string
+          template_type: string
+          version: number
+        }[]
+      }
+      list_consent_templates: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          code: string
+          is_active: boolean
+          name: string
+          template_id: string
+          version: number
+        }[]
+      }
+      list_documents: {
+        Args: {
+          p_acting_branch_id: string
+          p_document_type?: string
+          p_patient_id: string
+        }
+        Returns: {
+          document_id: string
+          document_type: string
+          generated_at: string
+          generated_by: string
+          include_set: Json
+          template_version: string
+          version: number
+        }[]
+      }
+      list_intake_forms: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          created_at: string
+          form_id: string
+          form_type: string
+          signed_at: string
+          status: string
+          submitted_at: string
+          submitted_via: string
+          template_version: string
+          version: number
+        }[]
+      }
+      list_inventory_items: {
+        Args: { p_acting_branch_id: string; p_include_inactive?: boolean }
+        Returns: {
+          category: string
+          code: string
+          is_active: boolean
+          item_id: string
+          lot_tracking: boolean
+          name: string
+          reorder_level: number
+          unit: string
+          version: number
+        }[]
+      }
+      list_inventory_movements: {
+        Args: { p_acting_branch_id: string; p_item_id?: string }
+        Returns: {
+          expiry_date: string
+          item_code: string
+          item_id: string
+          lot_number: string
+          movement_id: string
+          movement_type: string
+          quantity_delta: number
+          reason: string
+          recorded_at: string
+          recorded_by: string
+          transfer_id: string
+        }[]
+      }
+      list_inventory_stock: {
+        Args: {
+          p_acting_branch_id: string
+          p_item_id?: string
+          p_low_only?: boolean
+        }
+        Returns: {
+          branch_id: string
+          item_code: string
+          item_id: string
+          item_name: string
+          low_stock: boolean
+          quantity_on_hand: number
+          reorder_level: number
+          reorder_level_override: number
+          version: number
+        }[]
+      }
+      list_inventory_transfers: {
+        Args: { p_acting_branch_id: string; p_status?: string | null }
+        Returns: {
+          confirmed_at: string
+          created_at: string
+          destination_branch_id: string
+          item_code: string
+          item_id: string
+          item_name: string
+          quantity: number
+          reason: string
+          source_branch_id: string
+          status: string
+          transfer_id: string
+          version: number
+        }[]
+      }
+      list_operational_analytics_breakdown: {
+        Args: {
+          p_acting_branch_id: string
+          p_branch_id?: string
+          p_window_days?: number
+        }
+        Returns: {
+          booked_minutes: number
+          code: string
+          dimension_id: string
+          group_type: string
+          item_count: number
+          name: string
+        }[]
+      }
+      list_patient_account: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          amount_centavos: number
+          branch_id: string
+          entity_id: string
+          event_type: string
+          note: string
+          occurred_at: string
+          payment_method_code: string
+          procedure_id: string
+          provider_id: string
+          service_date: string
+          status: string
+        }[]
+      }
+      list_patient_files: {
+        Args: {
+          p_acting_branch_id: string
+          p_include_archived?: boolean
+          p_patient_id: string
+        }
+        Returns: {
+          created_at: string
+          file_id: string
+          mime_type: string
+          size_bytes: number
+          status: string
+          uploaded_by: string
+          version: number
+        }[]
+      }
+      list_patient_medical_records: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_record_type?: string
+        }
+        Returns: {
+          record: Json
+          record_type: string
+        }[]
+      }
+      list_patient_referrals: {
+        Args: {
+          p_acting_branch_id: string
+          p_include_terminal?: boolean
+          p_patient_id: string
+        }
+        Returns: {
+          created_at: string
+          direction: string
+          external_party_contact: string
+          external_party_name: string
+          external_party_organization: string
+          notes: string
+          referral_id: string
+          required_specialty_id: string
+          required_specialty_name: string
+          status: string
+          updated_at: string
+          version: number
+        }[]
+      }
+      list_payment_methods: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          active: boolean
+          code: string
+          method_id: string
+          name: string
+        }[]
+      }
+      list_procedures: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          booking_mode: string
+          code: string
+          default_duration_minutes: number
+          eligible_provider_count: number
+          name: string
+          online_booking_enabled: boolean
+          post_buffer_minutes: number
+          pre_buffer_minutes: number
+          procedure_id: string
+          specialty_count: number
+          status: string
+          website_visible: boolean
+        }[]
+      }
+      list_provider_directory: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          branch_count: number
+          display_name: string
+          primary_specialty_label: string
+          provider_id: string
+          provider_type: string
+          status: string
+          website_visible: boolean
+        }[]
+      }
+      list_provider_earnings: {
+        Args: {
+          p_acting_branch_id: string
+          p_from?: string
+          p_provider_id?: string
+          p_to?: string
+        }
+        Returns: {
+          cause: string
+          charge_id: string
+          earning_centavos: number
+          entry_type: string
+          occurred_at: string
+          provider_id: string
+          rate_bps: number
+          service_date: string
+        }[]
+      }
+      list_queue: {
+        Args: { p_acting_branch_id: string; p_include_terminal?: boolean }
+        Returns: {
+          arrived_at: string
+          chief_complaint: string
+          patient_display_name: string
+          patient_id: string
+          provider_display_name: string
+          provider_id: string
+          queue_entry_id: string
+          resource_id: string
+          resource_name: string
+          status: string
+          version: number
+        }[]
+      }
+      list_recall_rules: {
+        Args: { p_acting_branch_id: string; p_include_inactive?: boolean }
+        Returns: {
+          branch_id: string
+          channel: string
+          interval_months: number
+          is_active: boolean
+          name: string
+          rule_id: string
+          version: number
+        }[]
+      }
+      list_recalls: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id?: string
+          p_status?: string | null
+        }
+        Returns: {
+          appointment_id: string
+          due_date: string
+          patient_display_name: string
+          patient_id: string
+          recall_id: string
+          recall_rule_id: string
+          recall_rule_name: string
+          reminder_sent_at: string
+          reminders_sent: number
+          status: string
+          version: number
+        }[]
+      }
+      list_specialist_requests: {
+        Args: { p_acting_branch_id: string; p_status?: string | null }
+        Returns: {
+          case_summary: string
+          created_at: string
+          expires_at: string
+          patient_display_name: string
+          patient_id: string
+          request_channel: string
+          request_id: string
+          requested_ends_at: string
+          requested_provider_display_name: string
+          requested_provider_id: string
+          requested_starts_at: string
+          required_specialty_id: string
+          required_specialty_name: string
+          response_message: string
+          status: string
+          version: number
+        }[]
+      }
+      list_specialties: {
+        Args: { p_acting_branch_id: string }
+        Returns: {
+          code: string
+          is_active: boolean
+          is_global: boolean
+          name: string
+          specialty_id: string
+          version: number
+        }[]
+      }
+      list_tooth_conditions: {
+        Args: {
+          p_acting_branch_id: string
+          p_include_history?: boolean
+          p_patient_id: string
+        }
+        Returns: {
+          condition_id: string
+          finding_type: string
+          notes: string
+          recorded_at: string
+          recorded_by: string
+          status: string
+          surface: string
+          tooth_code: string
+          version: number
+          voided_at: string
+        }[]
+      }
+      list_treatment_plans: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          created_at: string
+          has_drawing: boolean
+          item_count: number
+          plan_id: string
+          status: string
+          title: string
+          version: number
+        }[]
+      }
+      list_unresolved_charge_compensation: {
+        Args: { p_acting_branch_id: string; p_patient_id?: string }
+        Returns: {
+          amount_centavos: number
+          branch_id: string
+          charge_id: string
+          net_allocated_centavos: number
+          patient_id: string
+          provider_id: string
+          resolution_state: string
+          service_date: string
+        }[]
+      }
       list_workforce_invitation_options: {
         Args: { p_actor_user_id: string }
         Returns: Json
+      }
+      mark_intake_form_paper: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_form_id: string
+          p_reason?: string
+        }
+        Returns: {
+          form_id: string
+          version: number
+        }[]
+      }
+      mark_recall_opted_out: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_recall_id: string
+        }
+        Returns: {
+          recall_id: string
+          status: string
+          version: number
+        }[]
+      }
+      post_charge: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_appointment_id: string
+          p_idempotency_key: string
+          p_non_clinical: boolean
+          p_patient_id: string
+          p_procedure_id: string
+          p_treatment_plan_item_id: string
+          p_zero_amount_reason: string
+        }
+        Returns: {
+          charge_id: string
+        }[]
+      }
+      post_charge_adjustment: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_charge_id: string
+          p_direction: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          adjustment_id: string
+        }[]
+      }
+      post_charge_with_attribution_override: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_appointment_id: string
+          p_idempotency_key: string
+          p_non_clinical: boolean
+          p_patient_id: string
+          p_procedure_id: string
+          p_provider_id: string
+          p_reason: string
+          p_service_date: string
+          p_treatment_plan_item_id: string
+          p_zero_amount_reason: string
+        }
+        Returns: {
+          charge_id: string
+        }[]
       }
       prepare_first_owner_invitation: {
         Args: {
@@ -912,6 +7130,61 @@ export type Database = {
         }
         Returns: string
       }
+      present_treatment_plan: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_plan_id: string
+        }
+        Returns: {
+          plan_id: string
+          version: number
+        }[]
+      }
+      public_cancel_booking_request: {
+        Args: { p_management_token_hash: string; p_request_id: string }
+        Returns: {
+          request_id: string
+          request_status: string
+        }[]
+      }
+      public_get_available_slots: {
+        Args: {
+          p_days_ahead?: number
+          p_org_slug: string
+          p_procedure_code?: string
+        }
+        Returns: {
+          ends_at: string
+          starts_at: string
+        }[]
+      }
+      public_get_booking_status: {
+        Args: { p_management_token_hash: string; p_request_id: string }
+        Returns: {
+          converted: boolean
+          created_at: string
+          request_id: string
+          request_status: string
+        }[]
+      }
+      public_get_intake_form: {
+        Args: { p_org_slug: string; p_token: string }
+        Returns: Json
+      }
+      public_submit_booking_request: {
+        Args: { p_org_slug: string; p_payload: Json }
+        Returns: Json
+      }
+      public_submit_intake_form: {
+        Args: {
+          p_answers: Json
+          p_org_slug: string
+          p_privacy_acknowledged: boolean
+          p_token: string
+        }
+        Returns: Json
+      }
       reactivate_patient: {
         Args: {
           p_acting_branch_id: string
@@ -923,10 +7196,184 @@ export type Database = {
           version: number
         }[]
       }
+      receive_stock: {
+        Args: {
+          p_acting_branch_id: string
+          p_expiry_date?: string
+          p_item_id: string
+          p_lot_number?: string
+          p_quantity: number
+        }
+        Returns: {
+          branch_id: string
+          item_id: string
+          quantity_on_hand: number
+          version: number
+        }[]
+      }
       record_mfa_enrollment: { Args: { p_factor_id: string }; Returns: number }
+      record_payment: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_idempotency_key: string
+          p_patient_id: string
+          p_payment_method_id: string
+          p_reference: string
+        }
+        Returns: {
+          payment_id: string
+        }[]
+      }
+      record_postdated_cheque: {
+        Args: {
+          p_acting_branch_id: string
+          p_allocations: Json
+          p_amount_centavos: number
+          p_bank_name: string
+          p_cheque_number: string
+          p_date_due: string
+          p_idempotency_key: string
+          p_patient_id: string
+        }
+        Returns: {
+          cheque_id: string
+        }[]
+      }
+      refund_payment: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_components: Json
+          p_idempotency_key: string
+          p_patient_id: string
+          p_payment_id: string
+          p_reason: string
+        }
+        Returns: {
+          refund_id: string
+        }[]
+      }
+      remove_treatment_plan_item: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_item_id: string
+          p_plan_id: string
+        }
+        Returns: {
+          item_id: string
+        }[]
+      }
+      requeue_communication: {
+        Args: {
+          p_acting_branch_id: string
+          p_communication_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          communication_id: string
+          status: string
+        }[]
+      }
+      reschedule_appointment: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_ends_at: string
+          p_expected_version: number
+          p_starts_at: string
+        }
+        Returns: {
+          appointment_id: string
+          version: number
+        }[]
+      }
+      resolve_charge_compensation: {
+        Args: {
+          p_acting_branch_id: string
+          p_charge_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          resolution_id: string
+        }[]
+      }
+      respond_specialist_request: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_request_id: string
+          p_response: Json
+        }
+        Returns: {
+          request_id: string
+          version: number
+        }[]
+      }
+      reverse_charge_adjustment: {
+        Args: {
+          p_acting_branch_id: string
+          p_adjustment_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          reversal_id: string
+        }[]
+      }
+      reverse_charge_direct_cost: {
+        Args: {
+          p_acting_branch_id: string
+          p_direct_cost_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          reversal_id: string
+        }[]
+      }
+      reverse_payment_allocation: {
+        Args: {
+          p_acting_branch_id: string
+          p_allocation_id: string
+          p_amount_centavos: number
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          reversal_id: string
+        }[]
+      }
+      review_booking_request: {
+        Args: {
+          p_acting_branch_id: string
+          p_action: string
+          p_expected_version: number
+          p_reason?: string
+          p_request_id: string
+        }
+        Returns: {
+          request_id: string
+          request_status: string
+        }[]
+      }
       revoke_workforce_invitation: {
         Args: { p_actor_user_id: string; p_invitation_id: string }
         Returns: boolean
+      }
+      save_treatment_plan_drawing: {
+        Args: {
+          p_acting_branch_id: string
+          p_drawing: Json
+          p_expected_version: number
+          p_plan_id: string
+        }
+        Returns: {
+          drawing_id: string
+          version: number
+        }[]
       }
       search_patients: {
         Args: {
@@ -957,6 +7404,79 @@ export type Database = {
         }
         Returns: string
       }
+      set_procedure_eligible_providers: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_procedure_id: string
+          p_provider_ids: string[]
+        }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
+      set_procedure_specialties: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_procedure_id: string
+          p_specialties: Json
+        }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
+      set_provider_branches: {
+        Args: {
+          p_acting_branch_id: string
+          p_branch_ids: string[]
+          p_expected_version: number
+          p_provider_id: string
+        }
+        Returns: {
+          provider_id: string
+          version: number
+        }[]
+      }
+      set_provider_compensation_agreement: {
+        Args: {
+          p_acting_branch_id: string
+          p_basis: string
+          p_default_rate_bps: number
+          p_effective_from: string
+          p_effective_to: string
+          p_idempotency_key: string
+          p_provider_id: string
+        }
+        Returns: {
+          agreement_id: string
+        }[]
+      }
+      set_provider_specialties: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_provider_id: string
+          p_specialties: Json
+        }
+        Returns: {
+          provider_id: string
+          version: number
+        }[]
+      }
+      set_recall_opt_out: {
+        Args: {
+          p_acting_branch_id: string
+          p_opt_out: boolean
+          p_patient_id: string
+        }
+        Returns: {
+          patient_id: string
+          recall_opt_out: boolean
+        }[]
+      }
       set_role_permission: {
         Args: {
           grant_permission: boolean
@@ -964,6 +7484,32 @@ export type Database = {
           target_role_id: string
         }
         Returns: string
+      }
+      transition_postdated_cheque: {
+        Args: {
+          p_acting_branch_id: string
+          p_cheque_id: string
+          p_idempotency_key: string
+          p_reason: string
+          p_to_status: string
+        }
+        Returns: {
+          event_id: string
+        }[]
+      }
+      update_appointment_status: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id: string
+          p_dimension: string
+          p_expected_version: number
+          p_new_status: string
+          p_reason: string
+        }
+        Returns: {
+          appointment_id: string
+          version: number
+        }[]
       }
       update_branch: {
         Args: {
@@ -981,6 +7527,35 @@ export type Database = {
         }
         Returns: string
       }
+      update_clinical_note: {
+        Args: {
+          p_acting_branch_id: string
+          p_content: string
+          p_expected_version: number
+          p_note_id: string
+        }
+        Returns: {
+          note_id: string
+          version: number
+        }[]
+      }
+      update_inventory_item: {
+        Args: {
+          p_acting_branch_id: string
+          p_category: string
+          p_expected_version: number
+          p_is_active: boolean
+          p_item_id: string
+          p_lot_tracking: boolean
+          p_name: string
+          p_reorder_level: number
+          p_unit: string
+        }
+        Returns: {
+          item_id: string
+          version: number
+        }[]
+      }
       update_organization_member_status: {
         Args: {
           target_membership_status: string
@@ -994,6 +7569,18 @@ export type Database = {
           p_duplicate_confirmed: boolean
           p_expected_version: number
           p_patch: Json
+          p_patient_id: string
+        }
+        Returns: {
+          patient_id: string
+          version: number
+        }[]
+      }
+      update_patient_attribution: {
+        Args: {
+          p_acting_branch_id: string
+          p_attribution: Json
+          p_expected_version: number
           p_patient_id: string
         }
         Returns: {
@@ -1018,6 +7605,18 @@ export type Database = {
           version: number
         }[]
       }
+      update_patient_referral_status: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_referral_id: string
+          p_status: string
+        }
+        Returns: {
+          referral_id: string
+          version: number
+        }[]
+      }
       update_patient_relationship: {
         Args: {
           p_acting_branch_id: string
@@ -1035,6 +7634,168 @@ export type Database = {
         }
         Returns: {
           relationship_id: string
+          version: number
+        }[]
+      }
+      update_procedure: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patch: Json
+          p_procedure_id: string
+        }
+        Returns: {
+          procedure_id: string
+          version: number
+        }[]
+      }
+      update_provider: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patch: Json
+          p_provider_id: string
+        }
+        Returns: {
+          provider_id: string
+          version: number
+        }[]
+      }
+      update_public_site_settings: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_settings: Json
+        }
+        Returns: {
+          organization_id: string
+          version: number
+        }[]
+      }
+      update_queue_status: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_new_status: string
+          p_queue_entry_id: string
+          p_reason?: string
+        }
+        Returns: {
+          queue_entry_id: string
+          version: number
+        }[]
+      }
+      update_recall_rule: {
+        Args: {
+          p_acting_branch_id: string
+          p_channel: string
+          p_expected_version: number
+          p_interval_months: number
+          p_is_active: boolean
+          p_name: string
+          p_rule_id: string
+        }
+        Returns: {
+          rule_id: string
+          version: number
+        }[]
+      }
+      update_specialty: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patch: Json
+          p_specialty_id: string
+        }
+        Returns: {
+          specialty_id: string
+          version: number
+        }[]
+      }
+      update_treatment_plan: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_plan_id: string
+          p_title: string
+        }
+        Returns: {
+          plan_id: string
+          version: number
+        }[]
+      }
+      update_treatment_plan_item: {
+        Args: {
+          p_acting_branch_id: string
+          p_description?: string
+          p_estimated_fee?: number
+          p_expected_version: number
+          p_item_id: string
+          p_plan_id: string
+          p_procedure_id?: string
+          p_tooth_code?: string
+        }
+        Returns: {
+          item_id: string
+          line_no: number
+        }[]
+      }
+      upsert_payment_method: {
+        Args: {
+          p_acting_branch_id: string
+          p_active: boolean
+          p_code: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_name: string
+          p_payment_method_id: string
+        }
+        Returns: {
+          method_id: string
+        }[]
+      }
+      void_charge: {
+        Args: {
+          p_acting_branch_id: string
+          p_charge_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: {
+          void_id: string
+        }[]
+      }
+      void_patient_medical_record: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_record_id: string
+        }
+        Returns: {
+          record_id: string
+          version: number
+        }[]
+      }
+      void_payment: {
+        Args: {
+          p_acting_branch_id: string
+          p_idempotency_key: string
+          p_payment_id: string
+          p_reason: string
+        }
+        Returns: {
+          void_id: string
+        }[]
+      }
+      void_tooth_condition: {
+        Args: {
+          p_acting_branch_id: string
+          p_condition_id: string
+          p_expected_version: number
+          p_reason?: string
+        }
+        Returns: {
+          condition_id: string
           version: number
         }[]
       }
