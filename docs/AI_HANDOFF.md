@@ -9,6 +9,21 @@
 
 ## Billing B7 — patient account and configuration UI (2026-08-28)
 
+### B7 final acceptance and deferred E2E (2026-08-28)
+
+- B7 UI/adapters/pgTAP/strict schemas, the B7 corrective procedure financial
+  configuration (`88b1c90`), and B6 (`ce35e50`) all pass focused Vitest,
+  ESLint, TypeScript, and migration privilege lint locally.
+- The B7 plan also requires `e2e/billing.spec.ts` and
+  `e2e/responsive-accessibility.spec.ts` extensions for the new views. The
+  Playwright suite runs against a hosted project through guarded sign-in and
+  seeded MFA identities; that environment is explicitly outside the
+  B0–B11/O0–O4 local-only window. These E2E flows remain a mandatory Cloud
+  TEST gate and must be recorded against the disposable hosted project when
+  the owner reauthorizes the post-O4 boundary work.
+- Per AGENTS.md and ADR-027, B7 is now locally complete; B8–B11 follow in
+  order without re-running Playwright locally.
+
 ### B7 corrective procedure financial configuration (2026-08-28)
 
 - Added local forward migrations `20260828010504` through `10506` for
