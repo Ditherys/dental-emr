@@ -3,6 +3,62 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Billing B2 — procedure pricing and charge ledger (2026-08-28)
+
+B2 completes the additive catalog and immutable charge-ledger foundation with
+four forward migrations applied locally through the ADR-027 `db:migrate:local`
+command (no reset, no Cloud target):
+
+- `20260828010100_billing_catalog_and_charge_ledger.sql`: procedures get
+  `default_fee_centavos`/`currency_code`; treatment_plan_items get
+  `estimated_fee_centavos` with an abort-on-fractional preflight and exact
+  backfill; payment_methods, procedure_direct_cost_defaults, charges,
+  charge_direct_costs (exactly-one full reversal via unique source link),
+  charge_adjustments/charge_adjustment_reversals (exactly-one full reversal),
+  and charge_voids tables; append-only triggers; RLS on; zero grants.
+- `20260828010101_billing_catalog_completion.sql`: charge_attribution_corrections
+  append-only table (attribution must actually change; org-scoped idempotency;
+  tenant-safe composite FKs), the remaining tenant access-path indexes
+  (org/procedure/date, plan-item link, active method code, effective
+  direct-cost-default lookup), and idempotent default payment-method seeding
+  (CASH/CARD/GCASH/MAYA/BANK_TRANSFER/CHEQUE/OTHER) for existing orgs plus an
+  org-creation hook.
+- `20260828010102_treatment_estimate_compatibility.sql`: bidirectional
+  decimal<->centavo sync trigger on treatment_plan_items; legacy decimal writes
+  derive exact centavos, fractional/overflow/conflicting-dual values are
+  rejected (never rounded), centavo-only writes keep the legacy column readable.
+- `20260828010103_billing_catalog_completion_fix.sql`: the org seed hook
+  originally referenced `new.organization_id`; the organizations primary key
+  column is `id`, so the function is recreated with `new.id` (forward-only
+  correction; the source file was also corrected for fresh deploys).
+- Tests: `billing_charge_ledger.test.sql` (14 assertions) and new
+  `billing_attribution.test.sql` (9 assertions) registered in both the guard
+  registry and its expected-suite list; procedure_foundation and treatment_plans
+  suites updated for the approved B2 columns plus the compatibility-trigger
+  behavior.
+- Fixture-isolation fixes (bounded, coverage-preserving) so the persistent local
+  DB under ADR-027 keeps passing: patient_identity (scoped a global patients
+  count to its fixture orgs; the persistent synthetic seed patient P-000001
+  remains), patient_contacts_relationships (scoped an unscoped `limit 1` to the
+  fixture org), file_upload_rpcs and file_read_rpcs (scoped three global
+  audit-count assertions to the fixture org).
+- **Evidence:** direct local pgTAP `billing_permission_contract` 3/3,
+  `billing_charge_ledger` 14/14, `billing_attribution` 9/9,
+  `procedure_foundation` and `treatment_plans` pass; `npm run test:unit` 122
+  files / 1261 tests pass; `security:migrations` 129 files / 196 approved
+  privileges pass; lint, typecheck, `git diff --check` clean;
+  migration-privilege-lint baseline updated (tables 77, functions 245, secdef
+  205 unchanged). `db:migrate:local` applied all four migrations forward.
+- **Residual local-only:** `npm run test:db:local` still stops at the existing
+  `seed_security_fixtures.test.sql` (runs before the billing suites in the
+  registry) because the local Auth persona `12000000-...0001` was provisioned as
+  a real login (`reyesditherb@gmail.com`) by an earlier local owner bootstrap,
+  so the deterministic seed-integrity count is 8/9. No reset is permitted under
+  ADR-027. Billing suites are verified via direct focused pgTAP. This residual
+  will be revisited at B10.
+
+## Billing B1 — permission and pure-money contracts (2026-08-28)
+
 ## Billing and odontogram foundation — B0 in progress (2026-08-28)
 
 The project owner explicitly accepted the independently reviewed billing ledger

@@ -681,8 +681,16 @@ and id not in (
   'a2050000-0000-0000-0000-000000000002',
   'a2050000-0000-0000-0000-000000000003'
 );
+-- Scope the count to this suite's fixture organizations: the guarded local
+-- stack preserves the persistent synthetic seed patient (P-000001, org
+-- 22000000-...) across forward-only migrations, so a global patients count is
+-- not stable. The probe patients and the three fixtures all live in orgs A/B.
 select extensions.is(
-  (select count(*)::integer from public.patients),
+  (select count(*)::integer from public.patients
+   where organization_id in (
+     'a2020000-0000-0000-0000-000000000001',
+     'a2020000-0000-0000-0000-000000000002'
+   )),
   3,
   'successful constraint probes are removed before the RLS matrix'
 );

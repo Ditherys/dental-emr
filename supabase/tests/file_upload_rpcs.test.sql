@@ -65,7 +65,7 @@ select extensions.ok(
   (select status='pending' and version=1 and uploaded_by='b6600000-0000-0000-0000-000000000001'::uuid and size_bytes=1024 and checksum_sha256 is null from public.file_objects where id=current_setting('p404.pdf')::uuid),
   'the created row stays pending, unverified, and attributed to the caller'
 );
-select extensions.is((select count(*)::integer from public.audit_events where action='patient.file.upload_created' and metadata='{}'::jsonb),2,'each successful upload creation writes exactly one opaque audit event');
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='b6610000-0000-0000-0000-000000000001' and action='patient.file.upload_created' and metadata='{}'::jsonb),2,'each successful upload creation writes exactly one opaque audit event');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
@@ -112,7 +112,7 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
 select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.pdf')::uuid,2,4096)$$,'P0001','invalid state','an already-available file cannot be confirmed again');
 reset role;
-select extensions.is((select count(*)::integer from public.audit_events where action='patient.file.confirmed'),1,'a failed re-confirmation writes no audit event');
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='b6610000-0000-0000-0000-000000000001' and action='patient.file.confirmed'),1,'a failed re-confirmation writes no audit event');
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b6600000-0000-0000-0000-000000000001',true);
@@ -121,7 +121,7 @@ select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0
 select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,0,2048)$$,'22023','invalid input','a non-positive expected version is rejected before any row access');
 select extensions.throws_ok($$select public.confirm_file_upload('b6620000-0000-0000-0000-000000000001',current_setting('p404.png')::uuid,1,0)$$,'22023','invalid input','a non-positive verified size is rejected before any row access');
 reset role;
-select extensions.is((select count(*)::integer from public.audit_events where action='patient.file.confirmed'),1,'failed confirmations leave exactly the successful audit event');
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='b6610000-0000-0000-0000-000000000001' and action='patient.file.confirmed'),1,'failed confirmations leave exactly the successful audit event');
 
 create function private.p404_reject_file_audit()
 returns trigger language plpgsql as $$

@@ -52,7 +52,7 @@ select extensions.ok((select relrowsecurity from pg_class where oid = 'public.pa
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.patient_relationships'::regclass), 'patient relationships has RLS enabled');
 select extensions.is(private.normalize_patient_mobile('0917 123 4567'), '+639171234567', 'Philippine mobile values canonicalize to E.164');
 select extensions.is(private.normalize_patient_email('  USER@EXAMPLE.TEST  '), 'user@example.test', 'email normalization is ASCII-lowercase and trimmed');
-select extensions.is((select normalized_value from public.patient_contacts limit 1), '+639171234567', 'mobile contacts store the canonical duplicate value');
+select extensions.is((select normalized_value from public.patient_contacts where organization_id = 'a3020000-0000-0000-0000-000000000001' limit 1), '+639171234567', 'mobile contacts store the canonical duplicate value');
 select extensions.ok(exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'patient_relationships_organization_patient_status_idx'), 'tenant active relationship index exists');
 select extensions.is(
   (select string_agg(attribute.attname, ',' order by index_column.ordinality)

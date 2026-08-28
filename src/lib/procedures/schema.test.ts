@@ -24,6 +24,14 @@ describe("procedure schemas", () => {
     expect(createProcedureSchema.safeParse({ ...input, websiteVisible: "true" }).success).toBe(false);
   });
 
+  it("accepts bounded centavo-string price defaults without number coercion", () => {
+    const input = { actingBranchId: branchId, code: "CLEANING", name: "Cleaning" };
+    expect(createProcedureSchema.parse({ ...input, defaultFeeCentavos: "250000" }).defaultFeeCentavos).toBe("250000");
+    expect(createProcedureSchema.safeParse({ ...input, defaultFeeCentavos: "2500.00" }).success).toBe(false);
+    expect(createProcedureSchema.safeParse({ ...input, defaultFeeCentavos: 250000 }).success).toBe(false);
+    expect(createProcedureSchema.safeParse({ ...input, defaultFeeCentavos: "100000000000" }).success).toBe(false);
+  });
+
   it("rejects empty patches, untrusted properties, and duplicate relations", () => {
     const update = { actingBranchId: branchId, procedureId, expectedVersion: 1 };
     expect(updateProcedureSchema.safeParse(update).success).toBe(false);

@@ -182,7 +182,8 @@ select extensions.is(
   'successful and refused file reads write no audit events'
 );
 select extensions.is(
-  (select count(*)::integer from public.audit_events where action like 'patient.file.%'),
+  (select count(*)::integer from public.audit_events
+   where organization_id='b6710000-0000-0000-0000-000000000001' and action like 'patient.file.%'),
   0,
   'no patient.file.* audit action is produced by reads'
 );

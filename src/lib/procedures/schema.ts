@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { databaseUuid } from "@/lib/validation/database-uuid";
+import { moneyCentavoStringSchema } from "@/lib/billing/schema";
 
 const procedureCodeSchema = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]*$/).max(80);
 const optionalText = (maximum: number) =>
@@ -26,6 +27,7 @@ const procedureFields = {
   websiteVisible: z.boolean(),
   onlineBookingEnabled: z.boolean(),
   bookingMode: bookingModeSchema,
+  defaultFeeCentavos: moneyCentavoStringSchema.nullable().optional(),
 };
 
 export const procedureReadSchema = z.object({ actingBranchId: databaseUuid }).strict();
@@ -43,6 +45,7 @@ export const createProcedureSchema = z.object({
   websiteVisible: procedureFields.websiteVisible.optional(),
   onlineBookingEnabled: procedureFields.onlineBookingEnabled.optional(),
   bookingMode: procedureFields.bookingMode.optional(),
+  defaultFeeCentavos: procedureFields.defaultFeeCentavos,
 }).strict().superRefine((value, context) => {
   if (value.defaultDurationMinutes == null && (value.preBufferMinutes !== 0 || value.postBufferMinutes !== 0)) {
     context.addIssue({ code: "custom", message: "Buffers must be zero when duration is omitted." });
@@ -63,6 +66,7 @@ export const updateProcedureSchema = z.object({
   websiteVisible: procedureFields.websiteVisible.optional(),
   onlineBookingEnabled: procedureFields.onlineBookingEnabled.optional(),
   bookingMode: procedureFields.bookingMode.optional(),
+  defaultFeeCentavos: procedureFields.defaultFeeCentavos,
 }).strict().superRefine((value, context) => {
   if (Object.keys(value).some((key) => !["actingBranchId", "procedureId", "expectedVersion"].includes(key))) return;
   context.addIssue({ code: "custom", message: "Update at least one procedure field." });
