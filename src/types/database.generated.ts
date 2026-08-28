@@ -5466,7 +5466,6 @@ export type Database = {
         Row: {
           created_at: string
           description: string
-          estimated_fee: number | null
           estimated_fee_centavos: number | null
           id: string
           line_no: number
@@ -5478,7 +5477,6 @@ export type Database = {
         Insert: {
           created_at?: string
           description: string
-          estimated_fee?: number | null
           estimated_fee_centavos?: number | null
           id?: string
           line_no: number
@@ -5490,7 +5488,6 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
-          estimated_fee?: number | null
           estimated_fee_centavos?: number | null
           id?: string
           line_no?: number
