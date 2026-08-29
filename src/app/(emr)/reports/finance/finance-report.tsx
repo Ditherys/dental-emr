@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { BarChart3 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CompactDescriptionItem, CompactDescriptionList } from "@/components/ui/description-list";
 import { formatPhpCentavos } from "@/lib/billing/money";
 import type { FinancialSummaryRow, PendingPdcRow } from "@/lib/billing/types";
 
@@ -45,14 +46,20 @@ export function FinanceReport({ actingBranchId, initialSummary, initialPending }
         <p className="mt-1 text-sm text-muted-foreground">Signed event-period production, collections, pending PDC, and clinic contribution. Clinic contribution is contribution, not profit.</p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Object.entries(METRIC_LABELS).map(([code, label]) => (
-          <div key={code} className="rounded-md border bg-muted/30 p-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-            <p className="mt-1 text-base font-semibold font-mono">{formatPhpCentavos(BigInt(Math.trunc(summaryTotals[code] ?? 0)))}</p>
-          </div>
-        ))}
-      </div>
+      <section aria-labelledby="financial-summary-title">
+        <h3 id="financial-summary-title" className="text-base font-semibold">Financial summary</h3>
+        <CompactDescriptionList className="mt-3">
+          {Object.entries(METRIC_LABELS).map(([code, label]) => (
+            <CompactDescriptionItem
+              key={code}
+              label={label}
+              valueClassName="font-mono font-semibold tabular-nums"
+            >
+              {formatPhpCentavos(BigInt(Math.trunc(summaryTotals[code] ?? 0)))}
+            </CompactDescriptionItem>
+          ))}
+        </CompactDescriptionList>
+      </section>
 
       <form action={summaryAction} className="flex flex-wrap items-end gap-3">
         <input type="hidden" name="actingBranchId" value={actingBranchId} />
