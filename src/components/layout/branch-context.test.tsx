@@ -164,4 +164,32 @@ describe("branch selector", () => {
       screen.getByRole("button", { name: "Branch context: Demo Main" }),
     ).toBeTruthy();
   });
+
+  it("fills the expanded sidebar without changing the selected branch", () => {
+    render(
+      <BranchContextProvider model={branchScopedModel}>
+        <BranchSelector presentation="sidebar" />
+      </BranchContextProvider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Branch context: Demo Main" }),
+    ).toHaveClass("w-full", "justify-start");
+    expect(screen.getByText("Demo Main")).toBeVisible();
+  });
+
+  it("keeps the branch menu accessible in the collapsed rail", () => {
+    render(
+      <BranchContextProvider model={branchScopedModel}>
+        <BranchSelector presentation="rail" />
+      </BranchContextProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Branch context: Demo Main",
+    });
+    expect(trigger).toHaveClass("size-9");
+    expect(screen.queryByText("Demo Main")).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("title", "Working branch: Demo Main");
+  });
 });

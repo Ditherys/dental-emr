@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/(auth)/login/actions";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,20 +13,56 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
-export function UserMenu() {
+type UserMenuPresentation = "topbar" | "sidebar" | "rail";
+
+export function UserMenu({
+  presentation = "topbar",
+}: {
+  presentation?: UserMenuPresentation;
+}) {
+  const rail = presentation === "rail";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2" aria-label="Open account menu">
+        <Button
+          variant="ghost"
+          className={cn(
+            "gap-2",
+            presentation === "sidebar" && "w-full justify-start",
+            rail && "size-9 justify-center px-0",
+          )}
+          aria-label="Open account menu"
+          title={rail ? "Account" : undefined}
+        >
           <span className="grid size-7 place-items-center rounded-md bg-brand-navy-100 text-brand-navy-950">
             <UserRound className="size-4" aria-hidden="true" />
           </span>
-          <span className="hidden sm:inline">Account</span>
-          <ChevronDown className="hidden size-4 sm:block" aria-hidden="true" />
+          {!rail && (
+            <>
+              <span
+                className={cn(presentation === "topbar" && "hidden sm:inline")}
+              >
+                Account
+              </span>
+              <ChevronDown
+                className={cn(
+                  "size-4",
+                  presentation === "topbar" && "hidden sm:block",
+                )}
+                aria-hidden="true"
+              />
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-56">
+      <DropdownMenuContent
+        align={presentation === "topbar" ? "end" : "start"}
+        side={rail ? "right" : "bottom"}
+        className="min-w-56"
+      >
         <DropdownMenuLabel>
           <span className="block text-sm font-medium text-foreground">
             Authenticated user
