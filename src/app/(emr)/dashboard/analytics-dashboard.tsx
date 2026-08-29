@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  CompactDescriptionItem,
+  CompactDescriptionList,
+} from "@/components/ui/description-list";
 import type {
   AnalyticsGroupType,
   AnalyticsMetricCode,
@@ -238,36 +242,30 @@ export function AnalyticsDashboard({
         <h2 id="operational-summary-title" className="text-base font-semibold">
           Operational summary
         </h2>
-        <dl className="mt-3 divide-y border-y">
+        <CompactDescriptionList className="mt-3">
           {summaryDefinitions.map((definition) => {
             const metric = state.summary.find(
               (row) => row.metricCode === definition.code,
             );
+            const detail = metricDetail(metric);
+
             return (
-              <div
+              <CompactDescriptionItem
                 key={definition.code}
-                className="flex items-center justify-between gap-4 px-3 py-3"
+                label={definition.label}
+                hint={definition.hint}
+                valueClassName="text-lg font-semibold tabular-nums"
               >
-                <dt>
-                  <p className="text-sm font-medium">{definition.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {definition.hint}
-                  </p>
-                </dt>
-                <dd className="text-right">
-                  <p className="text-lg font-semibold tabular-nums">
-                    {metricValue(metric)}
-                  </p>
-                  {metricDetail(metric) && (
-                    <p className="text-xs text-muted-foreground">
-                      {metricDetail(metric)}
-                    </p>
-                  )}
-                </dd>
-              </div>
+                <span>{metricValue(metric)}</span>
+                {detail && (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {detail}
+                  </span>
+                )}
+              </CompactDescriptionItem>
             );
           })}
-        </dl>
+        </CompactDescriptionList>
       </section>
 
       {breakdownDefinitions.map((definition) => (

@@ -46,6 +46,15 @@ describe("AnalyticsDashboard", () => {
       />,
     );
     expect(screen.getByText("Operational summary")).toBeInTheDocument();
+    const pairedList = container.querySelector('dl[data-layout="paired"]');
+    const appointmentsTerm = screen.getByText("Appointments").closest("dt");
+    const appointmentsValue = appointmentsTerm?.parentElement?.querySelector("dd");
+
+    expect(pairedList).toBeInTheDocument();
+    expect(pairedList).toHaveClass("max-w-xl");
+    expect(appointmentsTerm?.parentElement).toBe(appointmentsValue?.parentElement);
+    expect(appointmentsValue).toHaveTextContent("12");
+    expect(appointmentsValue).toHaveClass("text-left", "tabular-nums");
     expect(screen.getByText("10%")).toBeInTheDocument();
     expect(screen.getAllByText("3").length).toBeGreaterThan(0);
     expect(container.querySelector("[data-kpi-grid]")).toBeNull();
