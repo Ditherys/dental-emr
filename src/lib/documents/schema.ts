@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
+import { moneyCentavoStringSchema } from "@/lib/billing/schema";
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
 import { documentTypeIncludeSetKeys } from "./include-set";
@@ -191,7 +192,7 @@ export const treatmentPlanItemSnapshotSchema = z
     procedureId: databaseUuid.nullable(),
     toothCode: z.string().nullable(),
     description: z.string(),
-    estimatedFee: z.number().nullable(),
+    estimatedFeeCentavos: moneyCentavoStringSchema.nullable(),
     createdAt: isoTimestamp,
   })
   .strict();

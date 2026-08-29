@@ -75,5 +75,6 @@ select extensions.is(private.patient_account_balance('b3220000-0000-0000-0000-00
 select extensions.throws_ok($$update public.charges set amount_centavos=1 where id='b3250000-0000-0000-0000-000000000001'$$,'23514','billing ledger entries are append-only','a charge cannot be rewritten');
 select extensions.throws_ok($$delete from public.charges where id='b3250000-0000-0000-0000-000000000001'$$,'23514','billing ledger entries are append-only','a charge cannot be deleted');
 
-select * from extensions.finish();
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*) = 0 then 'P1_TEST_PASS' else string_agg(finish, E'\n') end as p1_test_result from test_failures;
 rollback;

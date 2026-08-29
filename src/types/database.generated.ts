@@ -1699,6 +1699,442 @@ export type Database = {
           },
         ]
       }
+      dental_bridge_units: {
+        Row: {
+          bridge_id: string
+          id: string
+          ordinal: number
+          organization_id: string
+          recorded_at: string
+          role: string
+          support_component_id: string | null
+          support_kind: string
+          tooth_fdi: string
+        }
+        Insert: {
+          bridge_id: string
+          id?: string
+          ordinal: number
+          organization_id: string
+          recorded_at?: string
+          role: string
+          support_component_id?: string | null
+          support_kind: string
+          tooth_fdi: string
+        }
+        Update: {
+          bridge_id?: string
+          id?: string
+          ordinal?: number
+          organization_id?: string
+          recorded_at?: string
+          role?: string
+          support_component_id?: string | null
+          support_kind?: string
+          tooth_fdi?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_bridge_units_organization_bridge_fk"
+            columns: ["organization_id", "bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridge_units_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_bridge_units_organization_support_component_fk"
+            columns: ["organization_id", "support_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      dental_bridge_voids: {
+        Row: {
+          bridge_id: string
+          id: string
+          organization_id: string
+          reason: string | null
+          voided_at: string
+          voided_by: string | null
+        }
+        Insert: {
+          bridge_id: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Update: {
+          bridge_id?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_bridge_voids_bridge_id_fkey"
+            columns: ["bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_bridge_voids_organization_bridge_fk"
+            columns: ["organization_id", "bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridge_voids_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dental_bridges: {
+        Row: {
+          charge_id: string | null
+          created_at: string
+          design_snapshot: Json | null
+          executed_at: string | null
+          id: string
+          organization_id: string
+          parent_plan_id: string | null
+          parent_plan_item_id: string | null
+          patient_id: string
+          prosthesis_value: string | null
+          provenance: string | null
+          record_kind: string
+          recorded_at: string
+          recorded_by: string | null
+          sealed_at: string | null
+          source_plan_design_id: string | null
+          supersedes_bridge_id: string | null
+          support_kind: string | null
+          treating_provider_id: string | null
+          updated_at: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          charge_id?: string | null
+          created_at?: string
+          design_snapshot?: Json | null
+          executed_at?: string | null
+          id?: string
+          organization_id: string
+          parent_plan_id?: string | null
+          parent_plan_item_id?: string | null
+          patient_id: string
+          prosthesis_value?: string | null
+          provenance?: string | null
+          record_kind: string
+          recorded_at?: string
+          recorded_by?: string | null
+          sealed_at?: string | null
+          source_plan_design_id?: string | null
+          supersedes_bridge_id?: string | null
+          support_kind?: string | null
+          treating_provider_id?: string | null
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          charge_id?: string | null
+          created_at?: string
+          design_snapshot?: Json | null
+          executed_at?: string | null
+          id?: string
+          organization_id?: string
+          parent_plan_id?: string | null
+          parent_plan_item_id?: string | null
+          patient_id?: string
+          prosthesis_value?: string | null
+          provenance?: string | null
+          record_kind?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          sealed_at?: string | null
+          source_plan_design_id?: string | null
+          supersedes_bridge_id?: string | null
+          support_kind?: string | null
+          treating_provider_id?: string | null
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_bridges_organization_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_parent_plan_fk"
+            columns: ["organization_id", "parent_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_parent_plan_item_fk"
+            columns: ["organization_id", "parent_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_provider_fk"
+            columns: ["organization_id", "treating_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_source_design_fk"
+            columns: ["organization_id", "source_plan_design_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_supersedes_fk"
+            columns: ["organization_id", "supersedes_bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      dental_implant_component_voids: {
+        Row: {
+          component_id: string
+          id: string
+          organization_id: string
+          reason: string | null
+          voided_at: string
+          voided_by: string | null
+        }
+        Insert: {
+          component_id: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Update: {
+          component_id?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_implant_component_voids_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_implant_component_voids_organization_component_fk"
+            columns: ["organization_id", "component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_component_voids_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dental_implant_components: {
+        Row: {
+          attachment_value: string | null
+          charge_id: string | null
+          component_kind: string
+          created_at: string
+          depends_on_component_id: string | null
+          design_snapshot: Json | null
+          executed_at: string | null
+          id: string
+          ordinal: number
+          organization_id: string
+          parent_plan_id: string | null
+          parent_plan_item_id: string | null
+          patient_id: string
+          provenance: string | null
+          record_kind: string
+          recorded_at: string
+          recorded_by: string | null
+          sealed_at: string | null
+          source_plan_design_component_id: string | null
+          supersedes_component_id: string | null
+          tooth_fdi: string
+          treating_provider_id: string | null
+          updated_at: string
+          version: number
+          voided_at: string | null
+        }
+        Insert: {
+          attachment_value?: string | null
+          charge_id?: string | null
+          component_kind: string
+          created_at?: string
+          depends_on_component_id?: string | null
+          design_snapshot?: Json | null
+          executed_at?: string | null
+          id?: string
+          ordinal: number
+          organization_id: string
+          parent_plan_id?: string | null
+          parent_plan_item_id?: string | null
+          patient_id: string
+          provenance?: string | null
+          record_kind: string
+          recorded_at?: string
+          recorded_by?: string | null
+          sealed_at?: string | null
+          source_plan_design_component_id?: string | null
+          supersedes_component_id?: string | null
+          tooth_fdi: string
+          treating_provider_id?: string | null
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Update: {
+          attachment_value?: string | null
+          charge_id?: string | null
+          component_kind?: string
+          created_at?: string
+          depends_on_component_id?: string | null
+          design_snapshot?: Json | null
+          executed_at?: string | null
+          id?: string
+          ordinal?: number
+          organization_id?: string
+          parent_plan_id?: string | null
+          parent_plan_item_id?: string | null
+          patient_id?: string
+          provenance?: string | null
+          record_kind?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          sealed_at?: string | null
+          source_plan_design_component_id?: string | null
+          supersedes_component_id?: string | null
+          tooth_fdi?: string
+          treating_provider_id?: string | null
+          updated_at?: string
+          version?: number
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dental_implant_components_organization_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_depends_on_fk"
+            columns: ["organization_id", "depends_on_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_parent_plan_fk"
+            columns: ["organization_id", "parent_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_parent_plan_item_fk"
+            columns: ["organization_id", "parent_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_provider_fk"
+            columns: ["organization_id", "treating_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_source_design_fk"
+            columns: ["organization_id", "source_plan_design_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_supersedes_fk"
+            columns: ["organization_id", "supersedes_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           branch_id: string
@@ -2307,6 +2743,81 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      odontogram_legacy_resolutions: {
+        Row: {
+          id: string
+          legacy_entry_id: string
+          organization_id: string
+          reason: string
+          resolution_kind: string
+          resolved_at: string
+          resolved_bridge_id: string | null
+          resolved_by: string | null
+          resolved_clinical_entry_id: string | null
+          resolved_treatment_plan_item_id: string | null
+        }
+        Insert: {
+          id?: string
+          legacy_entry_id: string
+          organization_id: string
+          reason: string
+          resolution_kind: string
+          resolved_at?: string
+          resolved_bridge_id?: string | null
+          resolved_by?: string | null
+          resolved_clinical_entry_id?: string | null
+          resolved_treatment_plan_item_id?: string | null
+        }
+        Update: {
+          id?: string
+          legacy_entry_id?: string
+          organization_id?: string
+          reason?: string
+          resolution_kind?: string
+          resolved_at?: string
+          resolved_bridge_id?: string | null
+          resolved_by?: string | null
+          resolved_clinical_entry_id?: string | null
+          resolved_treatment_plan_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "odontogram_legacy_resolutions_organization_bridge_fk"
+            columns: ["organization_id", "resolved_bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "odontogram_legacy_resolutions_organization_clinical_entry_fk"
+            columns: ["organization_id", "resolved_clinical_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "odontogram_legacy_resolutions_organization_entry_fk"
+            columns: ["organization_id", "legacy_entry_id"]
+            isOneToOne: true
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "odontogram_legacy_resolutions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "odontogram_legacy_resolutions_organization_plan_item_fk"
+            columns: ["organization_id", "resolved_treatment_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
           },
         ]
       }
@@ -3372,6 +3883,326 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "postdated_cheques"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      periodontal_examinations: {
+        Row: {
+          created_at: string
+          encounter_id: string
+          examination_kind: string
+          examined_at: string | null
+          examined_by: string | null
+          examined_provider_id: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          finalized_provider_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          predecessor_examination_id: string | null
+          recorded_at: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          encounter_id: string
+          examination_kind?: string
+          examined_at?: string | null
+          examined_by?: string | null
+          examined_provider_id?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_provider_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          patient_id: string
+          predecessor_examination_id?: string | null
+          recorded_at?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          encounter_id?: string
+          examination_kind?: string
+          examined_at?: string | null
+          examined_by?: string | null
+          examined_provider_id?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          finalized_provider_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          predecessor_examination_id?: string | null
+          recorded_at?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_examinations_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_organization_examined_provider_fk"
+            columns: ["organization_id", "examined_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_organization_finalized_provider_fk"
+            columns: ["organization_id", "finalized_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_organization_predecessor_fk"
+            columns: ["organization_id", "predecessor_examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_examinations_predecessor_examination_id_fkey"
+            columns: ["predecessor_examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodontal_furcation_measurements: {
+        Row: {
+          entrance: string
+          examination_id: string
+          grade: number
+          id: string
+          organization_id: string
+          recorded_at: string
+          tooth_fdi: string
+        }
+        Insert: {
+          entrance: string
+          examination_id: string
+          grade: number
+          id?: string
+          organization_id: string
+          recorded_at?: string
+          tooth_fdi: string
+        }
+        Update: {
+          entrance?: string
+          examination_id?: string
+          grade?: number
+          id?: string
+          organization_id?: string
+          recorded_at?: string
+          tooth_fdi?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_furcation_measurements_organization_examination_fk"
+            columns: ["organization_id", "examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_furcation_measurements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodontal_plaque_measurements: {
+        Row: {
+          examination_id: string
+          id: string
+          organization_id: string
+          plaque_present: boolean
+          recorded_at: string
+          surface: string
+          tooth_fdi: string
+        }
+        Insert: {
+          examination_id: string
+          id?: string
+          organization_id: string
+          plaque_present?: boolean
+          recorded_at?: string
+          surface: string
+          tooth_fdi: string
+        }
+        Update: {
+          examination_id?: string
+          id?: string
+          organization_id?: string
+          plaque_present?: boolean
+          recorded_at?: string
+          surface?: string
+          tooth_fdi?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_plaque_measurements_organization_examination_fk"
+            columns: ["organization_id", "examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_plaque_measurements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodontal_site_measurements: {
+        Row: {
+          bleeding_on_probing: boolean
+          cal_mm: number | null
+          examination_id: string
+          gingival_margin_mm: number
+          id: string
+          implant_context: boolean
+          organization_id: string
+          probing_depth_mm: number
+          recorded_at: string
+          site: string
+          suppuration: boolean
+          tooth_fdi: string
+          tooth_present: boolean
+        }
+        Insert: {
+          bleeding_on_probing?: boolean
+          cal_mm?: number | null
+          examination_id: string
+          gingival_margin_mm?: number
+          id?: string
+          implant_context?: boolean
+          organization_id: string
+          probing_depth_mm: number
+          recorded_at?: string
+          site: string
+          suppuration?: boolean
+          tooth_fdi: string
+          tooth_present?: boolean
+        }
+        Update: {
+          bleeding_on_probing?: boolean
+          cal_mm?: number | null
+          examination_id?: string
+          gingival_margin_mm?: number
+          id?: string
+          implant_context?: boolean
+          organization_id?: string
+          probing_depth_mm?: number
+          recorded_at?: string
+          site?: string
+          suppuration?: boolean
+          tooth_fdi?: string
+          tooth_present?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_site_measurements_organization_examination_fk"
+            columns: ["organization_id", "examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_site_measurements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      periodontal_tooth_measurements: {
+        Row: {
+          context_inferred: boolean
+          examination_id: string
+          id: string
+          implant_context: boolean
+          mobility_miller: string | null
+          notes: string | null
+          organization_id: string
+          recorded_at: string
+          tooth_fdi: string
+          tooth_present: boolean
+        }
+        Insert: {
+          context_inferred?: boolean
+          examination_id: string
+          id?: string
+          implant_context?: boolean
+          mobility_miller?: string | null
+          notes?: string | null
+          organization_id: string
+          recorded_at?: string
+          tooth_fdi: string
+          tooth_present?: boolean
+        }
+        Update: {
+          context_inferred?: boolean
+          examination_id?: string
+          id?: string
+          implant_context?: boolean
+          mobility_miller?: string | null
+          notes?: string | null
+          organization_id?: string
+          recorded_at?: string
+          tooth_fdi?: string
+          tooth_present?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "periodontal_tooth_measurements_organization_examination_fk"
+            columns: ["organization_id", "examination_id"]
+            isOneToOne: false
+            referencedRelation: "periodontal_examinations"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "periodontal_tooth_measurements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5251,11 +6082,244 @@ export type Database = {
           },
         ]
       }
+      tooth_clinical_entries: {
+        Row: {
+          charge_id: string | null
+          clinical_code: string
+          completed_at: string | null
+          created_at: string
+          effective_at: string | null
+          encounter_id: string | null
+          id: string
+          kind: string
+          legacy_tooth_condition_id: string | null
+          lifecycle: string
+          notes: string | null
+          organization_id: string
+          patient_id: string
+          provenance: string
+          recorded_at: string
+          recorded_by: string | null
+          status: string
+          superseded_by_entry_id: string | null
+          supersedes_entry_id: string | null
+          tooth_code: string
+          treating_provider_id: string | null
+          treatment_plan_item_id: string | null
+          updated_at: string
+          version: number
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          charge_id?: string | null
+          clinical_code: string
+          completed_at?: string | null
+          created_at?: string
+          effective_at?: string | null
+          encounter_id?: string | null
+          id?: string
+          kind: string
+          legacy_tooth_condition_id?: string | null
+          lifecycle?: string
+          notes?: string | null
+          organization_id: string
+          patient_id: string
+          provenance: string
+          recorded_at?: string
+          recorded_by?: string | null
+          status: string
+          superseded_by_entry_id?: string | null
+          supersedes_entry_id?: string | null
+          tooth_code: string
+          treating_provider_id?: string | null
+          treatment_plan_item_id?: string | null
+          updated_at?: string
+          version?: number
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          charge_id?: string | null
+          clinical_code?: string
+          completed_at?: string | null
+          created_at?: string
+          effective_at?: string | null
+          encounter_id?: string | null
+          id?: string
+          kind?: string
+          legacy_tooth_condition_id?: string | null
+          lifecycle?: string
+          notes?: string | null
+          organization_id?: string
+          patient_id?: string
+          provenance?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          status?: string
+          superseded_by_entry_id?: string | null
+          supersedes_entry_id?: string | null
+          tooth_code?: string
+          treating_provider_id?: string | null
+          treatment_plan_item_id?: string | null
+          updated_at?: string
+          version?: number
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_plan_item_fk"
+            columns: ["organization_id", "treatment_plan_item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_predecessor_fk"
+            columns: ["organization_id", "supersedes_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_provider_fk"
+            columns: ["organization_id", "treating_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entries_organization_successor_fk"
+            columns: ["organization_id", "superseded_by_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      tooth_clinical_entry_surfaces: {
+        Row: {
+          entry_id: string
+          id: string
+          ordinal: number
+          organization_id: string
+          surface: string
+        }
+        Insert: {
+          entry_id: string
+          id?: string
+          ordinal?: number
+          organization_id: string
+          surface: string
+        }
+        Update: {
+          entry_id?: string
+          id?: string
+          ordinal?: number
+          organization_id?: string
+          surface?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooth_clinical_entry_surfaces_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entry_surfaces_organization_entry_fk"
+            columns: ["organization_id", "entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entry_surfaces_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tooth_clinical_entry_voids: {
+        Row: {
+          entry_id: string
+          id: string
+          organization_id: string
+          reason: string | null
+          voided_at: string
+          voided_by: string | null
+        }
+        Insert: {
+          entry_id: string
+          id?: string
+          organization_id: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Update: {
+          entry_id?: string
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          voided_at?: string
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooth_clinical_entry_voids_organization_entry_fk"
+            columns: ["organization_id", "entry_id"]
+            isOneToOne: true
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "tooth_clinical_entry_voids_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tooth_conditions: {
         Row: {
           created_at: string
           finding_type: string
           id: string
+          migrated_to_clinical_entry_id: string | null
           notes: string | null
           organization_id: string
           patient_id: string
@@ -5272,6 +6336,7 @@ export type Database = {
           created_at?: string
           finding_type?: string
           id?: string
+          migrated_to_clinical_entry_id?: string | null
           notes?: string | null
           organization_id: string
           patient_id: string
@@ -5288,6 +6353,7 @@ export type Database = {
           created_at?: string
           finding_type?: string
           id?: string
+          migrated_to_clinical_entry_id?: string | null
           notes?: string | null
           organization_id?: string
           patient_id?: string
@@ -5301,6 +6367,13 @@ export type Database = {
           voided_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tooth_conditions_migrated_to_clinical_entry_id_fkey"
+            columns: ["migrated_to_clinical_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tooth_conditions_organization_id_fkey"
             columns: ["organization_id"]
@@ -5459,6 +6532,253 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "treatment_plans"
             referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_item_execution_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          from_state: string | null
+          id: string
+          idempotency_key: string | null
+          item_id: string
+          occurred_at: string
+          organization_id: string
+          plan_id: string
+          predecessor_event_id: string | null
+          reason: string | null
+          to_state: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          item_id: string
+          occurred_at?: string
+          organization_id: string
+          plan_id: string
+          predecessor_event_id?: string | null
+          reason?: string | null
+          to_state: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          from_state?: string | null
+          id?: string
+          idempotency_key?: string | null
+          item_id?: string
+          occurred_at?: string
+          organization_id?: string
+          plan_id?: string
+          predecessor_event_id?: string | null
+          reason?: string | null
+          to_state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_item_execution_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_execution_events_organization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_execution_events_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_execution_events_predecessor_event_id_fkey"
+            columns: ["predecessor_event_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_item_execution_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      treatment_plan_item_executions: {
+        Row: {
+          completion_bridge_id: string | null
+          completion_charge_id: string | null
+          completion_clinical_entry_id: string | null
+          completion_implant_component_id: string | null
+          created_at: string
+          current_event_id: string
+          current_state: string
+          id: string
+          item_id: string
+          last_actor_user_id: string | null
+          last_occurred_at: string | null
+          organization_id: string
+          plan_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          completion_bridge_id?: string | null
+          completion_charge_id?: string | null
+          completion_clinical_entry_id?: string | null
+          completion_implant_component_id?: string | null
+          created_at?: string
+          current_event_id: string
+          current_state: string
+          id?: string
+          item_id: string
+          last_actor_user_id?: string | null
+          last_occurred_at?: string | null
+          organization_id: string
+          plan_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          completion_bridge_id?: string | null
+          completion_charge_id?: string | null
+          completion_clinical_entry_id?: string | null
+          completion_implant_component_id?: string | null
+          created_at?: string
+          current_event_id?: string
+          current_state?: string
+          id?: string
+          item_id?: string
+          last_actor_user_id?: string | null
+          last_occurred_at?: string | null
+          organization_id?: string
+          plan_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_plan_item_executions_current_event_fk"
+            columns: ["organization_id", "current_event_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plan_item_execution_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_bridge_fk"
+            columns: ["organization_id", "completion_bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_charge_fk"
+            columns: ["organization_id", "completion_charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_clinical_entry_fk"
+            columns: ["organization_id", "completion_clinical_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_implant_fk"
+            columns: ["organization_id", "completion_implant_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: true
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_executions_organization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      treatment_plan_item_materialization_contracts: {
+        Row: {
+          created_at: string
+          design_snapshot: Json
+          item_id: string
+          materialization_kind: string
+          organization_id: string
+          patient_id: string
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          design_snapshot: Json
+          item_id: string
+          materialization_kind: string
+          organization_id: string
+          patient_id: string
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          design_snapshot?: Json
+          item_id?: string
+          materialization_kind?: string
+          organization_id?: string
+          patient_id?: string
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treatment_item_materialization_item_fk"
+            columns: ["organization_id", "item_id"]
+            isOneToOne: true
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_item_materialization_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_item_materialization_plan_fk"
+            columns: ["organization_id", "plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plan_item_materialization_contra_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5657,6 +6977,21 @@ export type Database = {
           line_no: number
         }[]
       }
+      add_treatment_plan_item_centavos: {
+        Args: {
+          p_acting_branch_id: string
+          p_description?: string
+          p_estimated_fee_centavos?: number
+          p_expected_version: number
+          p_plan_id: string
+          p_procedure_id?: string
+          p_tooth_code?: string
+        }
+        Returns: {
+          item_id: string
+          line_no: number
+        }[]
+      }
       adjust_stock: {
         Args: {
           p_acting_branch_id: string
@@ -5694,6 +7029,56 @@ export type Database = {
         }
         Returns: {
           note_id: string
+          version: number
+        }[]
+      }
+      amend_current_bridge: {
+        Args: {
+          p_acting_branch_id: string
+          p_bridge_id: string
+          p_expected_version: number
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          version: number
+        }[]
+      }
+      amend_current_implant_component: {
+        Args: {
+          p_acting_branch_id: string
+          p_component_id: string
+          p_components: Json
+          p_expected_version: number
+        }
+        Returns: {
+          component_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
+      amend_periodontal_examination: {
+        Args: {
+          p_acting_branch_id: string
+          p_encounter_id: string
+          p_predecessor_examination_id: string
+        }
+        Returns: {
+          examination_id: string
+          version: number
+        }[]
+      }
+      amend_tooth_clinical_entry: {
+        Args: {
+          p_acting_branch_id: string
+          p_entry_id: string
+          p_expected_version: number
+          p_notes: string
+          p_surfaces: string[]
+          p_tooth_code: string
+        }
+        Returns: {
+          entry_id: string
           version: number
         }[]
       }
@@ -5882,6 +7267,27 @@ export type Database = {
           version: number
         }[]
       }
+      complete_treatment_plan_item_with_charge: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_completion_kind: string
+          p_completion_payload: Json
+          p_expected_version: number
+          p_idempotency_key: string
+          p_item_id: string
+        }
+        Returns: {
+          bridge_id: string
+          charge_id: string
+          clinical_entry_id: string
+          execution_state: string
+          implant_component_id: string
+          item_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
       confirm_file_upload:
         | {
             Args: {
@@ -5941,6 +7347,22 @@ export type Database = {
         }
         Returns: {
           correction_id: string
+        }[]
+      }
+      correct_treatment_plan_item_execution: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_item_id: string
+          p_reason: string
+          p_target_state: string
+        }
+        Returns: {
+          execution_state: string
+          item_id: string
+          patient_id: string
+          version: number
         }[]
       }
       create_appointment: {
@@ -6155,6 +7577,44 @@ export type Database = {
         }
         Returns: {
           relationship_id: string
+          version: number
+        }[]
+      }
+      create_periodontal_examination: {
+        Args: {
+          p_acting_branch_id: string
+          p_encounter_id: string
+          p_examination_kind: string
+          p_patient_id: string
+        }
+        Returns: {
+          examination_id: string
+          version: number
+        }[]
+      }
+      create_plan_bridge_design: {
+        Args: {
+          p_acting_branch_id: string
+          p_parent_plan_item_id: string
+          p_patient_id: string
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
+      create_plan_implant_design: {
+        Args: {
+          p_acting_branch_id: string
+          p_components: Json
+          p_parent_plan_item_id: string
+          p_patient_id: string
+        }
+        Returns: {
+          component_id: string
+          patient_id: string
           version: number
         }[]
       }
@@ -6380,6 +7840,17 @@ export type Database = {
           version: number
         }[]
       }
+      finalize_periodontal_examination: {
+        Args: {
+          p_acting_branch_id: string
+          p_examination_id: string
+          p_expected_version: number
+        }
+        Returns: {
+          examination_id: string
+          version: number
+        }[]
+      }
       finalize_prescription: {
         Args: {
           p_acting_branch_id: string
@@ -6519,6 +7990,12 @@ export type Database = {
       get_patient_detail: {
         Args: { p_acting_branch_id: string; p_patient_id: string }
         Returns: Json
+      }
+      get_patient_odontogram: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          data: Json
+        }[]
       }
       get_procedure_configuration: {
         Args: { p_acting_branch_id: string; p_procedure_id: string }
@@ -7283,6 +8760,35 @@ export type Database = {
           version: number
         }[]
       }
+      record_current_bridge: {
+        Args: {
+          p_acting_branch_id: string
+          p_charge_id: string
+          p_executed_at: string
+          p_patient_id: string
+          p_treating_provider_id: string
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          version: number
+        }[]
+      }
+      record_current_implant_component: {
+        Args: {
+          p_acting_branch_id: string
+          p_charge_id: string
+          p_components: Json
+          p_executed_at: string
+          p_patient_id: string
+          p_treating_provider_id: string
+        }
+        Returns: {
+          component_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
       record_mfa_enrollment: { Args: { p_factor_id: string }; Returns: number }
       record_payment: {
         Args: {
@@ -7310,6 +8816,22 @@ export type Database = {
         }
         Returns: {
           cheque_id: string
+        }[]
+      }
+      record_tooth_clinical_entry: {
+        Args: {
+          p_acting_branch_id: string
+          p_clinical_code: string
+          p_kind: string
+          p_notes: string
+          p_patient_id: string
+          p_status: string
+          p_surfaces: string[]
+          p_tooth_code: string
+        }
+        Returns: {
+          entry_id: string
+          version: number
         }[]
       }
       refund_payment: {
@@ -7370,6 +8892,47 @@ export type Database = {
         }
         Returns: {
           resolution_id: string
+        }[]
+      }
+      resolve_legacy_odontogram_entry:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_legacy_entry_id: string
+              p_reason: string
+              p_resolution_kind: string
+              p_resolved_clinical_entry_id: string
+            }
+            Returns: {
+              legacy_entry_id: string
+              resolution_id: string
+              resolution_kind: string
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_legacy_entry_id: string
+              p_reason: string
+              p_resolution_kind: string
+              p_resolved_bridge_id: string
+              p_resolved_clinical_entry_id: string
+              p_resolved_treatment_plan_item_id: string
+            }
+            Returns: {
+              legacy_entry_id: string
+              resolution_id: string
+              resolution_kind: string
+            }[]
+          }
+      resolve_odontogram_entity_patient: {
+        Args: {
+          p_acting_branch_id: string
+          p_entity_id: string
+          p_entity_kind: string
+        }
+        Returns: {
+          patient_id: string
         }[]
       }
       respond_specialist_request: {
@@ -7434,6 +8997,24 @@ export type Database = {
       revoke_workforce_invitation: {
         Args: { p_actor_user_id: string; p_invitation_id: string }
         Returns: boolean
+      }
+      save_periodontal_measurements: {
+        Args: {
+          p_acting_branch_id: string
+          p_examination_id: string
+          p_furcation: Json
+          p_plaque: Json
+          p_sites: Json
+          p_tooth: Json
+        }
+        Returns: {
+          examination_id: string
+          saved_furcation: number
+          saved_plaque: number
+          saved_sites: number
+          saved_tooth: number
+          version: number
+        }[]
       }
       save_treatment_plan_drawing: {
         Args: {
@@ -7599,6 +9180,22 @@ export type Database = {
           event_id: string
         }[]
       }
+      transition_treatment_plan_item_execution: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_item_id: string
+          p_reason: string
+          p_target_state: string
+        }
+        Returns: {
+          execution_state: string
+          item_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
       update_appointment_status: {
         Args: {
           p_acting_branch_id: string
@@ -7638,6 +9235,32 @@ export type Database = {
         }
         Returns: {
           note_id: string
+          version: number
+        }[]
+      }
+      update_draft_plan_bridge_design: {
+        Args: {
+          p_acting_branch_id: string
+          p_bridge_id: string
+          p_expected_version: number
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
+      update_draft_plan_implant_design: {
+        Args: {
+          p_acting_branch_id: string
+          p_component_id: string
+          p_components: Json
+          p_expected_version: number
+        }
+        Returns: {
+          component_id: string
+          patient_id: string
           version: number
         }[]
       }
@@ -7856,6 +9479,22 @@ export type Database = {
           line_no: number
         }[]
       }
+      update_treatment_plan_item_centavos: {
+        Args: {
+          p_acting_branch_id: string
+          p_description?: string
+          p_estimated_fee_centavos?: number
+          p_expected_version: number
+          p_item_id: string
+          p_plan_id: string
+          p_procedure_id?: string
+          p_tooth_code?: string
+        }
+        Returns: {
+          item_id: string
+          line_no: number
+        }[]
+      }
       upsert_payment_method: {
         Args: {
           p_acting_branch_id: string
@@ -7881,6 +9520,30 @@ export type Database = {
           void_id: string
         }[]
       }
+      void_current_bridge: {
+        Args: {
+          p_acting_branch_id: string
+          p_bridge_id: string
+          p_expected_version: number
+          p_reason: string
+        }
+        Returns: {
+          bridge_id: string
+          version: number
+        }[]
+      }
+      void_current_implant_component: {
+        Args: {
+          p_acting_branch_id: string
+          p_component_id: string
+          p_expected_version: number
+          p_reason: string
+        }
+        Returns: {
+          component_id: string
+          version: number
+        }[]
+      }
       void_patient_medical_record: {
         Args: {
           p_acting_branch_id: string
@@ -7901,6 +9564,18 @@ export type Database = {
         }
         Returns: {
           void_id: string
+        }[]
+      }
+      void_tooth_clinical_entry: {
+        Args: {
+          p_acting_branch_id: string
+          p_entry_id: string
+          p_expected_version: number
+          p_reason: string
+        }
+        Returns: {
+          entry_id: string
+          version: number
         }[]
       }
       void_tooth_condition: {

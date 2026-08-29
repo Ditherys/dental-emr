@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 
+import { moneyCentavoStringSchema } from "@/lib/billing/schema";
 import { toothCodeSchema } from "@/lib/odontogram/schema";
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
@@ -12,7 +13,7 @@ export const treatmentPlanStatusSchema = z.enum(["DRAFT", "PRESENTED", "ACKNOWLE
 
 const titleSchema = () => z.string().trim().min(1).max(200);
 const expectedVersionSchema = z.number().int().positive();
-const estimatedFeeSchema = z.number().min(0).max(999999999).nullable().optional();
+const estimatedFeeCentavosSchema = moneyCentavoStringSchema.nullable().optional();
 const nullableUuid = () => databaseUuid.nullable().optional();
 
 export const createTreatmentPlanInputSchema = z.object({
@@ -47,7 +48,7 @@ export const addTreatmentPlanItemInputSchema = z.object({
   procedureId: nullableUuid(),
   toothCode: toothCodeSchema.nullable().optional(),
   description: z.string().trim().min(1).max(2000),
-  estimatedFee: estimatedFeeSchema,
+  estimatedFeeCentavos: estimatedFeeCentavosSchema,
 }).strict();
 
 export const updateTreatmentPlanItemInputSchema = z.object({
@@ -58,7 +59,7 @@ export const updateTreatmentPlanItemInputSchema = z.object({
   procedureId: nullableUuid(),
   toothCode: toothCodeSchema.nullable().optional(),
   description: z.string().trim().min(1).max(2000),
-  estimatedFee: estimatedFeeSchema,
+  estimatedFeeCentavos: estimatedFeeCentavosSchema,
 }).strict();
 
 export const removeTreatmentPlanItemInputSchema = z.object({
@@ -172,7 +173,7 @@ export const treatmentPlanItemJsonSchema = z.object({
   procedureId: databaseUuid.nullable(),
   toothCode: toothCodeSchema.nullable(),
   description: z.string().max(2000),
-  estimatedFee: z.number().min(0).max(999999999).nullable(),
+  estimatedFeeCentavos: moneyCentavoStringSchema.nullable(),
   createdAt: isoTimestamp,
 }).strict();
 

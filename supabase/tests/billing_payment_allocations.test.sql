@@ -112,5 +112,6 @@ insert into public.payment_allocation_reversals (id, organization_id, allocation
 select extensions.is((select count(*)::integer from public.payment_allocation_reversals where organization_id='b3100000-0000-0000-0000-000000000001' and cause='REFUND'),1,'a refund component reversal is accepted with the exact component amount');
 select extensions.throws_ok($$insert into public.payment_allocation_reversals (organization_id, allocation_id, payment_refund_allocation_id, cause, amount_centavos, reason, idempotency_key) values ('b3100000-0000-0000-0000-000000000001','b3170000-0000-0000-0000-000000000001','b31b0000-0000-0000-0000-000000000001','REFUND',50000,'duplicate component reversal','p310-rev-0004')$$,'23505','duplicate key value violates unique constraint "payment_allocation_reversals_one_refund_component_idx"','a second reversal for the same refund component is rejected');
 
-select * from extensions.finish();
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*) = 0 then 'P1_TEST_PASS' else string_agg(finish, E'\n') end as p1_test_result from test_failures;
 rollback;

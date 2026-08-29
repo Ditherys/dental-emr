@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(26);
+select extensions.plan(23);
 
 -- PDC tables are RLS-enforced, grant-free, and the event chain is append-only.
 select extensions.has_table('public','postdated_cheques','postdated cheques are protected promise records');
@@ -101,5 +101,6 @@ insert into public.payments (id, organization_id, patient_id, branch_id, payment
 select extensions.is((select postdated_cheque_id from public.payments where id='b5180000-0000-0000-0000-000000000001'),'b5160000-0000-0000-0000-000000000002'::uuid,'a cleared cheque payment retains its tenant-safe PDC source link');
 select extensions.throws_ok($$insert into public.payments (id, organization_id, patient_id, branch_id, payment_method_id, amount_centavos, postdated_cheque_id, idempotency_key) values ('b5180000-0000-0000-0000-000000000002','b5100000-0000-0000-0000-000000000002','b5120000-0000-0000-0000-000000000002','b5110000-0000-0000-0000-000000000002',(select id from public.payment_methods where organization_id='b5100000-0000-0000-0000-000000000002' and code='CHEQUE'),500000,'b5160000-0000-0000-0000-000000000002','p510-payment-0002')$$,'23503',null,'a cleared cheque payment link cannot cross organizations');
 
-select * from extensions.finish();
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*) = 0 then 'P1_TEST_PASS' else string_agg(finish, E'\n') end as p1_test_result from test_failures;
 rollback;

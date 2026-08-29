@@ -55,6 +55,9 @@ E2E_OWNER_TOTP_SECRET=<secret-store-value>
 E2E_ADMIN_EMAIL=<synthetic-admin-email>
 E2E_ADMIN_PASSWORD=<secret-store-value>
 E2E_ADMIN_TOTP_SECRET=<secret-store-value>
+E2E_DENTIST_EMAIL=<synthetic-dentist-email>
+E2E_DENTIST_PASSWORD=<secret-store-value>
+E2E_DENTIST_TOTP_SECRET=<secret-store-value>
 E2E_BRANCH_USER_EMAIL=<synthetic-branch-user-email>
 E2E_BRANCH_USER_PASSWORD=<secret-store-value>
 E2E_SUSPENDED_EMAIL=<synthetic-suspended-user-email>
@@ -75,6 +78,12 @@ using a dedicated identity keeps that suspension from touching the shared owner
 every other spec file signs in as. `npm run e2e:provision` provisions it from
 the seed's existing `org-a-admin` row, which already carries an
 organization-wide ADMIN assignment.
+
+The dentist fixture must be a different synthetic user with active Branch A1
+access, the DENTIST role, and a verified TOTP factor. The O14 odontogram
+specification creates each patient through the receptionist UI, then signs in
+independently as this dentist to prove that the clinical write happens through
+the normal browser/server/RPC path. It does not use service-role patient setup.
 
 ## Mid-session withdrawal flows (R5)
 

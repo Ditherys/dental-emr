@@ -480,7 +480,179 @@ const odontogramRpcGrants = Object.freeze([
   "public.create_tooth_condition(uuid,uuid,text,text,text,text,text)",
   "public.void_tooth_condition(uuid,uuid,integer,text)",
   "public.list_tooth_conditions(uuid,uuid,boolean)",
-].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only odontogram/dental-chart boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projection). Conditions carry validated FDI tooth codes and bounded vocabularies, are versioned, and are voided rather than deleted; terminal COMPLETED/REFERRED rows are kept as history and refused for voiding. Every mutation appends one atomic bounded-metadata audit event while the list writes none." })));
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  supersededFrom: "20260828020500_odontogram_legacy_retire.sql",
+  reason:
+    "Historical P15-02 odontogram boundary. Retired in O13 by 20260828020500 which revokes all three signatures after the backfill to tooth_clinical_entries and the read cutover to get_patient_odontogram. Replay boundaries through 20260828020401 legitimately hold this privilege and must expect it; from the revoking boundary onward it no longer exists in the live catalog and is excluded from the approved final set.",
+})));
+
+const ODONTOGRAM_O5_RPCS_GRANTS_MIGRATION = "20260828020401_odontogram_rpcs_grants.sql";
+const ODONTOGRAM_RESOLUTION_RPC_GRANT_MIGRATION =
+  "20260828020517_odontogram_resolution_rpc_grant.sql";
+const ODONTOGRAM_CLINICAL_EVENT_LINEAGE_GRANT_MIGRATION =
+  "20260828020521_clinical_entry_event_lineage_grants.sql";
+const ODONTOGRAM_CLINICAL_RPC_QUALIFICATION_GRANT_MIGRATION =
+  "20260828020523_clinical_entry_rpc_qualification_grants.sql";
+const ODONTOGRAM_CLINICAL_AUDIT_METADATA_GRANT_MIGRATION =
+  "20260828020525_clinical_entry_audit_metadata_grant.sql";
+const ODONTOGRAM_O5_O8_TERMINAL_GRANTS_MIGRATION =
+  "20260828020537_odontogram_o5_o8_terminal_grants.sql";
+const ODONTOGRAM_O5_O8_FINAL_RECONCILIATION_GRANTS_MIGRATION =
+  "20260828020539_odontogram_o5_o8_final_reconciliation_grants.sql";
+const ODONTOGRAM_O5_O8_SERIALIZED_FINAL_GRANTS_MIGRATION =
+  "20260828020541_odontogram_o5_o8_serialized_final_grants.sql";
+
+const odontogramO5O8TerminalGrants = Object.freeze([
+  "public.get_patient_odontogram(uuid,uuid)",
+  "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)",
+  "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+  "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+  "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
+  "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
+  "public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)",
+  "public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+  "public.amend_current_bridge(uuid,uuid,integer,jsonb)",
+  "public.void_current_bridge(uuid,uuid,integer,text)",
+  "public.create_plan_implant_design(uuid,uuid,uuid,jsonb)",
+  "public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)",
+  "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+  "public.amend_current_implant_component(uuid,uuid,integer,jsonb)",
+  "public.void_current_implant_component(uuid,uuid,integer,text)",
+  "public.create_periodontal_examination(uuid,uuid,uuid,text)",
+  "public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)",
+  "public.finalize_periodontal_examination(uuid,uuid,integer)",
+  "public.amend_periodontal_examination(uuid,uuid,uuid)",
+  "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+  "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)",
+  "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Final O5/O8 browser boundary after explicit forward replacement. Each SECURITY DEFINER function derives tenant and patient from trusted rows, checks live branch permission, preserves append-only history, bounds returned aggregates, and keeps all tenant tables RLS-locked with zero browser table grants.",
+})));
+
+const odontogramO5O8FinalReconciliationGrants = Object.freeze([
+  ...odontogramO5O8TerminalGrants,
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.resolve_odontogram_entity_patient(uuid,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Allows mutation services to resolve the authoritative patient from a tenant-scoped canonical entity after live clinical-write authorization, so cache invalidation never trusts a client-supplied patient identifier.",
+  },
+]);
+
+const odontogramO5Grants = Object.freeze([
+  "public.get_patient_odontogram(uuid,uuid)",
+  "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)",
+  "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+  "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+  "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,text)",
+  "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
+  "public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)",
+  "public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+  "public.amend_current_bridge(uuid,uuid,integer,jsonb)",
+  "public.void_current_bridge(uuid,uuid,integer,text)",
+  "public.create_plan_implant_design(uuid,uuid,uuid,jsonb)",
+  "public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)",
+  "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+  "public.amend_current_implant_component(uuid,uuid,integer,jsonb)",
+  "public.void_current_implant_component(uuid,uuid,integer,text)",
+  "public.create_periodontal_examination(uuid,uuid,uuid,text)",
+  "public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)",
+  "public.finalize_periodontal_examination(uuid,uuid,integer)",
+  "public.amend_periodontal_examination(uuid,uuid,uuid)",
+  "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
+  "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)",
+  "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  ...(object === "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,text)"
+    ? {
+        supersededBy:
+          "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
+        supersededFrom:
+          "20260828020516_odontogram_resolution_and_lineage_serialization.sql",
+      }
+    : {}),
+  reason:
+    "O5 odontogram clinical boundary (ADR-028). Derives organization_id from an active acting branch (status='active'), binds actor via auth.uid(), gates on patient.clinical permissions (read/write plus elevated patient.clinical.correct for legacy resolution, bridge/implant/perio correction and nonterminal execution correction), validates patient membership via FOR KEY SHARE, uses optimistic versions, caps projections at 200 rows / bounded batches, and emits one atomic CLINICAL audit event per mutation. Base tables remain RLS-locked with zero policies.",
+})));
+
+const odontogramResolutionRpcGrant = Object.freeze([
+  "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
+  "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+  "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+  "public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+  "public.amend_current_bridge(uuid,uuid,integer,jsonb)",
+  "public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the reviewed O2-O4 mutation boundary after the forward fail-closed repair revoked the replacement definitions from every browser role. Authorization remains inside the SECURITY DEFINER body; the legacy reconciliation signature additionally accepts exactly one same-patient clinical-entry, bridge, or treatment-plan-item target only for an ambiguous legacy row.",
+})));
+
+const odontogramClinicalEventLineageGrants = Object.freeze([
+  "public.get_patient_odontogram(uuid,uuid)",
+  "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+  "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the reviewed clinical-entry read/amend/void boundary after successor-side lineage and append-only void events replaced predecessor mutation. Tenant and patient authorization remain inside the SECURITY DEFINER functions, and the bounded read derives terminal lifecycle from immutable successor/event rows.",
+})));
+
+const odontogramClinicalRpcQualificationGrants = Object.freeze([
+  "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+  "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the unchanged reviewed amend/void privilege boundary after the forward local qualification repair removed PL/pgSQL output-column ambiguity; authorization and event-only lineage semantics remain inside the SECURITY DEFINER bodies.",
+})));
+
+const odontogramClinicalAuditMetadataGrant = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Restores the unchanged reviewed amend boundary after the forward audit-metadata repair removed a disallowed predecessor identifier; successor lineage remains structural and authorization remains inside the SECURITY DEFINER body.",
+  },
+]);
+
+// ---------------------------------------------------------------------------
+// Treatment-plan — preserved for O8 execution linkage
+// ---------------------------------------------------------------------------
 
 const TREATMENT_PLAN_RPCS_GRANTS_MIGRATION =
   "20260827013401_treatment_plan_rpcs_grants.sql";
@@ -499,6 +671,58 @@ const treatmentPlanRpcGrants = Object.freeze([
   "public.list_treatment_plans(uuid,uuid)",
   "public.get_treatment_plan_detail(uuid,uuid)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only treatment-plan clinical boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Plans are versioned with an immutable PRESENTED/ACKNOWLEDGED state backed by a database trigger; discussions are append-only on any status and always capture provider, time, and context. Every mutation appends one atomic opaque audit event while the read projections write none." })));
+
+const TREATMENT_ESTIMATE_CENTAVO_REPAIR_MIGRATION =
+  "20260828020505_treatment_estimate_centavo_contract_repair.sql";
+
+const treatmentEstimateCentavoRepairGrants = Object.freeze([
+  "public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)",
+  "public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)",
+  "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)",
+  "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)",
+  "public.get_treatment_plan_detail(uuid,uuid)",
+  "public.generate_document(uuid,uuid,text,jsonb)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the reviewed treatment-plan write/read/document privilege after the B11 centavo contract repair recreated its definition. The compatibility numeric writers reject non-centavo peso inputs before exact conversion; current application writers accept bounded bigint centavos directly. Every writer still derives tenant and actor from the authenticated active-branch context, requires clinical.write, locks the same-tenant DRAFT plan, and appends one atomic opaque audit event; detail/document projections retain their existing clinical.read or document.generate boundary and expose only base-10 centavo strings.",
+})));
+
+const TREATMENT_ESTIMATE_PROJECTION_CONTRACT_MIGRATION =
+  "20260828020507_treatment_estimate_projection_contract.sql";
+
+const treatmentEstimateProjectionContractGrants = Object.freeze([
+  "public.get_treatment_plan_detail(uuid,uuid)",
+  "public.generate_document(uuid,uuid,text,jsonb)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the exact reviewed EXECUTE boundary after replacing the temporary catalog-source projection rewrite with explicit SECURITY DEFINER definitions. Treatment-plan detail still requires same-tenant clinical.read; document generation still requires same-tenant document.generate and writes one atomic opaque audit. Both projections expose advisory estimates only as bounded base-10 centavo strings, retain empty search paths, and grant no base-table access.",
+})));
+
+const TREATMENT_ESTIMATE_PROJECTION_BOUNDS_MIGRATION =
+  "20260828020512_treatment_estimate_projection_bounds.sql";
+
+const treatmentEstimateProjectionBoundsGrants = Object.freeze([
+  "public.get_treatment_plan_detail(uuid,uuid)",
+  "public.generate_document(uuid,uuid,text,jsonb)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason:
+    "Restores the exact authenticated-only EXECUTE boundary after moving each deterministic projection cap into an ordered derived table before JSON aggregation. Treatment-plan detail still requires same-tenant clinical.read; document generation still requires same-tenant document.generate and appends one atomic opaque audit event. Both SECURITY DEFINER functions retain empty search paths and expose no base-table privilege.",
+})));
 
 const clinicalRpcGrants = Object.freeze([
   "public.create_clinical_encounter(uuid,uuid,uuid,uuid)",
@@ -1201,6 +1425,50 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
           "The bounded pending PDC report derives tenant and actor server-side, requires billing.read at the acting branch, and returns only the agreed cheque DTO for the same organization.",
       },
     ],
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_O5_RPCS_GRANTS_MIGRATION,
+    grants: odontogramO5Grants,
+  }),
+  Object.freeze({
+    file: TREATMENT_ESTIMATE_CENTAVO_REPAIR_MIGRATION,
+    grants: treatmentEstimateCentavoRepairGrants,
+  }),
+  Object.freeze({
+    file: TREATMENT_ESTIMATE_PROJECTION_CONTRACT_MIGRATION,
+    grants: treatmentEstimateProjectionContractGrants,
+  }),
+  Object.freeze({
+    file: TREATMENT_ESTIMATE_PROJECTION_BOUNDS_MIGRATION,
+    grants: treatmentEstimateProjectionBoundsGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_RESOLUTION_RPC_GRANT_MIGRATION,
+    grants: odontogramResolutionRpcGrant,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_CLINICAL_EVENT_LINEAGE_GRANT_MIGRATION,
+    grants: odontogramClinicalEventLineageGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_CLINICAL_RPC_QUALIFICATION_GRANT_MIGRATION,
+    grants: odontogramClinicalRpcQualificationGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_CLINICAL_AUDIT_METADATA_GRANT_MIGRATION,
+    grants: odontogramClinicalAuditMetadataGrant,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_O5_O8_TERMINAL_GRANTS_MIGRATION,
+    grants: odontogramO5O8TerminalGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_O5_O8_FINAL_RECONCILIATION_GRANTS_MIGRATION,
+    grants: odontogramO5O8FinalReconciliationGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_O5_O8_SERIALIZED_FINAL_GRANTS_MIGRATION,
+    grants: odontogramO5O8FinalReconciliationGrants,
   }),
 ]);
 

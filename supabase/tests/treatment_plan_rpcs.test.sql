@@ -60,6 +60,8 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.acknowledge_treatment_plan(uuid,uuid,integer)','execute')
   and has_function_privilege('authenticated','public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)','execute')
   and has_function_privilege('authenticated','public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)','execute')
+  and has_function_privilege('authenticated','public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)','execute')
+  and has_function_privilege('authenticated','public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)','execute')
   and has_function_privilege('authenticated','public.remove_treatment_plan_item(uuid,uuid,uuid,integer)','execute')
   and has_function_privilege('authenticated','public.add_treatment_plan_alternative(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)','execute')
@@ -72,9 +74,16 @@ select extensions.ok(
   and not has_function_privilege('service_role','public.create_treatment_plan(uuid,uuid,text)','execute')
   and not has_function_privilege('service_role','public.list_treatment_plans(uuid,uuid)','execute')
   and not has_function_privilege('service_role','public.get_treatment_plan_detail(uuid,uuid)','execute'),
-  'only authenticated has the twelve exact P16-02 RPC grants'
+  'only authenticated has the treatment-plan RPC grants, including both centavo application writers'
 );
-select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_treatment_plan(uuid,uuid,text)'::regprocedure,'public.update_treatment_plan(uuid,uuid,integer,text)'::regprocedure,'public.present_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.acknowledge_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.remove_treatment_plan_item(uuid,uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_alternative(uuid,uuid,integer,text)'::regprocedure,'public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)'::regprocedure,'public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'::regprocedure,'public.list_treatment_plans(uuid,uuid)'::regprocedure,'public.get_treatment_plan_detail(uuid,uuid)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),12,'the twelve P16-02 definers pin an empty search path');
+select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_treatment_plan(uuid,uuid,text)'::regprocedure,'public.update_treatment_plan(uuid,uuid,integer,text)'::regprocedure,'public.present_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.acknowledge_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.remove_treatment_plan_item(uuid,uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_alternative(uuid,uuid,integer,text)'::regprocedure,'public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)'::regprocedure,'public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'::regprocedure,'public.list_treatment_plans(uuid,uuid)'::regprocedure,'public.get_treatment_plan_detail(uuid,uuid)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),14,'the treatment-plan definers, including both centavo application writers, pin an empty search path');
+select extensions.ok(not exists (
+  select 1
+  from pg_proc as proc
+  join pg_namespace as namespace on namespace.oid = proc.pronamespace
+  where namespace.nspname in ('public', 'private')
+    and proc.prosrc ~ 'item\.estimated_fee([^_]|$)|description,[[:space:]]+estimated_fee([^_]|$)'
+),'no live function reads or writes the retired decimal estimate column');
 select extensions.ok(not exists (
   select 1 from pg_proc as proc
   where proc.oid = 'private.has_clinical_permission_at_branch(uuid,text)'::regprocedure
@@ -114,7 +123,7 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
 select extensions.throws_ok($$select public.update_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),1,'stale')$$,'P0001','stale version','updating with a stale expected version is rejected');
 select extensions.is((select line_no from public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,'c9300000-0000-0000-0000-000000000001','26','Composite filling on 26.',2500.00)),1,'an item with an org procedure, FDI tooth, and fee is appended at line one');
-select extensions.is((select line_no from public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,null,'27','Crown on 27.',null)),2,'a second item without a procedure is appended at line two');
+select extensions.is((select line_no from public.add_treatment_plan_item_centavos('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,null,'27','Crown on 27.',null)),2,'the centavo application RPC appends a second item without a procedure at line two');
 reset role;
 insert into p1602_items (seq, id)
 select 1, item.id
@@ -129,14 +138,21 @@ where item.organization_id='b7200000-0000-0000-0000-000000000001'
   and item.plan_id=(select id from p1602_plans where seq=1)
   and item.description='Crown on 27.';
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.item_added' and entity_id in (select id from p1602_items where seq in (1,2))),2,'each item add writes exactly one treatment.plan.item_added audit event');
-select extensions.ok((select line_no=1 and procedure_id='c9300000-0000-0000-0000-000000000001' and tooth_code='26' and estimated_fee=2500.00 from public.treatment_plan_items where id=(select id from p1602_items where seq=1)),'the first item persists its org procedure and bounded fee');
+select extensions.ok((select line_no=1 and procedure_id='c9300000-0000-0000-0000-000000000001' and tooth_code='26' and estimated_fee_centavos=250000 from public.treatment_plan_items where id=(select id from p1602_items where seq=1)),'the retained peso RPC persists its org procedure and exact centavo estimate');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.is((select line_no from public.update_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),(select id from p1602_items where seq=1),2,null,'27','Composite filling on 27.',2500.00)),1,'a DRAFT item updates in place');
+select extensions.is((select line_no from public.update_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),(select id from p1602_items where seq=1),2,null,'27','Composite filling on 27.',2500.01)),1,'a DRAFT item updates in place through the retained peso contract');
+reset role;
+select extensions.is((select estimated_fee_centavos from public.treatment_plan_items where id=(select id from p1602_items where seq=1)),250001::bigint,'the retained update RPC converts a two-decimal peso value exactly to centavos');
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
+select extensions.is((select line_no from public.update_treatment_plan_item_centavos('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),(select id from p1602_items where seq=1),2,null,'27','Composite filling on 27.',250002)),1,'the centavo application RPC updates a DRAFT item without a decimal conversion path');
 select extensions.is((select alternative_no from public.add_treatment_plan_alternative('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,'Extraction and implant alternative.')),1,'an alternative is appended at number one');
 reset role;
+select extensions.is((select estimated_fee_centavos from public.treatment_plan_items where id=(select id from p1602_items where seq=1)),250002::bigint,'the centavo application update persists the exact integer value');
 insert into p1602_alternatives (seq, id)
 select 1, alternative.id
 from public.treatment_plan_alternatives as alternative
@@ -144,7 +160,7 @@ where alternative.organization_id='b7200000-0000-0000-0000-000000000001'
   and alternative.plan_id=(select id from p1602_plans where seq=1)
   and alternative.alternative_no=1;
 select extensions.ok((select description='Composite filling on 27.' and tooth_code='27' from public.treatment_plan_items where id=(select id from p1602_items where seq=1)),'the item update persists the new description and tooth');
-select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.item_updated' and entity_id=(select id from p1602_items where seq=1)),1,'the item update writes exactly one treatment.plan.item_updated audit event');
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.item_updated' and entity_id=(select id from p1602_items where seq=1)),2,'each successful item update writes exactly one treatment.plan.item_updated audit event');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.alternative_added' and entity_id=(select id from p1602_alternatives where seq=1)),1,'the alternative add writes exactly one treatment.plan.alternative_added audit event');
 
 -- Discussion on a DRAFT plan captures provider/time/context.
@@ -251,6 +267,7 @@ select extensions.throws_ok($$select public.create_treatment_plan('b7300000-0000
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'c9300000-0000-0000-0000-000000000002','26','Foreign procedure',null)$$,'22023','invalid input','a foreign-org procedure is rejected with a clean error');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,'49','Bad tooth',null)$$,'22023','invalid input','an invalid FDI tooth code is rejected with a clean error');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'Too big',1000000000)$$,'22023','invalid input','an oversized estimated fee is rejected with a clean error');
+select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'Fractional centavo',123.456)$$,'22023','invalid input','a fractional-centavo peso estimate is rejected rather than rounded');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'   ',null)$$,'22023','invalid input','a blank item description is rejected with a clean error');
 select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000004','Foreign provider',null)$$,'22023','invalid input','a foreign-org treating provider is rejected with a clean error');
 select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),null,'   ',null)$$,'22023','invalid input','a blank discussion context is rejected with a clean error');
@@ -259,7 +276,7 @@ select extensions.throws_ok($$select public.save_treatment_plan_drawing('b730000
 reset role;
 
 -- Reads: the assistant may read bounded projections and detail, writes none.
-select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),18,'audit count is 18 before the read probes');
+select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),19,'audit count is 19 before the read probes');
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000002',true);
@@ -267,6 +284,8 @@ select extensions.is((select count(*)::integer from public.list_treatment_plans(
 select extensions.ok((select item_count=2 and has_drawing from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001') where plan_id=(select id from p1602_plans where seq=1) and title='Full mouth restoration v2' and status='ACKNOWLEDGED' and version=4),'list projects the bounded plan fields plus item_count and drawing presence for P1');
 select extensions.ok((select item_count=0 and not has_drawing from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001') where plan_id=(select id from p1602_plans where seq=2) and status='ACKNOWLEDGED'),'list shows zero items and no drawing for P2');
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'items')),2,'detail includes both P1 items');
+select extensions.is((select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) #>> '{items,0,estimatedFeeCentavos}'),'250002','detail returns the exact centavo estimate as a base-10 string');
+select extensions.ok(not (public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) #> '{items,0}' ? 'estimatedFee'),'detail has no legacy decimal estimate key');
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'alternatives')),1,'detail includes the P1 alternative');
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'discussions')),2,'detail includes both P1 discussions');
 select extensions.ok((select detail #>> '{plan,status}' = 'ACKNOWLEDGED' and detail #>> '{plan,title}' = 'Full mouth restoration v2' and detail #>> '{plan,version}' = '4' from (select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) as detail) as d),'detail returns the plan projection');
@@ -276,7 +295,7 @@ select extensions.ok((select (public.get_treatment_plan_detail('b7300000-0000-00
 select extensions.throws_ok($$select public.create_treatment_plan('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Denied')$$,'42501','not authorized','a read-only assistant cannot create plans');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,'26','Denied',null)$$,'42501','not authorized','a read-only assistant cannot add items');
 reset role;
-select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),18,'read probes leave the audit count unchanged');
+select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),19,'read probes leave the audit count unchanged');
 
 -- Permission denials on the read and write paths.
 set local role authenticated;

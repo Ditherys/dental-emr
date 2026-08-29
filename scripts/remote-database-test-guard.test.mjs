@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -250,7 +250,8 @@ describe("registered database suites", () => {
       "appointment_foundation.test.sql",
       "appointment_permission_contract.test.sql",
       "appointment_rpcs.test.sql",
- "audit_foundation.test.sql",
+      "audit_foundation.test.sql",
+      "audit_metadata_contract.test.sql",
       "billing_attribution.test.sql",
       "billing_authorization.test.sql",
       "billing_charge_ledger.test.sql",
@@ -288,7 +289,11 @@ describe("registered database suites", () => {
       "inventory_foundation.test.sql",
       "inventory_permission_contract.test.sql",
       "inventory_rpcs.test.sql",
-"odontogram_rpcs.test.sql",
+      "odontogram_domain_expansion.test.sql",
+      "odontogram_o2_o4_contract_repair.test.sql",
+      "odontogram_permission_contract.test.sql",
+      "odontogram_relationships.test.sql",
+      "odontogram_rpcs_v2.test.sql",
       "operational_analytics.test.sql",
       "owner_full_access.test.sql",
       "patient_attribution_columns.test.sql",
@@ -303,6 +308,7 @@ describe("registered database suites", () => {
       "patient_reads.test.sql",
       "patient_referral_rpcs.test.sql",
       "patient_referrals_foundation.test.sql",
+      "periodontal_charting.test.sql",
       "postdated_cheques.test.sql",
       "procedure_foundation.test.sql",
       "provider_availability.test.sql",
@@ -327,6 +333,8 @@ describe("registered database suites", () => {
       "specialist_request_rpcs.test.sql",
       "specialist_requests_foundation.test.sql",
       "tooth_conditions.test.sql",
+      "treatment_item_execution.test.sql",
+      "treatment_plan_estimated_fee_contract.test.sql",
       "treatment_plan_rpcs.test.sql",
       "treatment_plans.test.sql",
       "workforce_invitations.test.sql",
@@ -348,6 +356,22 @@ describe("registered database suites", () => {
         ),
       ).not.toThrow();
     }
+  });
+});
+
+describe("odontogram O14 deferred E2E registration", () => {
+  const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+  it("keeps the required guarded odontogram and responsive specifications in the repository", () => {
+    const odontogramSpec = resolve(repositoryRoot, "e2e", "odontogram-integration.spec.ts");
+    const responsiveSpec = resolve(repositoryRoot, "e2e", "responsive-accessibility.spec.ts");
+    const e2eReadme = resolve(repositoryRoot, "e2e", "README.md");
+
+    expect(existsSync(odontogramSpec)).toBe(true);
+    expect(readFileSync(odontogramSpec, "utf8")).toContain("loadE2EEnvironment");
+    expect(readFileSync(odontogramSpec, "utf8")).toContain("@odontogram");
+    expect(readFileSync(responsiveSpec, "utf8")).toContain("@responsive the odontogram");
+    expect(readFileSync(e2eReadme, "utf8")).toContain("E2E_DENTIST_EMAIL");
   });
 });
 

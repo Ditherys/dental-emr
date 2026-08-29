@@ -1,5 +1,7 @@
 import "server-only";
 
+import { formatPhpCentavos } from "@/lib/billing/money";
+
 import type {
   AppointmentSnapshot,
   DocumentRenderInput,
@@ -142,14 +144,9 @@ function renderAppointments(appointments: AppointmentSnapshot[]): string {
   ].join("");
 }
 
-function formatFee(value: unknown): string {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "";
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 2,
-  }).format(number);
+function formatFeeCentavos(value: string | null): string {
+  if (value === null) return "";
+  return formatPhpCentavos(BigInt(value));
 }
 
 function renderTreatmentPlanHeader(plan: TreatmentPlanSnapshot): string {
@@ -175,7 +172,7 @@ function renderTreatmentPlanItems(items: TreatmentPlanItemSnapshot[]): string {
         `<td>${escapeHtml(item.lineNo)}</td>`,
         `<td>${escapeHtml(item.toothCode)}</td>`,
         `<td>${escapeHtml(item.description)}</td>`,
-        `<td>${escapeHtml(formatFee(item.estimatedFee))}</td>`,
+        `<td>${escapeHtml(formatFeeCentavos(item.estimatedFeeCentavos))}</td>`,
         "</tr>",
       ].join("");
     })

@@ -6,7 +6,8 @@ import { hasPermission, hasSharedPatientPermission } from "@/lib/authorization/p
 import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
-import { OdontogramServiceError, listToothConditions } from "@/lib/odontogram/service";
+import { OdontogramServiceError, getPatientOdontogram } from "@/lib/odontogram/service";
+import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
 import { listProviders } from "@/lib/providers/data";
@@ -125,7 +126,8 @@ export default async function PatientPage({
   let filesUnavailable = false;
   let clinicalEncounters: Awaited<ReturnType<typeof listClinicalEncounters>> = [];
   let medicalRecords: Awaited<ReturnType<typeof listPatientMedicalRecords>> = [];
-  let toothConditions: Awaited<ReturnType<typeof listToothConditions>> = [];
+  const toothConditions: ToothCondition[] = [];
+  let initialOdontogram: PatientOdontogramDTO | null = null;
   let treatmentPlans: Awaited<ReturnType<typeof listTreatmentPlans>> = [];
   let clinicalLoadFailed = false;
   let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
@@ -169,14 +171,20 @@ export default async function PatientPage({
     }
   }
 
+  // O13 read cutover: canonical chart is get_patient_odontogram (tooth_clinical_entries).
+  // toothConditions is retained as deprecated empty fallback only — see 20260828020500.
   if (section === "clinical" && canReadClinical) {
     try {
-      [clinicalEncounters, medicalRecords, toothConditions, treatmentPlans] = await Promise.all([
+      [clinicalEncounters, medicalRecords, treatmentPlans] = await Promise.all([
         listClinicalEncounters({ actingBranchId, patientId }),
         listPatientMedicalRecords({ actingBranchId, patientId }),
-        listToothConditions({ actingBranchId, patientId }),
         listTreatmentPlans({ actingBranchId, patientId }),
       ]);
+      try {
+        initialOdontogram = await getPatientOdontogram({ actingBranchId, patientId });
+      } catch {
+        clinicalLoadFailed = true;
+      }
     } catch (error) {
       if (
         !(error instanceof ClinicalServiceError ||
@@ -243,6 +251,7 @@ export default async function PatientPage({
       initialClinicalEncounters={clinicalEncounters}
       initialMedicalRecords={medicalRecords}
       initialToothConditions={toothConditions}
+      initialOdontogram={initialOdontogram}
       initialTreatmentPlans={treatmentPlans}
       canGenerateDocuments={canGenerateDocuments}
       initialProviders={clinicalProviders}

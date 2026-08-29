@@ -103,6 +103,7 @@ delete from public.patients where organization_id = ${sqlLiteral(ids.organizatio
 delete from private.patient_number_counters where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.member_roles where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.organization_members where organization_id = ${sqlLiteral(ids.organization)}::uuid;
+delete from public.payment_methods where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.branches where organization_id = ${sqlLiteral(ids.organization)}::uuid;
 delete from public.organizations where id = ${sqlLiteral(ids.organization)}::uuid;
 delete from auth.users where id in (${sqlLiteral(ids.firstUser)}::uuid, ${sqlLiteral(ids.secondUser)}::uuid);

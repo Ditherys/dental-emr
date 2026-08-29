@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(24);
+select extensions.plan(27);
 
 -- Compensation tables are RLS-enforced, grant-free, and append-only where
 -- ledger-like.
@@ -92,5 +92,6 @@ insert into public.charge_compensation_resolutions (id, organization_id, charge_
 select extensions.is((select count(*)::integer from public.charge_compensation_resolutions where organization_id='b4100000-0000-0000-0000-000000000001'),1,'a consistent RESOLVED resolution is accepted');
 select extensions.throws_ok($$insert into public.charge_compensation_resolutions (organization_id, charge_id, state, agreement_id, rate_bps, basis, authoritative_service_date, reason, idempotency_key) values ('b4100000-0000-0000-0000-000000000001','b4150000-0000-0000-0000-000000000001','NO_ACTIVE_AGREEMENT','b4160000-0000-0000-0000-000000000002',6000,'GROSS',date '2026-08-10','contradictory','p410-res-0003')$$,'23514',null,'a NO_ACTIVE_AGREEMENT resolution cannot carry a rate snapshot');
 
-select * from extensions.finish();
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*) = 0 then 'P1_TEST_PASS' else string_agg(finish, E'\n') end as p1_test_result from test_failures;
 rollback;

@@ -35,7 +35,7 @@ import type { FileListItem } from "@/lib/files/types";
 import type { PatientReferral } from "@/lib/acquisition/types";
 import type { DuplicateReview, PatientDetail } from "@/lib/patients/types";
 import type { ClinicalEncounter, MedicalRecord } from "@/lib/clinical/types";
-import type { ToothCondition } from "@/lib/odontogram/types";
+import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 import type { ConsentTemplateOption, IntakeFormSummary } from "@/lib/intake/types";
@@ -81,6 +81,7 @@ type Props = {
   initialClinicalEncounters?: ClinicalEncounter[];
   initialMedicalRecords?: MedicalRecord[];
   initialToothConditions?: ToothCondition[];
+  initialOdontogram?: PatientOdontogramDTO | null;
   initialTreatmentPlans?: TreatmentPlan[];
   canGenerateDocuments?: boolean;
   initialProviders?: ProviderListItem[];
@@ -125,6 +126,7 @@ export function PatientWorkspace({
   initialClinicalEncounters = [],
   initialMedicalRecords = [],
   initialToothConditions = [],
+  initialOdontogram = null,
   initialTreatmentPlans = [],
   canGenerateDocuments = false,
   initialProviders = [],
@@ -385,6 +387,7 @@ export function PatientWorkspace({
             initialEncounters={initialClinicalEncounters}
             initialMedicalRecords={initialMedicalRecords}
             initialToothConditions={initialToothConditions}
+            initialOdontogram={initialOdontogram}
             initialTreatmentPlans={initialTreatmentPlans}
             canGenerateDocuments={canGenerateDocuments}
             initialProviders={initialProviders}

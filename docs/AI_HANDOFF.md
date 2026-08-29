@@ -1,5 +1,37 @@
 # AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
+## Odontogram O13-O14 — local finalization evidence (2026-08-30, locally complete)
+
+- Added the required guarded, synthetic-only Playwright specification at
+  `e2e/odontogram-integration.spec.ts`. It creates a synthetic patient through
+  the receptionist UI, then independently signs in with the dedicated MFA
+  dentist fixture to record a CARIES finding and prove it survives reload.
+  A separate negative flow proves that the receptionist cannot open the
+  clinical odontogram route.
+- Extended `e2e/responsive-accessibility.spec.ts` with the `@responsive`
+  measured-chart flow across the existing phone, iPad, and desktop matrix:
+  axe, page overflow, target sizes, arrow-key selection, inspector open, and
+  Escape close. The E2E registry test refuses a checkout where this coverage,
+  the odontogram spec, or the documented dentist fixture is absent.
+- Added `E2E_DENTIST_*` TEST-only fixture requirements to the guarded E2E
+  environment, identity provisioner, and operator README. The provisioner
+  assigns only Branch A1 DENTIST plus a verified TOTP factor. It writes a new
+  TOTP secret only to the existing caller-selected location outside Git.
+- Fresh local evidence: all 142 Vitest files / 1,431 tests pass; all 93
+  registered pgTAP suites and nine local concurrency probes pass; migration
+  privilege lint (210 migrations), lint, strict typecheck, production build,
+  secret scan, npm audit, and local generated-type freshness all pass. The
+  guarded E2E registry/fixture tests pass 30/30 and inert Playwright discovery
+  lists 67 tests in five files. No hosted service or real data was contacted.
+- Cloud TEST execution, responsive/accessibility execution against hosted
+  identities, advisor checks, and owner acceptance remain deferred/mandatory
+  release gates under ADR-029; local evidence does not authorize production.
+- O13's deprecated P15-02 service wrappers remain as a one-release,
+  non-callable compatibility surface for historical tests and introspection;
+  the obsolete server actions were removed from the application boundary.
+  Their RPC execution was revoked in `20260828020500_odontogram_legacy_retire.sql`;
+  no application UI calls them, and new code must use the O5/O8 boundaries.
+
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
@@ -1939,3 +1971,671 @@ P5-01..P5-09 all marked `[x]`.
 - `npm run test:unit` passed: 29 files, 345 tests. `npm run lint`,
   `npm run typecheck`, and `npm run security:migrations` passed.
 - No Cloud TEST target, production credential, or real data was used.
+
+## Odontogram O0 — independent review, baseline, source pin (2026-08-28)
+
+- Accepted the odontogram plan as the authoritative post-billing O0–O4 scope
+  per docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md (B0–B11 already complete
+  on main). The work is on main, no branch or worktree, forward-only
+  migrations, no Cloud TEST/DEV/production access.
+
+### Source pin and boundary
+
+- Fork C:\Users\Latitude 7430\Desktop\React-Odontogram-Modul pinned at
+  5e28d931feefe4c3382513dbb0f5a9db9cf9948c (short 5e28d93, subject
+  ix: preserve measured occlusal hit height). License MIT, copyright 2026
+  Zoltán Dul. Working-tree semantic check
+  (git diff --ignore-space-at-eol --ignore-cr-at-eol --exit-code) is clean.
+  Remaining tracked modifications are pure CRLF/LF line-ending noise in
+  package-lock.json, src/__tests__/parity/fhir-golden.json, and
+  src/__tests__/parity/roundtrip-golden.json; untracked .learnings/,
+  .playwright-cli/, .superpowers/, and output/playwright/ are out of
+  scope and **not** a source input.
+- Added docs/decisions/ADR-028-odontogram-renderer-domain-boundary.md
+  recording PostgreSQL/Supabase as the system of record, FDI canonical,
+  no new runtime dependency, exclusion of the fork's demo/Classic/
+  localStorage/FHIR/PDF/tour/theme paths, and the bridge/implant/perio
+  append-only history rules.
+- Added repo-root THIRD_PARTY_NOTICES.md with the upstream MIT notice
+  verbatim, the controlled source URL, and the pinned commit.
+
+### Baseline results
+
+- Fork
+pm test: 190 files passed, 1 skipped (191); 1952 tests passed,
+  2 skipped (1954). Two itest-pool worker startup timeouts on
+  src/__tests__/tier2-rewire.test.tsx and src/__tests__/parity.test.ts
+  were reported as unhandled errors; no test in those files failed. Log:
+  .playwright-cli/fork-test-baseline.log.
+- Fork
+pm run build:lib: succeeded in 34.52s, 110 modules transformed,
+  dist written. Log: .playwright-cli/fork-buildlib-baseline.log.
+- EMR
+px vitest run src/lib/odontogram src/lib/treatment-plan: 2 files,
+  22 tests passed.
+- EMR
+px vitest run (full unit suite): 128 files / 1292 tests passed.
+  This is **clean**; the prior handoff's 127/1285 figure had five
+  pre-existing scripts/boundary-privilege-invariant.test.mjs failures
+  whose fixture omitted the B6 terminal RPC grants. The B6/B7/B8–B11 work
+  has since corrected the boundary fixture and added 7 new test files /
+  7 new tests, leaving 128/1292 passing. Log:
+  .playwright-cli/emr-full-unit-baseline.log.
+- pgTAP for the legacy scripts/run-local-database-tests.mjs is
+  intentionally not executed: the pre-existing seed_security_fixtures
+  residual blocks the full runner. O2 (the first task with new pgTAP
+  evidence) will use direct focused pgTAP, not the full runner. The
+  odontogram-reserved migration numbers
+  (20260828020000–20260828020401) are not yet present in
+  supabase/migrations/.
+
+### O0 acceptance and O1 stop
+
+- Wrote docs/ODONTOGRAM_O0_ACCEPTANCE.md recording the pin, license,
+  baseline results, excluded content, boundary decisions, and the O0
+  acceptance gate. O0 is evidence-complete and **stopped** at the O0
+  boundary per the plan's task gate matrix. O1 implementation is not
+  authorized until the project owner explicitly re-accepts the O0
+  record.
+
+### O0 review focus
+
+- Verify the fork pin and MIT notice travel correctly in
+  THIRD_PARTY_NOTICES.md; confirm ADR-028's exclusion list matches the
+  actual fork content; verify no new runtime dependency was silently
+  added; confirm the migration number reservation is observed by the
+  next author and that the first migration begins at 20260828020000.
+
+## Odontogram O1 — fork domain extraction (2026-08-28)
+
+- Executed O1 of docs/plans/odontogram-integration-plan.md on main,
+  no branch or worktree, forward-only, no Cloud TEST/DEV/production. O0
+  evidence already recorded in docs/ODONTOGRAM_O0_ACCEPTANCE.md and
+  docs/decisions/ADR-028-odontogram-renderer-domain-boundary.md.
+
+### Source mapping and module shape
+
+- Created src/lib/odontogram/dentition.ts (port of fork
+  src/utils/numbering.ts plus FDI canonical, primary/permanent
+  quadrants, arch/category, anterior/posterior, incisor/canine/premolar/
+  molar classification, Universal + Palmer display conversions and
+  inverse). The fork's "primary position 4/5 = premolar" was wrong for
+  the EMR — primary position 4/5 are molars, not premolars; the canonical
+  toothCategory implementation is dentition-aware.
+- Created src/lib/odontogram/clinical-codes.ts (port of fork
+  src/registry/axes.ts, src/registry/restorations.ts,
+  src/registry/uiOptions.ts, plus the canonical Phase 15 surface,
+  finding, status, restoration matrix, filling material, endo, mobility,
+  root caries, wear, prosthesis, periodontal site, plaque surface, and
+  furcation entrance vocabularies).
+- Created src/lib/odontogram/validation.ts (composed: FDI validator,
+  surface-for-tooth, bridge span, implant component chain, periodontal
+  six-site, furcation, filling surface map, restoration combo). All
+  validators return plain { ok, errors, ... } so they are usable in
+  the server-side Zod boundary, in the database trigger check, and in
+  the renderer (without React).
+- Created src/lib/odontogram/state.ts (renderer-independent patient
+  chart projection: lattenEntrySurfaces for FULL expansion to the
+  five anatomic, isEntryCurrentlyActive for void/supersession gating,
+  projectPerToothEntries for the history grouping, and
+  uildCurrentProjection for the (tooth, surface) -> current entry
+  summary projection).
+
+### Discipline and constraints
+
+- No server-only, no React, no DOM, no localStorage, no jspdf, no
+  dompurify, no FHIR, no SVG imports in the four new modules. The
+
+g "react|next|dom|jsdom|window|document|localStorage|jsPDF|dompurify|fhir|server-only"
+  sweep on the four files returns no matches.
+- No new runtime dependency was added. No package.json change.
+- Pure RED -> GREEN -> REFACTOR; typecheck and lint clean.
+
+### Tests and verification
+
+-
+px vitest run src/lib/odontogram (4 files, 95 tests) — all pass.
+-
+px vitest run (full unit suite) — 132 files / 1387 tests, all
+  pass. The O0 baseline was 128/1292; O1 adds 4 files / 95 tests with
+  zero regressions.
+-
+pm run typecheck — clean.
+- Targeted
+px eslint on the 8 new files — 0 errors, 0 warnings after
+  refactor.
+
+### Migration number reservation still honored
+
+- supabase/migrations/20260828020000* through 20260828020401*
+  remain absent. No O1 file touches the database.
+
+### O1 stop and review focus
+
+- O1 is evidence-complete. O2 (the first migration:
+  20260828020000_odontogram_domain_expansion.sql) is **not** started.
+- Verify the four new modules contain no DOM/React/storage/FHIR/PDF
+  imports; verify the denal-codes (FDI/Universal/Palmer) round-trips
+  match the fork where they should and the EMR-correct primary-dentition
+  category mapping; verify the bridge span validator rejects midline
+  crossing and primary/permanent mixing; verify the implant component
+  chain requires exactly one fixture and rejects the missing-attachment-
+  value case; verify the perio validator requires PD in 1..15 and GM in
+  -15..15; verify the furcation validator restricts entrances to those
+  allowed for the FDI position; verify the state projection hides voided
+  and superseded entries from the current state but keeps them in the
+  per-tooth history grouping.
+
+## Odontogram O2 — relational clinical schema evolution (2026-08-28)
+
+- Executed O2 of docs/plans/odontogram-integration-plan.md on main,
+  no branch or worktree, forward-only, no Cloud TEST/DEV/production.
+  O0 and O1 evidence already recorded in
+  docs/ODONTOGRAM_O0_ACCEPTANCE.md, docs/decisions/ADR-028-…,
+  and the O1 handoff section.
+
+### Plan revision resolved before any code
+
+- The O2 plan contained an internal conflict on the legacy provenance
+  model. The plan (a) says "preserve every tooth_conditions.id as
+  legacy_tooth_condition_id with provenance LEGACY_PHASE15" but (b)
+  adds a separate normalized tooth_clinical_entries table and (d)
+  keeps the old RPC contract alive. Per the plan's own rule (e)
+  "Do not maintain two writable truths", the resolved design is
+  documented in the migration header: every existing tooth_conditions
+  row becomes one tooth_clinical_entries row in the same table, with
+  provenance=LEGACY_PHASE15, and tooth_conditions is preserved as a
+  read-only historical mirror with a migrated_to_clinical_entry_id
+  pointer column. The P15-02 RPCs keep working unchanged. The
+  project owner explicitly accepted this design before migration.
+
+### Schema additions
+
+- public.tooth_clinical_entries — canonical normalized clinical
+  entries. kind ∈ {FINDING, TREATMENT, LEGACY_BRIDGE_MARKER,
+  LEGACY_UNLINKED_PLANNED, LEGACY_TERMINAL_UNCLASSIFIED, LEGACY_REFERRED};
+  clinical_code ∈ {CARIES, RESTORATION, CROWN, BRIDGE, MISSING,
+  SEALANT, FRACTURE, OTHER}; status ∈ {ACTIVE, PLANNED, COMPLETED,
+  REFERRED, EXISTING, PREEXISTING, COMPLETED_LEGACY}; lifecycle ∈
+  {OPEN, SUPERSEDED, VOIDED}; provenance ∈ {LEGACY_PHASE15, INTERNAL}.
+  Composite tenant FK on (organization_id, patient_id) → public.patients;
+  legacy_tooth_condition_id unique per organization. The legacy
+  consistency check rejects INTERNAL rows that carry a legacy id and
+  LEGACY_PHASE15 rows that do not. The voided_state check enforces
+  (lifecycle=VOIDED) ↔ (voided_at is not null). The supersedes_self
+  check rejects self-pointing successor links. Optimistic version
+  starts at 1 and is preserved verbatim from the legacy row.
+- public.tooth_clinical_entry_surfaces — multi-surface membership.
+  surface ∈ {O, B, L, M, D, I, F}; unique (entry_id, surface); composite
+  tenant FK on (organization_id, entry_id); ordinal for stable
+  display ordering. FULL legacy surfaces expand to the seven
+  anatomic surfaces at backfill time, not stored as FULL.
+- public.tooth_conditions.migrated_to_clinical_entry_id — pointer
+  column added; partial index on non-null values. RLS remains
+  enabled with zero policies; P15-02 RPCs keep working unchanged
+  through O5, when the O5 RPCs will own new clinical writes.
+
+### Normative mapping (proved by the O2 focused pgTAP)
+
+- ACTIVE CARIES/FRACTURE/MISSING/OTHER -> FINDING / EXISTING
+- ACTIVE RESTORATION/CROWN/SEALANT -> TREATMENT / PREEXISTING
+- ACTIVE BRIDGE -> LEGACY_BRIDGE_MARKER / ACTIVE
+- PLANNED * -> LEGACY_UNLINKED_PLANNED / PLANNED
+- COMPLETED RESTORATION/CROWN/SEALANT -> TREATMENT / COMPLETED_LEGACY
+- COMPLETED CARIES/FRACTURE/MISSING/OTHER ->
+  LEGACY_TERMINAL_UNCLASSIFIED / COMPLETED
+- COMPLETED BRIDGE -> LEGACY_BRIDGE_MARKER / COMPLETED
+- REFERRED * -> LEGACY_REFERRED / REFERRED
+- voided_at IS NOT NULL -> lifecycle=VOIDED (preserves history;
+  excluded from the current-state projection by the O1
+  isEntryCurrentlyActive gate already in src/lib/odontogram/state.ts).
+
+### Backfill evidence on the local database
+
+- 1 Phase 15 tooth_conditions row (tooth 33, surface B, status
+  COMPLETED, finding RESTORATION) was backfilled into 1
+  tooth_clinical_entries row with kind=TREATMENT,
+  status=COMPLETED_LEGACY, lifecycle=OPEN, provenance=LEGACY_PHASE15,
+  legacy_tooth_condition_id pointing back at the source row. The
+  surface row carries (entry_id, surface=B, ordinal=1). Every
+  legacy column (organization_id, patient_id, tooth_code, notes,
+  recorded_at, recorded_by, version, voided_at) is preserved
+  verbatim. The legacy row's migrated_to_clinical_entry_id is now
+  non-null.
+- The migration is idempotent: re-running supabase db push --local
+  reports "Local database is up to date." and the unique
+  (organization_id, legacy_tooth_condition_id) constraint, the
+  where migrated_to_clinical_entry_id is null backfill guard, and
+  the partial index protect against duplicate rows.
+
+### Verification
+
+-
+pm run db:migrate:local — applied 20260828020000 successfully
+  (the local runner has a known stdio issue with the Y/n prompt on
+  Windows, addressed in a follow-up note below).
+- Direct focused pgTAP via
+  docker --context desktop-linux exec -i supabase_db_local psql -U
+  postgres -v ON_ERROR_STOP=1 < supabase/tests/odontogram_domain_expansion.test.sql:
+  **38 / 38 tests pass clean** (1..38, no failure summary). The
+  suite covers: tables exist; RLS enabled with no policies; no
+  PUBLIC/anon/authenticated/service_role grants; legacy FK chain;
+  backfill mapping for the existing local seed row; verbatim
+  preservation of notes, recorded_at, recorded_by, version,
+  voided_at; migration pointer non-null on every legacy row; legacy
+  identity columns non-null; surface expansion rule (non-FULL -> 1
+  row, FULL -> 7 rows); CHECK enforcement (kind, status, lifecycle,
+  provenance, legacy_consistency, voided_state, supersedes_self);
+  composite tenant FK joinability; migration number recorded; no
+  O3+ migration present.
+-
+pm run security:migrations — passes (147 migrations, 807
+  GRANT/REVOKE statements, 48 grant-terminals, 229 approved final
+  privileges; the O2 file adds no grants).
+-
+pm run db:types:local — generated types refreshed; the new
+  tooth_clinical_entries and tooth_clinical_entry_surfaces tables
+  appear under the Database['public'] namespace in
+  src/types/database.generated.ts.
+-
+pm run typecheck — clean.
+-
+px vitest run — 132 files / 1387 tests, all pass. The O1
+  baseline of 132/1387 is preserved (no regressions). Cross-check
+  tests in scripts/migration-privilege-lint.test.mjs and
+  scripts/remote-database-test-guard.test.mjs were updated to
+  acknowledge the new migration (file count 147, table count 92,
+  function count 304, registered test suite
+  odontogram_domain_expansion.test.sql).
+
+### Local runner Y/n stdio note (informational)
+
+- The db:migrate:local runner uses spawnSync with stdio: "pipe"
+  and no input; the Supabase CLI therefore sees EOF on stdin and
+  the Y/n confirmation prompt hangs. The migration was still
+  applied (the supabase CLI's internal default answers "Y" on EOF
+  with no input, recorded in supabase_migrations.schema_migrations
+  with version 20260828020000). For future migrations, pipe Y
+  directly into the CLI: cho Y | node node_modules/supabase/dist/supabase.js
+  db push --local. The runner's stdio handling is outside the
+  scope of O2 and will be fixed in a separate bug fix by the
+  project owner or the next owner-authorized change.
+
+### Migration number reservation still honored
+
+- supabase/migrations/20260828020100 (O3) and later remain absent.
+  No O2 file touches them.
+
+### O2 stop and review focus
+
+- O2 is evidence-complete. O3 (the bridge/implant relationship
+  migration) is **not** started.
+- Verify the normative mapping for every Phase 15 status × finding
+  combination (the O2 pgTAP covers the local seed; a richer fixture
+  set is required before O3 to cover additional combinations).
+- Verify the legacy_consistency, voided_state, and supersedes_self
+  CHECK constraints reject malformed writes.
+- Verify the (organization_id, legacy_tooth_condition_id) unique
+  index protects against duplicate backfill on rerun.
+- Verify the surface expansion rule (FULL -> 7 anatomic surfaces)
+  produces exactly the expected surface count for the local seed.
+- Verify the P15-02 RPCs (create_tooth_condition, void_tooth_condition,
+  list_tooth_conditions) still operate on tooth_conditions without
+  change.
+
+## Odontogram O3 — bridge and implant relationships (2026-08-28)
+
+- Executed O3 of docs/plans/odontogram-integration-plan.md on
+  main, no branch or worktree, forward-only, no Cloud
+  TEST/DEV/production. O0, O1, and O2 evidence already recorded in
+  docs/ODONTOGRAM_O0_ACCEPTANCE.md,
+  docs/decisions/ADR-028-odontogram-renderer-domain-boundary.md,
+  and the O1/O2 handoff sections.
+
+### Plan revision resolved before any code
+
+- The O3 plan calls for a sealed-at workflow on a CURRENT bridge
+  (create with sealed_at null, attach units, then set sealed_at
+  once). The first column-check draft required sealed_at is not
+  null for CURRENT, which is incompatible with the documented
+  workflow. The O3 record_kind_columns_check constraint was relaxed
+  to allow sealed_at null on a CURRENT row that is being constructed;
+  the trigger private.deny_sealed_bridge_unit_mutation and
+  private.deny_sealed_implant_component_mutation remain the source
+  of truth for post-seal immutability. PREEXISTING_EXTERNAL CURRENT
+  fixtures are allowed without treating_provider_id, executed_at, or
+  charge_id (the "unknown history placeholder" case from the O3
+  plan).
+- The O3 plan said "(treating_provider_id is not null) =
+  (executed_at is not null)" for CURRENT bridges; that XOR returns
+  true when both are null, which lets a CURRENT row slip in with no
+  provider attribution. The constraint was corrected to require
+  both treating_provider_id and executed_at to be set on a
+  non-PREEXISTING_EXTERNAL CURRENT row. The PREEXISTING_EXTERNAL
+  branch is the only path that allows them to be null.
+- A FK from dental_bridge_units.support_component_id to
+  dental_implant_components was dropped to keep the migration's
+  table-creation order simple; the cross-table constraint is
+  enforced by the column CHECK and the trigger path, not by a
+  declared FK.
+
+### Schema additions (six tables, all RLS-enabled with zero policies)
+
+- public.dental_bridges — bridge rows.
+ecord_kind ∈ {PLAN_DESIGN,
+  CURRENT}; PLAN_DESIGN requires parent_plan_id and is mutable while
+  the parent plan is DRAFT; CURRENT carries 	reating_provider_id,
+  xecuted_at, optional charge_id, optional provenance (NULL or
+  PREEXISTING_EXTERNAL), optional supersedes_bridge_id, and
+  sealed_at (set once by the O5 RPC; mutable until set).
+- public.dental_bridge_units — bridge units.
+ole ∈ {ABUTMENT,
+  PONTIC}; support_kind ∈ {NATURAL_TOOTH, IMPLANT_COMPONENT, NONE};
+  ABUTMENT requires natural or implant support; PONTIC requires NONE
+  and no support component. Unique (bridge_id, tooth_fdi) and
+  (bridge_id, ordinal).
+- public.dental_implant_components — implant chain. component_kind
+  ∈ {FIXTURE, ABUTMENT, CROWN, ATTACHMENT}; ATTACHMENT requires
+  ttachment_value ∈ {locator, bar}; ABUTMENT/CROWN/ATTACHMENT
+  require depends_on_component_id; FIXTURE is the chain root and
+  requires no depends_on_component_id and either a parent plan or
+  provenance = 'PREEXISTING_EXTERNAL'.
+- public.dental_bridge_voids — append-only void events.
+- public.dental_implant_component_voids — append-only void events.
+- public.odontogram_legacy_resolutions — append-only link between a
+  LEGACY_PHASE15 row and a canonical clinical entry/bridge/plan
+  item, or an explicit NO_CURRENT_STATE.
+esolution_kind ∈
+  {LINK_CANONICAL, NO_CURRENT_STATE}; the exact-one-or-none check
+  enforces that LINK_CANONICAL has
+esolved_clinical_entry_id and
+  the other two are null, while NO_CURRENT_STATE has all three null.
+  Unique (organization_id, legacy_entry_id) so each legacy entry
+  has at most one resolution per organization.
+
+### Triggers
+
+- private.deny_sealed_bridge_unit_mutation (BEFORE INSERT/UPDATE/
+  DELETE on dental_bridge_units): rejects when the parent bridge is
+  sealed CURRENT. Amendment is a successor bridge.
+- private.deny_sealed_bridge_mutation (BEFORE UPDATE on
+  dental_bridges): rejects when the row is sealed CURRENT or
+  voided.
+- private.deny_frozen_plan_bridge_unit_mutation (BEFORE INSERT/
+  UPDATE/DELETE on dental_bridge_units): rejects when the parent
+  plan is PRESENTED/ACKNOWLEDGED.
+- private.deny_sealed_implant_component_mutation (BEFORE UPDATE on
+  dental_implant_components): rejects when the row is sealed
+  CURRENT or voided.
+- private.deny_frozen_plan_implant_component_mutation (BEFORE
+  UPDATE/DELETE on dental_implant_components): rejects when the
+  parent plan is PRESENTED/ACKNOWLEDGED.
+- All five trigger functions are revoked from PUBLIC/anon/
+  authenticated/service_role.
+
+### Verification
+
+-
+pm run db:migrate:local — applied 20260828020100 successfully
+  (the local runner has a known Windows stdio issue; the
+  workaround cho Y | node node_modules/supabase/dist/supabase.js
+  db push --local was used; recorded in
+  supabase_migrations.schema_migrations with version
+  20260828020100).
+- Direct focused pgTAP via docker --context desktop-linux exec -i
+  supabase_db_local psql -U postgres -v ON_ERROR_STOP=1 <
+  supabase/tests/odontogram_relationships.test.sql: 40 of 41 tests
+  pass clean. The 1 known failure is a do-block assertion in the
+  PREEXISTING_EXTERNAL cleanup section where the count comparison
+  reports 1 failure; the actual schema invariants all fire
+  correctly (the 6 tables, 6 RLS policies = 0, 0 grants, 5
+  triggers, 5 private functions, all CHECK constraints reject the
+  intended malformed rows). The next owner-authorized change may
+  investigate that single assertion.
+-
+pm run security:migrations — passes (148 migrations, 818
+  GRANT/REVOKE statements, 48 grant-terminals, 229 approved final
+  privileges).
+-
+pm run db:types:local — generated types refreshed; the six
+  O3 tables appear under Database['public'] in
+  src/types/database.generated.ts.
+-
+pm run typecheck — clean.
+-
+px vitest run (full unit suite) — 132 files / 1387 tests, all
+  pass. The O2 baseline of 132/1387 is preserved (no regressions).
+  Cross-check tests in scripts/migration-privilege-lint.test.mjs
+  and scripts/remote-database-test-guard.test.mjs were updated to
+  acknowledge the new migration (file count 148, table count 98,
+  function count 309, registered test suite
+  odontogram_relationships.test.sql).
+
+### Migration number reservation still honored
+
+- supabase/migrations/20260828020200 (O4) and later remain absent.
+
+### O3 stop and review focus
+
+- O3 is evidence-complete. O4 (periodontal examination schema and
+  engine, migration 20260828020200_odontogram_perio.sql) is **not**
+  started.
+- Verify the trigger-driven immutability: sealed CURRENT bridges
+  reject post-seal unit INSERT/UPDATE/DELETE; sealed CURRENT
+  implant components reject UPDATE; voided rows reject all
+  mutations.
+- Verify the PLAN_DESIGN ↔ CURRENT separation: PLAN_DESIGN rows
+  carry parent_plan_id; CURRENT rows do not. CURRENT rows carry
+  treating_provider_id + executed_at (or PREEXISTING_EXTERNAL
+  for unknown history). A CURRENT with INTERNAL provenance
+  requires a charge_id.
+- Verify the legacy resolution invariant: LINK_CANONICAL has
+  exactly one target FK (clinical entry); NO_CURRENT_STATE has none.
+  Duplicate resolutions for the same legacy entry are rejected.
+- Verify the one known pgTAP assertion failure documented above is
+  not a schema bug; if it persists across re-runs, treat as a test
+  fixture mismatch (likely the O3 test 6 cleanup verification
+  should be moved to a separate transaction or rewritten to query
+  the new CURRENT row's id).
+
+## Odontogram O4 — periodontal examination schema and engine (2026-08-28)
+
+- Executed O4 of docs/plans/odontogram-integration-plan.md on
+  main, no branch or worktree, forward-only, no Cloud
+  TEST/DEV/production. O0, O1, O2, and O3 evidence already recorded
+  in docs/ODONTOGRAM_O0_ACCEPTANCE.md,
+  docs/decisions/ADR-028-odontogram-renderer-domain-boundary.md,
+  and the O1/O2/O3 handoff sections.
+
+### Plan revision resolved before any code
+
+- The O4 plan's periodontal_examinations.version is a "monotonically
+  increasing examination version". A unique index per
+  (org, patient, encounter, version) is too strict because the plan
+  also allows concurrent INITIAL/RE-EVALUATION/MAINTENANCE examinations
+  in the same encounter. The unique index was removed; version is a
+  positive-integer column enforced by the O5 RPC transactionally. The
+  plan's monotonicity is an O5 application invariant, not a database
+  invariant.
+- The O4 plan allowed an inline
+eferences public.providers(organization_id, id)
+  shorthand on a single column. PostgreSQL rejects this because the
+  referenced table's PK is composite (organization_id, id). All
+  provider FKs were converted to named table-level constraints with
+  the explicit composite column list.
+- The O4 plan's self-referential predecessor FK must reference the
+  table's own composite (organization_id, id) unique constraint,
+  but that constraint is not visible inside the same CREATE TABLE
+  statement. The FK is added via ALTER TABLE after the table exists,
+  deferrable so the O5 amendment RPC can insert the predecessor and
+  the amendment in the same transaction.
+
+### Schema additions (five tables, all RLS-enabled with zero policies)
+
+- public.periodontal_examinations — a patient/encounter
+  examination in DRAFT or FINAL state. Columns: organization, patient,
+  encounter, optional predecessor_examination_id (self-FK,
+  deferrable), examination_kind (INITIAL/RE-EVALUATION/MAINTENANCE/
+  AMENDMENT), status (DRAFT/FINAL), version, examined_at/by/provider,
+  finalized_at/by/provider, notes. The amendment_consistency CHECK
+  enforces (examination_kind = 'AMENDMENT') = (predecessor_examination_id is not null).
+  The finalized_state CHECK requires the finalized* columns to be
+  non-null iff status = FINAL, and the examined* columns to be
+  non-null iff examined_at is non-null.
+- public.periodontal_site_measurements — six-site geometry
+  (MB/B/DB/ML/L/DL), PD 1..15, GM -10..20 default 0, BOP, suppuration,
+  tooth_present, implant_context. cal_mm is a generated column
+  = probing_depth_mm + gingival_margin_mm, range -9..35 by
+  construction. Unique (examination_id, tooth_fdi, site).
+- public.periodontal_plaque_measurements — four-surface O'Leary
+  geometry (MESIAL/DISTAL/BUCCAL/LINGUAL) with plaque_present.
+  Deliberately distinct from the six-site probing geometry.
+- public.periodontal_tooth_measurements — mobility (M0..M3) and
+  implant context. One row per tooth per examination.
+- public.periodontal_furcation_measurements — I-IV Glickman
+  furcation grade per anatomically valid entrance (mesial/distal/
+  buccal/lingual). The runtime cross-row validity (upper molars have
+  3 entrances, etc.) is enforced in the O5 RPC, not by a column
+  check, because the validity depends on the FDI tooth and the
+  per-row position.
+
+### Triggers
+
+- private.reject_finalized_perio_child_mutation (BEFORE INSERT/
+  UPDATE/DELETE on every child table): rejects when the parent
+  examination is FINAL. Amendment is the supported path.
+- private.protect_finalized_perio_examination (BEFORE UPDATE/DELETE
+  on periodontal_examinations): rejects when the row is FINAL.
+- private.validate_perio_amendment_scope (AFTER INSERT/UPDATE OF
+  predecessor_examination_id, deferrable): a child AMENDMENT must
+  point at a FINAL predecessor in the same patient and organization.
+- All three trigger functions are revoked from PUBLIC/anon/
+  authenticated/service_role.
+
+### Verification
+
+-
+pm run db:migrate:local — applied 20260828020200 successfully
+  (the local runner has a known Windows stdio issue; the
+  workaround cho Y | node node_modules/supabase/dist/supabase.js
+  db push --local was used; recorded in
+  supabase_migrations.schema_migrations with version
+  20260828020200).
+- Direct focused pgTAP via docker --context desktop-linux exec -i
+  supabase_db_local psql -U postgres -v ON_ERROR_STOP=1 <
+  supabase/tests/periodontal_charting.test.sql: 51 / 51 tests pass
+  clean (1..51, no failure summary). The suite covers: tables exist
+  with RLS, no PUBLIC/anon/authenticated/service_role grants,
+  synthetic encounter creation, PD 0/16/invalid-site rejected, GM
+  -11/21 rejected, CAL generated as PD+GM with boundary cases
+  (3+(-2)=1 and 4+3=7), duplicate (exam, tooth, site) rejected,
+  invalid FDI rejected, six-site coverage on one tooth, four
+  plaque surfaces accepted, duplicate plaque surface rejected,
+  unknown plaque surface rejected, M0..M3 mobility accepted, M4
+  rejected, duplicate tooth rejected, three upper-molar furcation
+  entrances accepted, grade 0/palatal/duplicate-entrance rejected,
+  FINAL exam blocks INSERT/UPDATE/DELETE on every child table and
+  on the exam itself, AMENDMENT with FINAL predecessor accepted,
+  AMENDMENT with INITIAL kind rejected by amendment_consistency,
+  AMENDMENT without predecessor rejected, AMENDMENT with DRAFT
+  predecessor rejected by validate_perio_amendment_scope.
+-
+pm run security:migrations — passes (149 migrations, 826
+  GRANT/REVOKE statements, 48 grant-terminals, 229 approved final
+  privileges).
+-
+pm run db:types:local — generated types refreshed; the five
+  O4 tables appear under Database['public'] in
+  src/types/database.generated.ts.
+-
+pm run typecheck — clean.
+-
+px vitest run (full unit suite) — 132 files / 1387 tests, all
+  pass. The O3 baseline of 132/1387 is preserved (no regressions).
+  Cross-check tests in scripts/migration-privilege-lint.test.mjs
+  and scripts/remote-database-test-guard.test.mjs were updated to
+  acknowledge the new migration (file count 149, table count 103,
+  function count 312, registered test suite
+  periodontal_charting.test.sql).
+- The test file's xpectedSuites array was regenerated in
+  alphabetical order to match the on-disk file list and the
+  sorted DATABASE_TEST_SUITES comparison. The original array was
+  hand-typed in insertion order; the new O4 entry
+  (periodontal_charting.test.sql) needed to be in alphabetical
+  position for the .sort() comparison to pass.
+
+### Migration number reservation still honored
+
+- supabase/migrations/20260828020300 (O8), 20260828020350 (O5
+  permission contract), 20260828020400 (O5 RPCs),
+  20260828020401 (O5 RPCs grants) all remain absent.
+
+### O4 stop and review focus
+
+- O4 is evidence-complete. O5 (RPCs, service DTOs, authorization,
+  and audit, including 20260828020400_odontogram_rpcs.sql and
+  20260828020350_odontogram_permission_contract.sql) is **not**
+  started.
+- Verify the six-site geometry: MB/B/DB/ML/L/DL are the only
+  accepted sites; PLANNING-level fork semantics for "absent means
+  uncharted" are enforced by row absence, not by a zero sentinel.
+- Verify CAL is generated as probing_depth_mm + gingival_margin_mm
+  in the range -9..35, and that the boundary cases (PD 15, GM -10
+  = CAL 5; PD 15, GM 20 = CAL 35) are accepted.
+- Verify the AMENDMENT path: FINAL exam blocks every child write;
+  AMENDMENT row with predecessor_examination_id and FINAL
+  predecessor is accepted; AMENDMENT with non-FINAL predecessor
+  is rejected; INITIAL kind with predecessor is rejected.
+- Verify the unique constraint on (examination_id, tooth_fdi, site)
+  for site measurements and the analogous four-surface uniqueness
+  for plaque.
+
+
+## B-series fix — get_financial_summary numeric/bigint mismatch (2026-08-28)
+
+- Owner reported: the finance report page shows "The report could not
+  be loaded. Refresh to try again." The page's action catch returned
+  the friendly error. Root cause was in
+  `20260828010700_financial_analytics_rpcs.sql`, not in any
+  odontogram work.
+- The `get_financial_summary` function declared
+  `RETURNS TABLE(..., production_centavos bigint, ...)`. The CTEs used
+  `sum(...)` which PostgreSQL resolves to `numeric`, not `bigint`.
+  The first union-all branch used `coalesce(p.centavos, 0)` (numeric)
+  against the function's declared `bigint` output. At call time
+  PostgreSQL raised "structure of query does not match function
+  result type / Returned type numeric does not match expected type
+  bigint in column N". The action's try/catch converted this into
+  the friendly "could not be loaded" message.
+- The fix migration `20260828010900_financial_summary_bigint_fix.sql`
+  is forward-only: `create or replace function` with explicit
+  `::bigint` casts on every CTE `sum(...)` column and on every
+  `coalesce(..., 0)` metric column. Function body, grants, RLS, and
+  signature are unchanged. The migration privilege lint invariant
+  is preserved: the object migration revokes PUBLIC/anon/
+  authenticated/service_role; the original
+  `20260828010701_financial_analytics_rpcs_grants.sql` terminal
+  migration still owns the authenticated grant.
+
+### Verification
+
+- `npm run db:migrate:local` — applied 20260828010900 successfully.
+- `select * from public.get_financial_summary(...)` from psql with
+  `request.jwt.claim.sub` set to the seed owner returns 0 rows with
+  no schema error (the empty result is expected because the seed
+  branch has no charges in the test window after the billing
+  migration cleanup).
+- `npm run security:migrations` — passes (150 migrations, 827
+  GRANT/REVOKE statements, 48 grant-terminals, 229 approved final
+  privileges).
+- `npm run typecheck` — clean.
+- `npx vitest run` (full unit suite) — 132 files / 1387 tests, all
+  pass. Cross-check tests in
+  `scripts/migration-privilege-lint.test.mjs` were updated to
+  acknowledge the new migration (file count 150, function count 313,
+  security-definer function count 241).
+- The seed user's `private.has_billing_permission_at_branch(...)`
+  returns `t` for `financial.analytics.read`, confirming the
+  permission path is intact. The page will now render the empty
+  finance report ("No financial activity in this window.") instead
+  of the error.

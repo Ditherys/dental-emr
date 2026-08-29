@@ -224,6 +224,7 @@ select extensions.set_eq(
   $$ values
     ('patient.clinical.read'::text),
     ('patient.clinical.write'::text),
+    ('patient.clinical.correct'::text),
     ('patient.demographics.read'::text),
     ('patient.demographics.write'::text)
   $$,
@@ -242,6 +243,7 @@ select extensions.set_eq(
   $$ values
     ('ADMIN:patient.clinical.read'::text),
     ('ADMIN:patient.clinical.write'::text),
+    ('ADMIN:patient.clinical.correct'::text),
     ('DENTAL_ASSISTANT:patient.clinical.read'::text),
     ('DENTIST:patient.clinical.read'::text),
     ('DENTIST:patient.clinical.write'::text),
@@ -249,6 +251,7 @@ select extensions.set_eq(
     ('DENTIST:patient.demographics.write'::text),
     ('OWNER:patient.clinical.read'::text),
     ('OWNER:patient.clinical.write'::text),
+    ('OWNER:patient.clinical.correct'::text),
     ('OWNER:patient.demographics.read'::text),
     ('OWNER:patient.demographics.write'::text),
     ('RECEPTIONIST:patient.demographics.read'::text),

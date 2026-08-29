@@ -206,9 +206,34 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.list_patient_medical_records(uuid, uuid, text)",
     "public.create_prescription(uuid, uuid, jsonb)",
     "public.finalize_prescription(uuid, uuid, integer)",
-    "public.create_tooth_condition(uuid, uuid, text, text, text, text, text)",
-    "public.void_tooth_condition(uuid, uuid, integer, text)",
-    "public.list_tooth_conditions(uuid, uuid, boolean)",
+    "public.get_patient_odontogram(uuid,uuid)",
+    "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)",
+    "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
+    "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
+    "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
+    "public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)",
+    "public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+    "public.amend_current_bridge(uuid,uuid,integer,jsonb)",
+    "public.void_current_bridge(uuid,uuid,integer,text)",
+    "public.create_plan_implant_design(uuid,uuid,uuid,jsonb)",
+    "public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)",
+    "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
+    "public.amend_current_implant_component(uuid,uuid,integer,jsonb)",
+    "public.void_current_implant_component(uuid,uuid,integer,text)",
+    "public.create_periodontal_examination(uuid,uuid,uuid,text)",
+    "public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)",
+    "public.finalize_periodontal_examination(uuid,uuid,integer)",
+    "public.amend_periodontal_examination(uuid,uuid,uuid)",
+    "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
+    "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)",
+    "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
+    "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)",
+    "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)",
+    "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
+    "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+    "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)",
+    "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+    "public.resolve_odontogram_entity_patient(uuid,text,uuid)",
     "public.create_treatment_plan(uuid, uuid, text)",
     "public.update_treatment_plan(uuid, uuid, integer, text)",
     "public.present_treatment_plan(uuid, uuid, integer)",
@@ -1397,7 +1422,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(209);
+    expect(approved.size).toBe(234);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

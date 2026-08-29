@@ -1,0 +1,157 @@
+/* Scoped measured odontogram styles - no global leakage. */
+.odontogram-measured-root {
+  --odon-gap: 0.375rem;
+  --odon-tooth-radius: 0.5rem;
+  container-type: inline-size;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.odontogram-measured-root .odontogram-grid {
+  gap: var(--odon-gap);
+}
+
+.odontogram-measured-root .odontogram-tooth {
+  border-radius: var(--odon-tooth-radius);
+}
+
+.odontogram-measured-root .odontogram-asset[data-orientation="mirror"] {
+  transform: scaleX(-1);
+}
+
+.odontogram-measured-root .odontogram-asset[data-orientation="rotate"] {
+  transform: rotate(180deg);
+}
+
+.odontogram-measured-root .odontogram-asset[data-orientation="rotate-mirror"] {
+  transform: rotate(180deg) scaleX(-1);
+}
+
+.odontogram-measured-root .odontogram-tooth[data-selected="1"] {
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 0.35);
+}
+
+.odontogram-measured-root .odontogram-tooth:focus-visible {
+  outline: 2px solid rgb(37 99 235);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 0.3);
+}
+
+.odontogram-measured-root .odontogram-arch-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+/* Ensure horizontal scroll is contained, page never overflows */
+.odontogram-measured-root .overflow-x-auto {
+  overscroll-behavior-x: contain;
+}
+
+/* Text/pattern semantics: planned uses dashed border, already via utility but ensure visible */
+.odontogram-measured-root .odontogram-tooth[data-planned="1"] {
+  border-style: dashed;
+}
+
+/* Phone-safe: stacks arch grids vertically on very narrow viewport */
+@container (max-width: 420px) {
+  .odontogram-measured-root .odontogram-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Focus return highlight for inspector trigger */
+.odontogram-measured-root .odontogram-tooth:focus {
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* O12 print boundary: measured chart, legend, provider/date, planned  */
+/* No print button / no FHIR / no import-export is intentional.        */
+/* ------------------------------------------------------------------ */
+
+.odontogram-print-root {
+  break-inside: avoid;
+  color-scheme: light;
+}
+
+.odontogram-print-header {
+  break-after: avoid;
+}
+
+.odontogram-print-chart {
+  break-inside: avoid;
+}
+
+.odontogram-print-legend {
+  break-inside: avoid;
+}
+
+.odontogram-print-history {
+  break-inside: auto;
+}
+
+.odontogram-print-history li[data-planned="1"] {
+  border-left: 3px dashed rgb(245 158 11 / 0.7);
+  background: rgb(255 251 235);
+}
+
+.odontogram-print-history li[data-planned="0"] {
+  border-left: 3px solid rgb(16 185 129 / 0.7);
+}
+
+.odontogram-print-history li[data-voided="1"] {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+@media print {
+  .odontogram-measured-root {
+    border: 1px solid rgb(226 232 240) !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .odontogram-measured-root .odontogram-grid {
+    gap: var(--odon-gap);
+  }
+
+  .odontogram-print-root {
+    border: 1px solid rgb(226 232 240) !important;
+    box-shadow: none !important;
+    break-inside: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .odontogram-print-root .odontogram-print-header,
+  .odontogram-print-root .odontogram-print-legend,
+  .odontogram-print-root .odontogram-print-chart,
+  .odontogram-print-root .odontogram-print-history {
+    break-inside: avoid;
+  }
+
+  /* Hide screen-only affordances in print */
+  .odontogram-print-root button,
+  .odontogram-measured-root button:focus-visible {
+    box-shadow: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+    size: A4;
+  }
+
+  /* Distributions that would otherwise use background tints must still
+     distinguish current vs planned without relying solely on colour. */
+  .odontogram-print-history li[data-planned="1"] {
+    border-left-style: dashed !important;
+  }
+  .odontogram-print-history li[data-planned="0"] {
+    border-left-style: solid !important;
+  }
+}

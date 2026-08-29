@@ -150,7 +150,7 @@ describe("treatment plan plan-level actions", () => {
 
 describe("treatment plan item and alternative actions", () => {
   it("recheck clinical-write at the submitted branch", async () => {
-    const addItem = { actingBranchId: branchId, planId, expectedVersion: 1, description: "Composite filling on 26.", toothCode: "26", estimatedFee: 2500 };
+    const addItem = { actingBranchId: branchId, planId, expectedVersion: 1, description: "Composite filling on 26.", toothCode: "26", estimatedFeeCentavos: "250000" };
     await expect(addTreatmentPlanItemAction(addItem)).resolves.toEqual({ ok: true });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
     expect(addTreatmentPlanItem).toHaveBeenCalledWith(addItem);

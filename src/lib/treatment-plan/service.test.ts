@@ -72,8 +72,8 @@ describe("treatment-plan service input validation boundary", () => {
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "   " })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "I".repeat(2001) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", toothCode: "49" })).rejects.toBeInstanceOf(z.ZodError);
-    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFee: 1000000000 })).rejects.toBeInstanceOf(z.ZodError);
-    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFee: -1 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFeeCentavos: "100000000000" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFeeCentavos: "-1" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 1, description: "" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(removeTreatmentPlanItem({ actingBranchId: branchId, planId, itemId: "nope", expectedVersion: 1 })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanAlternative({ actingBranchId: branchId, planId, expectedVersion: 1, summary: "" })).rejects.toBeInstanceOf(z.ZodError);
@@ -126,24 +126,24 @@ describe("treatment-plan service RPC contract", () => {
 
   it("binds item add, update, and remove to their exact contracts", async () => {
     rpc.mockResolvedValueOnce({ data: [{ item_id: itemId, line_no: 1 }], error: null });
-    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500 })).resolves.toEqual({ itemId, lineNo: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_item", {
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000" })).resolves.toEqual({ itemId, lineNo: 1 });
+    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_item_centavos", {
       p_acting_branch_id: branchId, p_plan_id: planId, p_expected_version: 1, p_procedure_id: procedureId,
-      p_tooth_code: "26", p_description: "Composite filling on 26.", p_estimated_fee: 2500,
+      p_tooth_code: "26", p_description: "Composite filling on 26.", p_estimated_fee_centavos: "250000",
     });
 
     rpc.mockResolvedValueOnce({ data: [{ item_id: itemId, line_no: 1 }], error: null });
     await addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "No extras" });
-    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_item", {
+    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_item_centavos", {
       p_acting_branch_id: branchId, p_plan_id: planId, p_expected_version: 1, p_procedure_id: null,
-      p_tooth_code: null, p_description: "No extras", p_estimated_fee: null,
+      p_tooth_code: null, p_description: "No extras", p_estimated_fee_centavos: null,
     });
 
     rpc.mockResolvedValueOnce({ data: [{ item_id: itemId, line_no: 1 }], error: null });
-    await expect(updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 2, description: "Updated", estimatedFee: 3000 })).resolves.toEqual({ itemId, lineNo: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("update_treatment_plan_item", {
+    await expect(updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 2, description: "Updated", estimatedFeeCentavos: "300000" })).resolves.toEqual({ itemId, lineNo: 1 });
+    expect(rpc).toHaveBeenLastCalledWith("update_treatment_plan_item_centavos", {
       p_acting_branch_id: branchId, p_plan_id: planId, p_item_id: itemId, p_expected_version: 2,
-      p_procedure_id: null, p_tooth_code: null, p_description: "Updated", p_estimated_fee: 3000,
+      p_procedure_id: null, p_tooth_code: null, p_description: "Updated", p_estimated_fee_centavos: "300000",
     });
 
     rpc.mockResolvedValueOnce({ data: [{ item_id: itemId }], error: null });
@@ -188,7 +188,7 @@ describe("treatment-plan service RPC contract", () => {
   it("returns the detail jsonb in the bounded DTO shape", async () => {
     const detail = {
       plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt, updatedAt: createdAt, createdBy },
-      items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500, createdAt }],
+      items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", createdAt }],
       alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt }],
       discussions: [{ discussionId, discussedBy: createdBy, treatingProviderId: providerId, discussedAt: createdAt, context: "Case discussion", notes: "Patient prefers conservative care.", createdAt }],
       drawing: { drawingId, drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] }, updatedBy: createdBy, updatedAt: createdAt, version: 1 },

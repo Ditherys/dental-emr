@@ -1,7 +1,7 @@
 /**
- * Provisions the four synthetic E2E login identities on a disposable Cloud
+ * Provisions the five synthetic E2E login identities on a disposable Cloud
  * TEST project, wires them to the seeded synthetic tenant graph, and enrolls a
- * verified TOTP factor for the owner and the admin.
+ * verified TOTP factor for the owner, admin, and dentist.
  *
  * The seed's nine `auth.users` rows are deliberately non-login placeholders: no
  * password, no confirmed email, no factor. The Playwright flows need real
@@ -37,6 +37,8 @@
  *   $env:E2E_OWNER_PASSWORD='<generated>'
  *   $env:E2E_ADMIN_EMAIL='admin@p1e2e.example.test'
  *   $env:E2E_ADMIN_PASSWORD='<generated>'
+ *   $env:E2E_DENTIST_EMAIL='dentist@p1e2e.example.test'
+ *   $env:E2E_DENTIST_PASSWORD='<generated>'
  *   $env:E2E_BRANCH_USER_EMAIL='branch@p1e2e.example.test'
  *   $env:E2E_BRANCH_USER_PASSWORD='<generated>'
  *   $env:E2E_SUSPENDED_EMAIL='suspended@p1e2e.example.test'
@@ -411,11 +413,13 @@ try {
 
   const ownerEmail = required("E2E_OWNER_EMAIL");
   const adminEmail = required("E2E_ADMIN_EMAIL");
+  const dentistEmail = required("E2E_DENTIST_EMAIL");
   const branchUserEmail = required("E2E_BRANCH_USER_EMAIL");
   const suspendedEmail = required("E2E_SUSPENDED_EMAIL");
 
   const ownerRoleId = await resolveSystemRoleId(admin, "OWNER");
   const adminRoleId = await resolveSystemRoleId(admin, "ADMIN");
+  const dentistRoleId = await resolveSystemRoleId(admin, "DENTIST");
   const receptionistRoleId = await resolveSystemRoleId(admin, "RECEPTIONIST");
 
   // Owner: organization-wide OWNER, active, MFA-enrolled.
@@ -439,6 +443,19 @@ try {
   const adminMemberId = await upsertMembership(admin, adminUserId, "active");
   await ensureRole(admin, adminMemberId, adminRoleId, null);
   console.log("admin identity and organization-wide ADMIN assignment ready");
+
+  // Dentist: clinical writer scoped to Branch A1, MFA-enrolled. This is
+  // deliberately distinct from the owner/admin fixtures so O14 exercises the
+  // ordinary clinical role rather than an elevated administrative identity.
+  const dentistUserId = await upsertIdentity(
+    admin,
+    dentistEmail,
+    required("E2E_DENTIST_PASSWORD"),
+  );
+  const dentistMemberId = await upsertMembership(admin, dentistUserId, "active");
+  await ensureBranchAccess(admin, dentistMemberId);
+  await ensureRole(admin, dentistMemberId, dentistRoleId, BRANCH_A1);
+  console.log("dentist identity and Branch A1 DENTIST assignment ready");
 
   // Branch user: active, RECEPTIONIST scoped to Branch A1 only, no MFA.
   const branchUserId = await upsertIdentity(
@@ -488,6 +505,17 @@ try {
     newlyEnrolled.push("E2E_ADMIN_TOTP_SECRET");
   }
 
+  const dentistSecret = await ensureTotpFactor(
+    url,
+    publishableKey,
+    dentistEmail,
+    required("E2E_DENTIST_PASSWORD"),
+  );
+  if (dentistSecret) {
+    writeTotpSecret("E2E_DENTIST_TOTP_SECRET", dentistSecret);
+    newlyEnrolled.push("E2E_DENTIST_TOTP_SECRET");
+  }
+
   if (newlyEnrolled.length > 0) {
     console.log(
       `${newlyEnrolled.length} new TOTP factor(s) enrolled and verified; written to ${totpSecretOut}`,
@@ -497,7 +525,7 @@ try {
     );
   } else {
     console.log(
-      "owner and admin already hold verified TOTP factors; existing secrets left untouched",
+      "owner, admin, and dentist already hold verified TOTP factors; existing secrets left untouched",
     );
   }
 

@@ -253,7 +253,7 @@ describe("document service RPC contract", () => {
       template_version: "v1",
       data_snapshot: {
         plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt: generatedAt, updatedAt: generatedAt, createdBy: "c3000000-0000-0000-0000-000000000003" },
-        items: [{ itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500, createdAt: generatedAt }],
+        items: [{ itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", createdAt: generatedAt }],
         discussions: [{ discussionId: "c6000000-0000-0000-0000-000000000009", discussedBy: "c3000000-0000-0000-0000-000000000003", treatingProviderId: null, discussedAt: generatedAt, context: "Case discussion", createdAt: generatedAt }],
         drawing: { drawingId: "c6000000-0000-0000-0000-00000000000a", drawing: { strokes: [] }, updatedBy: "c3000000-0000-0000-0000-000000000003", updatedAt: generatedAt, version: 1 },
       },

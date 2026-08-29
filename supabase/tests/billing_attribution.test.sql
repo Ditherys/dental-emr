@@ -102,5 +102,6 @@ select extensions.throws_ok(
   'a duplicate idempotency key cannot replay a correction'
 );
 
-select * from extensions.finish();
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
+select case when count(*) = 0 then 'P1_TEST_PASS' else string_agg(finish, E'\n') end as p1_test_result from test_failures;
 rollback;

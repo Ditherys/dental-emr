@@ -195,8 +195,8 @@ describe("renderDocumentHtml", () => {
           createdBy: "c3000000-0000-0000-0000-000000000003",
         },
         items: [
-          { itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFee: 2500, createdAt: "2026-08-27T09:00:00+00:00" },
-          { itemId: "c6000000-0000-0000-0000-000000000007", lineNo: 2, procedureId: null, toothCode: "27", description: "Crown on 27.", estimatedFee: null, createdAt: "2026-08-27T09:00:00+00:00" },
+          { itemId: "c6000000-0000-0000-0000-000000000006", lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", createdAt: "2026-08-27T09:00:00+00:00" },
+          { itemId: "c6000000-0000-0000-0000-000000000007", lineNo: 2, procedureId: null, toothCode: "27", description: "Crown on 27.", estimatedFeeCentavos: null, createdAt: "2026-08-27T09:00:00+00:00" },
         ],
         alternatives: [
           { alternativeId: "c6000000-0000-0000-0000-000000000008", alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt: "2026-08-27T09:00:00+00:00" },

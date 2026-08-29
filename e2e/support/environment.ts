@@ -133,6 +133,11 @@ export function loadE2EEnvironment() {
       password: required("E2E_ADMIN_PASSWORD"),
       totpSecret: required("E2E_ADMIN_TOTP_SECRET"),
     },
+    dentist: {
+      email: required("E2E_DENTIST_EMAIL"),
+      password: required("E2E_DENTIST_PASSWORD"),
+      totpSecret: required("E2E_DENTIST_TOTP_SECRET"),
+    },
     branchUser: {
       email: required("E2E_BRANCH_USER_EMAIL"),
       password: required("E2E_BRANCH_USER_PASSWORD"),

@@ -26,17 +26,17 @@ Read the smallest relevant set before reviewing or implementing:
 Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
 2026-08-19. Execute only its ordered task/checkpoint currently authorized.
 
-## Current Phase: Billing ledger and odontogram foundation — Accepted, bounded execution
+## Current Phase: Odontogram integration — Local completion authorized
 
-The project owner accepted the billing and odontogram plans on 2026-08-28, as
-recorded in `docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`. Execute billing
-tasks B0-B11 first, then odontogram tasks O0-O4 only, on `main` without a
-branch or worktree. ADR-027 extends the guarded local verification boundary to
-this scope and authorizes forward-only local migrations; it explicitly
-prohibits using `db:reset:local` for it. No Cloud TEST activity is authorized
-before O4, and O5 onward requires separate owner authorization. Guarded Cloud
-TEST remains mandatory before production deployment; local acceptance never
-authorizes production provider or patient use.
+The project owner accepted billing B0-B11 and odontogram O0-O4 on 2026-08-28,
+then explicitly re-accepted O0 and authorized local completion of O1-O14 on
+2026-08-29 in ADR-029. Execute on `main` without a branch or worktree. Use only
+guarded forward-only local migrations; `db:reset:local` is prohibited. Cloud
+TEST is deferred, not waived. Until the separately authorized hosted database,
+E2E, responsive/accessibility, advisor, and security gates pass, O14 may be
+recorded only as locally implemented/verified with Cloud TEST and final release
+acceptance pending. Local completion never authorizes production deployment or
+real provider/patient use.
 
 Do not begin a later product phase until its bounded plan has been independently
 reviewed and explicitly approved.

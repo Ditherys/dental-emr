@@ -96,21 +96,21 @@ export async function acknowledgeTreatmentPlan(input: unknown): Promise<Treatmen
 
 export async function addTreatmentPlanItem(input: unknown): Promise<TreatmentPlanItemMutationResult> {
   const value = addTreatmentPlanItemInputSchema.parse(input);
-  const row = treatmentPlanItemMutationRowSchema.parse(firstRow(await callRpc("add_treatment_plan_item", {
+  const row = treatmentPlanItemMutationRowSchema.parse(firstRow(await callRpc("add_treatment_plan_item_centavos", {
     p_acting_branch_id: value.actingBranchId,
     p_plan_id: value.planId,
     p_expected_version: value.expectedVersion,
     p_procedure_id: value.procedureId ?? null,
     p_tooth_code: value.toothCode ?? null,
     p_description: value.description,
-    p_estimated_fee: value.estimatedFee ?? null,
+    p_estimated_fee_centavos: value.estimatedFeeCentavos ?? null,
   })));
   return { itemId: row.item_id, lineNo: row.line_no };
 }
 
 export async function updateTreatmentPlanItem(input: unknown): Promise<TreatmentPlanItemMutationResult> {
   const value = updateTreatmentPlanItemInputSchema.parse(input);
-  const row = treatmentPlanItemMutationRowSchema.parse(firstRow(await callRpc("update_treatment_plan_item", {
+  const row = treatmentPlanItemMutationRowSchema.parse(firstRow(await callRpc("update_treatment_plan_item_centavos", {
     p_acting_branch_id: value.actingBranchId,
     p_plan_id: value.planId,
     p_item_id: value.itemId,
@@ -118,7 +118,7 @@ export async function updateTreatmentPlanItem(input: unknown): Promise<Treatment
     p_procedure_id: value.procedureId ?? null,
     p_tooth_code: value.toothCode ?? null,
     p_description: value.description,
-    p_estimated_fee: value.estimatedFee ?? null,
+    p_estimated_fee_centavos: value.estimatedFeeCentavos ?? null,
   })));
   return { itemId: row.item_id, lineNo: row.line_no };
 }

@@ -40,6 +40,7 @@ export const foundationPermissionCodes = [
   "compensation.manage",
   "compensation.own.read",
   "financial.analytics.read",
+  "patient.clinical.correct",
 ] as const;
 
 export type PermissionCode = (typeof foundationPermissionCodes)[number];

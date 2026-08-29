@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatPhpCentavos } from "@/lib/billing/money";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan, TreatmentPlanDetail, TreatmentPlanDrawingCanvas, TreatmentPlanItem, TreatmentPlanStatus } from "@/lib/treatment-plan/types";
 
@@ -172,7 +173,7 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
       procedureId: null,
       toothCode: nullableString(data, "toothCode"),
       description: requiredString(data, "description"),
-      estimatedFee: nullableNumeric(data, "estimatedFee"),
+      estimatedFeeCentavos: nullablePesoToCentavos(data, "estimatedFee"),
     };
     setSaving(true);
     try {
@@ -276,11 +277,14 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
   </div>;
 }
 
-function nullableNumeric(form: FormData, name: string): number | null {
+function nullablePesoToCentavos(form: FormData, name: string): string | null {
   const value = String(form.get(name) ?? "").trim();
   if (value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  const match = /^(0|[1-9][0-9]*)(?:\.([0-9]{1,2}))?$/.exec(value);
+  if (!match) return value;
+  const pesos = BigInt(match[1]);
+  const fractionalCentavos = BigInt((match[2] ?? "").padEnd(2, "0") || "0");
+  return (pesos * BigInt(100) + fractionalCentavos).toString();
 }
 
 function ItemRow({ item, editable, saving, openItem, requestRemoveItem, canReadBilling, initialSummary, patientId, actingBranchId }: {
@@ -294,7 +298,7 @@ function ItemRow({ item, editable, saving, openItem, requestRemoveItem, canReadB
   patientId: string;
   actingBranchId: string;
 }) {
-  return <tr className="border-b last:border-0 align-top"><td className="px-3 py-3 tabular-nums">{item.lineNo}</td><td className="px-3 py-3">{item.toothCode ?? "—"}</td><td className="px-3 py-3"><p>{item.description}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</td><td className="px-3 py-3 tabular-nums">{item.estimatedFee === null ? "—" : formatFee(item.estimatedFee)}</td>{editable && <td className="px-3 py-3"><div className="flex gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /> <span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div></td>}</tr>;
+  return <tr className="border-b last:border-0 align-top"><td className="px-3 py-3 tabular-nums">{item.lineNo}</td><td className="px-3 py-3">{item.toothCode ?? "—"}</td><td className="px-3 py-3"><p>{item.description}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</td><td className="px-3 py-3 tabular-nums">{formatEstimate(item.estimatedFeeCentavos)}</td>{editable && <td className="px-3 py-3"><div className="flex gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /> <span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div></td>}</tr>;
 }
 
 function ItemCard({ item, editable, saving, openItem, requestRemoveItem, canReadBilling, initialSummary, patientId, actingBranchId }: {
@@ -308,7 +312,7 @@ function ItemCard({ item, editable, saving, openItem, requestRemoveItem, canRead
   patientId: string;
   actingBranchId: string;
 }) {
-  return <li className="py-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{item.description}</p>{editable && <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /><span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div>}</div><p className="mt-1 text-xs text-muted-foreground">Line {item.lineNo}{item.toothCode ? ` · Tooth ${item.toothCode}` : ""} · {item.estimatedFee === null ? "No fee" : formatFee(item.estimatedFee)}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</li>;
+  return <li className="py-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{item.description}</p>{editable && <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /><span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div>}</div><p className="mt-1 text-xs text-muted-foreground">Line {item.lineNo}{item.toothCode ? ` · Tooth ${item.toothCode}` : ""} · {item.estimatedFeeCentavos === null ? "No fee" : formatEstimate(item.estimatedFeeCentavos)}</p>{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} initialSummary={initialSummary} />}</li>;
 }
 
 function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, providerName, back, editTitle, requestPresent, requestAcknowledge, openItem, openAlternative, openDiscussion, requestRemoveItem, saveDrawing, printPlan, canReadBilling = false, initialProcedureSummaries = {}, patientId, actingBranchId }: {
@@ -377,8 +381,16 @@ function PlanDetailView({ plan, canWriteClinical, canGenerateDocuments, saving, 
   </div>;
 }
 
-function formatFee(value: number) {
-  return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 }).format(value);
+function formatEstimate(value: string | null) {
+  return value === null ? "—" : formatPhpCentavos(BigInt(value));
+}
+
+function centavosToPesoInput(value: string | null | undefined) {
+  if (value == null) return "";
+  const centavos = BigInt(value);
+  const pesos = centavos / BigInt(100);
+  const fraction = (centavos % BigInt(100)).toString().padStart(2, "0");
+  return fraction === "00" ? pesos.toString() : `${pesos}.${fraction}`;
 }
 
 type Stroke = { points: { x: number; y: number }[] };
@@ -460,7 +472,7 @@ function CreatePlanDialog({ saving, error, close, save }: { saving: boolean; err
 function ItemDialog({ state, saving, error, close, save }: { state: { plan: TreatmentPlanDetail; item?: TreatmentPlanItem }; saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {
   const item = state.item;
   const isEdit = Boolean(item);
-  return <Dialog open onOpenChange={(next) => !next && !saving && close()}><DialogContent><DialogHeader><DialogTitle>{isEdit ? "Edit item" : "Add item"}</DialogTitle><DialogDescription>Line items are appended in order on a DRAFT plan. The estimated fee is an estimate only.</DialogDescription></DialogHeader><form action={save} className="grid gap-4">{error && <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p>}<label className="grid gap-1.5 text-sm font-medium">Description<textarea name="description" required maxLength={2000} defaultValue={item?.description ?? ""} className={textareaClass} /></label><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5 text-sm font-medium">Tooth (FDI)<input name="toothCode" maxLength={2} pattern="(1[1-8]|2[1-8]|3[1-8]|4[1-8]|5[1-5]|6[1-5]|7[1-5]|8[1-5])" defaultValue={item?.toothCode ?? ""} className={inputClass} /></label><label className="grid gap-1.5 text-sm font-medium">Estimated fee<input name="estimatedFee" type="number" min={0} max={999999999} step="0.01" defaultValue={item?.estimatedFee === null ? "" : item?.estimatedFee} className={inputClass} /></label></div><DialogFooter><Button type="button" variant="outline" onClick={close} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <LoaderCircle className="animate-spin" aria-hidden="true" />}{isEdit ? "Save changes" : "Add item"}</Button></DialogFooter></form></DialogContent></Dialog>;
+  return <Dialog open onOpenChange={(next) => !next && !saving && close()}><DialogContent><DialogHeader><DialogTitle>{isEdit ? "Edit item" : "Add item"}</DialogTitle><DialogDescription>Line items are appended in order on a DRAFT plan. The estimated fee is an estimate only.</DialogDescription></DialogHeader><form action={save} className="grid gap-4">{error && <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p>}<label className="grid gap-1.5 text-sm font-medium">Description<textarea name="description" required maxLength={2000} defaultValue={item?.description ?? ""} className={textareaClass} /></label><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5 text-sm font-medium">Tooth (FDI)<input name="toothCode" maxLength={2} pattern="(1[1-8]|2[1-8]|3[1-8]|4[1-8]|5[1-5]|6[1-5]|7[1-5]|8[1-5])" defaultValue={item?.toothCode ?? ""} className={inputClass} /></label><label className="grid gap-1.5 text-sm font-medium">Estimated fee<input name="estimatedFee" type="number" min={0} max={999999999.99} step="0.01" defaultValue={centavosToPesoInput(item?.estimatedFeeCentavos)} className={inputClass} /></label></div><DialogFooter><Button type="button" variant="outline" onClick={close} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <LoaderCircle className="animate-spin" aria-hidden="true" />}{isEdit ? "Save changes" : "Add item"}</Button></DialogFooter></form></DialogContent></Dialog>;
 }
 
 function AlternativeDialog({ saving, error, close, save }: { saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {

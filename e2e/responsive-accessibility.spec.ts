@@ -3,6 +3,11 @@ import { expect, type Page, test } from "@playwright/test";
 
 import { loadE2EEnvironment } from "./support/environment";
 import { signInOwnerWithTotp } from "./support/login";
+import {
+  createSyntheticOdontogramPatient,
+  openOdontogram,
+  signInDentistWithTotp,
+} from "./support/odontogram";
 
 /**
  * R9 — responsive and accessibility verification across the supported form
@@ -382,4 +387,32 @@ test("@responsive the account and security screen is accessible", async ({
     "account and security form",
     'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea',
   );
+});
+
+test("@responsive the odontogram is keyboard and touch safe", async ({ page }, testInfo) => {
+  const patientId = await createSyntheticOdontogramPatient(
+    page,
+    environment,
+    `responsive${environment.runId}${testInfo.retry}${Date.now()}`,
+  );
+
+  await signInDentistWithTotp(page, environment);
+  await openOdontogram(page, patientId, environment);
+
+  await expectNoAxeViolations(page, "odontogram");
+  await expectNoHorizontalOverflow(page, "odontogram");
+  await expectUsableTargets(page, "odontogram");
+  await expectCoarsePointerTargets(page, "odontogram", 'button[data-fdi]');
+
+  await page.locator('button[data-fdi="16"]').focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('button[data-fdi="15"]')).toBeFocused();
+  await page.keyboard.press("Enter");
+  const inspectorDialog = page
+    .getByRole("dialog")
+    .filter({ has: page.getByTestId("tooth-inspector") });
+  await expect(inspectorDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(inspectorDialog).toBeHidden();
+  await expect(page.locator('button[data-fdi="15"]')).toBeFocused();
 });
