@@ -1,5 +1,35 @@
 # AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
+## Sidebar and information alignment Tasks 1–6 — local review evidence (2026-08-30)
+
+- Checkpointed sequence: `1d9739e` adds the paired description-row primitive;
+  `157c7de` supports persistent shell controls; `633699b` moves branch context
+  and account controls into the sidebar/drawer; `c050a66` makes dashboard
+  summary values compact; `55ee4aa` replaces finance KPI cards with paired
+  rows. Task 6 adds only `e2e/responsive-accessibility.spec.ts` contracts for
+  branch/account placement at the 1280px shell breakpoint and for dashboard/
+  finance paired-summary geometry.
+- Focused UI Vitest passed 6 files / 23 tests. `npm run lint`, `npm run
+  typecheck`, `npm run test:unit`, `npm run build`, and `git diff --check` all
+  passed locally. The first build invocation did not return a terminal result
+  and left Next's lock briefly present; after it cleared, a fresh invocation
+  completed successfully.
+- `npm run test:e2e:list` listed 80 tests in five files under process-local,
+  synthetic discovery values only; this performs no browser execution or hosted
+  contact. An unconfigured invocation correctly refused discovery because
+  `APP_ENVIRONMENT` was absent. Authenticated Cloud TEST execution was not
+  authorized and was not run.
+- The requested source sweep found dashboard/finance summary violations gone.
+  Existing patient facts, appointment/branch/procedure/intake/file facts retain
+  local label/value grouping; table/ledger/schedule cells and row-end statuses/
+  actions retain intentional alignment. Marketing and unaccepted odontogram/
+  periodontal UI remain out of scope. Cloud TEST responsive/accessibility
+  browser verification remains a required release gate.
+- This checkpoint changed no tenancy/RLS/server authorization, branch model,
+  analytics math, or finance math. No server action, database migration,
+  dependency, current odontogram file, secret, patient content, token, or
+  production identifier was added.
+
 ## Odontogram O13-O14 — local finalization evidence (2026-08-30, locally complete)
 
 - Added the required guarded, synthetic-only Playwright specification at

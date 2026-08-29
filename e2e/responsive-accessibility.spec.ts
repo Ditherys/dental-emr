@@ -60,6 +60,32 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(overflow, `horizontal overflow on ${label}`).toBeLessThanOrEqual(1);
 }
 
+async function expectCompactPairedSummary(
+  page: Page,
+  label: string,
+  context: string,
+) {
+  const list = page.locator('dl[data-layout="paired"]').first();
+  const row = list.locator("div", {
+    has: page.locator("dt", { hasText: label }),
+  });
+  const listBox = await list.boundingBox();
+  const labelBox = await row.locator("dt").boundingBox();
+  const valueBox = await row.locator("dd").boundingBox();
+
+  expect(listBox, `${context}: paired list is not rendered`).not.toBeNull();
+  expect(labelBox, `${context}: label is not rendered`).not.toBeNull();
+  expect(valueBox, `${context}: value is not rendered`).not.toBeNull();
+  expect(
+    listBox!.width,
+    `${context}: list exceeds max-w-xl`,
+  ).toBeLessThanOrEqual(577);
+  expect(
+    valueBox!.x - labelBox!.x,
+    `${context}: value is too far from its label`,
+  ).toBeLessThan(320);
+}
+
 async function expectUsableTargets(page: Page, label: string) {
   const undersized = await page.evaluate((minimum) => {
     // WCAG 2.2 target size is the *activation* area, not the painted control.
@@ -260,6 +286,72 @@ test("@responsive the authenticated shell is accessible on every form factor", a
   await expectNoAxeViolations(page, "dashboard");
   await expectNoHorizontalOverflow(page, "dashboard");
   await expectUsableTargets(page, "dashboard");
+});
+
+test("@responsive @shell branch and account follow the active shell composition", async ({
+  page,
+}, testInfo) => {
+  await loginOwner(page);
+
+  const width = page.viewportSize()?.width ?? 0;
+  const sidebar = page.getByRole("complementary", {
+    name: "Application sidebar",
+  });
+  const topbar = page.getByRole("banner");
+
+  if (width >= 1280) {
+    await expect(sidebar).toBeVisible();
+    await expect(topbar).toBeHidden();
+    await expect(
+      sidebar.getByRole("button", { name: /Branch context:/ }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("button", { name: "Open account menu" }),
+    ).toBeVisible();
+
+    await sidebar.getByRole("button", { name: "Collapse sidebar" }).click();
+    await expect(
+      sidebar.getByRole("button", { name: /Branch context:/ }),
+    ).toBeVisible();
+    await expect(
+      sidebar.getByRole("button", { name: "Open account menu" }),
+    ).toBeVisible();
+  } else {
+    await expect(sidebar).toBeHidden();
+    await expect(topbar).toBeVisible();
+    await topbar
+      .getByRole("button", { name: "Open primary navigation" })
+      .click();
+
+    const drawer = page.locator('[data-slot="sheet-content"]');
+    await expect(
+      drawer.getByRole("button", { name: /Branch context:/ }),
+    ).toBeVisible();
+    await expect(
+      drawer.getByRole("button", { name: "Open account menu" }),
+    ).toBeVisible();
+  }
+
+  await expectNoHorizontalOverflow(
+    page,
+    `shell composition (${testInfo.project.name})`,
+  );
+});
+
+test("@responsive dashboard and finance keep summary values close to labels", async ({
+  page,
+}) => {
+  await loginOwner(page);
+
+  await expectCompactPairedSummary(page, "Appointments", "dashboard summary");
+  await expectNoHorizontalOverflow(page, "dashboard paired summary");
+
+  await page.goto("/reports/finance");
+  await expect(
+    page.getByRole("heading", { name: "Finance report" }),
+  ).toBeVisible();
+  await expectCompactPairedSummary(page, "Production", "finance summary");
+  await expectNoHorizontalOverflow(page, "finance paired summary");
 });
 
 test("@responsive navigation is reachable without a pointer on every form factor", async ({
