@@ -205,6 +205,42 @@ describe("branch selector", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("opens and dismisses the topbar branch menu from the keyboard", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <BranchContextProvider model={organizationWideModel}>
+        <BranchSelector presentation="topbar" />
+      </BranchContextProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Branch context: All Branches",
+    });
+    trigger.focus();
+
+    await user.keyboard("{Enter}");
+
+    expect(
+      screen.getByRole("menuitemradio", { name: /All Branches/ }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("menuitemradio", { name: "Demo Main" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("menuitemradio", { name: "Demo Second" }),
+    ).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("menuitemradio", { name: /All Branches/ }),
+      ).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
+  });
+
   it("keeps the branch menu accessible in the collapsed rail", () => {
     render(
       <BranchContextProvider model={branchScopedModel}>

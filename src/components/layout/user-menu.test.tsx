@@ -50,6 +50,30 @@ describe("UserMenu", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("opens and dismisses the topbar account menu from the keyboard", async () => {
+    const user = userEvent.setup();
+    render(<UserMenu presentation="topbar" />);
+
+    const trigger = screen.getByRole("button", { name: "Open account menu" });
+    trigger.focus();
+
+    await user.keyboard("{Enter}");
+
+    expect(
+      screen.getByRole("menuitem", { name: "Account & security" }),
+    ).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("menuitem", { name: "Account & security" }),
+      ).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
+  });
+
   it("opens and dismisses the collapsed-rail account menu from the keyboard", async () => {
     const user = userEvent.setup();
     render(<UserMenu presentation="rail" />);
