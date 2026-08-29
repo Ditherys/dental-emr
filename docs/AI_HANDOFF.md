@@ -6,14 +6,14 @@
   `157c7de` supports persistent shell controls; `633699b` moves branch context
   and account controls into the sidebar/drawer; `c050a66` makes dashboard
   summary values compact; `55ee4aa` replaces finance KPI cards with paired
-  rows. Task 6 adds only `e2e/responsive-accessibility.spec.ts` contracts for
-  branch/account placement at the 1280px shell breakpoint and for dashboard/
-  finance paired-summary geometry.
-- Focused UI Vitest passed 6 files / 23 tests. `npm run lint`, `npm run
-  typecheck`, `npm run test:unit`, `npm run build`, and `git diff --check` all
-  passed locally. The first build invocation did not return a terminal result
-  and left Next's lock briefly present; after it cleared, a fresh invocation
-  completed successfully.
+  rows; `017468d` adds responsive shell/summary contracts; `df75b10` closes
+  the mobile drawer on account navigation and adds real shell keyboard and
+  long-name coverage; `289c45f` adds the final compact-topbar keyboard tests.
+- The final focused UI suite passed 7 files / 34 tests. `npm run lint`, `npm
+  run typecheck`, `npm run test:unit` (146 files / 1,453 tests), `npm run build`,
+  and `git diff --check` all passed locally. The first build invocation did not
+  return a terminal result and left Next's lock briefly present; after it
+  cleared, a fresh invocation completed successfully.
 - `npm run test:e2e:list` listed 80 tests in five files under process-local,
   synthetic discovery values only; this performs no browser execution or hosted
   contact. An unconfigured invocation correctly refused discovery because
@@ -28,7 +28,9 @@
 - This checkpoint changed no tenancy/RLS/server authorization, branch model,
   analytics math, or finance math. No server action, database migration,
   dependency, current odontogram file, secret, patient content, token, or
-  production identifier was added.
+  production identifier was added. The final UI/test files include
+  `src/components/layout/mobile-navigation.test.tsx`; no production domain
+  semantics changed in the review-fix commits.
 
 ## Odontogram O13-O14 — local finalization evidence (2026-08-30, locally complete)
 
