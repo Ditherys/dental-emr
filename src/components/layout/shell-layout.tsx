@@ -10,7 +10,6 @@ import { DesktopNavigation } from "@/components/layout/desktop-navigation";
 import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { UserMenu } from "@/components/layout/user-menu";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { NavigationHref } from "@/components/layout/navigation-items";
 
@@ -80,54 +79,76 @@ export function ShellLayout({
           </Button>
         </div>
 
-        {!collapsed && (
-          <>
-            <div className="shrink-0 px-4 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
-                Current organization
-              </p>
-              <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground">
-                {organizationName}
-              </p>
-            </div>
-            <Separator />
-          </>
-        )}
+        <div
+          className={cn(
+            "shrink-0 border-b",
+            collapsed
+              ? "grid place-items-center p-2"
+              : "space-y-2 px-3 py-3",
+          )}
+        >
+          {collapsed ? (
+            <BranchSelector presentation="rail" />
+          ) : (
+            <>
+              <div className="min-w-0 px-1">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Current organization
+                </p>
+                <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground">
+                  {organizationName}
+                </p>
+              </div>
+              <BranchSelector presentation="sidebar" />
+            </>
+          )}
+        </div>
 
-        <div className={cn("min-h-0 flex-1 overflow-y-auto", collapsed ? "p-2" : "p-3")}>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto",
+            collapsed ? "p-2" : "p-3",
+          )}
+        >
           <DesktopNavigation
             visibleHrefs={visibleNavigationHrefs}
             collapsed={collapsed}
           />
         </div>
 
-        {!collapsed && (
-          <div className="shrink-0 border-t px-4 py-2.5 text-xs leading-5 text-muted-foreground">
-            Dental EMR workspace
-          </div>
-        )}
+        <div
+          className={cn(
+            "shrink-0 border-t",
+            collapsed ? "grid place-items-center p-2" : "p-3",
+          )}
+        >
+          <UserMenu presentation={collapsed ? "rail" : "sidebar"} />
+        </div>
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-40 border-b bg-background/95 supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-sm print:hidden">
+        <header className="sticky top-0 z-40 border-b bg-background/95 supports-[backdrop-filter]:bg-background/90 supports-[backdrop-filter]:backdrop-blur-sm xl:hidden print:hidden">
           <div className="flex min-h-16 items-center gap-2 px-3 sm:px-4 lg:px-6">
-            <MobileNavigation visibleHrefs={visibleNavigationHrefs} />
-            <div className="hidden min-w-0 sm:block xl:hidden">
+            <MobileNavigation
+              organizationName={organizationName}
+              visibleHrefs={visibleNavigationHrefs}
+            />
+            <div className="hidden min-w-0 sm:block">
               <p className="truncate text-xs text-muted-foreground">
                 Current organization
               </p>
               <p className="truncate text-sm font-medium">{organizationName}</p>
             </div>
             <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-              <BranchSelector />
-              <UserMenu />
+              <BranchSelector presentation="topbar" />
+              <UserMenu presentation="topbar" />
             </div>
           </div>
         </header>
 
         <main
           id="main-content"
-          className="min-h-[calc(100svh-4rem)] scroll-mt-20 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8 print:p-0"
+          className="min-h-[calc(100svh-4rem)] scroll-mt-20 px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-6 lg:px-8 xl:min-h-svh xl:scroll-mt-0 print:p-0"
         >
           {children}
         </main>

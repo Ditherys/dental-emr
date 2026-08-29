@@ -5,11 +5,13 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { AppBrand } from "@/components/layout/app-brand";
+import { BranchSelector } from "@/components/layout/branch-selector";
 import {
   groupedNavigationItems,
   type NavigationHref,
   type NavigationIcon,
 } from "@/components/layout/navigation-items";
+import { UserMenu } from "@/components/layout/user-menu";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,8 +32,10 @@ function isActiveItem(pathname: string, href: string) {
 }
 
 export function MobileNavigation({
+  organizationName,
   visibleHrefs,
 }: {
+  organizationName: string;
   visibleHrefs: readonly NavigationHref[];
 }) {
   const pathname = usePathname();
@@ -60,6 +64,13 @@ export function MobileNavigation({
           </SheetDescription>
           <AppBrand href="/dashboard" />
         </SheetHeader>
+        <div className="shrink-0 space-y-2 border-b px-3 py-3">
+          <div className="min-w-0 px-1">
+            <p className="text-xs text-muted-foreground">Current organization</p>
+            <p className="truncate text-sm font-medium">{organizationName}</p>
+          </div>
+          <BranchSelector presentation="sidebar" />
+        </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
           <nav aria-label="Primary navigation" className="space-y-1">
             {ungrouped.map((item) => (
@@ -90,6 +101,9 @@ export function MobileNavigation({
               </div>
             ))}
           </nav>
+        </div>
+        <div className="shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <UserMenu presentation="sidebar" />
         </div>
       </SheetContent>
     </Sheet>
