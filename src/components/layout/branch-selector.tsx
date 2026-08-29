@@ -38,16 +38,16 @@ export function BranchSelector({
       <DropdownMenuTrigger asChild disabled={!hasOptions}>
         <Button
           variant="outline"
-          className={cn(
-            "min-w-0 justify-start gap-2",
+        className={cn(
+          "min-w-0 justify-start gap-2",
             presentation === "topbar" &&
               "max-w-36 px-2.5 sm:min-w-44 sm:max-w-64",
             presentation === "sidebar" && "w-full max-w-none px-2.5",
             rail && "size-9 justify-center px-0",
-          )}
-          aria-label={`Branch context: ${selectedLabel}`}
-          title={rail ? `Working branch: ${selectedLabel}` : undefined}
-        >
+        )}
+        aria-label={`Branch context: ${selectedLabel}`}
+        title={rail ? `Working branch: ${selectedLabel}` : selectedLabel}
+      >
           <Building2 className="size-4 shrink-0" aria-hidden="true" />
           {!rail && <span className="truncate">{selectedLabel}</span>}
           {!rail && hasOptions && (
@@ -81,7 +81,12 @@ export function BranchSelector({
           )}
           {model.branches.map((branch) => (
             <DropdownMenuRadioItem key={branch.id} value={branch.id}>
-              <span className="min-w-0 flex-1 truncate">{branch.name}</span>
+              <span
+                className="min-w-0 flex-1 break-words whitespace-normal"
+                title={branch.name}
+              >
+                {branch.name}
+              </span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

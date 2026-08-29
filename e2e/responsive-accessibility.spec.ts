@@ -302,34 +302,81 @@ test("@responsive @shell branch and account follow the active shell composition"
   if (width >= 1280) {
     await expect(sidebar).toBeVisible();
     await expect(topbar).toBeHidden();
+    const sidebarBranch = sidebar.getByRole("button", { name: /Branch context:/ });
+    const sidebarAccount = sidebar.getByRole("button", {
+      name: "Open account menu",
+    });
+    await expect(sidebarBranch).toBeVisible();
+    await expect(sidebarAccount).toBeVisible();
+
+    await sidebarBranch.focus();
+    await page.keyboard.press("Enter");
+    await expect(sidebar.getByRole("menuitemradio").first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sidebarBranch).toBeFocused();
+
+    await sidebarAccount.focus();
+    await page.keyboard.press("Enter");
     await expect(
-      sidebar.getByRole("button", { name: /Branch context:/ }),
+      page.getByRole("menuitem", { name: "Account & security" }),
     ).toBeVisible();
-    await expect(
-      sidebar.getByRole("button", { name: "Open account menu" }),
-    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(sidebarAccount).toBeFocused();
 
     await sidebar.getByRole("button", { name: "Collapse sidebar" }).click();
+    const railBranch = sidebar.getByRole("button", { name: /Branch context:/ });
+    const railAccount = sidebar.getByRole("button", {
+      name: "Open account menu",
+    });
+    await expect(railBranch).toBeVisible();
+    await expect(railAccount).toBeVisible();
+
+    await railBranch.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitemradio").first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(railBranch).toBeFocused();
+
+    await railAccount.focus();
+    await page.keyboard.press("Enter");
     await expect(
-      sidebar.getByRole("button", { name: /Branch context:/ }),
+      page.getByRole("menuitem", { name: "Account & security" }),
     ).toBeVisible();
-    await expect(
-      sidebar.getByRole("button", { name: "Open account menu" }),
-    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(railAccount).toBeFocused();
   } else {
     await expect(sidebar).toBeHidden();
     await expect(topbar).toBeVisible();
-    await topbar
-      .getByRole("button", { name: "Open primary navigation" })
-      .click();
+    const trigger = topbar.getByRole("button", {
+      name: "Open primary navigation",
+    });
+    await trigger.focus();
+    await page.keyboard.press("Enter");
 
     const drawer = page.locator('[data-slot="sheet-content"]');
+    const drawerBranch = drawer.getByRole("button", { name: /Branch context:/ });
+    const drawerAccount = drawer.getByRole("button", {
+      name: "Open account menu",
+    });
+    await expect(drawerBranch).toBeVisible();
+    await expect(drawerAccount).toBeVisible();
+
+    await drawerBranch.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitemradio").first()).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawerBranch).toBeFocused();
+
+    await drawerAccount.focus();
+    await page.keyboard.press("Enter");
     await expect(
-      drawer.getByRole("button", { name: /Branch context:/ }),
+      page.getByRole("menuitem", { name: "Account & security" }),
     ).toBeVisible();
-    await expect(
-      drawer.getByRole("button", { name: "Open account menu" }),
-    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawerAccount).toBeFocused();
+
+    await page.keyboard.press("Escape");
+    await expect(trigger).toBeFocused();
   }
 
   await expectNoHorizontalOverflow(

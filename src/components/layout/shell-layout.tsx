@@ -95,7 +95,10 @@ export function ShellLayout({
                 <p className="text-xs font-medium text-muted-foreground">
                   Current organization
                 </p>
-                <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground">
+                <p
+                  className="mt-0.5 break-words text-sm font-medium text-sidebar-foreground"
+                  title={organizationName}
+                >
                   {organizationName}
                 </p>
               </div>
@@ -137,7 +140,9 @@ export function ShellLayout({
               <p className="truncate text-xs text-muted-foreground">
                 Current organization
               </p>
-              <p className="truncate text-sm font-medium">{organizationName}</p>
+              <p className="truncate text-sm font-medium" title={organizationName}>
+                {organizationName}
+              </p>
             </div>
             <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
               <BranchSelector presentation="topbar" />

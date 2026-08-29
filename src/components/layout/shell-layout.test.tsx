@@ -38,9 +38,17 @@ beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 function renderShell() {
+  return renderShellWithProps();
+}
+
+function renderShellWithProps({
+  organizationName = "Synthetic Dental",
+}: {
+  organizationName?: string;
+} = {}) {
   return render(
     <ShellLayout
-      organizationName="Synthetic Dental"
+      organizationName={organizationName}
       visibleNavigationHrefs={["/dashboard"]}
     >
       <p>Page content</p>
@@ -108,5 +116,21 @@ describe("ShellLayout", () => {
       "data-collapsed",
       "false",
     );
+  });
+
+  it("keeps long organization names discoverable in the expanded shell", () => {
+    const longOrganizationName =
+      "Synthetic Dental Organization With A Deliberately Long Name For Shell Discoverability";
+
+    renderShellWithProps({ organizationName: longOrganizationName });
+
+    const sidebar = screen.getByLabelText("Application sidebar");
+    const sidebarName = within(sidebar).getAllByText(longOrganizationName)[1];
+    const banner = screen.getByRole("banner");
+    const bannerName = within(banner).getByText(longOrganizationName);
+
+    expect(sidebarName).toHaveClass("break-words");
+    expect(sidebarName).toHaveAttribute("title", longOrganizationName);
+    expect(bannerName).toHaveAttribute("title", longOrganizationName);
   });
 });

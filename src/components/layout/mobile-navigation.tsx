@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { Menu } from "lucide-react";
 
 import { AppBrand } from "@/components/layout/app-brand";
@@ -38,11 +39,12 @@ export function MobileNavigation({
   organizationName: string;
   visibleHrefs: readonly NavigationHref[];
 }) {
+  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { ungrouped, groups } = groupedNavigationItems(visibleHrefs);
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -67,7 +69,12 @@ export function MobileNavigation({
         <div className="shrink-0 space-y-2 border-b px-3 py-3">
           <div className="min-w-0 px-1">
             <p className="text-xs text-muted-foreground">Current organization</p>
-            <p className="truncate text-sm font-medium">{organizationName}</p>
+            <p
+              className="break-words text-sm font-medium"
+              title={organizationName}
+            >
+              {organizationName}
+            </p>
           </div>
           <BranchSelector presentation="sidebar" />
         </div>
@@ -103,7 +110,10 @@ export function MobileNavigation({
           </nav>
         </div>
         <div className="shrink-0 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <UserMenu presentation="sidebar" />
+          <UserMenu
+            presentation="sidebar"
+            onAccountNavigation={() => setOpen(false)}
+          />
         </div>
       </SheetContent>
     </Sheet>

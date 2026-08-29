@@ -178,6 +178,33 @@ describe("branch selector", () => {
     expect(screen.getByText("Demo Main")).toBeVisible();
   });
 
+  it("opens and dismisses the expanded-sidebar branch menu from the keyboard", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <BranchContextProvider model={branchScopedModel}>
+        <BranchSelector presentation="sidebar" />
+      </BranchContextProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Branch context: Demo Main",
+    });
+    trigger.focus();
+
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Demo Main" }),
+    ).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitemradio", { name: "Demo Main" })).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
+  });
+
   it("keeps the branch menu accessible in the collapsed rail", () => {
     render(
       <BranchContextProvider model={branchScopedModel}>
@@ -191,5 +218,61 @@ describe("branch selector", () => {
     expect(trigger).toHaveClass("size-9");
     expect(screen.queryByText("Demo Main")).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute("title", "Working branch: Demo Main");
+  });
+
+  it("opens and dismisses the collapsed-rail branch menu from the keyboard", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <BranchContextProvider model={branchScopedModel}>
+        <BranchSelector presentation="rail" />
+      </BranchContextProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Branch context: Demo Main",
+    });
+    trigger.focus();
+
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("menuitemradio", { name: "Demo Main" }),
+    ).toBeVisible();
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitemradio", { name: "Demo Main" })).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
+  });
+
+  it("keeps long branch names discoverable in the branch menu", async () => {
+    const user = userEvent.setup();
+    const longBranchName =
+      "Demo Main Branch With A Deliberately Long Name For Discoverability";
+
+    render(
+      <BranchContextProvider
+        model={{
+          ...branchScopedModel,
+          branches: [{ id: "branch-a1", name: longBranchName }],
+        }}
+      >
+        <BranchSelector presentation="sidebar" />
+      </BranchContextProvider>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: `Branch context: ${longBranchName}`,
+    });
+    await user.click(trigger);
+
+    const option = screen.getByRole("menuitemradio", { name: longBranchName });
+    const optionLabel = option.querySelector(`span[title="${longBranchName}"]`);
+
+    expect(trigger).toHaveAttribute("title", longBranchName);
+    expect(optionLabel).toHaveClass("break-words", "whitespace-normal");
+    expect(optionLabel).toHaveAttribute("title", longBranchName);
   });
 });

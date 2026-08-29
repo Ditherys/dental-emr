@@ -19,8 +19,10 @@ type UserMenuPresentation = "topbar" | "sidebar" | "rail";
 
 export function UserMenu({
   presentation = "topbar",
+  onAccountNavigation,
 }: {
   presentation?: UserMenuPresentation;
+  onAccountNavigation?: () => void;
 }) {
   const rail = presentation === "rail";
 
@@ -73,7 +75,7 @@ export function UserMenu({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings/account">
+          <Link href="/settings/account" onClick={onAccountNavigation}>
             <ShieldCheck aria-hidden="true" />
             Account & security
           </Link>
