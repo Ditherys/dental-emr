@@ -32,3 +32,60 @@ export function DescriptionItem({
     </div>
   );
 }
+
+export function CompactDescriptionList({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <dl
+      data-layout="paired"
+      className={cn("w-full max-w-xl divide-y border-y text-sm", className)}
+    >
+      {children}
+    </dl>
+  );
+}
+
+export function CompactDescriptionItem({
+  label,
+  hint,
+  children,
+  className,
+  valueClassName,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+  className?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-[minmax(7.5rem,12rem)_minmax(0,1fr)] items-start gap-x-4 px-3 py-3 sm:grid-cols-[12rem_minmax(0,1fr)]",
+        className,
+      )}
+    >
+      <dt className="min-w-0 font-medium">
+        <span className="break-words">{label}</span>
+        {hint && (
+          <span className="mt-0.5 block break-words text-xs font-normal text-muted-foreground">
+            {hint}
+          </span>
+        )}
+      </dt>
+      <dd
+        className={cn(
+          "min-w-0 break-words text-left",
+          valueClassName,
+        )}
+      >
+        {children}
+      </dd>
+    </div>
+  );
+}
