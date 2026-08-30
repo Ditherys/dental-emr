@@ -28,3 +28,9 @@ GREEN: `npx vitest run src/lib/odontogram/service.test.ts` passed after strict f
 - `20260830010001_odontogram_feature_details_code_compatibility.sql` is a required forward correction after the first O2 migration was already applied locally; it retains existing `EXTRACTION` and `IMPLANT` execution codes. No applied migration was rewritten.
 - The detail table deliberately has no browser grant or direct-write service path. A later narrow audited RPC must create detail rows atomically with clinical entries.
 - Cloud TEST is deferred under ADR-029.
+
+## Review remediation
+
+- Added forward-only atomic `record_tooth_clinical_entry` RPC replacement with validated `detail`, occurrence timestamp, actor-scoped idempotency, audit, and no base-table grants.
+- Added a composite parent/detail feature FK and same-tenant mismatch pgTAP case; the earlier cross-tenant case remains.
+- Preserved legacy extraction/implant codes while allowing O2 feature codes; updated generated RPC types and service payload.

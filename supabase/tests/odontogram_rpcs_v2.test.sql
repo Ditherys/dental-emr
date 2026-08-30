@@ -155,7 +155,7 @@ select extensions.throws_ok($$select public.get_patient_odontogram('e5030000-000
 select extensions.throws_ok($$select public.transition_treatment_plan_item_execution('e5030000-0000-0000-0000-000000000001','e5090000-0000-0000-0000-00000000ffff',1,'ACCEPTED',null,'o5-foreign-item')$$,'42501','not authorized','unknown or foreign treatment item is safely denied');
 select extensions.ok((select data ?& array['entries','bridges','implantChains','periodontalExaminations','legacyReconciliationFlags','treatmentExecutions'] from public.get_patient_odontogram('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001')),'DTO includes every bounded domain family');
 
-select extensions.is((select version from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','Synthetic')),1,'owner records a scoped clinical entry');
+select extensions.is((select version from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),1,'owner records a scoped clinical entry');
 reset role;
 create temp table o5_clinical(entry_id uuid);
 insert into o5_clinical select id from public.tooth_clinical_entries where organization_id='e5020000-0000-0000-0000-000000000001' and tooth_code='16' and supersedes_entry_id is null;
