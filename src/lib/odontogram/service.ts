@@ -180,7 +180,7 @@ export async function recordToothClinicalEntry(input: unknown) {
     p_tooth_code: value.toothCode,
     p_surfaces: value.surfaces,
     p_kind: value.kind,
-    p_clinical_code: value.clinicalCode,
+    p_clinical_code: value.detail.code,
     p_status: value.status,
     p_notes: value.notes ?? null,
   })));

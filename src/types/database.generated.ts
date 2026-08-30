@@ -6226,6 +6226,41 @@ export type Database = {
           },
         ]
       }
+      tooth_clinical_entry_details: {
+        Row: {
+          created_at: string
+          detail: Json
+          entry_id: string
+          feature_code: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail: Json
+          entry_id: string
+          feature_code: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: Json
+          entry_id?: string
+          feature_code?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tooth_clinical_entry_details_entry_fk"
+            columns: ["organization_id", "entry_id"]
+            isOneToOne: true
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       tooth_clinical_entry_surfaces: {
         Row: {
           entry_id: string

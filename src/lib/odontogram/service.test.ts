@@ -314,7 +314,7 @@ describe("odontogram service RPC contract", () => {
   it("binds O5 clinical entry mutations to their exact contracts", async () => {
     rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, patient_id: patientId, version: 1 }], error: null });
     rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });
-    await expect(recordToothClinicalEntry({ actingBranchId: branchId, patientId, toothCode: "16", surfaces: ["O"], kind: "FINDING", clinicalCode: "CARIES", status: "EXISTING" })).resolves.toEqual({ entryId, patientId, version: 1 });
+    await expect(recordToothClinicalEntry({ actingBranchId: branchId, patientId, toothCode: "16", surfaces: ["O"], kind: "FINDING", status: "EXISTING", detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null }, idempotencyKey: "odontogram-entry-0001" })).resolves.toEqual({ entryId, patientId, version: 1 });
     expect(rpc).toHaveBeenCalledWith("record_tooth_clinical_entry", {
       p_acting_branch_id: branchId,
       p_patient_id: patientId,
@@ -337,6 +337,32 @@ describe("odontogram service RPC contract", () => {
     });
   });
 
+  it("requires a complete renderer-independent clinical feature detail when recording an entry", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, patient_id: patientId, version: 1 }], error: null });
+    rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });
+    await expect(recordToothClinicalEntry({
+      actingBranchId: branchId,
+      patientId,
+      toothCode: "16",
+      surfaces: ["O"],
+      kind: "FINDING",
+      status: "EXISTING",
+      detail: { code: "CARIES", depth: "DENTIN", icdas: 3, cars: null, radiographicDepth: null },
+      idempotencyKey: "odontogram-detail-0001",
+    })).resolves.toEqual({ entryId, patientId, version: 1 });
+
+    await expect(recordToothClinicalEntry({
+      actingBranchId: branchId,
+      patientId,
+      toothCode: "16",
+      surfaces: ["O"],
+      kind: "FINDING",
+      status: "EXISTING",
+      detail: { code: "CARIES", depth: "DENTIN", icdas: 7, cars: null, radiographicDepth: null },
+      idempotencyKey: "odontogram-detail-0002",
+    })).rejects.toBeInstanceOf(z.ZodError);
+  });
+
   it("resolves the authoritative patient when a legacy mutation row omits it", async () => {
     rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, version: 1 }], error: null });
     rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });
@@ -347,8 +373,9 @@ describe("odontogram service RPC contract", () => {
       toothCode: "16",
       surfaces: ["O"],
       kind: "FINDING",
-      clinicalCode: "CARIES",
       status: "EXISTING",
+      detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null },
+      idempotencyKey: "odontogram-entry-0003",
     })).resolves.toEqual({ entryId, patientId, version: 1 });
 
     expect(rpc).toHaveBeenLastCalledWith("resolve_odontogram_entity_patient", {
@@ -572,7 +599,7 @@ describe("odontogram service RPC contract", () => {
     await expect(getPatientOdontogram({ actingBranchId: branchId, patientId })).rejects.toEqual(new OdontogramServiceError("NOT_AUTHORIZED"));
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "22023", message: "invalid input" } });
-    await expect(recordToothClinicalEntry({ actingBranchId: branchId, patientId, toothCode: "16", surfaces: ["O"], kind: "FINDING", clinicalCode: "CARIES", status: "EXISTING" })).rejects.toEqual(new OdontogramServiceError("INVALID_INPUT"));
+    await expect(recordToothClinicalEntry({ actingBranchId: branchId, patientId, toothCode: "16", surfaces: ["O"], kind: "FINDING", status: "EXISTING", detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null }, idempotencyKey: "odontogram-entry-0004" })).rejects.toEqual(new OdontogramServiceError("INVALID_INPUT"));
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
     await expect(amendToothClinicalEntry({ actingBranchId: branchId, entryId, expectedVersion: 1 })).rejects.toEqual(new OdontogramServiceError("STALE_VERSION"));

@@ -96,6 +96,38 @@ export const clinicalStatusSchema = z.enum([
 ]);
 export const resolutionKindSchema = z.enum(["LINK_CANONICAL", "NO_CURRENT_STATE"]);
 
+const nullableBoundedDetailText = z.string().trim().min(1).max(100).nullable();
+
+export const clinicalFeatureDetailSchema = z.discriminatedUnion("code", [
+  z.object({
+    code: z.literal("CARIES"),
+    depth: z.enum(["ENAMEL", "DENTIN", "PULPAL"]),
+    icdas: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]).nullable(),
+    cars: nullableBoundedDetailText,
+    radiographicDepth: nullableBoundedDetailText,
+  }).strict(),
+  z.object({
+    code: z.literal("RESTORATION"),
+    restorationType: z.enum(["none", "crown", "inlay", "onlay", "veneer", "bridge"]),
+    material: z.enum(["none", "emax", "gold", "gradia", "zircon", "metal", "metal-ceramic", "telescope", "temporary", "amalgam", "composite", "gic"]),
+    marginalLeakage: z.boolean(),
+  }).strict(),
+  z.object({
+    code: z.literal("ROOT_CANAL"),
+    state: z.enum(["endo-medical-filling", "endo-filling", "endo-filling-incomplete", "endo-glass-pin", "endo-metal-pin"]),
+  }).strict(),
+  z.object({
+    code: z.literal("TOOTH_STATE"),
+    state: z.enum(["PRESENT", "MISSING", "EXTRACTION_WOUND", "SUBGINGIVAL", "RADIX", "BROKEN", "CROWN_PREPARATION"]),
+  }).strict(),
+  z.object({
+    code: z.literal("ORTHODONTIC"),
+    appliance: z.enum(["BRACKET", "BAND"]),
+    movement: z.enum(["DRIFT", "INTRUSION", "EXTRUSION", "ROTATION"]).nullable(),
+  }).strict(),
+  z.object({ code: z.literal("OTHER"), controlledCode: z.string().trim().min(1).max(100) }).strict(),
+]);
+
 export const getPatientOdontogramInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
@@ -107,9 +139,11 @@ export const recordToothClinicalEntryInputSchema = z.object({
   toothCode: toothCodeSchema,
   surfaces: z.array(toothClinicalSurfaceSchema).min(1).max(7),
   kind: clinicalKindSchema,
-  clinicalCode: clinicalCodeSchema,
   status: clinicalStatusSchema,
+  detail: clinicalFeatureDetailSchema,
   notes: boundedNullableText(2000),
+  occurredAt: isoTimestamp.optional(),
+  idempotencyKey: boundedText(1, 128),
 }).strict();
 
 export const amendToothClinicalEntryInputSchema = z.object({
