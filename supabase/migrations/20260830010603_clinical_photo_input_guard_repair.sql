@@ -11,6 +11,9 @@ begin
   if v_definition is null then
     raise exception using errcode = '55000', message = 'expected create clinical photo RPC is missing';
   end if;
+  if v_definition like '%from public.file_objects as file_object%' and v_definition like '%from public.patients as patient%' then
+    return;
+  end if;
   if v_definition not like '%from public.file_objects where organization_id=v_org and id=p_source_file_id%' then
     raise exception using errcode = '55000', message = 'unexpected create clinical photo RPC body';
   end if;

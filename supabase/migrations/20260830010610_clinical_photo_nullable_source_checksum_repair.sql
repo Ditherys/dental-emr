@@ -13,6 +13,9 @@ begin
   if v_definition is null then
     raise exception using errcode='55000', message='expected derivative RPC is missing';
   end if;
+  if v_definition like '%v_source_size is null or v_source_size<>p_source_size_bytes or (v_source_checksum is not null and v_source_checksum<>p_source_checksum_sha256)%' then
+    return;
+  end if;
   if v_definition not like '%v_source_checksum is null or v_source_size is null%' then
     raise exception using errcode='55000', message='unexpected derivative source guard';
   end if;

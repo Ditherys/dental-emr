@@ -13,5 +13,6 @@ describe("clinical photo input schemas", () => {
     const derivative = (variant: "thumbnail" | "preview" | "display") => ({ variant, objectKey: `org/${ids.actingBranchId}/patients/${ids.patientId}/clinical-photos/${ids.sourceFileId}/${variant}.jpg`, mimeType: "image/jpeg" as const, width: 10, height: 10, sizeBytes: 100, checksumSha256: "b".repeat(64) });
     expect(recordClinicalPhotoDerivativesInputSchema.parse({ ...base, derivatives: [derivative("thumbnail"), derivative("preview"), derivative("display")] })).toBeTruthy();
     expect(() => recordClinicalPhotoDerivativesInputSchema.parse({ ...base, derivatives: [derivative("thumbnail")] })).toThrow();
+    expect(() => recordClinicalPhotoDerivativesInputSchema.parse({ ...base, derivatives: [ { ...derivative("thumbnail"), width: 321 }, derivative("preview"), derivative("display") ] })).toThrow();
   });
 });

@@ -2816,18 +2816,23 @@ next O12 slice.
   patient/capture/category/procedure indexes.
 - Added narrowly granted SECURITY DEFINER photo RPCs for metadata creation,
   chronological listing, display-name rename with optimistic versioning,
-  BEFORE/AFTER pairing, and idempotent derivative completion. Original client
-  filenames never appear in ordinary DTOs; source objects remain canonical.
-  Creation, pairing, rename, and processing write bounded clinical audit events.
+  BEFORE/AFTER pairing, processing claim/failure transitions, and idempotent
+  derivative completion. Original client filenames never appear in ordinary
+  DTOs; source objects remain canonical. Creation, pairing, rename, lifecycle,
+  and processing write bounded clinical audit events.
 - Added server-only schema/service/types/filename helpers and a server-only
   Sharp processor using the MinIO/R2 adapter. It validates canonical source
   keys, stat/get size and MIME consistency, JPEG/PNG/WEBP magic bytes and
-  dimensions, auto-rotates, strips EXIF, emits fixed thumbnail/preview/display
-  JPEGs under opaque keys, and returns source/derivative checksums. Derivative
-  recursion is rejected.
+  dimensions plus a 50M-pixel decompression cap, auto-rotates, strips EXIF,
+  emits fixed thumbnail/preview/display JPEGs under opaque keys, and verifies
+  every stored derivative's MIME, size, bytes, checksum, and dimensions before
+  returning it. Derivative recursion is rejected. The server orchestration
+  derives source identity from the authorized claim, records only attested
+  derivatives, and marks failures through the audited lifecycle RPC.
 - Because 10500–10601 had already been applied in local development, repairs
-  10602–10610 are retained as guarded forward-only corrections; applied
-  migrations were not rewritten.
+  10602–10617 are retained as guarded forward-only corrections. The retained
+  repair bodies are idempotent for a clean replay of the full chain, and local
+  verification advanced only through guarded migrations (no reset or reseed).
 
 ### Verification
 
@@ -2836,15 +2841,17 @@ next O12 slice.
 - `npm run db:migrate:local` applied the forward repairs; local generated
   types are current; MinIO storage smoke passed all put/stat/get/signing,
   CORS, and delete checks.
-- Clinical media unit tests pass (4 files / 11 tests), including checksum,
-  exact fixed dimensions, EXIF removal, filename safety, spoof rejection, and
-  derivative-recursion rejection.
-- Full unit suite passes (160 files / 1,530 tests). Migration privilege lint,
-  guarded database-suite tests (139 tests), typecheck, build, and secret scan
-  pass. The focused clinical-photo pgTAP suite reports P1_TEST_PASS (21
-  assertions); the full local runner reaches that suite and later stops at
-  the unrelated pre-existing `treatment_plans.test.sql` completion-marker
-  residual.
+- Clinical media unit tests pass (4 files / 17 tests), including lifecycle
+  orchestration, storage attestation, checksum, exact fixed dimensions, EXIF
+  removal, filename safety, spoof rejection, pixel limits, and derivative-
+  recursion rejection.
+- Full unit suite passes (160 files / 1,536 tests). Migration privilege lint
+  passes (287 files, 2,898 statements, 1,264 privilege statements, 78 grant
+  terminals, 380 approved final privileges); typecheck, build, secret scan,
+  and production dependency audit pass. The focused clinical-photo pgTAP
+  suite reports P1_TEST_PASS (23 assertions); the full local runner reaches
+  that suite and later stops at the unrelated pre-existing
+  `treatment_plans.test.sql` completion-marker residual.
 - Generic `db:types:check` was not run against a linked project because none
   is configured; the authorized `node scripts/generate-database-types.mjs
   --local --check` passed. Cloud TEST, hosted E2E/axe, advisor/security

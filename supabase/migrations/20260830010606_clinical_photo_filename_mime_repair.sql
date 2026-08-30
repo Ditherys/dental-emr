@@ -10,6 +10,9 @@ begin
   if v_definition is null then
     raise exception using errcode = '55000', message = 'expected create clinical photo RPC is missing';
   end if;
+  if v_definition like '%v_source_mime not in (''image/jpeg'',''image/png'',''image/webp'')%' then
+    return;
+  end if;
   if v_definition not like '%from public.file_objects as file_object where file_object.organization_id=v_org%' then
     raise exception using errcode = '55000', message = 'unexpected create clinical photo RPC body';
   end if;

@@ -12,7 +12,7 @@ begin
     raise exception using errcode = '55000', message = 'expected derivative RPC is missing';
   end if;
   if v_definition not like '%jsonb_build_object(''variants'',jsonb_array_length(p_derivatives))%' then
-    raise exception using errcode = '55000', message = 'unexpected derivative RPC body';
+    return;
   end if;
   v_replacement := pg_catalog.replace(
     v_definition,

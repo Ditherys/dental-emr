@@ -474,6 +474,8 @@ const CLINICAL_RPCS_GRANTS_MIGRATION =
   "20260827013001_clinical_rpcs_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
+const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
+  "20260830010613_clinical_photo_processing_lifecycle_grants.sql";
 
 const ODONTOGRAM_RPCS_GRANTS_MIGRATION =
   "20260827013201_odontogram_rpcs_grants.sql";
@@ -1616,6 +1618,27 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION,
     grants: clinicalPhotoRpcGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.claim_clinical_photo_processing(uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason: "Claims a same-tenant clinical photo under clinical.write, derives the canonical source key server-side, and advances processing state with an attributable lifecycle audit event.",
+      },
+      {
+        grantee: "authenticated",
+        objectClass: "function",
+        object: "public.fail_clinical_photo_processing(uuid,uuid)",
+        privilege: "execute",
+        columns: [],
+        reason: "Idempotently records an attributed failed clinical-photo processing attempt under clinical.write without storing protected failure details.",
+      },
+    ]),
   }),
 ]);
 

@@ -7979,6 +7979,18 @@ export type Database = {
           version: number
         }[]
       }
+      claim_clinical_photo_processing: {
+        Args: { p_acting_branch_id: string; p_photo_id: string }
+        Returns: {
+          organization_id: string
+          patient_id: string
+          photo_id: string
+          processing_status: string
+          source_mime_type: string
+          source_object_key: string
+          version: number
+        }[]
+      }
       claim_due_calendar_syncs: {
         Args: { p_acting_branch_id: string; p_limit?: number }
         Returns: {
@@ -8627,6 +8639,10 @@ export type Database = {
           status: string
           sync_job_id: string
         }[]
+      }
+      fail_clinical_photo_processing: {
+        Args: { p_acting_branch_id: string; p_photo_id: string }
+        Returns: boolean
       }
       fail_communication: {
         Args: { p_acting_branch_id: string; p_communication_id: string }
