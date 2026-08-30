@@ -7,7 +7,7 @@ mounted only for server-authorized, open/in-progress cases.
 
 ## Implemented
 
-- Forward-only O8 completion migrations `20260830010418` through `20260830010428`, including RLS/no table grants, provider derivation, idempotency, explicit finding-resolution links, immutable execution completion, completion context, approved final RPC grant registration, and a pre-charge immutable-materialization guard.
+- Forward-only O8 completion migrations `20260830010418` through `20260830010429`, including RLS/no table grants, provider derivation, idempotency, explicit finding-resolution links, immutable execution completion, completion context, approved final RPC grant registration, pre-charge immutable-materialization guards, and the clinical detail/extraction repair.
 - Structured treatment-plan fields replace drawing UI/types/includes; legacy drawing response fields are explicitly transformed at the read boundary rather than broadly stripped.
 - `PlanModePanel` confirmation component and focused tests: patient, procedure, date, signed-in dentist, selected findings, exact PHP amount; it has no provider selector or payment collection control.
 - `completeTreatmentAction` has server authorization for clinical write plus billing charge; completion input contains no provider identity.
@@ -37,14 +37,18 @@ mounted only for server-authorized, open/in-progress cases.
   completion is constrained to the contract tooth and an explicit safe mapping:
   ROOT_CANAL -> ROOT_CANAL, CROWN -> RESTORATION with crown type, and generic
   OTHER -> RESTORATION or OTHER; unsupported extraction completion is rejected.
+- Planned extraction now uses the canonical, renderer-independent payload
+  `{ code: "TOOTH_STATE", state: "EXTRACTION_WOUND" }`, which materializes an
+  `EXTRACTION` clinical entry with no unsupported feature-detail row. Detail
+  bearing clinical completions persist the matching required `feature_code`.
 
 ## Verification
 
-- `npm run db:migrate:local`: forward-applied local migrations 10423–10428; no reset.
+- `npm run db:migrate:local`: forward-applied local migrations 10423–10429; no reset.
 - `npm run test:db:local`: the updated atomic suite passed after migration
-  10428, as did all suites before the existing `treatment_plans.test.sql`
+  10429, as did all suites before the existing `treatment_plans.test.sql`
   completion-marker residual.
-- `npm run test:unit -- src/lib/treatment-plan src/components/odontogram 'src/app/(emr)/patients/[patientId]/treatment-plan-section.test.tsx'`: 15 files / 82 tests passed.
+- `npm run test:unit -- src/lib/treatment-plan src/components/odontogram 'src/app/(emr)/patients/[patientId]/treatment-plan-section.test.tsx'`: 15 files / 83 tests passed.
 - `npm run typecheck`: passed.
 - `npm run security:migrations`: passed after adding the final-grant registry entry.
 - `git diff --check`: passed (only line-ending warnings emitted).

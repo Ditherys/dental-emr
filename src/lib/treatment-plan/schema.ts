@@ -50,7 +50,7 @@ export const completeTreatmentInputSchema = z.object({
   resolvedFindingIds: z.array(databaseUuid).max(100).refine((ids) => new Set(ids).size === ids.length, "finding ids must be unique"),
   amountCentavos: moneyCentavoStringSchema,
   completion: z.union([clinicalFeatureDetailSchema, bridgeCompletionPayloadSchema, implantCompletionPayloadSchema]).refine(
-    (value) => "kind" in value || ["RESTORATION", "ROOT_CANAL", "OTHER"].includes(value.code),
+    (value) => "kind" in value || ["RESTORATION", "ROOT_CANAL", "OTHER"].includes(value.code) || (value.code === "TOOTH_STATE" && value.state === "EXTRACTION_WOUND"),
     "unsupported clinical completion",
   ),
   idempotencyKey: z.string().trim().min(1).max(80),

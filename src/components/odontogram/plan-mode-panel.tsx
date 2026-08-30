@@ -31,7 +31,7 @@ export function PlanModePanel({
 }): React.ReactElement {
   const [amountPesos, setAmountPesos] = React.useState("");
   const [resolvedFindingIds, setResolvedFindingIds] = React.useState<string[]>([]);
-  const [clinicalCode, setClinicalCode] = React.useState<"" | "RESTORATION" | "ROOT_CANAL" | "OTHER">("");
+  const [clinicalCode, setClinicalCode] = React.useState<"" | "RESTORATION" | "ROOT_CANAL" | "OTHER" | "EXTRACTION">("");
   const [restorationType, setRestorationType] = React.useState("");
   const [material, setMaterial] = React.useState("");
   const [rootCanalState, setRootCanalState] = React.useState("");
@@ -69,7 +69,7 @@ export function PlanModePanel({
     </div>
     <label className="mt-3 grid gap-1 text-sm font-medium">Actual charge (PHP)<input aria-label="Actual charge (PHP)" inputMode="decimal" pattern="[0-9]+(?:\\.[0-9]{1,2})?" value={amountPesos} onChange={(event) => setAmountPesos(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm" /></label>
     {completion === null && <fieldset className="mt-3 grid gap-2"><legend className="text-sm font-medium">Completed clinical treatment</legend>
-      <label className="grid gap-1 text-sm">Treatment type<select aria-label="Completed treatment type" value={clinicalCode} onChange={(event) => setClinicalCode(event.target.value as typeof clinicalCode)} className="h-10 rounded-md border bg-background px-3 text-sm"><option value="">Select recorded treatment</option><option value="RESTORATION">Restoration</option><option value="ROOT_CANAL">Root canal</option><option value="OTHER">Other controlled treatment</option></select></label>
+      <label className="grid gap-1 text-sm">Treatment type<select aria-label="Completed treatment type" value={clinicalCode} onChange={(event) => setClinicalCode(event.target.value as typeof clinicalCode)} className="h-10 rounded-md border bg-background px-3 text-sm"><option value="">Select recorded treatment</option><option value="RESTORATION">Restoration</option><option value="ROOT_CANAL">Root canal</option><option value="EXTRACTION">Extraction</option><option value="OTHER">Other controlled treatment</option></select></label>
       {clinicalCode === "RESTORATION" && <div className="grid gap-2 sm:grid-cols-2"><label className="grid gap-1 text-sm">Restoration type<select aria-label="Restoration type" value={restorationType} onChange={(event) => setRestorationType(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm"><option value="">Select type</option>{["none", "crown", "inlay", "onlay", "veneer", "bridge"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label><label className="grid gap-1 text-sm">Material<select aria-label="Restoration material" value={material} onChange={(event) => setMaterial(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm"><option value="">Select material</option>{["none", "emax", "gold", "gradia", "zircon", "metal", "metal-ceramic", "telescope", "temporary", "amalgam", "composite", "gic"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label></div>}
       {clinicalCode === "ROOT_CANAL" && <label className="grid gap-1 text-sm">Root canal state<select aria-label="Root canal state" value={rootCanalState} onChange={(event) => setRootCanalState(event.target.value)} className="h-10 rounded-md border bg-background px-3 text-sm"><option value="">Select state</option>{["endo-medical-filling", "endo-filling", "endo-filling-incomplete", "endo-glass-pin", "endo-metal-pin"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>}
       {clinicalCode === "OTHER" && <label className="grid gap-1 text-sm">Controlled treatment code<input aria-label="Controlled treatment code" value={controlledCode} onChange={(event) => setControlledCode(event.target.value)} maxLength={100} className="h-10 rounded-md border bg-background px-3 text-sm" /></label>}
@@ -88,7 +88,7 @@ export function PlanModePanel({
 }
 
 function clinicalCompletion(
-  code: "" | "RESTORATION" | "ROOT_CANAL" | "OTHER",
+  code: "" | "RESTORATION" | "ROOT_CANAL" | "OTHER" | "EXTRACTION",
   restorationType: string,
   material: string,
   rootCanalState: string,
@@ -96,6 +96,7 @@ function clinicalCompletion(
 ): ClinicalFeatureDetail | null {
   if (code === "RESTORATION" && ["none", "crown", "inlay", "onlay", "veneer", "bridge"].includes(restorationType) && ["none", "emax", "gold", "gradia", "zircon", "metal", "metal-ceramic", "telescope", "temporary", "amalgam", "composite", "gic"].includes(material)) return { code, restorationType: restorationType as "none" | "crown" | "inlay" | "onlay" | "veneer" | "bridge", material: material as "none" | "emax" | "gold" | "gradia" | "zircon" | "metal" | "metal-ceramic" | "telescope" | "temporary" | "amalgam" | "composite" | "gic", marginalLeakage: false };
   if (code === "ROOT_CANAL" && ["endo-medical-filling", "endo-filling", "endo-filling-incomplete", "endo-glass-pin", "endo-metal-pin"].includes(rootCanalState)) return { code, state: rootCanalState as "endo-medical-filling" | "endo-filling" | "endo-filling-incomplete" | "endo-glass-pin" | "endo-metal-pin" };
+  if (code === "EXTRACTION") return { code: "TOOTH_STATE", state: "EXTRACTION_WOUND" };
   if (code === "OTHER" && controlledCode.trim()) return { code, controlledCode: controlledCode.trim() };
   return null;
 }

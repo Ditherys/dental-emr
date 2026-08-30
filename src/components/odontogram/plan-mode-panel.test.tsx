@@ -28,4 +28,14 @@ describe("PlanModePanel", () => {
     fireEvent.change(screen.getAllByLabelText("Actual charge (PHP)").at(-1)!, { target: { value: "0.01" } });
     expect(screen.getAllByRole("button", { name: "Review completion" }).at(-1)).toBeDisabled();
   });
+
+  it("records the canonical extraction wound completion for an extraction plan", () => {
+    const onComplete = vi.fn(async () => ({ ok: true }));
+    render(<PlanModePanel patientName="Synthetic Patient" procedureName="Extraction on 28" serviceDate="2026-08-30" signedInDentist="Dr. Synthetic Dentist" findingChoices={[]} completion={null} onComplete={onComplete} />);
+    fireEvent.change(screen.getAllByLabelText("Actual charge (PHP)").at(-1)!, { target: { value: "1250" } });
+    fireEvent.change(screen.getAllByLabelText("Completed treatment type").at(-1)!, { target: { value: "EXTRACTION" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Review completion" }).at(-1)!);
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Confirm treatment completion" })).getByRole("button", { name: "Confirm charge and completion" }));
+    expect(onComplete).toHaveBeenCalledWith({ resolvedFindingIds: [], amountCentavos: "125000", completion: { code: "TOOTH_STATE", state: "EXTRACTION_WOUND" } });
+  });
 });
