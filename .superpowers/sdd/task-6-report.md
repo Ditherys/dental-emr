@@ -154,3 +154,8 @@ Verification:
 The full local database runner still stops at the pre-existing
 `supabase/tests/treatment_plans.test.sql` sentinel failure after all Task 6
 suites have passed; no Task 6 migration or test changes that suite.
+
+Review repair: `20260830010302` adds persistent actor/organization-scoped
+bridge/implant idempotency records and fingerprints; `20260830010303` revokes
+all browser roles from the provider-accepting legacy bridge, implant, and
+clinical-entry signatures and restores only the reviewed v3 grants.

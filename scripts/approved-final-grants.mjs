@@ -514,6 +514,7 @@ const PROCEDURE_CASE_PLAN_DETAIL_RPC_GRANTS_MIGRATION =
   "20260830010107_procedure_case_plan_detail_rpcs_grants.sql";
 const TREATMENT_PLAN_DETAIL_PRESENCE_RPC_GRANTS_MIGRATION = "20260830010109_treatment_plan_detail_presence_rpcs_grants.sql";
 const ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION = "20260830010301_odontogram_revamp_rpcs_grants.sql";
+const ODONTOGRAM_REVAMP_TERMINAL_REPAIR_GRANTS_MIGRATION = "20260830010303_odontogram_revamp_terminal_repair_grants.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -559,7 +560,7 @@ const odontogramO5O8TerminalGrants = Object.freeze([
   ...(object === "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)" ? {
     supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
     supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
-  } : {}),
+  } : ["public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)", "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)"].includes(object) ? { supersededFrom: "20260830010303_odontogram_revamp_terminal_repair_grants.sql" } : {}),
   reason:
     "Final O5/O8 browser boundary after explicit forward replacement. Each SECURITY DEFINER function derives tenant and patient from trusted rows, checks live branch permission, preserves append-only history, bounds returned aggregates, and keeps all tenant tables RLS-locked with zero browser table grants.",
 })));
@@ -1543,6 +1544,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
     { grantee: "authenticated", objectClass: "function", object: "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text,boolean,boolean,boolean,boolean)", privilege: "execute", columns: [], reason: "Presence-aware structured draft item patch delegates tenant, branch, authorization, versioning, frozen-plan protection, and audit to the reviewed clinical writer." },
   ]) }),
   Object.freeze({ file: ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION, grants: odontogramRevampRpcGrants }),
+  Object.freeze({ file: ODONTOGRAM_REVAMP_TERMINAL_REPAIR_GRANTS_MIGRATION, grants: odontogramRevampRpcGrants.filter((grant) => ["public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)", "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)"].includes(grant.object)) }),
 ]);
 
 /**

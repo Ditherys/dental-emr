@@ -38,18 +38,18 @@ select extensions.ok(
 
 select extensions.ok(
   has_function_privilege('authenticated','public.get_patient_odontogram(uuid,uuid)','execute')
-  and has_function_privilege('authenticated','public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute')
+  and has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute')
   and has_function_privilege('authenticated','public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)','execute')
   and has_function_privilege('authenticated','public.void_tooth_clinical_entry(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute')
+  and has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_bridge(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_bridge(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_implant_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute')
+  and has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_implant_component(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_implant_component(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_periodontal_examination(uuid,uuid,uuid,text)','execute')
@@ -66,11 +66,11 @@ select extensions.ok(
   not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname in (
-      'get_patient_odontogram','record_tooth_clinical_entry','amend_tooth_clinical_entry',
+      'get_patient_odontogram','get_patient_odontogram_v3','record_tooth_clinical_entry_v3','amend_tooth_clinical_entry',
       'void_tooth_clinical_entry','resolve_legacy_odontogram_entry','create_plan_bridge_design',
-      'update_draft_plan_bridge_design','record_current_bridge','amend_current_bridge',
+      'update_draft_plan_bridge_design','record_current_bridge_v3','amend_current_bridge',
       'void_current_bridge','create_plan_implant_design','update_draft_plan_implant_design',
-      'record_current_implant_component','amend_current_implant_component','void_current_implant_component',
+      'record_current_implant_component_v3','amend_current_implant_component','void_current_implant_component',
       'create_periodontal_examination','save_periodontal_measurements','finalize_periodontal_examination',
       'amend_periodontal_examination','transition_treatment_plan_item_execution',
       'complete_treatment_plan_item_with_charge','correct_treatment_plan_item_execution'
