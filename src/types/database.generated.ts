@@ -8022,6 +8022,17 @@ export type Database = {
           payment_id: string
         }[]
       }
+      complete_clinical_photo_derivatives: {
+        Args: {
+          p_acting_branch_id: string
+          p_actor_user_id: string
+          p_derivatives: Json
+          p_photo_id: string
+          p_source_checksum_sha256: string
+          p_source_size_bytes: number
+        }
+        Returns: boolean
+      }
       complete_recall: {
         Args: {
           p_acting_branch_id: string

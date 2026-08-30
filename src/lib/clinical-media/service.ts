@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { createStorageClient, type StorageAdapter } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
@@ -56,6 +57,32 @@ async function callRpc(name: string, args: Record<string, unknown>): Promise<unk
   if (!response.success) throw new ClinicalPhotoServiceError("FAILED");
   if (response.data.error !== null) throw mapClinicalPhotoRpcError(response.data.error);
   return response.data.data;
+}
+
+async function callTrustedRpc(name: string, args: Record<string, unknown>): Promise<unknown> {
+  let rawResponse: unknown;
+  try {
+    const client = createAdminClient();
+    rawResponse = await (client.rpc as unknown as Rpc)(name, args);
+  } catch (error) {
+    throw mapClinicalPhotoRpcError(error);
+  }
+  const response = rpcResponseSchema.safeParse(rawResponse);
+  if (!response.success) throw new ClinicalPhotoServiceError("FAILED");
+  if (response.data.error !== null) throw mapClinicalPhotoRpcError(response.data.error);
+  return response.data.data;
+}
+
+async function getActorUserId(): Promise<string> {
+  try {
+    const client = await createClient();
+    const result = await client.auth.getUser();
+    if (result.error || !result.data.user) throw new ClinicalPhotoServiceError("NOT_AUTHORIZED");
+    return databaseUuid.parse(result.data.user.id);
+  } catch (error) {
+    if (error instanceof ClinicalPhotoServiceError) throw error;
+    throw new ClinicalPhotoServiceError("NOT_AUTHORIZED");
+  }
 }
 
 function firstRow(data: unknown) {
@@ -221,12 +248,20 @@ export async function pairClinicalPhotos(input: unknown): Promise<void> {
 
 export async function recordClinicalPhotoDerivatives(input: unknown): Promise<void> {
   const value = recordClinicalPhotoDerivativesInputSchema.parse(input);
-  await callRpc("record_clinical_photo_derivatives", {
-    p_acting_branch_id: value.actingBranchId,
-    p_photo_id: value.photoId,
-    p_source_checksum_sha256: value.sourceChecksumSha256,
-    p_source_size_bytes: value.sourceSizeBytes,
-    p_derivatives: value.derivatives.map((derivative) => ({
+  await completeClinicalPhotoDerivatives(await getActorUserId(), value);
+}
+
+async function completeClinicalPhotoDerivatives(
+  actorUserId: string,
+  input: z.infer<typeof recordClinicalPhotoDerivativesInputSchema>,
+): Promise<void> {
+  await callTrustedRpc("complete_clinical_photo_derivatives", {
+    p_actor_user_id: actorUserId,
+    p_acting_branch_id: input.actingBranchId,
+    p_photo_id: input.photoId,
+    p_source_checksum_sha256: input.sourceChecksumSha256,
+    p_source_size_bytes: input.sourceSizeBytes,
+    p_derivatives: input.derivatives.map((derivative) => ({
       variant: derivative.variant,
       object_key: derivative.objectKey,
       mime_type: derivative.mimeType,
@@ -260,6 +295,7 @@ export async function processClinicalPhoto(
   }
 
   try {
+    const actorUserId = await getActorUserId();
     const storage = dependencies.storage ?? createStorageClient();
     const processor = dependencies.processor ?? runClinicalPhotoProcessor;
     const processed = await processor({
@@ -277,7 +313,7 @@ export async function processClinicalPhoto(
     });
 
     await attestDerivatives(storage, claim, recordInput.derivatives);
-    await recordClinicalPhotoDerivatives(recordInput);
+    await completeClinicalPhotoDerivatives(actorUserId, recordInput);
     return processed;
   } catch (error) {
     const safeError = safeProcessingError(error);

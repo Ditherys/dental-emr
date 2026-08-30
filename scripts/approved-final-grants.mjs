@@ -476,6 +476,10 @@ const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
   "20260830010613_clinical_photo_processing_lifecycle_grants.sql";
+const CLINICAL_PHOTO_BROWSER_COMPLETION_REVOKE_MIGRATION =
+  "20260830010618_clinical_photo_browser_completion_revoke.sql";
+const CLINICAL_PHOTO_SERVER_COMPLETION_GRANTS_MIGRATION =
+  "20260830010620_clinical_photo_server_completion_grants.sql";
 
 const ODONTOGRAM_RPCS_GRANTS_MIGRATION =
   "20260827013201_odontogram_rpcs_grants.sql";
@@ -797,6 +801,13 @@ const clinicalPhotoRpcGrants = Object.freeze([
   object,
   privilege: "execute",
   columns: [],
+  ...(object === "public.record_clinical_photo_derivatives(uuid,uuid,text,bigint,jsonb)"
+    ? {
+        supersededFrom: CLINICAL_PHOTO_BROWSER_COMPLETION_REVOKE_MIGRATION,
+        supersededBy:
+          "public.complete_clinical_photo_derivatives(uuid,uuid,uuid,text,bigint,jsonb)",
+      }
+    : {}),
   reason: "The narrow private clinical-photo metadata/processing boundary. Each function derives the organization from an active acting branch, enforces patient.clinical.read/write inside a SECURITY DEFINER body with an empty search path, preserves opaque source objects, and writes only bounded patient-linked audit events; no photo table or service-role privilege is exposed.",
 })));
 
@@ -1637,6 +1648,21 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
         privilege: "execute",
         columns: [],
         reason: "Idempotently records an attributed failed clinical-photo processing attempt under clinical.write without storing protected failure details.",
+      },
+    ]),
+  }),
+  Object.freeze({
+    file: CLINICAL_PHOTO_SERVER_COMPLETION_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "service_role",
+        objectClass: "function",
+        object:
+          "public.complete_clinical_photo_derivatives(uuid,uuid,uuid,text,bigint,jsonb)",
+        privilege: "execute",
+        columns: [],
+        reason:
+          "Server-only clinical-photo completion boundary. The worker calls it only after reading and hashing every private derivative through the storage adapter; the explicit actor parameter preserves attributable audit events while no browser role can fabricate READY metadata.",
       },
     ]),
   }),

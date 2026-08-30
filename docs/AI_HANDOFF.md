@@ -2816,10 +2816,11 @@ next O12 slice.
   patient/capture/category/procedure indexes.
 - Added narrowly granted SECURITY DEFINER photo RPCs for metadata creation,
   chronological listing, display-name rename with optimistic versioning,
-  BEFORE/AFTER pairing, processing claim/failure transitions, and idempotent
-  derivative completion. Original client filenames never appear in ordinary
-  DTOs; source objects remain canonical. Creation, pairing, rename, lifecycle,
-  and processing write bounded clinical audit events.
+  BEFORE/AFTER pairing, and processing claim/failure transitions. Derivative
+  completion is isolated behind a service-role-only RPC; browser sessions can
+  never fabricate READY metadata. Original client filenames never appear in
+  ordinary DTOs; source objects remain canonical. Creation, pairing, rename,
+  lifecycle, and processing write bounded clinical audit events.
 - Added server-only schema/service/types/filename helpers and a server-only
   Sharp processor using the MinIO/R2 adapter. It validates canonical source
   keys, stat/get size and MIME consistency, JPEG/PNG/WEBP magic bytes and
@@ -2830,7 +2831,7 @@ next O12 slice.
   derives source identity from the authorized claim, records only attested
   derivatives, and marks failures through the audited lifecycle RPC.
 - Because 10500–10601 had already been applied in local development, repairs
-  10602–10617 are retained as guarded forward-only corrections. The retained
+  10602–10620 are retained as guarded forward-only corrections. The retained
   repair bodies are idempotent for a clean replay of the full chain, and local
   verification advanced only through guarded migrations (no reset or reseed).
 
@@ -2846,8 +2847,8 @@ next O12 slice.
   removal, filename safety, spoof rejection, pixel limits, and derivative-
   recursion rejection.
 - Full unit suite passes (160 files / 1,536 tests). Migration privilege lint
-  passes (287 files, 2,898 statements, 1,264 privilege statements, 78 grant
-  terminals, 380 approved final privileges); typecheck, build, secret scan,
+  passes (290 files, 2,902 statements, 1,267 privilege statements, 79 grant
+  terminals, 381 approved final privileges); typecheck, build, secret scan,
   and production dependency audit pass. The focused clinical-photo pgTAP
   suite reports P1_TEST_PASS (23 assertions); the full local runner reaches
   that suite and later stops at the unrelated pre-existing

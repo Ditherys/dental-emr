@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+const { rpc, getUser } = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc })) }));
+vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc, auth: { getUser } })) }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ rpc })) }));
 
 import { ClinicalPhotoServiceError, mapClinicalPhotoRpcError } from "./errors";
 import { createClinicalPhoto, listClinicalPhotos, processClinicalPhoto, renameClinicalPhoto, pairClinicalPhotos } from "./service";
@@ -14,6 +15,7 @@ const row = { photo_id: ids.sourceFileId, patient_id: ids.patientId, procedure_c
 describe("clinical photo service", () => {
   beforeEach(() => {
     rpc.mockReset();
+    getUser.mockReset();
   });
 
   it("maps RPC errors to safe typed codes without retaining database details", () => {
@@ -61,7 +63,7 @@ describe("clinical photo service", () => {
       if (name === "claim_clinical_photo_processing") {
         return { data: [{ photo_id: photoId, organization_id: orgId, patient_id: patientId, source_object_key: sourceObjectKey, source_mime_type: "image/jpeg", processing_status: "PROCESSING", version: 2 }], error: null };
       }
-      if (name === "record_clinical_photo_derivatives") return { data: true, error: null };
+      if (name === "complete_clinical_photo_derivatives") return { data: true, error: null };
       throw new Error(`unexpected RPC ${name}`);
     });
     const storage = {
@@ -69,6 +71,7 @@ describe("clinical photo service", () => {
       get: vi.fn(async (key: string) => { order.push(`get:${key.split("/").at(-1)}`); return { contentType: "image/jpeg", body: new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(bytes); controller.close(); } }) }; }),
     };
     const processor = vi.fn(async () => { order.push("processor"); return processed; });
+    getUser.mockResolvedValue({ data: { user: { id: "66666666-6666-4666-8666-666666666666" } }, error: null });
 
     const result = await processClinicalPhoto({ actingBranchId: branchId, photoId }, { processor, storage: storage as never });
     expect(result).toEqual(processed);
@@ -79,13 +82,14 @@ describe("clinical photo service", () => {
       "stat:thumbnail.jpg", "get:thumbnail.jpg",
       "stat:preview.jpg", "get:preview.jpg",
       "stat:display.jpg", "get:display.jpg",
-      "record_clinical_photo_derivatives",
+      "complete_clinical_photo_derivatives",
     ]);
     expect(processor).toHaveBeenCalledWith({ photoId, sourceObjectKey, organizationId: orgId, patientId }, expect.anything());
   });
 
   it("fails a claimed photo when storage attestation fails and returns a safe error", async () => {
     const order: string[] = [];
+    getUser.mockResolvedValue({ data: { user: { id: "66666666-6666-4666-8666-666666666666" } }, error: null });
     rpc.mockImplementation(async (name: string) => {
       order.push(name);
       if (name === "claim_clinical_photo_processing") return { data: [{ photo_id: ids.sourceFileId, organization_id: ids.actingBranchId, patient_id: ids.patientId, source_object_key: "org/11111111-1111-4111-8111-111111111111/patients/22222222-2222-4222-8222-222222222222/files/33333333-3333-4333-8333-333333333333", source_mime_type: "image/jpeg", processing_status: "PROCESSING", version: 2 }], error: null };
