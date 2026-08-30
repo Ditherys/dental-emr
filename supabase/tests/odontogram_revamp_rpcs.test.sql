@@ -9,7 +9,7 @@ select extensions.ok(not has_function_privilege('service_role','public.record_pr
 select extensions.ok(not has_function_privilege('authenticated','public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute'),'legacy bridge provider-picker signature is not callable');
 select extensions.ok(not has_function_privilege('authenticated','public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute'),'legacy implant provider-picker signature is not callable');
 select extensions.ok(not has_function_privilege('authenticated','public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'legacy clinical entry signature is not callable');
-select extensions.ok(has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)','execute'),'provider-derived bridge v3 is callable');
+select extensions.ok(has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute'),'provider-derived bridge v3 is callable');
 select extensions.throws_ok($$select public.record_procedure_followup(null,null,null,null,null)$$,'42501','not authorized','anonymous caller cannot record a follow-up');
 select extensions.throws_ok($$select public.record_direct_treatment_with_charge(null,null,null,null,'{}'::jsonb,null)$$,'42501','not authorized','anonymous caller cannot post direct treatment');
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$') select case when count(*)=0 then 'P1_TEST_PASS' else 'P1_TEST_FAIL' end as p1_test_result from test_failures;

@@ -9029,6 +9029,7 @@ export type Database = {
           p_acting_branch_id: string
           p_idempotency_key: string
           p_occurred_at: string
+          p_charge_id: string
           p_patient_id: string
           p_units: Json
         }

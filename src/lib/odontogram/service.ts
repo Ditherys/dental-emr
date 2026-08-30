@@ -267,6 +267,7 @@ export async function recordCurrentBridge(input: unknown) {
     p_patient_id: value.patientId,
     p_units: value.units,
     p_occurred_at: value.occurredAt ?? null,
+    p_charge_id: value.chargeId,
     p_idempotency_key: value.idempotencyKey,
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "BRIDGE", row.bridge_id);

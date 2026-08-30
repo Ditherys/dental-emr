@@ -165,3 +165,17 @@ the provider-picker privilege inventory. The remaining legacy standalone
 implant fixture exposes that its historical writer requires a charge link while
 the provider-free v3 wrapper deliberately accepts no client charge; it now
 fails at that delegated invariant and needs a reviewed charge-resolution rule.
+
+## 2026-08-30 bridge/direct charge repair
+
+- `20260830010306` preserves the existing `post_charge` ledger/audit contract
+  while stripping only null optional identifiers from audit metadata; it also
+  requires a same-patient charge for bridge v3. `10307` grants only the new
+  six-argument bridge signature, and `10308` qualifies direct-treatment's
+  case version in its `RETURNING` clause.
+- Focused `odontogram_rpcs_v2` pgTAP passed 86 assertions, including linked
+  dentist success, role/cross-org denials, revoked legacy signatures, retry
+  identity, changed-payload conflict, one audit event, and rollback.
+- `npm run security:migrations`, `npm run typecheck`, and `git diff --check`
+  passed. Migrations were applied locally, forward-only; no reset or hosted
+  write was used.

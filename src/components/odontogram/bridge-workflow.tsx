@@ -119,7 +119,7 @@ export function BridgeWorkflow({
   const canSavePlan = provenance === "PLAN_DESIGN" ? Boolean(planItemIdInput.trim()) : true;
   const canSaveCurrent =
     provenance === "CURRENT_INTERNAL"
-      ? Boolean(providerId.trim() && executedAt.trim() && chargeId.trim())
+      ? Boolean(executedAt.trim() && chargeId.trim())
       : provenance === "CURRENT_EXTERNAL"
         ? true
         : canSavePlan;
@@ -193,9 +193,9 @@ export function BridgeWorkflow({
             actingBranchId,
             patientId,
             units,
-            treatingProviderId: providerId.trim(),
-            executedAt: executedAt.trim(),
+            occurredAt: executedAt.trim(),
             chargeId: chargeId.trim(),
+            idempotencyKey: crypto.randomUUID(),
           });
           if (!res.ok) {
             setError(message(res.code));

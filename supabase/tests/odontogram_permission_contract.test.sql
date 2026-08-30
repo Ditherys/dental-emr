@@ -44,7 +44,7 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)','execute')
+  and has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_bridge(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_bridge(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_implant_design(uuid,uuid,uuid,jsonb)','execute')

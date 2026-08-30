@@ -216,6 +216,7 @@ export const recordCurrentBridgeInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   units: z.array(bridgeUnitSchema).min(2).max(16),
+  chargeId: databaseUuid,
   occurredAt: isoTimestamp.optional(),
   idempotencyKey: boundedText(1, 128),
 }).strict();

@@ -37,6 +37,10 @@ insert into public.providers(id,organization_id,linked_user_id,first_name,last_n
  ('e5060000-0000-0000-0000-000000000001','e5020000-0000-0000-0000-000000000001','e5010000-0000-0000-0000-000000000001','Synthetic','Dentist','REGULAR','active');
 insert into public.provider_branches(organization_id,provider_id,branch_id,is_active) values
  ('e5020000-0000-0000-0000-000000000001','e5060000-0000-0000-0000-000000000001','e5030000-0000-0000-0000-000000000001',true);
+insert into public.providers(id,organization_id,linked_user_id,first_name,last_name,provider_type,status) values
+ ('e5060000-0000-0000-0000-000000000002','e5020000-0000-0000-0000-000000000001','e5010000-0000-0000-0000-000000000003','Linked','Dentist','REGULAR','active');
+insert into public.provider_branches(organization_id,provider_id,branch_id,is_active) values
+ ('e5020000-0000-0000-0000-000000000001','e5060000-0000-0000-0000-000000000002','e5030000-0000-0000-0000-000000000001',true);
 insert into public.procedures(id,organization_id,code,name,status) values
  ('e5070000-0000-0000-0000-000000000001','e5020000-0000-0000-0000-000000000001','O5_CROWN','Synthetic Crown','active');
 insert into public.treatment_plans(id,organization_id,patient_id,title,status,version,created_by) values
@@ -339,6 +343,48 @@ set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
 select extensions.ok((select (data->'entries') @> '[{"clinical_code":"EXTRACTION"}]'::jsonb and (data->'entries') @> '[{"clinical_code":"ROOT_CANAL"}]'::jsonb and jsonb_array_length(data->'treatmentExecutions')>=7 from public.get_patient_odontogram('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001')),'DTO reload exposes completed whole-tooth history and execution projections');
+reset role;
+
+-- O5 revamp regression fixture: a real DENTIST is linked to the provider
+-- resolved by the v3 boundary.  These assertions exercise the callable path,
+-- rather than merely inspecting grants.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000002',true);
+select extensions.throws_ok($$select public.record_direct_treatment_with_charge('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','e5070000-0000-0000-0000-000000000001',10000,'{}','o5-rv-reception')$$,'42501','not authorized','receptionist cannot use the provider-derived treatment writer');
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000004',true);
+select extensions.throws_ok($$select public.record_current_bridge_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[]',statement_timestamp(),(select charge_id from o5_completion_charge),'o5-rv-unassigned')$$,'42501','not authorized','unassigned specialist/admin cannot use the provider-derived bridge writer');
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000003',true);
+select extensions.throws_ok($$select public.record_direct_treatment_with_charge('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000002','e5070000-0000-0000-0000-000000000001',10000,'{}','o5-rv-foreign-patient')$$,'42501','not authorized','linked Organization A dentist cannot write Organization B patient');
+select extensions.throws_ok($$select public.record_current_bridge('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[]','e5060000-0000-0000-0000-000000000001',statement_timestamp(),null)$$,'42501',null,'superseded bridge provider-picker signature is denied to a dentist');
+select extensions.throws_ok($$select public.record_current_implant_component('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','{}','e5060000-0000-0000-0000-000000000001',statement_timestamp(),null)$$,'42501',null,'superseded implant provider-picker signature is denied to a dentist');
+create temp table o5_revamp_direct(event_id uuid, version integer, charge_id uuid);
+grant select on o5_revamp_direct to authenticated;
+insert into o5_revamp_direct(event_id,version) select event_id,version from public.record_direct_treatment_with_charge('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','e5070000-0000-0000-0000-000000000001',10000,'{"notes":"synthetic"}','o5-rv-direct-once');
+reset role;
+update o5_revamp_direct set charge_id=c.charge_id from public.procedure_case_events e join public.procedure_cases c on c.organization_id=e.organization_id and c.id=e.procedure_case_id where e.id=o5_revamp_direct.event_id;
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000003',true);
+select extensions.ok((select event_id is not null and charge_id is not null from o5_revamp_direct),'linked dentist records direct treatment with a canonical charge');
+select extensions.is((select event_id from public.record_direct_treatment_with_charge('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','e5070000-0000-0000-0000-000000000001',99999,'{"notes":"changed"}','o5-rv-direct-once')),(select event_id from o5_revamp_direct),'duplicate direct-treatment key returns the same event');
+reset role;
+select extensions.is((select count(*)::integer from public.audit_events where entity_id=(select event_id from o5_revamp_direct) and action='procedure.case.direct_treatment.recorded'),1,'duplicate direct-treatment key leaves one audit event');
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000003',true);
+create temp table o5_revamp_bridge(bridge_id uuid,version integer); grant select on o5_revamp_bridge to authenticated;
+insert into o5_revamp_bridge select bridge_id,version from public.record_current_bridge_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[{"tooth_fdi":"41","ordinal":1,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"},{"tooth_fdi":"42","ordinal":2,"role":"PONTIC","support_kind":"NONE"},{"tooth_fdi":"43","ordinal":3,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"}]','2030-01-01T00:00:00Z',(select charge_id from o5_completion_charge),'o5-rv-bridge-once');
+select extensions.is((select bridge_id from public.record_current_bridge_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[{"tooth_fdi":"41","ordinal":1,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"},{"tooth_fdi":"42","ordinal":2,"role":"PONTIC","support_kind":"NONE"},{"tooth_fdi":"43","ordinal":3,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"}]','2030-01-01T00:00:00Z',(select charge_id from o5_completion_charge),'o5-rv-bridge-once')),(select bridge_id from o5_revamp_bridge),'duplicate bridge key returns the same bridge');
+select extensions.throws_ok($$select public.record_current_bridge_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[{"tooth_fdi":"44","ordinal":1,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"},{"tooth_fdi":"45","ordinal":2,"role":"PONTIC","support_kind":"NONE"}]',statement_timestamp(),(select charge_id from o5_completion_charge),'o5-rv-bridge-once')$$,'P0001','idempotency conflict','changed bridge payload under the same key conflicts');
+reset role;
+select extensions.is((select count(*)::integer from public.audit_events where entity_id=(select bridge_id from o5_revamp_bridge) and action='clinical.bridge.current.recorded'),1,'duplicate bridge key leaves one canonical audit event');
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000003',true);
+select extensions.throws_ok($$select public.record_current_bridge_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','[{"tooth_fdi":"31","ordinal":1,"role":"ABUTMENT","support_kind":"NATURAL_TOOTH"},{"tooth_fdi":"31","ordinal":2,"role":"PONTIC","support_kind":"NONE"}]',statement_timestamp(),(select charge_id from o5_completion_charge),'o5-rv-invalid')$$,'22023','invalid bridge span','invalid bridge downstream write fails');
+reset role;
+select extensions.is((select count(*)::integer from public.dental_bridges where organization_id='e5020000-0000-0000-0000-000000000001' and patient_id='e5050000-0000-0000-0000-000000000001' and id not in (select bridge_id from o5_revamp_bridge) and charge_id=(select charge_id from o5_revamp_direct)),0,'failed bridge write rolls back without a partial canonical bridge');
 reset role;
 
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
