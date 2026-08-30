@@ -32,6 +32,14 @@ registry. No reset, hosted command, or production write was used.
 - Structured plan details freeze under the existing PRESENTED/ACKNOWLEDGED trigger. No drawing, payment, media, UI, or new write RPC was introduced.
 - The forward projection repairs are intentionally narrow and guard their expected prior definition before dynamic replacement; Cloud TEST remains a required deferred gate.
 
+## Isolated migration verification
+
+- Created disposable project `dental-emr-isolated` under `C:\Users\Latitude 7430\Desktop\dental-emr-isolated` with ports 55421–55429; the existing `dental-emr` local stack was not stopped, reset, or modified.
+- Replayed the committed migration sequence forward successfully after a temporary-only copy patch for the pre-existing duplicate-trigger migration `20260828010401_postdated_cheque_guard_split.sql`; the canonical migration file was unchanged.
+- Provisioned synthetic pgTAP tooling with `P1_PROVISION_PASS`; a second `db push --local` reported `upToDate: true`.
+- Isolated `odontogram_feature_details.test.sql`, `odontogram_rpcs_v2.test.sql`, and `procedure_cases_and_plan_details.test.sql` all returned `P1_TEST_PASS`; the latter includes public structured add/update round trips, omitted-field preservation, explicit note clearing, frozen-plan denial, and unauthenticated denial.
+- The full copied runner stops at the pre-existing `odontogram_domain_expansion.test.sql` seed residual (1 failed assertion); this is outside Task 4 and is retained as a deferred baseline issue rather than masked.
+
 ## Review remediation
 
 - `20260830010106` adds same-case correction validation and detail-aware,
