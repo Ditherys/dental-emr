@@ -4742,6 +4742,86 @@ export type Database = {
           },
         ]
       }
+      procedure_installment_schedule_items: {
+        Row: {
+          due_date: string
+          expected_centavos: number
+          id: string
+          ordinal: number
+          organization_id: string
+          schedule_id: string
+        }
+        Insert: {
+          due_date: string
+          expected_centavos: number
+          id?: string
+          ordinal: number
+          organization_id: string
+          schedule_id: string
+        }
+        Update: {
+          due_date?: string
+          expected_centavos?: number
+          id?: string
+          ordinal?: number
+          organization_id?: string
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_installment_schedule_organization_id_schedule_id_fkey"
+            columns: ["organization_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_installment_schedules"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      procedure_installment_schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          procedure_case_id: string
+          status: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          procedure_case_id: string
+          status?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          procedure_case_id?: string
+          status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_installment_schedul_organization_id_procedure_ca_fkey"
+            columns: ["organization_id", "procedure_case_id"]
+            isOneToOne: true
+            referencedRelation: "procedure_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_installment_schedules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedure_specialties: {
         Row: {
           created_at: string
@@ -7891,6 +7971,15 @@ export type Database = {
           direct_cost_default_id: string
           version: number
         }[]
+      }
+      create_procedure_installment_schedule: {
+        Args: {
+          p_acting_branch_id: string
+          p_idempotency_key: string
+          p_items: Json
+          p_procedure_case_id: string
+        }
+        Returns: Json
       }
       create_provider: {
         Args: { p_acting_branch_id: string; p_provider: Json }

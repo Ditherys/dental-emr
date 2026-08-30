@@ -7,6 +7,7 @@ import { formatPhpCentavos } from "@/lib/billing/money";
 import type { ProcedurePaymentStatus, ProcedurePaymentSummary } from "@/lib/billing/types";
 
 import { summarizeProcedureChargesAction } from "./billing-actions";
+import { InstallmentScheduleDialog } from "./installment-schedule-dialog";
 
 const STATUS_LABELS: Record<ProcedurePaymentStatus, string> = {
   UNPAID: "Unpaid",
@@ -74,6 +75,7 @@ export function ProcedurePaymentSummaryCard({ patientId, actingBranchId, procedu
       {isFetching && <p className="mt-2 inline-flex items-center gap-1 text-muted-foreground"><LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" /> Refreshing</p>}
       {error && <p role="alert" className="mt-2 text-destructive">{error}</p>}
       <button type="button" className="mt-2 min-h-11 text-xs underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30" onClick={() => setVersion((value) => value + 1)}>Refresh</button>
+      <InstallmentScheduleDialog branchId={actingBranchId} patientId={patientId} procedureCaseId={procedureId} actualAllocatedCentavos={String(summary.paidCentavos)} />
     </div>
   );
 }
