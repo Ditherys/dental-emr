@@ -665,5 +665,6 @@ export const patientOdontogramDataSchema = z.object({
   }).strict();
 
 export const patientOdontogramRowSchema = z.object({
+  entry_id: databaseUuid.nullable(),
   data: patientOdontogramDataSchema,
 }).strict();

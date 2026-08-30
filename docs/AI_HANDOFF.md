@@ -2904,3 +2904,21 @@ URLs.
 - Cloud TEST, hosted E2E/axe, advisor/security, and final release acceptance
   remain pending under ADR-029. The processing claim lease/token remains a
   documented pre-production hardening item.
+
+### Post-checkpoint clinical-load repair (2026-08-30)
+
+Local browser reproduction showed the shared clinical section displaying the
+generic load error while the photo gallery still rendered. The root cause was
+`get_patient_odontogram_v3` retaining its historical `(entry_id uuid, data
+jsonb)` declaration after `get_patient_odontogram` was changed to return one
+aggregate `data jsonb` row. PostgreSQL raised `42804` before the page could
+finish the clinical load, so records and treatment plans were hidden behind
+the same `clinicalLoadFailed` flag.
+
+Forward-only migration `20260830010624_odontogram_v3_return_contract.sql`
+preserves the approved v3 signature and returns one bounded DTO row with a
+null legacy `entry_id`; the TypeScript RPC schema now validates that shape.
+The regression test was observed failing against the old function, then passed
+after migration (`P1_TEST_PASS`). Odontogram service/schema tests, typecheck,
+build, lint, migration privilege lint, and diff checks pass. The three lint
+warnings remain the pre-existing treatment-plan warnings documented above.

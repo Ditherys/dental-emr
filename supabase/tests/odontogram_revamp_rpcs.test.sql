@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(12);
+select extensions.plan(13);
 select extensions.ok(has_function_privilege('authenticated','public.get_patient_odontogram_v3(uuid,uuid)','execute'),'v3 odontogram read is callable');
 select extensions.ok(has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'v3 clinical entry is callable');
 select extensions.ok(has_function_privilege('authenticated','public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)','execute'),'direct treatment boundary is callable');
@@ -12,5 +12,10 @@ select extensions.ok(not has_function_privilege('authenticated','public.record_t
 select extensions.ok(has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute'),'provider-derived bridge v3 is callable');
 select extensions.throws_ok($$select public.record_procedure_followup(null,null,null,null,null)$$,'42501','not authorized','anonymous caller cannot record a follow-up');
 select extensions.throws_ok($$select public.record_direct_treatment_with_charge(null,null,null,null,'{}'::jsonb,null)$$,'42501','not authorized','anonymous caller cannot post direct treatment');
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','12000000-0000-0000-0000-000000000001',true);
+select extensions.is((select count(*)::integer from public.get_patient_odontogram_v3('32000000-0000-0000-0000-000000000001','d45e073b-77d0-4c67-a656-aed601cc5c18')),1,'v3 odontogram read returns its declared row shape');
+set local role postgres;
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$') select case when count(*)=0 then 'P1_TEST_PASS' else 'P1_TEST_FAIL' end as p1_test_result from test_failures;
 rollback;

@@ -316,7 +316,7 @@ describe("odontogram service RPC contract", () => {
   });
 
   it("binds O5 getPatientOdontogram to its exact contract", async () => {
-    rpc.mockResolvedValueOnce({ data: [{ data: { patientId, entries: [], bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [] } }], error: null });
+    rpc.mockResolvedValueOnce({ data: [{ entry_id: null, data: { patientId, entries: [], bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [] } }], error: null });
     await expect(getPatientOdontogram({ actingBranchId: branchId, patientId })).resolves.toEqual({ patientId, entries: [], bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [] });
     expect(rpc).toHaveBeenLastCalledWith("get_patient_odontogram_v3", {
       p_acting_branch_id: branchId,
@@ -618,7 +618,7 @@ describe("odontogram service RPC contract", () => {
         events: [{ id: conditionId, predecessor_event_id: null, from_state: "PROPOSED", to_state: "ACCEPTED", actor_user_id: recordedBy, reason: null, occurred_at: recordedAt }],
       }],
     };
-    rpc.mockResolvedValueOnce({ data: [{ data }], error: null });
+    rpc.mockResolvedValueOnce({ data: [{ entry_id: null, data }], error: null });
 
     await expect(getPatientOdontogram({ actingBranchId: branchId, patientId })).resolves.toMatchObject({
       patientId,
