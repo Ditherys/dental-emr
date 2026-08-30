@@ -19,4 +19,13 @@ Fresh local evidence:
 
 Residual: the focused pgTAP suite currently proves replay-boundary catalog/security invariants; an independent reviewer should expand synthetic actor/fixture execution and the external two-session concurrency probe before final release acceptance. Cloud TEST remains required and deferred under ADR-029.
 
-Follow-up evidence: migrations `20260830010410`–`20260830010414` correct amendment ordering (predecessor cancellation precedes successor insert), use organization+actor+key serialization, repair the emitted regex/audit metadata, and remove the mistakenly retained historical one-to-one constraint. The focused synthetic pgTAP fixture now exercises create replay/conflict, amend history/replay, cancel, complete, cross-tenant denial, and allocation non-mutation (13/13 passing locally). The generated relationship metadata marks schedules-to-procedure-cases as many-to-one.
+Follow-up evidence: migrations `20260830010410`–`20260830010414` correct amendment ordering (predecessor cancellation precedes successor insert), use organization+actor+key serialization, repair the emitted regex/audit metadata, and remove the mistakenly retained historical one-to-one constraint. Migration `20260830010415` adds the ADR-030 `DENTIST:payment.record` role grant while the payment RPC continues to require clinical read access for dentist actors. The focused synthetic pgTAP fixture now exercises create replay/conflict, amend history/replay, cancel, complete, cross-tenant denial, allocation non-mutation, dentist payment authorization/actor derivation, dentist clinical-read denial, and receptionist payment authorization (20/20 behavioral assertions in the 24-test suite). The generated relationship metadata marks schedules-to-procedure-cases as many-to-one.
+
+Additional local evidence:
+
+- `npm run db:migrate:local` applied `20260830010415_dentist_payment_record_permission.sql`.
+- `supabase/tests/procedure_installment_schedules_concurrency.local.mjs` runs two authenticated sessions for one OWNER through active branches A and B with the same key. Because branch is part of the normalized request fingerprint, exactly one request commits and the other receives the expected `22023` idempotency conflict; the test proves one schedule exists for the case and no raw unique violation occurs.
+- The local runner imports and executes the concurrency probe after the existing billing and odontogram probes.
+- Focused local pgTAP suites `procedure_installment_schedules.test.sql` and `billing_permission_contract.test.sql`, `npm run security:migrations`, `npm run lint`, and `npm run typecheck` pass.
+
+Residual: Cloud TEST, authenticated E2E, responsive/accessibility, advisor, and security gates remain deferred under ADR-029. The full local database runner retains the previously documented unrelated baseline treatment-plan residual and has not been claimed as a clean full-suite pass.

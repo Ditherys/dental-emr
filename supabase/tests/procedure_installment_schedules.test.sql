@@ -1,17 +1,31 @@
 begin;
-select extensions.plan(19);
+select extensions.plan(24);
 select extensions.ok(to_regclass('public.procedure_installment_schedule_operations') is not null, 'durable schedule replay table exists');
 select extensions.ok((select relrowsecurity from pg_class where oid='public.procedure_installment_schedules'::regclass), 'schedule table has RLS');
 select extensions.ok(not has_table_privilege('authenticated','public.procedure_installment_schedules','select'), 'schedule table has no browser grant');
 select extensions.ok(position('payment_allocations' in pg_get_functiondef('public.create_procedure_installment_schedule_unlocked(uuid,uuid,jsonb,text)'::regprocedure))=0, 'expectation writer does not post allocations');
 
-insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values ('d7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-owner@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values
+ ('d7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-owner@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
+ ('d7100000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-dentist@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
+ ('d7100000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-dentist-no-clinical@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
+ ('d7100000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-receptionist@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
 insert into public.organizations(id,legal_name,business_name,slug) values ('d7110000-0000-0000-0000-000000000001','Schedule Synthetic Inc','Schedule Synthetic','schedule-synthetic');
 insert into public.organizations(id,legal_name,business_name,slug) values ('d7110000-0000-0000-0000-000000000002','Schedule Foreign Inc','Schedule Foreign','schedule-foreign');
+insert into public.roles(id,organization_id,code,name,is_system) values ('d7180000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','DENTIST','Dentist without clinical access',false);
 insert into public.branches(id,organization_id,name,slug,code,address_line1,city,province) values ('d7120000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','Schedule A','schedule-a','SCA','1 Test','Test','Test'),('d7120000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','Schedule B','schedule-b','SCB','2 Test','Test','Test');
 insert into public.branches(id,organization_id,name,slug,code,address_line1,city,province) values ('d7120000-0000-0000-0000-000000000003','d7110000-0000-0000-0000-000000000002','Schedule Foreign','schedule-foreign-main','SCF','3 Test','Test','Test');
 insert into public.organization_members(id,organization_id,user_id,membership_status,joined_at) values ('d7130000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','active',statement_timestamp());
+insert into public.organization_members(id,organization_id,user_id,membership_status,joined_at) values
+ ('d7130000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000002','active',statement_timestamp()),
+ ('d7130000-0000-0000-0000-000000000003','d7110000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000003','active',statement_timestamp()),
+ ('d7130000-0000-0000-0000-000000000004','d7110000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000004','active',statement_timestamp());
 insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by) select 'd7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000001',id,'d7100000-0000-0000-0000-000000000001' from public.roles where organization_id is null and code='OWNER';
+insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by) select 'd7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000002',id,'d7100000-0000-0000-0000-000000000001' from public.roles where organization_id is null and code='DENTIST';
+insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by) values
+ ('d7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000003','d7180000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001'),
+ ('d7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000004',(select id from public.roles where organization_id is null and code='RECEPTIONIST'),'d7100000-0000-0000-0000-000000000001');
+insert into public.role_permissions(role_id,permission_id) select 'd7180000-0000-0000-0000-000000000001',id from public.permissions where code='payment.record';
 insert into public.patients(id,organization_id,patient_number,first_name,last_name,birth_date,preferred_branch_id) values ('d7140000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH-1','Synthetic','Schedule','1990-01-01','d7120000-0000-0000-0000-000000000001');
 insert into public.patients(id,organization_id,patient_number,first_name,last_name,birth_date,preferred_branch_id) values ('d7140000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000002','SCF-1','Synthetic','Foreign','1990-01-01','d7120000-0000-0000-0000-000000000003');
 insert into public.procedures(id,organization_id,code,name,status) values ('d7150000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH','Schedule','active');
@@ -41,6 +55,18 @@ select extensions.ok(current_setting('test.payment_id')::uuid is not null,'autho
 select extensions.is((select payment_id::text from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,500,'receipt-1','payment-record')),current_setting('test.payment_id'),'payment exact retry returns original receipt');
 select extensions.throws_ok($$select * from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,501,'receipt-1','payment-record')$$,'22023','idempotency key conflicts with a different request','payment changed payload conflicts');
 select extensions.throws_ok($$select * from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000002',current_setting('test.cash_method')::uuid,500,'foreign receipt','foreign-payment')$$,'42501','not authorized','foreign-tenant patient payment is denied');
+set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true); select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000002',true);
+select set_config('test.dentist_payment_id',(select payment_id::text from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,125,'dentist receipt','dentist-payment')),true);
+select extensions.ok(current_setting('test.dentist_payment_id')::uuid is not null,'a DENTIST with patient.clinical.read may record a payment');
+reset role;
+select extensions.is((select received_by from public.payments where id=current_setting('test.dentist_payment_id')::uuid),'d7100000-0000-0000-0000-000000000002'::uuid,'a dentist payment derives received_by from auth.uid');
+set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true); select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000003',true);
+select extensions.throws_ok($$select * from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,125,'no clinical receipt','dentist-no-clinical-payment')$$,'42501','not authorized','a DENTIST without patient.clinical.read cannot record a payment');
+select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000004',true);
+select set_config('test.receptionist_payment_id',(select payment_id::text from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,125,'reception receipt','receptionist-payment')),true);
+select extensions.ok(current_setting('test.receptionist_payment_id')::uuid is not null,'a RECEPTIONIST with payment.record may record a payment');
+reset role;
+select extensions.is((select received_by from public.payments where id=current_setting('test.receptionist_payment_id')::uuid),'d7100000-0000-0000-0000-000000000004'::uuid,'a receptionist payment derives received_by from auth.uid');
 select public.allocate_payment('d7120000-0000-0000-0000-000000000001',current_setting('test.payment_id')::uuid,'d7170000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',500,'schedule-allocation');
 reset role;
 select extensions.is((select count(*)::integer from public.payment_allocations where charge_id='d7170000-0000-0000-0000-000000000001'),1,'allocation affects the selected charge only');

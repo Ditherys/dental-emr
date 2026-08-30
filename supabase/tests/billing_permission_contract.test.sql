@@ -35,7 +35,7 @@ select extensions.set_eq(
   array[
     'ADMIN:billing.adjust', 'ADMIN:billing.attribution.override', 'ADMIN:billing.charge', 'ADMIN:billing.read', 'ADMIN:compensation.manage', 'ADMIN:compensation.own.read', 'ADMIN:financial.analytics.read', 'ADMIN:payment.record',
     'BILLING:billing.charge', 'BILLING:billing.read', 'BILLING:payment.record',
-    'DENTIST:billing.charge', 'DENTIST:billing.read', 'DENTIST:compensation.own.read',
+    'DENTIST:billing.charge', 'DENTIST:billing.read', 'DENTIST:compensation.own.read', 'DENTIST:payment.record',
     'OWNER:billing.adjust', 'OWNER:billing.attribution.override', 'OWNER:billing.charge', 'OWNER:billing.read', 'OWNER:compensation.manage', 'OWNER:compensation.own.read', 'OWNER:financial.analytics.read', 'OWNER:payment.record',
     'RECEPTIONIST:billing.read', 'RECEPTIONIST:payment.record'
   ]::text[],
