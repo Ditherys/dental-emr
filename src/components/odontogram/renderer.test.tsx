@@ -73,8 +73,10 @@ describe("MeasuredChart O6 renderer", () => {
     expect(container.querySelector('[data-fdi="36"]')?.getAttribute("data-template")).toBe("36");
     // Tailwind classes present (no inline style simulation of pseudo-classes)
     expect(container.querySelector(".odontogram-measured-root")).toBeInTheDocument();
-    expect(container.querySelectorAll(".odontogram-tooth img")).toHaveLength(32);
-    expect(container.querySelector(".odontogram-tooth svg")).not.toBeInTheDocument();
+    // Assets start as a fast URL fallback while the trusted fork SVG text is
+    // loaded and mounted inline; the inline activation contract is covered by
+    // measured-inline-asset.test.tsx.
+    expect(container.querySelectorAll(".odontogram-tooth img").length).toBeGreaterThan(0);
     expect(container.querySelector('[data-fdi="21"] img')?.getAttribute("data-orientation")).toBe("mirror");
     expect(container.querySelector('[data-fdi="31"] img')?.getAttribute("data-orientation")).toBe("rotate");
     expect(container.querySelector('[data-fdi="41"] img')?.getAttribute("data-orientation")).toBe("rotate-mirror");

@@ -70,6 +70,33 @@
   pointer-events: none;
 }
 
+/* The fork artwork is now rendered inline and owns the clinical geometry.
+ * These spans remain as stable, accessible renderer-layer markers for tests,
+ * print projections, and assistive tooling, but must not draw a second set of
+ * approximate rectangles over the anatomical SVG. */
+.odontogram-measured-root .odontogram-semantic-overlay {
+  display: none !important;
+}
+
+.odontogram-measured-root .odontogram-inline-asset {
+  display: block;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.odontogram-measured-root .odontogram-inline-asset-mirror {
+  transform: scaleX(-1);
+}
+
+.odontogram-measured-root .odontogram-inline-asset-rotate {
+  transform: rotate(180deg);
+}
+
+.odontogram-measured-root .odontogram-inline-asset-rotate-mirror {
+  transform: rotate(180deg) scaleX(-1);
+}
+
 .odontogram-measured-root .odontogram-overlay-caries {
   inset: 33% 31% 33% 31%;
   border: 2px solid rgb(217 119 6);

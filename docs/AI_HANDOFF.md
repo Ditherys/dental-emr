@@ -2922,3 +2922,23 @@ The regression test was observed failing against the old function, then passed
 after migration (`P1_TEST_PASS`). Odontogram service/schema tests, typecheck,
 build, lint, migration privilege lint, and diff checks pass. The three lint
 warnings remain the pre-existing treatment-plan warnings documented above.
+
+### Measured fork overlay correction (2026-08-30, local working checkpoint)
+
+The first measured-chart adapter copied the fork SVG files but rendered them as
+flat `<img>` elements and drew approximate CSS overlay rectangles. That made
+the fork's embedded anatomical layers unreachable, notably `endo-*`,
+`caries-root`, implant components, and restoration variants. The correction
+adds `measured-inline-asset.tsx` and `measured-fork-layers.ts`: trusted
+repository-owned SVG text is fetched from the existing bundled asset URL,
+mounted inline, reset through the fork's `data-active` contract, and activated
+from the renderer-independent clinical detail/state. The old CSS overlays are
+now semantic-only markers so they cannot obscure anatomical artwork. Focused
+fork-layer, inline-asset, renderer, feature-parity, and a11y tests pass;
+typecheck, lint (three pre-existing treatment-plan warnings plus the existing
+no-`img` optimization warning for the intentional URL fallback), and build pass.
+
+This is a local renderer correction, not a claim that every fork control/state
+has yet been exposed in the patient domain. Canonical data remains outside the
+renderer; Cloud TEST, hosted E2E/axe, advisor/security gates, and final release
+acceptance remain pending under ADR-029.

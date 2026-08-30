@@ -6,7 +6,8 @@ import type { ClinicalFeatureDetail, ToothRenderState } from "@/lib/odontogram/f
 import type { ClinicalFeatureCode } from "@/lib/odontogram/clinical-codes";
 import type { ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
-import { MeasuredAssetImage, MeasuredInlinePlaceholder, templateForFdi } from "./measured-assets";
+import { templateForFdi } from "./measured-assets";
+import { MeasuredInlineAsset } from "./measured-inline-asset";
 import { overlayRendererFor, surfaceOverlayRendererFor, type RendererSurface } from "./overlay-registry";
 
 export type RendererMode = "CURRENT" | "PLANNED" | "ALL";
@@ -327,7 +328,6 @@ export function MeasuredTooth({
   const hasCurrent = state.current.length > 0 || state.anatomy !== "NATURAL";
   const isPlanned = mode !== "CURRENT" && hasPlanned;
   const isCurrent = mode !== "PLANNED" && hasCurrent;
-  const natural = state.showNaturalCrown && state.anatomy === "NATURAL";
   const clinicalSummary = renderableEntries.length > 0 ? entrySummary(renderableEntries) : summary(state, mode);
   const planSegment = isPlanned && isCurrent ? "current and planned" : isPlanned ? "planned" : isCurrent ? "current" : "no active state";
   const bridgeLabel = bridgeRole ? `bridge ${bridgeRole.toLowerCase()}` : "no bridge role";
@@ -335,6 +335,24 @@ export function MeasuredTooth({
   const tone = state.anatomy === "MISSING" ? "border-slate-300 bg-slate-100 opacity-70" : isPlanned && !isCurrent ? "border-dashed border-amber-400 bg-amber-50" : "border-slate-200 bg-white";
   const translatedCurrent = language === "fil" ? "kasalukuyan" : "current";
   const translatedPlanned = language === "fil" ? "nakaplano" : "planned";
+
+  const entryFeatures = renderableEntries.map((entry) => ({
+    detail: detailForEntry(entry),
+    surfaces: entrySurfaces(entry),
+    planned: entry.status === "PLANNED",
+  }));
+  const sourceFeatures = entryFeatures.length > 0
+    ? entryFeatures
+    : [
+        ...state.current.map((detail) => ({ detail, surfaces: [] as string[], planned: false })),
+        ...state.planned.map((detail) => ({ detail, surfaces: [] as string[], planned: true })),
+      ];
+  const forkLayerInput = {
+    anatomy: state.anatomy,
+    view,
+    current: mode === "PLANNED" ? [] : sourceFeatures.filter((feature) => !feature.planned).map(({ detail, surfaces }) => ({ detail, surfaces })),
+    planned: mode === "CURRENT" ? [] : sourceFeatures.filter((feature) => feature.planned).map(({ detail, surfaces }) => ({ detail, surfaces })),
+  };
 
   const hasSurfaceEntries = renderableEntries.some((entry) => entrySurfaces(entry).length > 0);
   const currentEntryOverlays = renderableEntries.flatMap((entry) => entry.status === "PLANNED" ? [] : entrySurfaces(entry).flatMap((surface) => renderSurfaceFeature(fdi, detailForEntry(entry), surface, false, visibleLayers, view)));
@@ -389,8 +407,9 @@ export function MeasuredTooth({
         {labelDensity === "comfortable" && <span className="hidden text-[9px] font-normal text-slate-500 sm:inline">F:{fdi} U:{universal} P:{palmer}</span>}
       </span>
       <span className="relative flex h-[78px] w-full items-center justify-center overflow-hidden rounded-md bg-white/70" aria-hidden="true">
-        {natural && <span data-layer="natural-crown" className="odontogram-natural-crown absolute inset-0 flex items-center justify-center"><>{template ? <MeasuredAssetImage fdi={fdi} view={view} alt={ariaLabel} /> : <MeasuredInlinePlaceholder fdi={fdi} label={ariaLabel} />}</></span>}
-        {!natural && <span className="odontogram-anatomy-placeholder absolute inset-0" aria-hidden="true" />}
+        <span data-layer="fork-measured-artwork" className="odontogram-natural-crown absolute inset-0 flex items-center justify-center">
+          {template ? <MeasuredInlineAsset fdi={fdi} view={view} alt={ariaLabel} layerInput={forkLayerInput} /> : <span className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">{fdi}</span>}
+        </span>
         <span className="odontogram-overlay-stack absolute inset-0" aria-hidden="true">{currentOverlays}{stateOverlays}{plannedOverlays}{bridgeRole && <span data-layer="BRIDGE_ROLE" data-bridge-role={bridgeRole} className="odontogram-bridge-role" />}</span>
       </span>
       <span className="flex min-h-2 items-center justify-center gap-1 text-[9px] font-medium uppercase tracking-wide text-slate-600" aria-hidden="true">

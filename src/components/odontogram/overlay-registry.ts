@@ -62,7 +62,7 @@ function layer(
 ): ReactElement {
   return createElement("span", {
     "aria-hidden": true,
-    className: `odontogram-overlay odontogram-overlay-${name.toLowerCase().replaceAll("_", "-")}`,
+    className: `odontogram-overlay odontogram-semantic-overlay odontogram-overlay-${name.toLowerCase().replaceAll("_", "-")}`,
     "data-fdi": String(context.fdi),
     "data-layer": name,
     "data-planned": context.planned ? "1" : "0",
