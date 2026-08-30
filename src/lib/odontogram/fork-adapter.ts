@@ -61,6 +61,22 @@ export type ForkClinicalDraft = {
 };
 
 /**
+ * Stable identity for one renderer-derived canonical draft. It deliberately
+ * contains only allowlisted clinical fields so renderer metadata cannot affect
+ * duplicate detection at the save boundary.
+ */
+export function forkClinicalDraftKey(draft: ForkClinicalDraft): string {
+  return JSON.stringify({
+    toothCode: draft.toothCode,
+    surfaces: [...draft.surfaces].sort(),
+    kind: draft.kind,
+    status: draft.status,
+    detail: draft.detail,
+    note: draft.note,
+  });
+}
+
+/**
  * Renderer-independent relationship context used by the save boundary.  The
  * fork can display these structures, but its JSON has no bridge/component IDs
  * and must never be treated as an instruction to create or void a relationship.

@@ -178,6 +178,7 @@ describe("ForkOdontogram", () => {
 
     await waitFor(() => expect(onDraftChange).toHaveBeenCalled());
     const emitted = onDraftChange.mock.lastCall?.[0];
+    expect(emitted).toHaveLength(1);
     expect(emitted).toContainEqual({
       toothCode: "12",
       surfaces: ["O"],

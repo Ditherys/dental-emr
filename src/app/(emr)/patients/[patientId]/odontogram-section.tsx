@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
 import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
+import { ForkSaveController } from "@/components/odontogram/fork-save-controller";
 import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
 import { OdontogramPrintHistory } from "@/components/odontogram/print-history";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
@@ -54,7 +55,7 @@ export function OdontogramSection({
   const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedFdi, setSelectedFdi] = React.useState<number | null>(null);
-  const [, setForkDrafts] = React.useState<readonly ForkClinicalDraft[]>([]);
+  const [forkDrafts, setForkDrafts] = React.useState<readonly ForkClinicalDraft[]>([]);
   const [perioOpen, setPerioOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
@@ -237,6 +238,18 @@ export function OdontogramSection({
               canWriteClinical={canWriteClinical}
               onSelect={handleSelect}
               onDraftChange={setForkDrafts}
+              onError={setError}
+            />
+            <ForkSaveController
+              key={`${patientId}:${actingBranchId}`}
+              patientId={patientId}
+              actingBranchId={actingBranchId}
+              canWriteClinical={canWriteClinical}
+              drafts={forkDrafts}
+              onSaved={async () => {
+                setForkDrafts([]);
+                await refetch();
+              }}
               onError={setError}
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">

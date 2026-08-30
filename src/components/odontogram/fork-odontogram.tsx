@@ -18,6 +18,7 @@ import {
 import {
   buildForkPayload,
   buildForkRelationshipBaselines,
+  forkClinicalDraftKey,
   forkPayloadToClinicalDraft,
   type ForkClinicalDraft,
   type ForkRelationshipBaseline,
@@ -50,6 +51,8 @@ const FIXED_FDI_TEETH = new Set([
 ]);
 
 function RuntimeBridge({ status, plan, relationshipBaselines, onDraftChange, onError }: RuntimeBridgeProps) {
+  const baselineKeys = React.useRef<ReadonlySet<string>>(new Set());
+
   React.useLayoutEffect(() => {
     // Child layout effects run before the provider's passive initialization.
     // Fix the anatomy profile before the engine chooses and caches SVG assets.
@@ -69,10 +72,11 @@ function RuntimeBridge({ status, plan, relationshipBaselines, onDraftChange, onE
         unsubscribe = onStateChange(() => {
           if (cancelled) return;
           try {
-            onDraftChange(forkPayloadToClinicalDraft(
+            const drafts = forkPayloadToClinicalDraft(
               { status: getStatusChart(), plan: getPlanChart() },
               { relationshipBaselines },
-            ));
+            );
+            onDraftChange(drafts.filter((draft) => !baselineKeys.current.has(forkClinicalDraftKey(draft))));
           } catch {
             onError("The chart change could not be prepared. Refresh the odontogram and try again.");
           }
@@ -91,6 +95,9 @@ function RuntimeBridge({ status, plan, relationshipBaselines, onDraftChange, onE
     };
 
     try {
+      baselineKeys.current = new Set(
+        forkPayloadToClinicalDraft({ status, plan }, { relationshipBaselines }).map(forkClinicalDraftKey),
+      );
       // Hydrate before subscribing. importStatus intentionally emits a state
       // notification; attaching only after the initialized SVG grid is present
       // keeps both that notification and the provider's init notification from
