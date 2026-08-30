@@ -52,6 +52,8 @@ Status: locally implemented and verified; Cloud TEST and final release acceptanc
 - The mobile-only Open inspector control now uses the required 44px minimum
   target (`min-h-11`), with a component integration assertion.
 
+Final follow-up commit: `d9ab1948a2728c1652ee9baeaa964f455fc9b930` — `fix: bind odontogram progress events to patient`.
+
 ## Verification
 
 | Command | Result |
