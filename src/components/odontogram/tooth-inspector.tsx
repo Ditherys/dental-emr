@@ -38,6 +38,7 @@ export interface ToothInspectorProps {
   dto: PatientOdontogramDTO | null;
   notation: NumberingSystem;
   canWriteClinical: boolean;
+  initialRecordOpen?: boolean;
   onClose(): void;
   onMutated?(): void;
 }
@@ -49,6 +50,7 @@ export function ToothInspector({
   dto,
   notation,
   canWriteClinical,
+  initialRecordOpen = false,
   onClose,
   onMutated,
 }: ToothInspectorProps): React.ReactElement {
@@ -56,7 +58,7 @@ export function ToothInspector({
   const [tab, setTab] = React.useState("details");
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
-  const [recordOpen, setRecordOpen] = React.useState(false);
+  const [recordOpen, setRecordOpen] = React.useState(initialRecordOpen);
   const [amendTarget, setAmendTarget] = React.useState<ToothClinicalEntryDTO | null>(null);
   const [voidTarget, setVoidTarget] = React.useState<ToothClinicalEntryDTO | null>(null);
   const [legacyReason, setLegacyReason] = React.useState("");
@@ -282,7 +284,7 @@ export function ToothInspector({
           <div className="mt-4 flex flex-wrap gap-2">
             {canWriteClinical ? (
               <Button type="button" size="sm" className="min-h-9" disabled={saving} onClick={() => setRecordOpen(true)}>
-                Record finding
+                Record finding or treatment
               </Button>
             ) : (
               <p className="text-xs text-muted-foreground">Read-only access. Clinical write is required to record or amend.</p>
@@ -377,7 +379,7 @@ export function ToothInspector({
       <Dialog open={recordOpen} onOpenChange={(open) => !open && setRecordOpen(false)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Record finding — Tooth {label}</DialogTitle>
+            <DialogTitle>Record finding or treatment — Tooth {label}</DialogTitle>
             <DialogDescription>Creates a versioned clinical entry. Use amend/void for corrections — records are never overwritten.</DialogDescription>
           </DialogHeader>
           <form

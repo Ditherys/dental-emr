@@ -45,7 +45,7 @@ export function OdontogramToolbar({
             variant={notation === system ? "default" : "outline"}
             aria-pressed={notation === system}
             onClick={() => onNotationChange(system)}
-            className="min-h-8 px-2.5 text-xs"
+            className="min-h-11 px-2.5 text-xs"
           >
             {system === "UNIVERSAL" ? "Universal" : system === "PALMER" ? "Palmer" : "FDI"}
           </Button>
@@ -64,7 +64,7 @@ export function OdontogramToolbar({
             variant={dentition === value ? "secondary" : "outline"}
             aria-pressed={dentition === value}
             onClick={() => onDentitionChange(value)}
-            className="min-h-8 px-2.5 text-xs capitalize"
+            className="min-h-11 px-2.5 text-xs capitalize"
           >
             {value}
           </Button>
@@ -83,7 +83,7 @@ export function OdontogramToolbar({
             variant={view === value ? "secondary" : "outline"}
             aria-pressed={view === value}
             onClick={() => onViewChange(value)}
-            className="min-h-8 px-2.5 text-xs capitalize"
+            className="min-h-11 px-2.5 text-xs capitalize"
           >
             {value}
           </Button>
@@ -93,7 +93,7 @@ export function OdontogramToolbar({
       <div className="ml-auto flex items-center gap-2">
         <Popover>
           <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="outline" className="min-h-8 text-xs">
+            <Button type="button" size="sm" variant="outline" className="min-h-11 text-xs">
               Options
             </Button>
           </PopoverTrigger>
@@ -110,7 +110,7 @@ export function OdontogramToolbar({
           size="sm"
           variant={canWriteClinical ? "default" : "outline"}
           onClick={onPerioEntry}
-          className="min-h-8 text-xs"
+          className="min-h-11 text-xs"
           aria-label="Open periodontal entry"
         >
           Perio entry

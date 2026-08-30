@@ -1,0 +1,56 @@
+# Task 9 / O7 — Current Status Workspace and Chronological Record
+
+Date: 2026-08-30
+
+Status: locally implemented and verified; Cloud TEST and final release acceptance remain pending.
+
+## Delivered scope
+
+- Added the renderer-independent `ProgressEventDTO` projection and an
+  oldest-to-newest patient progress-record table. The base projection uses
+  append-only odontogram entries and final periodontal examinations; it does
+  not manufacture financial amounts, balances, procedure-case IDs, or actor
+  identities absent from the approved DTO.
+- Added the patient-keyed Current Status panel below the chart. Direct treatment
+  opens the existing selected-tooth, signed-in clinical-entry workflow; no
+  provider picker is present.
+- Added a procedure follow-up dialog that requires an existing case, captures
+  occurred date and bounded note, and states that it creates no charge. The
+  section renders an actionable follow-up only when its caller provides both
+  authoritative case choices and an authorized recording callback. O7 does not
+  supply a no-op browser mutation or infer a case ID.
+- Desktop selection stays in the persistent inspector; tablet/phone selection
+  uses the existing bottom sheet. Toolbar and Current Status controls have
+  44px minimum touch targets. The chart remains internally horizontally
+  scrollable rather than forcing page overflow.
+- Patient transitions clear selected-tooth, sheet, direct-entry, and follow-up
+  transient state. No Reset, Classic renderer, drawing path, provider picker,
+  or grouped case accordion was added.
+
+## Verification
+
+| Command | Result |
+| --- | --- |
+| `npm run test:unit -- 'src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx' src/components/odontogram` | PASS — 12 files, 37 tests |
+| `npm run lint` | PASS — no errors or warnings |
+| `npm run typecheck` | PASS — strict TypeScript clean |
+| `git diff --check` | PASS — no whitespace errors (Git emitted expected Windows LF/CRLF notices) |
+
+The red phase was recorded before implementation: the three new component
+tests initially failed because the required components did not exist; the
+patient-section direct-treatment test initially failed because selection always
+opened a sheet. Both now pass in the focused suite above.
+
+## Commit
+
+Commit SHA: pending amend after local checkpoint creation.
+
+## Residual gates
+
+- Cloud TEST database/RLS/authorization, hosted E2E, responsive/accessibility,
+  security/advisor review, and owner release acceptance remain mandatory under
+  ADR-029.
+- O7 intentionally does not add a procedure-case follow-up server action or a
+  new charge path. An authorized case-linked recording boundary is required
+  before the follow-up dialog becomes actionable in the patient section; the
+  separate confirmed-procedure workflow remains the only charge path.

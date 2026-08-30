@@ -7,13 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MeasuredChart } from "@/components/odontogram/measured-chart";
+import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
 import { OdontogramToolbar, type ChartViewFilter, type DentitionFilter } from "@/components/odontogram/odontogram-toolbar";
 import { PerioWorkspace, type PerioMeasurement } from "@/components/odontogram/perio-workspace";
 import { OdontogramPrintHistory } from "@/components/odontogram/print-history";
+import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
+import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { ToothInspector } from "@/components/odontogram/tooth-inspector";
 import type { NumberingSystem } from "@/lib/odontogram/dentition";
 import { isPrimaryFdi, isPermanentFdi } from "@/lib/odontogram/dentition";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
+import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
 import {
   amendPeriodontalExaminationAction,
@@ -28,6 +32,9 @@ type Props = {
   /** @deprecated O13 read cutover — use initialOdontogram (get_patient_odontogram DTO). */
   initialConditions?: unknown;
   initialOdontogram?: PatientOdontogramDTO | null;
+  initialProgressEvents?: ProgressEventDTO[];
+  procedureCases?: readonly ProcedureCaseChoice[];
+  recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
   loadFailed?: boolean;
 };
 
@@ -36,6 +43,9 @@ export function OdontogramSection({
   actingBranchId,
   canWriteClinical,
   initialOdontogram,
+  initialProgressEvents,
+  procedureCases: suppliedProcedureCases,
+  recordFollowup,
   loadFailed,
 }: Props): React.ReactElement {
   const [dto, setDto] = React.useState<PatientOdontogramDTO | null>(() => initialOdontogram ?? null);
@@ -47,6 +57,8 @@ export function OdontogramSection({
   const [view, setView] = React.useState<ChartViewFilter>("all");
   const [perioOpen, setPerioOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [followupOpen, setFollowupOpen] = React.useState(false);
+  const [directTreatmentRequested, setDirectTreatmentRequested] = React.useState(false);
 
   // Transient state is keyed by patientId — clear selection on patient change.
   React.useEffect(() => {
@@ -54,6 +66,8 @@ export function OdontogramSection({
     setSheetOpen(false);
     setError(null);
     setPerioOpen(false);
+    setFollowupOpen(false);
+    setDirectTreatmentRequested(false);
   }, [patientId]);
 
   const handleSelect = React.useCallback(
@@ -61,7 +75,7 @@ export function OdontogramSection({
       const active = document.activeElement as HTMLElement | null;
       if (active?.matches?.('[data-fdi]')) lastFocusedRef.current = active;
       setSelectedFdi(fdi);
-      setSheetOpen(true);
+      setSheetOpen(window.matchMedia?.("(max-width: 1023px)")?.matches ?? false);
     },
     [],
   );
@@ -135,11 +149,27 @@ export function OdontogramSection({
     }));
   }, [selectedPeriodontalExam]);
 
+  const progressEvents = React.useMemo(
+    () => initialProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : []),
+    [dto, initialProgressEvents],
+  );
+  const procedureCases = React.useMemo<ProcedureCaseChoice[]>(() => {
+    if (suppliedProcedureCases) return [...suppliedProcedureCases];
+    const seen = new Set<string>();
+    return progressEvents.flatMap((event) => {
+      if (!event.procedureCaseId || seen.has(event.procedureCaseId)) return [];
+      seen.add(event.procedureCaseId);
+      return [{ procedureCaseId: event.procedureCaseId, display: event.procedureDisplay ?? "Procedure case" }];
+    });
+  }, [progressEvents, suppliedProcedureCases]);
+  const followupAvailable = canWriteClinical && procedureCases.length > 0 && Boolean(recordFollowup);
+
   const lastFocusedRef = React.useRef<HTMLElement | null>(null);
 
   const closeInspector = React.useCallback(() => {
     setSelectedFdi(null);
     setSheetOpen(false);
+    setDirectTreatmentRequested(false);
     // Return focus to the previously selected tooth for keyboard continuity.
     const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`[data-fdi="${selectedFdi}"]`);
     // Defer to next frame so sheet/dialog unmount does not steal focus.
@@ -205,6 +235,7 @@ export function OdontogramSection({
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-auto">
                 <ToothInspector
+                  key={`desktop-${selectedFdi}-${directTreatmentRequested ? "direct" : "inspect"}`}
                   patientId={patientId}
                   actingBranchId={actingBranchId}
                   fdi={selectedFdi}
@@ -213,12 +244,27 @@ export function OdontogramSection({
                   canWriteClinical={canWriteClinical}
                   onClose={closeInspector}
                   onMutated={refetch}
+                  initialRecordOpen={directTreatmentRequested}
                 />
               </div>
             )}
           </aside>
         </div>
       )}
+
+      <CurrentStatusPanel
+        selectedTooth={selectedFdi}
+        canWriteClinical={canWriteClinical}
+        procedureCases={procedureCases}
+        followupAvailable={followupAvailable}
+        onRecordDirectTreatment={() => {
+          setDirectTreatmentRequested(true);
+          setSheetOpen(window.matchMedia?.("(max-width: 1023px)")?.matches ?? false);
+        }}
+        onOpenFollowup={() => setFollowupOpen(true)}
+      />
+
+      <ProgressRecordTable events={progressEvents} />
 
       <Sheet open={sheetOpen && selectedFdi !== null} onOpenChange={(open) => { if (!open) closeInspector(); else setSheetOpen(true); }}>
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-auto p-0 sm:max-h-[80dvh] sm:max-w-none" onEscapeKeyDown={closeInspector} onInteractOutside={closeInspector}>
@@ -235,6 +281,7 @@ export function OdontogramSection({
               canWriteClinical={canWriteClinical}
               onClose={closeInspector}
               onMutated={refetch}
+              initialRecordOpen={directTreatmentRequested}
             />
           )}
         </SheetContent>
@@ -287,6 +334,15 @@ export function OdontogramSection({
           )}
         </DialogContent>
       </Dialog>
+
+      {recordFollowup && (
+        <ProcedureFollowupDialog
+          open={followupOpen}
+          onOpenChange={setFollowupOpen}
+          procedureCases={procedureCases}
+          onRecord={recordFollowup}
+        />
+      )}
     </div>
   );
 }

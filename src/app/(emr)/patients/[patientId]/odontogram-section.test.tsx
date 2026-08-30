@@ -126,6 +126,34 @@ describe("OdontogramSection O7", () => {
     });
   });
 
+  it("clears the selected tooth's current-status state when the patient changes", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <OdontogramSection patientId="00000000-0000-4000-a000-000000000021" actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
+    expect(screen.getByText("Tooth 11 selected")).toBeInTheDocument();
+
+    rerender(
+      <OdontogramSection patientId="00000000-0000-4000-a000-000000000022" actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={{ ...mockDto, patientId: "00000000-0000-4000-a000-000000000022" }} />,
+    );
+
+    expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+  });
+
+  it("opens the approved tooth-entry workflow for an explicit direct treatment", async () => {
+    const user = userEvent.setup();
+    render(
+      <OdontogramSection patientId={mockDto.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
+    await user.click(screen.getByRole("button", { name: /record direct treatment/i }));
+
+    expect(await screen.findByRole("dialog", { name: /record finding or treatment/i })).toBeInTheDocument();
+  });
+
   it("hides write affordances in read-only state", async () => {
     const user = userEvent.setup();
     render(

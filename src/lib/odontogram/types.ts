@@ -32,6 +32,7 @@ import type {
   resolveLegacyOdontogramEntryInputSchema,
   savePeriodontalMeasurementsInputSchema,
   toothClinicalEntryDataSchema,
+  toothClinicalSurfaceSchema,
   toothClinicalEntryMutationRowSchema,
   toothFindingTypeSchema,
   toothStatusSchema,
@@ -76,6 +77,7 @@ export type ListToothConditionsInput = z.infer<typeof listToothConditionsInputSc
 // ---------------------------------------------------------------------------
 
 export type ToothClinicalEntryDTO = z.infer<typeof toothClinicalEntryDataSchema>;
+export type ToothClinicalSurface = z.infer<typeof toothClinicalSurfaceSchema>;
 export type ClinicalFeatureDetail = z.infer<typeof clinicalFeatureDetailSchema>;
 
 export type PatientOdontogramDTO = {
