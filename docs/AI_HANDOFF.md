@@ -2731,8 +2731,8 @@ px vitest run (full unit suite) — 132 files / 1387 tests, all
 
 ## Task 11 — O10/O11 periodontal, accessibility, and responsive hardening (2026-08-30)
 
-Codex implemented the approved Task 11 slice on `main`; no database or
-migration files were changed.
+Codex implemented the approved Task 11 slice on `main` in commit `bdee94f`;
+no database or migration files were changed.
 
 ### Implementation
 

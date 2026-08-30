@@ -44,4 +44,4 @@ the approved local-completion scope. No real patient data, credentials, or
 trace artifacts were used. O14 release acceptance remains blocked on its
 separate hosted and independent review gates.
 
-Commit: pending
+Implementation commit: `bdee94f` (`feat: harden periodontal and responsive charting`).
