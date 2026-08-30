@@ -30,3 +30,11 @@ Complete locally. The controlled fork is vendored at `vendor/react-advanced-odon
 
 - Added a jsdom Testing Library composition regression test that mounts the vendored `OdontogramProvider`, `OdontogramChartSurface`, and `ToothControlsSurface`, then asserts both reset buttons are absent.
 - `npx vitest run src/components/odontogram/fork-package.test.ts --no-file-parallelism --maxWorkers=1` — `1 file passed; 2 tests passed`.
+
+## Task 3 review follow-up
+
+- Controlled fork commit: `b6a99ddaf2dfb2659c747501494d7e34387ff040` (`fix: remove touch reset controls`).
+- Added `fork-patches/remove-touch-reset-controls.patch`; the source test now checks both touch compositions for reset labels and reset handlers.
+- Source fork test: `npx vitest run src/__tests__/touch.test.ts --no-file-parallelism --maxWorkers=1 --reporter=dot` — `1 file passed; 15 tests passed`.
+- Rebuilt with `npm run build:lib` and copied all dist artifacts. Representative artifact hashes: `odontogram.js` `F47D58255C767A9E65C7EC0C03588348CF3CE5F9999E259B7C059A2B1023A975`; `index.d.ts` `425C592A272348E5CE4E5BE062B97ACDAFED3A90671CFCCF1CC1439AE4D12A04`; `style.css` `BF619622C9E4E4724263E3FFF2DA3E74B69A30CC92713979C9F465AFCA063851`.
+- EMR package regression: `npx vitest run src/components/odontogram/fork-package.test.ts --no-file-parallelism --maxWorkers=1 --testTimeout=15000` — `1 file passed; 2 tests passed`.

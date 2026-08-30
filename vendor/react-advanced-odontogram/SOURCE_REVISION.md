@@ -3,10 +3,11 @@
 - Source repository: `https://github.com/Ditherys/React-Odontogram-Modul`
 - Source path: `C:\Users\Latitude 7430\Desktop\React-Odontogram-Modul`
 - Fork source commit: `5e28d931feefe4c3382513dbb0f5a9db9cf9948c`
-- Patch commit: `cb9b58f3c35b49c7b9467d01c3ef84c388dae007`
+- Initial patch commit: `cb9b58f3c35b49c7b9467d01c3ef84c388dae007`
+- Touch reset patch commit: `b6a99ddaf2dfb2659c747501494d7e34387ff040`
 - Build date: `2026-08-30` (Asia/Manila)
 - Build command: `npm run build:lib`
-- Patch: `fork-patches/remove-reset-controls.patch`
+- Patches: `fork-patches/remove-reset-controls.patch`, `fork-patches/remove-touch-reset-controls.patch`
 
 Artifacts copied from `dist/`:
 

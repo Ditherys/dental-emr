@@ -1,5 +1,5 @@
-import { jsxs as M, jsx as s, Fragment as st } from "react/jsx-runtime";
-import { useState as e1, useEffect as d1, useCallback as zt, useMemo as H4, useRef as x1, useId as Re, useContext as Ml, createContext as wl, useLayoutEffect as fr } from "react";
+import { jsxs as M, jsx as l, Fragment as lt } from "react/jsx-runtime";
+import { useState as e1, useEffect as d1, useCallback as zt, useMemo as H4, useRef as x1, useId as Re, useContext as xl, createContext as Ml, useLayoutEffect as fr } from "react";
 const Si = {
   arches: {
     upper: [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
@@ -11277,52 +11277,52 @@ let Ti = "en";
 const V3 = /* @__PURE__ */ new Set();
 function c(t, e, a) {
   const i = typeof e == "object" ? e : a, o = x3[typeof e == "string" ? e : Ti] ?? x3[Yr], n = x3[Yr], d = o[t] ?? n[t] ?? t;
-  return i ? d.replace(/\{\{(\w+)\}\}/g, (l, f) => String(i[f] ?? "")) : d;
+  return i ? d.replace(/\{\{(\w+)\}\}/g, (s, f) => String(i[f] ?? "")) : d;
 }
 function hr() {
   return Ti;
 }
-function Zl(t) {
+function wl(t) {
   if (t !== Ti) {
     Ti = t;
     for (const e of V3)
       e(t);
   }
 }
-function Sl(t) {
+function Zl(t) {
   return V3.add(t), () => V3.delete(t);
 }
-function zl(t = {}) {
+function Sl(t = {}) {
   const { language: e, onLanguageChange: a } = t, [i, r] = e1(e ?? hr()), o = e ?? i;
   d1(() => {
-    Zl(o);
+    wl(o);
   }, [o]);
-  const n = zt((l) => {
+  const n = zt((s) => {
     if (e) {
-      a?.(l);
+      a?.(s);
       return;
     }
-    r(l), a?.(l);
-  }, [e, a]), d = H4(() => (l, f) => c(l, o, f), [o]);
+    r(s), a?.(s);
+  }, [e, a]), d = H4(() => (s, f) => c(s, o, f), [o]);
   return { lang: o, setLang: n, t: d };
 }
-function Il(t) {
+function zl(t) {
   const e = typeof t == "number" ? t : Number(t);
   return Number.isFinite(e) ? Math.trunc(e) : null;
 }
-function Cl(t) {
+function Il(t) {
   return t >= 11 && t <= 18 || t >= 21 && t <= 28 || t >= 31 && t <= 38 || t >= 41 && t <= 48;
 }
 function M3(t) {
   return t >= 51 && t <= 55 || t >= 61 && t <= 65 || t >= 71 && t <= 75 || t >= 81 && t <= 85;
 }
 function X2(t, e) {
-  const a = Il(t);
+  const a = zl(t);
   if (a === null) return String(t);
   if (e === "FDI")
     return String(a);
   const i = Math.floor(a / 10), r = a % 10;
-  if (!Cl(a) && !M3(a))
+  if (!Il(a) && !M3(a))
     return String(a);
   if (e === "UNIVERSAL") {
     if (M3(a)) {
@@ -11355,7 +11355,7 @@ function X2(t, e) {
   }
   return String(a);
 }
-function Pl(t) {
+function Cl(t) {
   const e = Math.floor(t / 10);
   return e === 1 ? 1 : e === 2 ? 2 : e === 3 ? 3 : 4;
 }
@@ -11369,20 +11369,20 @@ function Jr(t, e) {
   for (var a = 0, i = Array(e); a < e; a++) i[a] = t[a];
   return i;
 }
-function Gl(t) {
+function Pl(t) {
   if (Array.isArray(t)) return t;
 }
-function Tl(t, e) {
+function Gl(t, e) {
   var a = t == null ? null : typeof Symbol < "u" && t[Symbol.iterator] || t["@@iterator"];
   if (a != null) {
-    var i, r, o, n, d = [], l = !0, f = !1;
+    var i, r, o, n, d = [], s = !0, f = !1;
     try {
-      if (o = (a = a.call(t)).next, e !== 0) for (; !(l = (i = o.call(a)).done) && (d.push(i.value), d.length !== e); l = !0) ;
+      if (o = (a = a.call(t)).next, e !== 0) for (; !(s = (i = o.call(a)).done) && (d.push(i.value), d.length !== e); s = !0) ;
     } catch (p) {
       f = !0, r = p;
     } finally {
       try {
-        if (!l && a.return != null && (n = a.return(), Object(n) !== n)) return;
+        if (!s && a.return != null && (n = a.return(), Object(n) !== n)) return;
       } finally {
         if (f) throw r;
       }
@@ -11390,21 +11390,21 @@ function Tl(t, e) {
     return d;
   }
 }
-function Dl() {
+function Tl() {
   throw new TypeError(`Invalid attempt to destructure non-iterable instance.
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
 }
-function Ol(t, e) {
-  return Gl(t) || Tl(t, e) || Al(t, e) || Dl();
+function Dl(t, e) {
+  return Pl(t) || Gl(t, e) || Ol(t, e) || Tl();
 }
-function Al(t, e) {
+function Ol(t, e) {
   if (t) {
     if (typeof t == "string") return Jr(t, e);
     var a = {}.toString.call(t).slice(8, -1);
     return a === "Object" && t.constructor && (a = t.constructor.name), a === "Map" || a === "Set" ? Array.from(t) : a === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(a) ? Jr(t, e) : void 0;
   }
 }
-const j4 = Object.entries, _r = Object.setPrototypeOf, Ul = Object.isFrozen, El = Object.getPrototypeOf, Ll = Object.getOwnPropertyDescriptor;
+const j4 = Object.entries, _r = Object.setPrototypeOf, Al = Object.isFrozen, Ul = Object.getPrototypeOf, El = Object.getOwnPropertyDescriptor;
 let W1 = Object.freeze, J1 = Object.seal, Se = Object.create, N4 = typeof Reflect < "u" && Reflect, F3 = N4.apply, B3 = N4.construct;
 W1 || (W1 = function(e) {
   return e;
@@ -11422,7 +11422,7 @@ B3 || (B3 = function(e) {
     i[r - 1] = arguments[r];
   return new e(...i);
 });
-const ue = U1(Array.prototype.forEach), Hl = U1(Array.prototype.lastIndexOf), Qr = U1(Array.prototype.pop), ke = U1(Array.prototype.push), jl = U1(Array.prototype.splice), x2 = Array.isArray, ua = U1(String.prototype.toLowerCase), w3 = U1(String.prototype.toString), Xr = U1(String.prototype.match), ca = U1(String.prototype.replace), $r = U1(String.prototype.indexOf), Nl = U1(String.prototype.trim), Rl = U1(Number.prototype.toString), Vl = U1(Boolean.prototype.toString), to = typeof BigInt > "u" ? null : U1(BigInt.prototype.toString), eo = typeof Symbol > "u" ? null : U1(Symbol.prototype.toString), j1 = U1(Object.prototype.hasOwnProperty), da = U1(Object.prototype.toString), H1 = U1(RegExp.prototype.test), N2 = Fl(TypeError);
+const ue = U1(Array.prototype.forEach), Ll = U1(Array.prototype.lastIndexOf), Qr = U1(Array.prototype.pop), ke = U1(Array.prototype.push), Hl = U1(Array.prototype.splice), b2 = Array.isArray, ua = U1(String.prototype.toLowerCase), w3 = U1(String.prototype.toString), Xr = U1(String.prototype.match), ca = U1(String.prototype.replace), $r = U1(String.prototype.indexOf), jl = U1(String.prototype.trim), Nl = U1(Number.prototype.toString), Rl = U1(Boolean.prototype.toString), to = typeof BigInt > "u" ? null : U1(BigInt.prototype.toString), eo = typeof Symbol > "u" ? null : U1(Symbol.prototype.toString), j1 = U1(Object.prototype.hasOwnProperty), da = U1(Object.prototype.toString), H1 = U1(RegExp.prototype.test), j2 = Vl(TypeError);
 function U1(t) {
   return function(e) {
     e instanceof RegExp && (e.lastIndex = 0);
@@ -11431,7 +11431,7 @@ function U1(t) {
     return F3(t, e, i);
   };
 }
-function Fl(t) {
+function Vl(t) {
   return function() {
     for (var e = arguments.length, a = new Array(e), i = 0; i < e; i++)
       a[i] = arguments[i];
@@ -11440,20 +11440,20 @@ function Fl(t) {
 }
 function g1(t, e) {
   let a = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : ua;
-  if (_r && _r(t, null), !x2(e))
+  if (_r && _r(t, null), !b2(e))
     return t;
   let i = e.length;
   for (; i--; ) {
     let r = e[i];
     if (typeof r == "string") {
       const o = a(r);
-      o !== r && (Ul(e) || (e[i] = o), r = o);
+      o !== r && (Al(e) || (e[i] = o), r = o);
     }
     t[r] = !0;
   }
   return t;
 }
-function Bl(t) {
+function Fl(t) {
   for (let e = 0; e < t.length; e++)
     j1(t, e) || (t[e] = null);
   return t;
@@ -11461,20 +11461,20 @@ function Bl(t) {
 function X1(t) {
   const e = Se(null);
   for (const i of j4(t)) {
-    var a = Ol(i, 2);
+    var a = Dl(i, 2);
     const r = a[0], o = a[1];
-    j1(t, r) && (x2(o) ? e[r] = Bl(o) : o && typeof o == "object" && o.constructor === Object ? e[r] = X1(o) : e[r] = o);
+    j1(t, r) && (b2(o) ? e[r] = Fl(o) : o && typeof o == "object" && o.constructor === Object ? e[r] = X1(o) : e[r] = o);
   }
   return e;
 }
-function Kl(t) {
+function Bl(t) {
   switch (typeof t) {
     case "string":
       return t;
     case "number":
-      return Rl(t);
+      return Nl(t);
     case "boolean":
-      return Vl(t);
+      return Rl(t);
     case "bigint":
       return to ? to(t) : "0";
     case "symbol":
@@ -11498,34 +11498,34 @@ function Kl(t) {
 }
 function Et(t, e) {
   for (; t !== null; ) {
-    const i = Ll(t, e);
+    const i = El(t, e);
     if (i) {
       if (i.get)
         return U1(i.get);
       if (typeof i.value == "function")
         return U1(i.value);
     }
-    t = El(t);
+    t = Ul(t);
   }
   function a() {
     return null;
   }
   return a;
 }
-function ql(t) {
+function Kl(t) {
   try {
     return H1(t, ""), !0;
   } catch {
     return !1;
   }
 }
-const ao = W1(["a", "abbr", "acronym", "address", "area", "article", "aside", "audio", "b", "bdi", "bdo", "big", "blink", "blockquote", "body", "br", "button", "canvas", "caption", "center", "cite", "code", "col", "colgroup", "content", "data", "datalist", "dd", "decorator", "del", "details", "dfn", "dialog", "dir", "div", "dl", "dt", "element", "em", "fieldset", "figcaption", "figure", "font", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "img", "input", "ins", "kbd", "label", "legend", "li", "main", "map", "mark", "marquee", "menu", "menuitem", "meter", "nav", "nobr", "ol", "optgroup", "option", "output", "p", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "search", "section", "select", "shadow", "slot", "small", "source", "spacer", "span", "strike", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "template", "textarea", "tfoot", "th", "thead", "time", "tr", "track", "tt", "u", "ul", "var", "video", "wbr"]), Z3 = W1(["svg", "a", "altglyph", "altglyphdef", "altglyphitem", "animatecolor", "animatemotion", "animatetransform", "circle", "clippath", "defs", "desc", "ellipse", "enterkeyhint", "exportparts", "filter", "font", "g", "glyph", "glyphref", "hkern", "image", "inputmode", "line", "lineargradient", "marker", "mask", "metadata", "mpath", "part", "path", "pattern", "polygon", "polyline", "radialgradient", "rect", "stop", "style", "switch", "symbol", "text", "textpath", "title", "tref", "tspan", "view", "vkern"]), S3 = W1(["feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR", "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence"]), Yl = W1(["animate", "color-profile", "cursor", "discard", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "foreignobject", "hatch", "hatchpath", "mesh", "meshgradient", "meshpatch", "meshrow", "missing-glyph", "script", "set", "solidcolor", "unknown", "use"]), z3 = W1(["math", "menclose", "merror", "mfenced", "mfrac", "mglyph", "mi", "mlabeledtr", "mmultiscripts", "mn", "mo", "mover", "mpadded", "mphantom", "mroot", "mrow", "ms", "mspace", "msqrt", "mstyle", "msub", "msup", "msubsup", "mtable", "mtd", "mtext", "mtr", "munder", "munderover", "mprescripts"]), Wl = W1(["maction", "maligngroup", "malignmark", "mlongdiv", "mscarries", "mscarry", "msgroup", "mstack", "msline", "msrow", "semantics", "annotation", "annotation-xml", "mprescripts", "none"]), io = W1(["#text"]), ro = W1(["accept", "action", "align", "alt", "autocapitalize", "autocomplete", "autopictureinpicture", "autoplay", "background", "bgcolor", "border", "capture", "cellpadding", "cellspacing", "checked", "cite", "class", "clear", "color", "cols", "colspan", "command", "commandfor", "controls", "controlslist", "coords", "crossorigin", "datetime", "decoding", "default", "dir", "disabled", "disablepictureinpicture", "disableremoteplayback", "download", "draggable", "enctype", "enterkeyhint", "exportparts", "face", "for", "headers", "height", "hidden", "high", "href", "hreflang", "id", "inert", "inputmode", "integrity", "ismap", "kind", "label", "lang", "list", "loading", "loop", "low", "max", "maxlength", "media", "method", "min", "minlength", "multiple", "muted", "name", "nonce", "noshade", "novalidate", "nowrap", "open", "optimum", "part", "pattern", "placeholder", "playsinline", "popover", "popovertarget", "popovertargetaction", "poster", "preload", "pubdate", "radiogroup", "readonly", "rel", "required", "rev", "reversed", "role", "rows", "rowspan", "spellcheck", "scope", "selected", "shape", "size", "sizes", "slot", "span", "srclang", "start", "src", "srcset", "step", "style", "summary", "tabindex", "title", "translate", "type", "usemap", "valign", "value", "width", "wrap", "xmlns"]), I3 = W1(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]), oo = W1(["accent", "accentunder", "align", "bevelled", "close", "columnalign", "columnlines", "columnspacing", "columnspan", "denomalign", "depth", "dir", "display", "displaystyle", "encoding", "fence", "frame", "height", "href", "id", "largeop", "length", "linethickness", "lquote", "lspace", "mathbackground", "mathcolor", "mathsize", "mathvariant", "maxsize", "minsize", "movablelimits", "notation", "numalign", "open", "rowalign", "rowlines", "rowspacing", "rowspan", "rspace", "rquote", "scriptlevel", "scriptminsize", "scriptsizemultiplier", "selection", "separator", "separators", "stretchy", "subscriptshift", "supscriptshift", "symmetric", "voffset", "width", "xmlns"]), yi = W1(["xlink:href", "xml:id", "xlink:title", "xml:space", "xmlns:xlink"]), Jl = J1(/{{[\w\W]*|^[\w\W]*}}/g), _l = J1(/<%[\w\W]*|^[\w\W]*%>/g), Ql = J1(/\${[\w\W]*/g), Xl = J1(/^data-[\-\w.\u00B7-\uFFFF]+$/), $l = J1(/^aria-[\-\w]+$/), no = J1(
+const ao = W1(["a", "abbr", "acronym", "address", "area", "article", "aside", "audio", "b", "bdi", "bdo", "big", "blink", "blockquote", "body", "br", "button", "canvas", "caption", "center", "cite", "code", "col", "colgroup", "content", "data", "datalist", "dd", "decorator", "del", "details", "dfn", "dialog", "dir", "div", "dl", "dt", "element", "em", "fieldset", "figcaption", "figure", "font", "footer", "form", "h1", "h2", "h3", "h4", "h5", "h6", "head", "header", "hgroup", "hr", "html", "i", "img", "input", "ins", "kbd", "label", "legend", "li", "main", "map", "mark", "marquee", "menu", "menuitem", "meter", "nav", "nobr", "ol", "optgroup", "option", "output", "p", "picture", "pre", "progress", "q", "rp", "rt", "ruby", "s", "samp", "search", "section", "select", "shadow", "slot", "small", "source", "spacer", "span", "strike", "strong", "style", "sub", "summary", "sup", "table", "tbody", "td", "template", "textarea", "tfoot", "th", "thead", "time", "tr", "track", "tt", "u", "ul", "var", "video", "wbr"]), Z3 = W1(["svg", "a", "altglyph", "altglyphdef", "altglyphitem", "animatecolor", "animatemotion", "animatetransform", "circle", "clippath", "defs", "desc", "ellipse", "enterkeyhint", "exportparts", "filter", "font", "g", "glyph", "glyphref", "hkern", "image", "inputmode", "line", "lineargradient", "marker", "mask", "metadata", "mpath", "part", "path", "pattern", "polygon", "polyline", "radialgradient", "rect", "stop", "style", "switch", "symbol", "text", "textpath", "title", "tref", "tspan", "view", "vkern"]), S3 = W1(["feBlend", "feColorMatrix", "feComponentTransfer", "feComposite", "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feDistantLight", "feDropShadow", "feFlood", "feFuncA", "feFuncB", "feFuncG", "feFuncR", "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology", "feOffset", "fePointLight", "feSpecularLighting", "feSpotLight", "feTile", "feTurbulence"]), ql = W1(["animate", "color-profile", "cursor", "discard", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "foreignobject", "hatch", "hatchpath", "mesh", "meshgradient", "meshpatch", "meshrow", "missing-glyph", "script", "set", "solidcolor", "unknown", "use"]), z3 = W1(["math", "menclose", "merror", "mfenced", "mfrac", "mglyph", "mi", "mlabeledtr", "mmultiscripts", "mn", "mo", "mover", "mpadded", "mphantom", "mroot", "mrow", "ms", "mspace", "msqrt", "mstyle", "msub", "msup", "msubsup", "mtable", "mtd", "mtext", "mtr", "munder", "munderover", "mprescripts"]), Yl = W1(["maction", "maligngroup", "malignmark", "mlongdiv", "mscarries", "mscarry", "msgroup", "mstack", "msline", "msrow", "semantics", "annotation", "annotation-xml", "mprescripts", "none"]), io = W1(["#text"]), ro = W1(["accept", "action", "align", "alt", "autocapitalize", "autocomplete", "autopictureinpicture", "autoplay", "background", "bgcolor", "border", "capture", "cellpadding", "cellspacing", "checked", "cite", "class", "clear", "color", "cols", "colspan", "command", "commandfor", "controls", "controlslist", "coords", "crossorigin", "datetime", "decoding", "default", "dir", "disabled", "disablepictureinpicture", "disableremoteplayback", "download", "draggable", "enctype", "enterkeyhint", "exportparts", "face", "for", "headers", "height", "hidden", "high", "href", "hreflang", "id", "inert", "inputmode", "integrity", "ismap", "kind", "label", "lang", "list", "loading", "loop", "low", "max", "maxlength", "media", "method", "min", "minlength", "multiple", "muted", "name", "nonce", "noshade", "novalidate", "nowrap", "open", "optimum", "part", "pattern", "placeholder", "playsinline", "popover", "popovertarget", "popovertargetaction", "poster", "preload", "pubdate", "radiogroup", "readonly", "rel", "required", "rev", "reversed", "role", "rows", "rowspan", "spellcheck", "scope", "selected", "shape", "size", "sizes", "slot", "span", "srclang", "start", "src", "srcset", "step", "style", "summary", "tabindex", "title", "translate", "type", "usemap", "valign", "value", "width", "wrap", "xmlns"]), I3 = W1(["accent-height", "accumulate", "additive", "alignment-baseline", "amplitude", "ascent", "attributename", "attributetype", "azimuth", "basefrequency", "baseline-shift", "begin", "bias", "by", "class", "clip", "clippathunits", "clip-path", "clip-rule", "color", "color-interpolation", "color-interpolation-filters", "color-profile", "color-rendering", "cx", "cy", "d", "dx", "dy", "diffuseconstant", "direction", "display", "divisor", "dominant-baseline", "dur", "edgemode", "elevation", "end", "exponent", "fill", "fill-opacity", "fill-rule", "filter", "filterunits", "flood-color", "flood-opacity", "font-family", "font-size", "font-size-adjust", "font-stretch", "font-style", "font-variant", "font-weight", "fx", "fy", "g1", "g2", "glyph-name", "glyphref", "gradientunits", "gradienttransform", "height", "href", "id", "image-rendering", "in", "in2", "intercept", "k", "k1", "k2", "k3", "k4", "kerning", "keypoints", "keysplines", "keytimes", "lang", "lengthadjust", "letter-spacing", "kernelmatrix", "kernelunitlength", "lighting-color", "local", "marker-end", "marker-mid", "marker-start", "markerheight", "markerunits", "markerwidth", "maskcontentunits", "maskunits", "max", "mask", "mask-type", "media", "method", "mode", "min", "name", "numoctaves", "offset", "operator", "opacity", "order", "orient", "orientation", "origin", "overflow", "paint-order", "path", "pathlength", "patterncontentunits", "patterntransform", "patternunits", "points", "preservealpha", "preserveaspectratio", "primitiveunits", "r", "rx", "ry", "radius", "refx", "refy", "repeatcount", "repeatdur", "restart", "result", "rotate", "scale", "seed", "shape-rendering", "slope", "specularconstant", "specularexponent", "spreadmethod", "startoffset", "stddeviation", "stitchtiles", "stop-color", "stop-opacity", "stroke-dasharray", "stroke-dashoffset", "stroke-linecap", "stroke-linejoin", "stroke-miterlimit", "stroke-opacity", "stroke", "stroke-width", "style", "surfacescale", "systemlanguage", "tabindex", "tablevalues", "targetx", "targety", "transform", "transform-origin", "text-anchor", "text-decoration", "text-orientation", "text-rendering", "textlength", "type", "u1", "u2", "unicode", "values", "viewbox", "visibility", "version", "vert-adv-y", "vert-origin-x", "vert-origin-y", "width", "word-spacing", "wrap", "writing-mode", "xchannelselector", "ychannelselector", "x", "x1", "x2", "xmlns", "y", "y1", "y2", "z", "zoomandpan"]), oo = W1(["accent", "accentunder", "align", "bevelled", "close", "columnalign", "columnlines", "columnspacing", "columnspan", "denomalign", "depth", "dir", "display", "displaystyle", "encoding", "fence", "frame", "height", "href", "id", "largeop", "length", "linethickness", "lquote", "lspace", "mathbackground", "mathcolor", "mathsize", "mathvariant", "maxsize", "minsize", "movablelimits", "notation", "numalign", "open", "rowalign", "rowlines", "rowspacing", "rowspan", "rspace", "rquote", "scriptlevel", "scriptminsize", "scriptsizemultiplier", "selection", "separator", "separators", "stretchy", "subscriptshift", "supscriptshift", "symmetric", "voffset", "width", "xmlns"]), yi = W1(["xlink:href", "xml:id", "xlink:title", "xml:space", "xmlns:xlink"]), Wl = J1(/{{[\w\W]*|^[\w\W]*}}/g), Jl = J1(/<%[\w\W]*|^[\w\W]*%>/g), _l = J1(/\${[\w\W]*/g), Ql = J1(/^data-[\-\w.\u00B7-\uFFFF]+$/), Xl = J1(/^aria-[\-\w]+$/), no = J1(
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
   // eslint-disable-line no-useless-escape
-), t0 = J1(/^(?:\w+script|data):/i), e0 = J1(
+), $l = J1(/^(?:\w+script|data):/i), t0 = J1(
   /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g
   // eslint-disable-line no-control-regex
-), a0 = J1(/^html$/i), i0 = J1(/^[a-z][.\w]*(-[.\w]+)+$/i), lo = J1(/<[/\w!]/g), so = J1(/<[/\w]/g), r0 = J1(/<\/no(script|embed|frames)/i), o0 = J1(/\/>/i), ut = {
+), e0 = J1(/^html$/i), a0 = J1(/^[a-z][.\w]*(-[.\w]+)+$/i), lo = J1(/<[/\w!]/g), so = J1(/<[/\w]/g), i0 = J1(/<\/no(script|embed|frames)/i), r0 = J1(/\/>/i), yt = {
   element: 1,
   attribute: 2,
   text: 3,
@@ -11541,9 +11541,9 @@ const ao = W1(["a", "abbr", "acronym", "address", "area", "article", "aside", "a
   documentFragment: 11,
   notation: 12
   // Deprecated
-}, n0 = function() {
+}, o0 = function() {
   return typeof window > "u" ? null : window;
-}, l0 = function(e, a) {
+}, n0 = function(e, a) {
   if (typeof e != "object" || typeof e.createPolicy != "function")
     return null;
   let i = null;
@@ -11575,19 +11575,19 @@ const ao = W1(["a", "abbr", "acronym", "address", "area", "article", "aside", "a
     uponSanitizeShadowNode: []
   };
 }, y2 = function(e, a, i, r) {
-  return j1(e, a) && x2(e[a]) ? g1(r.base ? X1(r.base) : {}, e[a], r.transform) : i;
+  return j1(e, a) && b2(e[a]) ? g1(r.base ? X1(r.base) : {}, e[a], r.transform) : i;
 };
 function R4() {
-  let t = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : n0();
+  let t = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : o0();
   const e = (B) => R4(B);
-  if (e.version = "3.4.13", e.removed = [], !t || !t.document || t.document.nodeType !== ut.document || !t.Element)
+  if (e.version = "3.4.13", e.removed = [], !t || !t.document || t.document.nodeType !== yt.document || !t.Element)
     return e.isSupported = !1, e;
   let a = t.document;
   const i = a, r = i.currentScript;
   t.DocumentFragment;
-  const o = t.HTMLTemplateElement, n = t.Node, d = t.Element, l = t.NodeFilter, f = t.NamedNodeMap;
+  const o = t.HTMLTemplateElement, n = t.Node, d = t.Element, s = t.NodeFilter, f = t.NamedNodeMap;
   f === void 0 && (t.NamedNodeMap || t.MozNamedAttrMap), t.HTMLFormElement;
-  const p = t.DOMParser, v = t.trustedTypes, k = d.prototype, x = Et(k, "cloneNode"), u = Et(k, "remove"), y = Et(k, "nextSibling"), h = Et(k, "childNodes"), C = Et(k, "parentNode"), w = Et(k, "shadowRoot"), g = Et(k, "attributes"), Z = n && n.prototype ? Et(n.prototype, "nodeType") : null, G = n && n.prototype ? Et(n.prototype, "nodeName") : null, I = n && n.prototype ? Et(n.prototype, "ownerDocument") : null;
+  const p = t.DOMParser, v = t.trustedTypes, k = d.prototype, x = Et(k, "cloneNode"), u = Et(k, "remove"), y = Et(k, "nextSibling"), h = Et(k, "childNodes"), T = Et(k, "parentNode"), w = Et(k, "shadowRoot"), g = Et(k, "attributes"), Z = n && n.prototype ? Et(n.prototype, "nodeType") : null, P = n && n.prototype ? Et(n.prototype, "nodeName") : null, I = n && n.prototype ? Et(n.prototype, "ownerDocument") : null;
   if (typeof o == "function") {
     const B = a.createElement("template");
     B.content && B.content.ownerDocument && (a = B.content.ownerDocument);
@@ -11595,8 +11595,8 @@ function R4() {
   let D, A = "", H, R = !1, N = 0;
   const S = function() {
     if (N > 0)
-      throw N2('A configured TRUSTED_TYPES_POLICY callback (createHTML or createScriptURL) must not call DOMPurify.sanitize, as that causes infinite recursion. Do not pass a policy whose callbacks wrap DOMPurify as TRUSTED_TYPES_POLICY; see the "DOMPurify and Trusted Types" section of the README.');
-  }, P = function(m) {
+      throw j2('A configured TRUSTED_TYPES_POLICY callback (createHTML or createScriptURL) must not call DOMPurify.sanitize, as that causes infinite recursion. Do not pass a policy whose callbacks wrap DOMPurify as TRUSTED_TYPES_POLICY; see the "DOMPurify and Trusted Types" section of the README.');
+  }, C = function(m) {
     S(), N++;
     try {
       return D.createHTML(m);
@@ -11611,15 +11611,15 @@ function R4() {
       N--;
     }
   }, _ = function() {
-    return R || (H = l0(v, r), R = !0), H;
+    return R || (H = n0(v, r), R = !0), H;
   }, t1 = a, V = t1.implementation, W = t1.createNodeIterator, l1 = t1.createDocumentFragment, z = t1.getElementsByTagName, K = i.importNode;
   let L = co();
-  e.isSupported = typeof j4 == "function" && typeof C == "function" && V && V.createHTMLDocument !== void 0;
-  const q = Jl, v1 = _l, R1 = Ql, I1 = Xl, E1 = $l, V1 = t0, Ot = e0, dt = i0;
+  e.isSupported = typeof j4 == "function" && typeof T == "function" && V && V.createHTMLDocument !== void 0;
+  const q = Wl, v1 = Jl, R1 = _l, I1 = Ql, E1 = Xl, V1 = $l, Ot = t0, dt = a0;
   let O1 = no, c1 = null;
   const pt = g1({}, [...ao, ...Z3, ...S3, ...z3, ...io]);
   let y1 = null;
-  const t2 = g1({}, [...ro, ...I3, ...oo, ...yi]);
+  const $t = g1({}, [...ro, ...I3, ...oo, ...yi]);
   let Z1 = Object.seal(Se(null, {
     tagNameCheck: {
       writable: !0,
@@ -11639,8 +11639,8 @@ function R4() {
       enumerable: !0,
       value: !1
     }
-  })), Nt = null, D2 = null;
-  const et = Object.seal(Se(null, {
+  })), jt = null, T2 = null;
+  const tt = Object.seal(Se(null, {
     tagCheck: {
       writable: !0,
       configurable: !1,
@@ -11654,9 +11654,9 @@ function R4() {
       value: null
     }
   }));
-  let We = !0, Je = !0, _e = !1, O2 = !0, Rt = !1, At = !0, e2 = !1, oe = !1, ne = null, A2 = null, Qe = !1, a2 = !1, le = !1, U2 = !1, ai = !0, Xe = !1;
+  let We = !0, Je = !0, _e = !1, D2 = !0, Nt = !1, At = !0, t2 = !1, oe = !1, ne = null, O2 = null, Qe = !1, e2 = !1, le = !1, A2 = !1, ai = !0, Xe = !1;
   const ii = "user-content-";
-  let se = !0, ce = !1, i2 = {}, xt = null;
+  let se = !0, ce = !1, a2 = {}, xt = null;
   const de = g1({}, [
     "annotation-xml",
     "audio",
@@ -11697,9 +11697,9 @@ function R4() {
   let ri = null;
   const $e = g1({}, ["audio", "video", "img", "source", "image", "track"]);
   let ta = null;
-  const ea = g1({}, ["alt", "class", "for", "id", "label", "name", "pattern", "placeholder", "role", "summary", "title", "value", "style", "xmlns"]), pe = "http://www.w3.org/1998/Math/MathML", E2 = "http://www.w3.org/2000/svg", Mt = "http://www.w3.org/1999/xhtml";
+  const ea = g1({}, ["alt", "class", "for", "id", "label", "name", "pattern", "placeholder", "role", "summary", "title", "value", "style", "xmlns"]), pe = "http://www.w3.org/1998/Math/MathML", U2 = "http://www.w3.org/2000/svg", Mt = "http://www.w3.org/1999/xhtml";
   let p2 = Mt, fe = !1, aa = null;
-  const oi = g1({}, [pe, E2, Mt], w3), ni = W1(["mi", "mo", "mn", "ms", "mtext"]);
+  const oi = g1({}, [pe, U2, Mt], w3), ni = W1(["mi", "mo", "mn", "ms", "mtext"]);
   let he = g1({}, ni);
   const li = W1(["annotation-xml"]);
   let me = g1({}, li);
@@ -11716,7 +11716,7 @@ function R4() {
     (!m || typeof m != "object") && (m = {}), m = X1(m), f2 = // eslint-disable-next-line unicorn/prefer-includes
     ci.indexOf(m.PARSER_MEDIA_TYPE) === -1 ? di : m.PARSER_MEDIA_TYPE, C1 = f2 === "application/xhtml+xml" ? w3 : ua, c1 = y2(m, "ALLOWED_TAGS", pt, {
       transform: C1
-    }), y1 = y2(m, "ALLOWED_ATTR", t2, {
+    }), y1 = y2(m, "ALLOWED_ATTR", $t, {
       transform: C1
     }), aa = y2(m, "ALLOWED_NAMESPACES", oi, {
       transform: w3
@@ -11728,56 +11728,56 @@ function R4() {
       base: $e
     }), xt = y2(m, "FORBID_CONTENTS", de, {
       transform: C1
-    }), Nt = y2(m, "FORBID_TAGS", X1({}), {
+    }), jt = y2(m, "FORBID_TAGS", X1({}), {
       transform: C1
-    }), D2 = y2(m, "FORBID_ATTR", X1({}), {
+    }), T2 = y2(m, "FORBID_ATTR", X1({}), {
       transform: C1
-    }), i2 = j1(m, "USE_PROFILES") ? m.USE_PROFILES && typeof m.USE_PROFILES == "object" ? X1(m.USE_PROFILES) : m.USE_PROFILES : !1, We = m.ALLOW_ARIA_ATTR !== !1, Je = m.ALLOW_DATA_ATTR !== !1, _e = m.ALLOW_UNKNOWN_PROTOCOLS || !1, O2 = m.ALLOW_SELF_CLOSE_IN_ATTR !== !1, Rt = m.SAFE_FOR_TEMPLATES || !1, At = m.SAFE_FOR_XML !== !1, e2 = m.WHOLE_DOCUMENT || !1, a2 = m.RETURN_DOM || !1, le = m.RETURN_DOM_FRAGMENT || !1, U2 = m.RETURN_TRUSTED_TYPE || !1, Qe = m.FORCE_BODY || !1, ai = m.SANITIZE_DOM !== !1, Xe = m.SANITIZE_NAMED_PROPS || !1, se = m.KEEP_CONTENT !== !1, ce = m.IN_PLACE || !1, O1 = ql(m.ALLOWED_URI_REGEXP) ? m.ALLOWED_URI_REGEXP : no, p2 = typeof m.NAMESPACE == "string" ? m.NAMESPACE : Mt, he = j1(m, "MATHML_TEXT_INTEGRATION_POINTS") && m.MATHML_TEXT_INTEGRATION_POINTS && typeof m.MATHML_TEXT_INTEGRATION_POINTS == "object" ? X1(m.MATHML_TEXT_INTEGRATION_POINTS) : g1({}, ni), me = j1(m, "HTML_INTEGRATION_POINTS") && m.HTML_INTEGRATION_POINTS && typeof m.HTML_INTEGRATION_POINTS == "object" ? X1(m.HTML_INTEGRATION_POINTS) : g1({}, li);
-    const T = j1(m, "CUSTOM_ELEMENT_HANDLING") && m.CUSTOM_ELEMENT_HANDLING && typeof m.CUSTOM_ELEMENT_HANDLING == "object" ? X1(m.CUSTOM_ELEMENT_HANDLING) : Se(null);
-    if (Z1 = Se(null), j1(T, "tagNameCheck") && pi(T.tagNameCheck) && (Z1.tagNameCheck = T.tagNameCheck), j1(T, "attributeNameCheck") && pi(T.attributeNameCheck) && (Z1.attributeNameCheck = T.attributeNameCheck), j1(T, "allowCustomizedBuiltInElements") && typeof T.allowCustomizedBuiltInElements == "boolean" && (Z1.allowCustomizedBuiltInElements = T.allowCustomizedBuiltInElements), J1(Z1), Rt && (Je = !1), le && (a2 = !0), i2 && (c1 = g1({}, io), y1 = Se(null), i2.html === !0 && (g1(c1, ao), g1(y1, ro)), i2.svg === !0 && (g1(c1, Z3), g1(y1, I3), g1(y1, yi)), i2.svgFilters === !0 && (g1(c1, S3), g1(y1, I3), g1(y1, yi)), i2.mathMl === !0 && (g1(c1, z3), g1(y1, oo), g1(y1, yi))), et.tagCheck = null, et.attributeCheck = null, j1(m, "ADD_TAGS") && (typeof m.ADD_TAGS == "function" ? et.tagCheck = m.ADD_TAGS : x2(m.ADD_TAGS) && (c1 === pt && (c1 = X1(c1)), g1(c1, m.ADD_TAGS, C1))), j1(m, "ADD_ATTR") && (typeof m.ADD_ATTR == "function" ? et.attributeCheck = m.ADD_ATTR : x2(m.ADD_ATTR) && (y1 === t2 && (y1 = X1(y1)), g1(y1, m.ADD_ATTR, C1))), j1(m, "ADD_URI_SAFE_ATTR") && x2(m.ADD_URI_SAFE_ATTR) && g1(ta, m.ADD_URI_SAFE_ATTR, C1), j1(m, "FORBID_CONTENTS") && x2(m.FORBID_CONTENTS) && (xt === de && (xt = X1(xt)), g1(xt, m.FORBID_CONTENTS, C1)), j1(m, "ADD_FORBID_CONTENTS") && x2(m.ADD_FORBID_CONTENTS) && (xt === de && (xt = X1(xt)), g1(xt, m.ADD_FORBID_CONTENTS, C1)), se && (c1["#text"] = !0), e2 && g1(c1, ["html", "head", "body"]), c1.table && (g1(c1, ["tbody"]), delete Nt.tbody), m.TRUSTED_TYPES_POLICY) {
+    }), a2 = j1(m, "USE_PROFILES") ? m.USE_PROFILES && typeof m.USE_PROFILES == "object" ? X1(m.USE_PROFILES) : m.USE_PROFILES : !1, We = m.ALLOW_ARIA_ATTR !== !1, Je = m.ALLOW_DATA_ATTR !== !1, _e = m.ALLOW_UNKNOWN_PROTOCOLS || !1, D2 = m.ALLOW_SELF_CLOSE_IN_ATTR !== !1, Nt = m.SAFE_FOR_TEMPLATES || !1, At = m.SAFE_FOR_XML !== !1, t2 = m.WHOLE_DOCUMENT || !1, e2 = m.RETURN_DOM || !1, le = m.RETURN_DOM_FRAGMENT || !1, A2 = m.RETURN_TRUSTED_TYPE || !1, Qe = m.FORCE_BODY || !1, ai = m.SANITIZE_DOM !== !1, Xe = m.SANITIZE_NAMED_PROPS || !1, se = m.KEEP_CONTENT !== !1, ce = m.IN_PLACE || !1, O1 = Kl(m.ALLOWED_URI_REGEXP) ? m.ALLOWED_URI_REGEXP : no, p2 = typeof m.NAMESPACE == "string" ? m.NAMESPACE : Mt, he = j1(m, "MATHML_TEXT_INTEGRATION_POINTS") && m.MATHML_TEXT_INTEGRATION_POINTS && typeof m.MATHML_TEXT_INTEGRATION_POINTS == "object" ? X1(m.MATHML_TEXT_INTEGRATION_POINTS) : g1({}, ni), me = j1(m, "HTML_INTEGRATION_POINTS") && m.HTML_INTEGRATION_POINTS && typeof m.HTML_INTEGRATION_POINTS == "object" ? X1(m.HTML_INTEGRATION_POINTS) : g1({}, li);
+    const G = j1(m, "CUSTOM_ELEMENT_HANDLING") && m.CUSTOM_ELEMENT_HANDLING && typeof m.CUSTOM_ELEMENT_HANDLING == "object" ? X1(m.CUSTOM_ELEMENT_HANDLING) : Se(null);
+    if (Z1 = Se(null), j1(G, "tagNameCheck") && pi(G.tagNameCheck) && (Z1.tagNameCheck = G.tagNameCheck), j1(G, "attributeNameCheck") && pi(G.attributeNameCheck) && (Z1.attributeNameCheck = G.attributeNameCheck), j1(G, "allowCustomizedBuiltInElements") && typeof G.allowCustomizedBuiltInElements == "boolean" && (Z1.allowCustomizedBuiltInElements = G.allowCustomizedBuiltInElements), J1(Z1), Nt && (Je = !1), le && (e2 = !0), a2 && (c1 = g1({}, io), y1 = Se(null), a2.html === !0 && (g1(c1, ao), g1(y1, ro)), a2.svg === !0 && (g1(c1, Z3), g1(y1, I3), g1(y1, yi)), a2.svgFilters === !0 && (g1(c1, S3), g1(y1, I3), g1(y1, yi)), a2.mathMl === !0 && (g1(c1, z3), g1(y1, oo), g1(y1, yi))), tt.tagCheck = null, tt.attributeCheck = null, j1(m, "ADD_TAGS") && (typeof m.ADD_TAGS == "function" ? tt.tagCheck = m.ADD_TAGS : b2(m.ADD_TAGS) && (c1 === pt && (c1 = X1(c1)), g1(c1, m.ADD_TAGS, C1))), j1(m, "ADD_ATTR") && (typeof m.ADD_ATTR == "function" ? tt.attributeCheck = m.ADD_ATTR : b2(m.ADD_ATTR) && (y1 === $t && (y1 = X1(y1)), g1(y1, m.ADD_ATTR, C1))), j1(m, "ADD_URI_SAFE_ATTR") && b2(m.ADD_URI_SAFE_ATTR) && g1(ta, m.ADD_URI_SAFE_ATTR, C1), j1(m, "FORBID_CONTENTS") && b2(m.FORBID_CONTENTS) && (xt === de && (xt = X1(xt)), g1(xt, m.FORBID_CONTENTS, C1)), j1(m, "ADD_FORBID_CONTENTS") && b2(m.ADD_FORBID_CONTENTS) && (xt === de && (xt = X1(xt)), g1(xt, m.ADD_FORBID_CONTENTS, C1)), se && (c1["#text"] = !0), t2 && g1(c1, ["html", "head", "body"]), c1.table && (g1(c1, ["tbody"]), delete jt.tbody), m.TRUSTED_TYPES_POLICY) {
       if (typeof m.TRUSTED_TYPES_POLICY.createHTML != "function")
-        throw N2('TRUSTED_TYPES_POLICY configuration option must provide a "createHTML" hook.');
+        throw j2('TRUSTED_TYPES_POLICY configuration option must provide a "createHTML" hook.');
       if (typeof m.TRUSTED_TYPES_POLICY.createScriptURL != "function")
-        throw N2('TRUSTED_TYPES_POLICY configuration option must provide a "createScriptURL" hook.');
+        throw j2('TRUSTED_TYPES_POLICY configuration option must provide a "createScriptURL" hook.');
       const j = D;
       D = m.TRUSTED_TYPES_POLICY;
       try {
-        A = P("");
+        A = C("");
       } catch (i1) {
         throw D = j, i1;
       }
-    } else m.TRUSTED_TYPES_POLICY === null ? (D = void 0, A = "") : (D === void 0 && (D = _()), D && typeof A == "string" && (A = P("")));
+    } else m.TRUSTED_TYPES_POLICY === null ? (D = void 0, A = "") : (D === void 0 && (D = _()), D && typeof A == "string" && (A = C("")));
     W1 && W1(m), h2 = m;
-  }, fi = g1({}, [...Z3, ...S3, ...Yl]), hi = g1({}, [...z3, ...Wl]), h3 = function(m, T, j) {
-    return T.namespaceURI === Mt ? m === "svg" : T.namespaceURI === pe ? m === "svg" && (j === "annotation-xml" || he[j]) : !!fi[m];
-  }, m3 = function(m, T, j) {
-    return T.namespaceURI === Mt ? m === "math" : T.namespaceURI === E2 ? m === "math" && me[j] : !!hi[m];
-  }, v3 = function(m, T, j) {
-    return T.namespaceURI === E2 && !me[j] || T.namespaceURI === pe && !he[j] ? !1 : !hi[m] && (si[m] || !fi[m]);
+  }, fi = g1({}, [...Z3, ...S3, ...ql]), hi = g1({}, [...z3, ...Yl]), h3 = function(m, G, j) {
+    return G.namespaceURI === Mt ? m === "svg" : G.namespaceURI === pe ? m === "svg" && (j === "annotation-xml" || he[j]) : !!fi[m];
+  }, m3 = function(m, G, j) {
+    return G.namespaceURI === Mt ? m === "math" : G.namespaceURI === U2 ? m === "math" && me[j] : !!hi[m];
+  }, v3 = function(m, G, j) {
+    return G.namespaceURI === U2 && !me[j] || G.namespaceURI === pe && !he[j] ? !1 : !hi[m] && (si[m] || !fi[m]);
   }, ra = function(m) {
-    let T = C(m);
-    (!T || !T.tagName) && (T = {
+    let G = T(m);
+    (!G || !G.tagName) && (G = {
       namespaceURI: p2,
       tagName: "template"
     });
-    const j = ua(m.tagName), i1 = ua(T.tagName);
-    return aa[m.namespaceURI] ? m.namespaceURI === E2 ? h3(j, T, i1) : m.namespaceURI === pe ? m3(j, T, i1) : m.namespaceURI === Mt ? v3(j, T, i1) : !!(f2 === "application/xhtml+xml" && aa[m.namespaceURI]) : !1;
-  }, Vt = function(m) {
+    const j = ua(m.tagName), i1 = ua(G.tagName);
+    return aa[m.namespaceURI] ? m.namespaceURI === U2 ? h3(j, G, i1) : m.namespaceURI === pe ? m3(j, G, i1) : m.namespaceURI === Mt ? v3(j, G, i1) : !!(f2 === "application/xhtml+xml" && aa[m.namespaceURI]) : !1;
+  }, Rt = function(m) {
     ke(e.removed, {
       element: m
     });
     try {
-      C(m).removeChild(m);
+      T(m).removeChild(m);
     } catch {
-      if (u(m), !C(m))
-        throw N2("a node selected for removal could not be detached from its tree and cannot be safely returned; refusing to sanitize in place");
+      if (u(m), !T(m))
+        throw j2("a node selected for removal could not be detached from its tree and cannot be safely returned; refusing to sanitize in place");
     }
-  }, L2 = function(m) {
+  }, E2 = function(m) {
     m2(m);
-    const T = h(m);
-    if (T) {
+    const G = h(m);
+    if (G) {
       const i1 = [];
-      ue(T, (r1) => {
+      ue(G, (r1) => {
         ke(i1, r1);
       }), ue(i1, (r1) => {
         try {
@@ -11796,34 +11796,34 @@ function R4() {
           } catch {
           }
       }
-  }, Ft = function(m, T) {
+  }, Vt = function(m, G) {
     try {
       ke(e.removed, {
-        attribute: T.getAttributeNode(m),
-        from: T
+        attribute: G.getAttributeNode(m),
+        from: G
       });
     } catch {
       ke(e.removed, {
         attribute: null,
-        from: T
+        from: G
       });
     }
-    if (T.removeAttribute(m), m === "is")
-      if (a2 || le)
+    if (G.removeAttribute(m), m === "is")
+      if (e2 || le)
         try {
-          Vt(T);
+          Rt(G);
         } catch {
         }
       else
         try {
-          T.setAttribute(m, "");
+          G.setAttribute(m, "");
         } catch {
         }
   }, mi = function(m) {
-    const T = g(m);
-    if (T)
-      for (let j = T.length - 1; j >= 0; --j) {
-        const i1 = T[j], r1 = i1 && i1.name;
+    const G = g(m);
+    if (G)
+      for (let j = G.length - 1; j >= 0; --j) {
+        const i1 = G[j], r1 = i1 && i1.name;
         if (!(typeof r1 != "string" || y1[C1(r1)]))
           try {
             m.removeAttribute(r1);
@@ -11831,30 +11831,30 @@ function R4() {
           }
       }
   }, m2 = function(m) {
-    const T = [m];
-    for (; T.length > 0; ) {
-      const j = T.pop();
-      (Z ? Z(j) : j.nodeType) === ut.element && mi(j);
+    const G = [m];
+    for (; G.length > 0; ) {
+      const j = G.pop();
+      (Z ? Z(j) : j.nodeType) === yt.element && mi(j);
       const r1 = h(j);
       if (r1)
         for (let f1 = r1.length - 1; f1 >= 0; --f1)
-          T.push(r1[f1]);
+          G.push(r1[f1]);
     }
   }, g3 = function(m) {
     if (!At)
       return;
-    const T = [m];
-    for (; T.length > 0; ) {
-      const j = T.pop(), i1 = Z ? Z(j) : j.nodeType;
-      if (i1 === ut.processingInstruction || i1 === ut.comment && H1(so, j.data)) {
+    const G = [m];
+    for (; G.length > 0; ) {
+      const j = G.pop(), i1 = Z ? Z(j) : j.nodeType;
+      if (i1 === yt.processingInstruction || i1 === yt.comment && H1(so, j.data)) {
         try {
           u(j);
         } catch {
         }
         continue;
       }
-      if (i1 === ut.element) {
-        const f1 = j, M1 = C1(G ? G(j) : j.nodeName);
+      if (i1 === yt.element) {
+        const f1 = j, M1 = C1(P ? P(j) : j.nodeName);
         try {
           f1.hasAttribute && f1.hasAttribute("patchsrc") && f1.removeAttribute("patchsrc"), f1.hasAttribute && f1.hasAttribute("for") && M1 !== "label" && M1 !== "output" && f1.removeAttribute("for");
         } catch {
@@ -11863,10 +11863,10 @@ function R4() {
       const r1 = h(j);
       if (r1)
         for (let f1 = r1.length - 1; f1 >= 0; --f1)
-          T.push(r1[f1]);
+          G.push(r1[f1]);
     }
   }, vi = function(m) {
-    let T = null, j = null;
+    let G = null, j = null;
     if (Qe)
       m = "<remove></remove>" + m;
     else {
@@ -11874,52 +11874,52 @@ function R4() {
       j = f1 && f1[0];
     }
     f2 === "application/xhtml+xml" && p2 === Mt && (m = '<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body>' + m + "</body></html>");
-    const i1 = D ? P(m) : m;
+    const i1 = D ? C(m) : m;
     if (p2 === Mt)
       try {
-        T = new p().parseFromString(i1, f2);
+        G = new p().parseFromString(i1, f2);
       } catch {
       }
-    if (!T || !T.documentElement) {
-      T = V.createDocument(p2, "template", null);
+    if (!G || !G.documentElement) {
+      G = V.createDocument(p2, "template", null);
       try {
-        T.documentElement.innerHTML = fe ? A : i1;
+        G.documentElement.innerHTML = fe ? A : i1;
       } catch {
       }
     }
-    const r1 = T.body || T.documentElement;
-    return m && j && r1.insertBefore(a.createTextNode(j), r1.childNodes[0] || null), p2 === Mt ? z.call(T, e2 ? "html" : "body")[0] : e2 ? T.documentElement : r1;
+    const r1 = G.body || G.documentElement;
+    return m && j && r1.insertBefore(a.createTextNode(j), r1.childNodes[0] || null), p2 === Mt ? z.call(G, t2 ? "html" : "body")[0] : t2 ? G.documentElement : r1;
   }, gi = function(m) {
-    const T = I ? I(m) : m.ownerDocument;
+    const G = I ? I(m) : m.ownerDocument;
     return W.call(
-      T || m,
+      G || m,
       m,
       // eslint-disable-next-line no-bitwise
-      l.SHOW_ELEMENT | l.SHOW_COMMENT | l.SHOW_TEXT | l.SHOW_PROCESSING_INSTRUCTION | l.SHOW_CDATA_SECTION,
+      s.SHOW_ELEMENT | s.SHOW_COMMENT | s.SHOW_TEXT | s.SHOW_PROCESSING_INSTRUCTION | s.SHOW_CDATA_SECTION,
       null
     );
   }, ve = function(m) {
     return m = ca(m, q, " "), m = ca(m, v1, " "), m = ca(m, R1, " "), m;
   }, oa = function(m) {
-    var T;
+    var G;
     m.normalize();
     const j = I ? I(m) : m.ownerDocument, i1 = W.call(
       j || m,
       m,
       // eslint-disable-next-line no-bitwise
-      l.SHOW_TEXT | l.SHOW_COMMENT | l.SHOW_CDATA_SECTION | l.SHOW_PROCESSING_INSTRUCTION,
+      s.SHOW_TEXT | s.SHOW_COMMENT | s.SHOW_CDATA_SECTION | s.SHOW_PROCESSING_INSTRUCTION,
       null
     );
     let r1 = i1.nextNode();
     for (; r1; )
       r1.data = ve(r1.data), r1 = i1.nextNode();
-    const f1 = (T = m.querySelectorAll) === null || T === void 0 ? void 0 : T.call(m, "template");
+    const f1 = (G = m.querySelectorAll) === null || G === void 0 ? void 0 : G.call(m, "template");
     f1 && ue(f1, (M1) => {
       v2(M1.content) && oa(M1.content);
     });
   }, ge = function(m) {
-    const T = G ? G(m) : null;
-    return typeof T != "string" || C1(T) !== "form" ? !1 : typeof m.nodeName != "string" || typeof m.textContent != "string" || typeof m.removeChild != "function" || // Realm-safe NamedNodeMap detection: equality against the cached
+    const G = P ? P(m) : null;
+    return typeof G != "string" || C1(G) !== "form" ? !1 : typeof m.nodeName != "string" || typeof m.textContent != "string" || typeof m.removeChild != "function" || // Realm-safe NamedNodeMap detection: equality against the cached
     // prototype getter. Clobbered .attributes (e.g. <input name="attributes">)
     // makes the direct read diverge from the cached read; a clean form
     // (same-realm OR foreign-realm) has both reads pointing at the same
@@ -11947,11 +11947,11 @@ function R4() {
     if (!Z || typeof m != "object" || m === null)
       return !1;
     try {
-      return Z(m) === ut.documentFragment;
+      return Z(m) === yt.documentFragment;
     } catch {
       return !1;
     }
-  }, H2 = function(m) {
+  }, L2 = function(m) {
     if (!Z || typeof m != "object" || m === null)
       return !1;
     try {
@@ -11960,18 +11960,18 @@ function R4() {
       return !1;
     }
   };
-  function wt(B, m, T) {
+  function wt(B, m, G) {
     B.length !== 0 && ue(B, (j) => {
-      j.call(e, m, T, h2);
+      j.call(e, m, G, h2);
     });
   }
-  const y3 = function(m, T) {
-    return !!(At && m.hasChildNodes() && !H2(m.firstElementChild) && H1(lo, m.textContent) && H1(lo, m.innerHTML) || At && m.namespaceURI === Mt && T === "style" && H2(m.firstElementChild) || m.nodeType === ut.processingInstruction || At && m.nodeType === ut.comment && H1(so, m.data));
-  }, u3 = function(m, T, j) {
-    if (!Nt[T] && ye(T) && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, T) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(T)))
+  const y3 = function(m, G) {
+    return !!(At && m.hasChildNodes() && !L2(m.firstElementChild) && H1(lo, m.textContent) && H1(lo, m.innerHTML) || At && m.namespaceURI === Mt && G === "style" && L2(m.firstElementChild) || m.nodeType === yt.processingInstruction || At && m.nodeType === yt.comment && H1(so, m.data));
+  }, u3 = function(m, G, j) {
+    if (!jt[G] && ye(G) && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, G) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(G)))
       return !1;
-    if (se && !xt[T]) {
-      const i1 = C(m), r1 = h(m);
+    if (se && !xt[G]) {
+      const i1 = T(m), r1 = h(m);
       if (r1 && i1) {
         const f1 = r1.length;
         for (let M1 = f1 - 1; M1 >= 0; --M1) {
@@ -11980,45 +11980,45 @@ function R4() {
         }
       }
     }
-    return Vt(m), !0;
-  }, g2 = function(m, T, j, i1) {
-    return m.length === 0 ? T : T === j || T === i1 ? X1(T) : T;
-  }, na = function(m, T) {
-    if (wt(L.beforeSanitizeElements, m, null), m !== T && C(m) === null)
+    return Rt(m), !0;
+  }, g2 = function(m, G, j, i1) {
+    return m.length === 0 ? G : G === j || G === i1 ? X1(G) : G;
+  }, na = function(m, G) {
+    if (wt(L.beforeSanitizeElements, m, null), m !== G && T(m) === null)
       return ce && m2(m), !0;
     if (ge(m))
-      return Vt(m), !0;
-    const j = C1(G ? G(m) : m.nodeName);
+      return Rt(m), !0;
+    const j = C1(P ? P(m) : m.nodeName);
     if (c1 = g2(L.uponSanitizeElement, c1, pt, ne), wt(L.uponSanitizeElement, m, {
       tagName: j,
       allowedTags: c1
-    }), m !== T && C(m) === null)
+    }), m !== G && T(m) === null)
       return ce && m2(m), !0;
     if (y3(m, j))
-      return Vt(m), !0;
-    if (Nt[j] || !(et.tagCheck instanceof Function && et.tagCheck(j)) && !c1[j]) {
-      const r1 = u3(m, j, T);
+      return Rt(m), !0;
+    if (jt[j] || !(tt.tagCheck instanceof Function && tt.tagCheck(j)) && !c1[j]) {
+      const r1 = u3(m, j, G);
       return r1 === !1 && wt(L.afterSanitizeElements, m, null), r1;
     }
-    if ((Z ? Z(m) : m.nodeType) === ut.element && !ra(m) || (j === "noscript" || j === "noembed" || j === "noframes") && H1(r0, m.innerHTML))
-      return Vt(m), !0;
-    if (Rt && m.nodeType === ut.text) {
+    if ((Z ? Z(m) : m.nodeType) === yt.element && !ra(m) || (j === "noscript" || j === "noembed" || j === "noframes") && H1(i0, m.innerHTML))
+      return Rt(m), !0;
+    if (Nt && m.nodeType === yt.text) {
       const r1 = ve(m.textContent);
       m.textContent !== r1 && (ke(e.removed, {
         element: m.cloneNode()
       }), m.textContent = r1);
     }
     return wt(L.afterSanitizeElements, m, null), !1;
-  }, la = function(m, T, j) {
-    if (D2[T] || At && T === "patchsrc" || At && T === "for" && m !== "label" && m !== "output" || ai && (T === "id" || T === "name") && (j in a || j in f3))
+  }, la = function(m, G, j) {
+    if (T2[G] || At && G === "patchsrc" || At && G === "for" && m !== "label" && m !== "output" || ai && (G === "id" || G === "name") && (j in a || j in f3))
       return !1;
-    const i1 = y1[T] || et.attributeCheck instanceof Function && et.attributeCheck(T, m);
-    if (!(Je && H1(I1, T))) {
-      if (!(We && H1(E1, T))) {
+    const i1 = y1[G] || tt.attributeCheck instanceof Function && tt.attributeCheck(G, m);
+    if (!(Je && H1(I1, G))) {
+      if (!(We && H1(E1, G))) {
         if (i1) {
-          if (!ta[T]) {
+          if (!ta[G]) {
             if (!H1(O1, ca(j, Ot, ""))) {
-              if (!((T === "src" || T === "xlink:href" || T === "href") && m !== "script" && $r(j, "data:") === 0 && ri[m])) {
+              if (!((G === "src" || G === "xlink:href" || G === "href") && m !== "script" && $r(j, "data:") === 0 && ri[m])) {
                 if (!(_e && !H1(V1, ca(j, Ot, "")))) {
                   if (j)
                     return !1;
@@ -12030,36 +12030,36 @@ function R4() {
           // First condition does a very basic check if a) it's basically a valid custom element tagname AND
           // b) if the tagName passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
           // and c) if the attribute name passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.attributeNameCheck
-          !(ye(m) && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, m) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(m)) && (Z1.attributeNameCheck instanceof RegExp && H1(Z1.attributeNameCheck, T) || Z1.attributeNameCheck instanceof Function && Z1.attributeNameCheck(T, m)) || // Alternative, second condition checks if it's an `is`-attribute, AND
+          !(ye(m) && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, m) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(m)) && (Z1.attributeNameCheck instanceof RegExp && H1(Z1.attributeNameCheck, G) || Z1.attributeNameCheck instanceof Function && Z1.attributeNameCheck(G, m)) || // Alternative, second condition checks if it's an `is`-attribute, AND
           // the value passes whatever the user has configured for CUSTOM_ELEMENT_HANDLING.tagNameCheck
-          T === "is" && Z1.allowCustomizedBuiltInElements && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, j) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(j)))
+          G === "is" && Z1.allowCustomizedBuiltInElements && (Z1.tagNameCheck instanceof RegExp && H1(Z1.tagNameCheck, j) || Z1.tagNameCheck instanceof Function && Z1.tagNameCheck(j)))
         ) return !1;
       }
     }
     return !0;
   }, sa = g1({}, ["annotation-xml", "color-profile", "font-face", "font-face-format", "font-face-name", "font-face-src", "font-face-uri", "missing-glyph"]), ye = function(m) {
     return !sa[ua(m)] && H1(dt, m);
-  }, qr = function(m, T, j, i1) {
+  }, qr = function(m, G, j, i1) {
     if (D && typeof v == "object" && typeof v.getAttributeType == "function" && !j)
-      switch (v.getAttributeType(m, T)) {
+      switch (v.getAttributeType(m, G)) {
         case "TrustedHTML":
-          return P(i1);
+          return C(i1);
         case "TrustedScriptURL":
           return b(i1);
       }
     return i1;
-  }, k3 = function(m, T, j, i1) {
+  }, k3 = function(m, G, j, i1) {
     try {
-      j ? m.setAttributeNS(j, T, i1) : m.setAttribute(T, i1), ge(m) ? Vt(m) : Qr(e.removed);
+      j ? m.setAttributeNS(j, G, i1) : m.setAttribute(G, i1), ge(m) ? Rt(m) : Qr(e.removed);
     } catch {
-      Ft(T, m);
+      Vt(G, m);
     }
   }, O = function(m) {
     wt(L.beforeSanitizeAttributes, m, null);
-    const T = m.attributes;
-    if (!T || ge(m))
+    const G = m.attributes;
+    if (!G || ge(m))
       return;
-    y1 = g2(L.uponSanitizeAttribute, y1, t2, A2);
+    y1 = g2(L.uponSanitizeAttribute, y1, $t, O2);
     const j = {
       attrName: "",
       attrValue: "",
@@ -12067,68 +12067,68 @@ function R4() {
       allowedAttributes: y1,
       forceKeepAttr: void 0
     };
-    let i1 = T.length;
+    let i1 = G.length;
     const r1 = C1(m.nodeName);
     for (; i1--; ) {
-      const f1 = T[i1], M1 = f1.name, D1 = f1.namespaceURI, ft = f1.value, ht = C1(M1), b3 = ft;
-      let at = M1 === "value" ? b3 : Nl(b3);
-      if (j.attrName = ht, j.attrValue = at, j.keepAttr = !0, j.forceKeepAttr = void 0, wt(L.uponSanitizeAttribute, m, j), at = j.attrValue, Xe && (ht === "id" || ht === "name") && $r(at, ii) !== 0 && (Ft(M1, m), at = ii + at), At && H1(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, at)) {
-        Ft(M1, m);
+      const f1 = G[i1], M1 = f1.name, D1 = f1.namespaceURI, ft = f1.value, ht = C1(M1), b3 = ft;
+      let et = M1 === "value" ? b3 : jl(b3);
+      if (j.attrName = ht, j.attrValue = et, j.keepAttr = !0, j.forceKeepAttr = void 0, wt(L.uponSanitizeAttribute, m, j), et = j.attrValue, Xe && (ht === "id" || ht === "name") && $r(et, ii) !== 0 && (Vt(M1, m), et = ii + et), At && H1(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, et)) {
+        Vt(M1, m);
         continue;
       }
-      if (ht === "attributename" && Xr(at, "href")) {
-        Ft(M1, m);
+      if (ht === "attributename" && Xr(et, "href")) {
+        Vt(M1, m);
         continue;
       }
       if (!j.forceKeepAttr) {
         if (!j.keepAttr) {
-          Ft(M1, m);
+          Vt(M1, m);
           continue;
         }
-        if (!O2 && H1(o0, at)) {
-          Ft(M1, m);
+        if (!D2 && H1(r0, et)) {
+          Vt(M1, m);
           continue;
         }
-        if (Rt && (at = ve(at)), !la(r1, ht, at)) {
-          Ft(M1, m);
+        if (Nt && (et = ve(et)), !la(r1, ht, et)) {
+          Vt(M1, m);
           continue;
         }
-        at = qr(r1, ht, D1, at), at !== b3 && k3(m, M1, D1, at);
+        et = qr(r1, ht, D1, et), et !== b3 && k3(m, M1, D1, et);
       }
     }
     wt(L.afterSanitizeAttributes, m, null);
   }, _1 = function(m) {
-    let T = null;
+    let G = null;
     const j = gi(m);
-    for (wt(L.beforeSanitizeShadowDOM, m, null); T = j.nextNode(); )
-      if (wt(L.uponSanitizeShadowNode, T, null), na(T, m), O(T), v2(T.content) && _1(T.content), (Z ? Z(T) : T.nodeType) === ut.element) {
-        const r1 = w(T);
-        v2(r1) && (j2(r1), _1(r1));
+    for (wt(L.beforeSanitizeShadowDOM, m, null); G = j.nextNode(); )
+      if (wt(L.uponSanitizeShadowNode, G, null), na(G, m), O(G), v2(G.content) && _1(G.content), (Z ? Z(G) : G.nodeType) === yt.element) {
+        const r1 = w(G);
+        v2(r1) && (H2(r1), _1(r1));
       }
     wt(L.afterSanitizeShadowDOM, m, null);
-  }, j2 = function(m) {
-    const T = [{
+  }, H2 = function(m) {
+    const G = [{
       node: m,
       shadow: null
     }];
-    for (; T.length > 0; ) {
-      const j = T.pop();
+    for (; G.length > 0; ) {
+      const j = G.pop();
       if (j.shadow) {
         _1(j.shadow);
         continue;
       }
-      const i1 = j.node, f1 = (Z ? Z(i1) : i1.nodeType) === ut.element, M1 = h(i1);
+      const i1 = j.node, f1 = (Z ? Z(i1) : i1.nodeType) === yt.element, M1 = h(i1);
       if (M1)
         for (let D1 = M1.length - 1; D1 >= 0; --D1)
-          T.push({
+          G.push({
             node: M1[D1],
             shadow: null
           });
       if (f1) {
-        const D1 = G ? G(i1) : null;
+        const D1 = P ? P(i1) : null;
         if (typeof D1 == "string" && C1(D1) === "template") {
           const ft = i1.content;
-          v2(ft) && T.push({
+          v2(ft) && G.push({
             node: ft,
             shadow: null
           });
@@ -12136,7 +12136,7 @@ function R4() {
       }
       if (f1) {
         const D1 = w(i1);
-        v2(D1) && T.push({
+        v2(D1) && G.push({
           node: null,
           shadow: D1
         }, {
@@ -12147,79 +12147,79 @@ function R4() {
     }
   };
   return e.sanitize = function(B) {
-    let m = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {}, T = null, j = null, i1 = null, r1 = null;
-    if (fe = !B, fe && (B = "<!-->"), typeof B != "string" && !H2(B) && (B = Kl(B), typeof B != "string"))
-      throw N2("dirty is not a string, aborting");
+    let m = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {}, G = null, j = null, i1 = null, r1 = null;
+    if (fe = !B, fe && (B = "<!-->"), typeof B != "string" && !L2(B) && (B = Bl(B), typeof B != "string"))
+      throw j2("dirty is not a string, aborting");
     if (!e.isSupported)
       return B;
-    oe ? (c1 = ne, y1 = A2) : ia(m), (L.uponSanitizeElement.length > 0 || L.uponSanitizeAttribute.length > 0) && (c1 = X1(c1)), L.uponSanitizeAttribute.length > 0 && (y1 = X1(y1)), e.removed = [];
-    const f1 = ce && typeof B != "string" && H2(B);
+    oe ? (c1 = ne, y1 = O2) : ia(m), (L.uponSanitizeElement.length > 0 || L.uponSanitizeAttribute.length > 0) && (c1 = X1(c1)), L.uponSanitizeAttribute.length > 0 && (y1 = X1(y1)), e.removed = [];
+    const f1 = ce && typeof B != "string" && L2(B);
     if (f1) {
       g3(B);
-      const ft = G ? G(B) : B.nodeName;
+      const ft = P ? P(B) : B.nodeName;
       if (typeof ft == "string") {
         const ht = C1(ft);
-        if (!c1[ht] || Nt[ht])
-          throw L2(B), N2("root node is forbidden and cannot be sanitized in-place");
+        if (!c1[ht] || jt[ht])
+          throw E2(B), j2("root node is forbidden and cannot be sanitized in-place");
       }
       if (ge(B))
-        throw L2(B), N2("root node is clobbered and cannot be sanitized in-place");
+        throw E2(B), j2("root node is clobbered and cannot be sanitized in-place");
       try {
-        j2(B);
+        H2(B);
       } catch (ht) {
-        throw L2(B), ht;
+        throw E2(B), ht;
       }
-    } else if (H2(B))
-      T = vi("<!---->"), j = T.ownerDocument.importNode(B, !0), j.nodeType === ut.element && j.nodeName === "BODY" || j.nodeName === "HTML" ? T = j : T.appendChild(j), j2(j);
+    } else if (L2(B))
+      G = vi("<!---->"), j = G.ownerDocument.importNode(B, !0), j.nodeType === yt.element && j.nodeName === "BODY" || j.nodeName === "HTML" ? G = j : G.appendChild(j), H2(j);
     else {
-      if (!a2 && !Rt && !e2 && // eslint-disable-next-line unicorn/prefer-includes
+      if (!e2 && !Nt && !t2 && // eslint-disable-next-line unicorn/prefer-includes
       B.indexOf("<") === -1)
-        return D && U2 ? P(B) : B;
-      if (T = vi(B), !T)
-        return a2 ? null : U2 ? A : "";
+        return D && A2 ? C(B) : B;
+      if (G = vi(B), !G)
+        return e2 ? null : A2 ? A : "";
     }
-    T && Qe && Vt(T.firstChild);
-    const M1 = f1 ? B : T;
+    G && Qe && Rt(G.firstChild);
+    const M1 = f1 ? B : G;
     try {
       const ft = gi(M1);
       for (; i1 = ft.nextNode(); )
         na(i1, M1), O(i1), v2(i1.content) && _1(i1.content);
     } catch (ft) {
-      throw f1 && (L2(B), ue(e.removed, (ht) => {
+      throw f1 && (E2(B), ue(e.removed, (ht) => {
         ht.element && m2(ht.element);
       })), ft;
     }
     if (f1)
       return ue(e.removed, (ft) => {
         ft.element && m2(ft.element);
-      }), Rt && oa(B), B;
-    if (a2) {
-      if (Rt && oa(T), le)
-        for (r1 = l1.call(T.ownerDocument); T.firstChild; )
-          r1.appendChild(T.firstChild);
+      }), Nt && oa(B), B;
+    if (e2) {
+      if (Nt && oa(G), le)
+        for (r1 = l1.call(G.ownerDocument); G.firstChild; )
+          r1.appendChild(G.firstChild);
       else
-        r1 = T;
+        r1 = G;
       return (y1.shadowroot || y1.shadowrootmode) && (r1 = K.call(i, r1, !0)), r1;
     }
-    let D1 = e2 ? T.outerHTML : T.innerHTML;
-    return e2 && c1["!doctype"] && T.ownerDocument && T.ownerDocument.doctype && T.ownerDocument.doctype.name && H1(a0, T.ownerDocument.doctype.name) && (D1 = "<!DOCTYPE " + T.ownerDocument.doctype.name + `>
-` + D1), Rt && (D1 = ve(D1)), D && U2 ? P(D1) : D1;
+    let D1 = t2 ? G.outerHTML : G.innerHTML;
+    return t2 && c1["!doctype"] && G.ownerDocument && G.ownerDocument.doctype && G.ownerDocument.doctype.name && H1(e0, G.ownerDocument.doctype.name) && (D1 = "<!DOCTYPE " + G.ownerDocument.doctype.name + `>
+` + D1), Nt && (D1 = ve(D1)), D && A2 ? C(D1) : D1;
   }, e.setConfig = function() {
     let B = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
-    ia(B), oe = !0, ne = c1, A2 = y1;
+    ia(B), oe = !0, ne = c1, O2 = y1;
   }, e.clearConfig = function() {
-    h2 = null, oe = !1, ne = null, A2 = null, D = H, A = "";
-  }, e.isValidAttribute = function(B, m, T) {
+    h2 = null, oe = !1, ne = null, O2 = null, D = H, A = "";
+  }, e.isValidAttribute = function(B, m, G) {
     h2 || ia({});
     const j = C1(B), i1 = C1(m);
-    return la(j, i1, T);
+    return la(j, i1, G);
   }, e.addHook = function(B, m) {
     typeof m == "function" && j1(L, B) && ke(L[B], m);
   }, e.removeHook = function(B, m) {
     if (j1(L, B)) {
       if (m !== void 0) {
-        const T = Hl(L[B], m);
-        return T === -1 ? void 0 : jl(L[B], T, 1)[0];
+        const G = Ll(L[B], m);
+        return G === -1 ? void 0 : Hl(L[B], G, 1)[0];
       }
       return Qr(L[B]);
     }
@@ -12229,14 +12229,14 @@ function R4() {
     L = co();
   }, e;
 }
-var s0 = R4();
-const c0 = {
+var l0 = R4();
+const s0 = {
   USE_PROFILES: { svg: !0, svgFilters: !0 },
   FORBID_TAGS: ["script", "iframe", "object", "embed", "foreignObject"]
 };
-function d0(t) {
-  const e = `<svg xmlns="http://www.w3.org/2000/svg">${t}</svg>`, i = s0.sanitize(e, {
-    ...c0,
+function c0(t) {
+  const e = `<svg xmlns="http://www.w3.org/2000/svg">${t}</svg>`, i = l0.sanitize(e, {
+    ...s0,
     RETURN_DOM: !0
   }).firstElementChild;
   if (!i || i.tagName.toLowerCase() !== "svg") return "";
@@ -12246,7 +12246,7 @@ function d0(t) {
     o += r.serializeToString(n);
   return o;
 }
-const Ht = "https://github.com/ZoliQua/React-Odontogram-Modul/fhir/CodeSystem/odontogram", V4 = "urn:iso:std:iso:3950", p0 = "http://snomed.info/sct", f0 = "http://hl7.org/fhir/sid/icd-10", h0 = "https://www.icdas.org", m0 = {
+const Ht = "https://github.com/ZoliQua/React-Odontogram-Modul/fhir/CodeSystem/odontogram", V4 = "urn:iso:std:iso:3950", d0 = "http://snomed.info/sct", p0 = "http://hl7.org/fhir/sid/icd-10", f0 = "https://www.icdas.org", h0 = {
   0: "ICDAS 0 — Sound tooth surface",
   1: "ICDAS 1 — First visual change in enamel",
   2: "ICDAS 2 — Distinct visual change in enamel",
@@ -12473,19 +12473,19 @@ const Ht = "https://github.com/ZoliQua/React-Odontogram-Modul/fhir/CodeSystem/od
     fracture: { code: "fracture", display: "Fractured / chipped filling" },
     wear: { code: "wear", display: "Worn / deficient filling material" }
   }
-}, v0 = {}, g0 = "odontogram-subject", Di = "urn:uuid:odontogram-subject";
+}, m0 = {}, v0 = "odontogram-subject", Di = "urn:uuid:odontogram-subject";
 function F4(t, e, a) {
-  const i = [{ system: t, code: e.code, display: e.display }], r = e.snomed ?? (a ? v0[a] : void 0);
-  return r && i.push({ system: p0, code: r, display: e.display }), { coding: i, text: e.display };
+  const i = [{ system: t, code: e.code, display: e.display }], r = e.snomed ?? (a ? m0[a] : void 0);
+  return r && i.push({ system: d0, code: r, display: e.display }), { coding: i, text: e.display };
 }
-function w2(t, e) {
+function M2(t, e) {
   const a = mr[t]?.[e] ?? { code: e, display: e };
   return F4(Ht, a, `${t}:${e}`);
 }
 function zi(t, e) {
   return F4(Ht, { code: t, display: e }, `finding:${t}`);
 }
-function y0(t) {
+function g0(t) {
   return { coding: [{ system: V4, code: t }], text: `Tooth ${t}` };
 }
 const B4 = [
@@ -12500,13 +12500,13 @@ const B4 = [
   category: B4,
   code: a,
   subject: { reference: t },
-  bodySite: y0(e)
+  bodySite: g0(e)
 });
 function Ut(t) {
   const e = t?.coding;
   return Array.isArray(e) ? e.find((i) => i?.system === Ht && typeof i.code == "string")?.code : void 0;
 }
-function u0(t, e) {
+function y0(t, e) {
   return t[e] || (t[e] = {}), t[e];
 }
 const S1 = (t) => Object.values(mr[t]).map((e) => ({ id: e.code, coding: { local: e.code, display: e.display } })), pa = (t, e) => t.map((a) => a.id in e ? { ...a, svgLayer: e[a.id] } : a), po = (t) => Object.fromEntries(t.map((e) => [e, e])), ie = [
@@ -12986,7 +12986,7 @@ for (let t = 1; t <= 4; t++)
     const a = `${t}${e}`, i = `${t + 4}${e}`;
     K4[a] = i, q4[i] = a;
   }
-function k0(t) {
+function u0(t) {
   return q4[t] ?? null;
 }
 function Y4(t, e) {
@@ -12994,14 +12994,14 @@ function Y4(t, e) {
   const a = K4[t];
   return a || (console.warn(`odontogram FHIR export: tooth ${t} is flagged milktooth but has no ISO 3950 deciduous equivalent — exporting the permanent code`), t);
 }
-function b0(t, e, a, i) {
+function k0(t, e, a, i) {
   const r = a[i.field], o = () => zi(i.finding.local, i.finding.display);
   switch (i.kind) {
     case "enum": {
       const n = typeof r == "string" ? r : "";
       if (!n || n === i.skipValue) return [];
       const d = Lt(t, e, o());
-      return d.valueCodeableConcept = w2(i.valueGroup, n), [d];
+      return d.valueCodeableConcept = M2(i.valueGroup, n), [d];
     }
     case "boolean": {
       if (r !== !0) return [];
@@ -13011,14 +13011,14 @@ function b0(t, e, a, i) {
     case "set": {
       const n = Array.isArray(r) ? r.filter((f) => typeof f == "string") : [];
       if (n.length === 0) return [];
-      const d = Lt(t, e, o()), l = i.field === "caries" ? a.cariesSeverity : void 0;
+      const d = Lt(t, e, o()), s = i.field === "caries" ? a.cariesSeverity : void 0;
       return d.component = n.map((f) => {
-        const p = { code: w2(i.valueGroup, f), valueBoolean: !0 };
-        if (l) {
-          const v = String(f).replace("caries-", ""), k = l[v];
+        const p = { code: M2(i.valueGroup, f), valueBoolean: !0 };
+        if (s) {
+          const v = String(f).replace("caries-", ""), k = s[v];
           if (typeof k == "number") {
             p.valueInteger = k, delete p.valueBoolean;
-            const x = a.fillingSurfaceMaterials, y = !!x && typeof x == "object" && v in x ? { system: Ht, code: `cars-${k}`, display: `CARS score ${k}` } : { system: h0, code: `ICDAS-${k}`, display: m0[k] ?? `ICDAS ${k}` };
+            const x = a.fillingSurfaceMaterials, y = !!x && typeof x == "object" && v in x ? { system: Ht, code: `cars-${k}`, display: `CARS score ${k}` } : { system: f0, code: `ICDAS-${k}`, display: h0[k] ?? `ICDAS ${k}` };
             p.code = { ...p.code, coding: [...p.code.coding ?? [], y] };
           }
         }
@@ -13035,20 +13035,20 @@ function b0(t, e, a, i) {
         if (f && f !== i.skipValue) for (const v of p) d.push([v, f]);
       }
       if (d.length === 0) return [];
-      const l = Lt(t, e, o());
-      return l.component = d.map(([f, p]) => ({
-        code: w2("fillingSurfaces", f),
-        valueCodeableConcept: w2("fillingMaterial", p)
-      })), [l];
+      const s = Lt(t, e, o());
+      return s.component = d.map(([f, p]) => ({
+        code: M2("fillingSurfaces", f),
+        valueCodeableConcept: M2("fillingMaterial", p)
+      })), [s];
     }
     default:
       return [];
   }
 }
-function x0(t, e = {}) {
+function b0(t, e = {}) {
   const a = t && typeof t == "object" && t.teeth && typeof t.teeth == "object" ? t.teeth : {}, i = e.subject ?? Di, r = [];
   if (!e.subject) {
-    const n = { resourceType: "Patient", id: g0 };
+    const n = { resourceType: "Patient", id: v0 };
     r.push({ fullUrl: Di, resource: n });
   }
   if ((t && typeof t == "object" && t.globals && typeof t.globals == "object" ? t.globals : {}).edentulous === !0) {
@@ -13063,35 +13063,35 @@ function x0(t, e = {}) {
     r.push({ resource: n });
   }
   for (const [n, d] of Object.entries(a)) {
-    const l = d && typeof d == "object" ? d : {}, f = Y4(n, l);
-    for (const x of ie) for (const u of b0(i, f, l, x)) r.push({ resource: u });
-    const p = l.radiographicDepth;
+    const s = d && typeof d == "object" ? d : {}, f = Y4(n, s);
+    for (const x of ie) for (const u of k0(i, f, s, x)) r.push({ resource: u });
+    const p = s.radiographicDepth;
     if (p && typeof p == "object") {
       const x = Object.entries(p).filter((u) => typeof u[1] == "string");
       if (x.length) {
         const u = Lt(i, f, zi("radiographic-caries-depth", "Radiographic caries depth"));
         u.component = x.map(([y, h]) => ({
-          code: w2("fillingSurfaces", y),
-          valueCodeableConcept: w2("radiographicDepth", h)
+          code: M2("fillingSurfaces", y),
+          valueCodeableConcept: M2("radiographicDepth", h)
         })), r.push({ resource: u });
       }
     }
-    const v = l.fillingDefect;
+    const v = s.fillingDefect;
     if (v && typeof v == "object") {
       const x = Object.entries(v).filter((u) => typeof u[1] == "string");
       if (x.length) {
         const u = Lt(i, f, zi("filling-defect", "Filling defect"));
         u.component = x.map(([y, h]) => ({
-          code: w2("fillingSurfaces", y),
-          valueCodeableConcept: w2("fillingDefect", h)
+          code: M2("fillingSurfaces", y),
+          valueCodeableConcept: M2("fillingDefect", h)
         })), r.push({ resource: u });
       }
     }
-    if (typeof l.note == "string" && l.note.trim().length > 0) {
+    if (typeof s.note == "string" && s.note.trim().length > 0) {
       const x = Lt(i, f, zi("tooth-note", "Tooth note"));
-      x.note = [{ text: l.note }], r.push({ resource: x });
+      x.note = [{ text: s.note }], r.push({ resource: x });
     }
-    const k = l.customStates;
+    const k = s.customStates;
     if (k && typeof k == "object")
       for (const [x, u] of Object.entries(k)) {
         if (typeof u != "string" && typeof u != "number" && typeof u != "boolean") continue;
@@ -13104,9 +13104,9 @@ function x0(t, e = {}) {
   }
   return { resourceType: "Bundle", type: "collection", entry: r };
 }
-const M0 = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], w0 = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
-function Z0(t, e) {
-  for (const a of [M0, w0]) {
+const x0 = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], M0 = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+function w0(t, e) {
+  for (const a of [x0, M0]) {
     const i = a.indexOf(t), r = a.indexOf(e);
     if (i !== -1 && r !== -1 && Math.abs(i - r) === 1) return !0;
   }
@@ -13127,34 +13127,34 @@ const mo = ["A", "B", "C"];
 function vo(t, e) {
   return mo.indexOf(t) >= mo.indexOf(e) ? t : e;
 }
-function S0(t, e) {
+function Z0(t, e) {
   const a = t.filter((n) => n.present), i = a.filter((n) => n.interdentalCal >= 1);
   let r = !1;
   t: for (let n = 0; n < i.length; n++)
     for (let d = n + 1; d < i.length; d++)
-      if (!Z0(i[n].toothNo, i[d].toothNo)) {
+      if (!w0(i[n].toothNo, i[d].toothNo)) {
         r = !0;
         break t;
       }
   const o = a.filter((n) => n.buccalOralCal >= 3 && n.maxPd > 3).length;
   return r || o >= 2 ? "periodontitis" : e >= 10 ? "gingivitis" : "health";
 }
-function z0(t) {
+function S0(t) {
   return t >= 5 ? 3 : t >= 3 ? 2 : t >= 1 ? 1 : null;
 }
-function I0(t) {
+function z0(t) {
   return t > 33 ? 3 : t >= 15 ? 2 : 1;
 }
-const C0 = ["I", "II", "III"];
-function P0(t, e, a) {
-  const i = t.filter((p) => p.present), r = i.reduce((p, v) => Math.max(p, v.interdentalCal), 0), o = z0(r), n = e.maxRblPercent === null ? null : I0(e.maxRblPercent);
+const I0 = ["I", "II", "III"];
+function C0(t, e, a) {
+  const i = t.filter((p) => p.present), r = i.reduce((p, v) => Math.max(p, v.interdentalCal), 0), o = S0(r), n = e.maxRblPercent === null ? null : z0(e.maxRblPercent);
   if (o === null && n === null) return "indeterminate";
   let d = Math.max(o ?? 0, n ?? 0);
   (i.reduce((p, v) => Math.max(p, v.maxPd), 0) >= 6 || a !== null && a >= 2) && (d = Math.max(d, 3));
-  let f = C0[d - 1];
+  let f = I0[d - 1];
   return e.toothLossPerio !== null && e.toothLossPerio >= 5 && (f = "IV"), f;
 }
-function G0(t) {
+function P0(t) {
   let e = null;
   if (t.age !== null && t.age > 0 && t.maxRblPercent !== null) {
     const n = t.maxRblPercent / t.age;
@@ -13167,7 +13167,7 @@ function G0(t) {
   const r = { smoking: a, diabetes: i, direct: e };
   return e === null && t.smokingStatus === "unknown" && t.diabetesStatus === "unknown" ? { grade: "indeterminate", buckets: r } : { grade: vo(vo(e ?? "B", a), i), buckets: r };
 }
-function T0(t) {
+function G0(t) {
   const e = t.filter((r) => r.present), a = e.filter((r) => r.interdentalCal >= 1);
   if (a.length > 0) {
     const r = a.every((d) => fo(d.toothNo) || ho(d.toothNo)), o = a.some((d) => fo(d.toothNo)), n = a.some((d) => ho(d.toothNo));
@@ -13176,16 +13176,16 @@ function T0(t) {
   return e.length === 0 || a.length / e.length < 0.3 ? "localized" : "generalized";
 }
 function J4(t) {
-  const e = S0(t.teeth, t.bopPercent), { grade: a, buckets: i } = G0(t.meta);
+  const e = Z0(t.teeth, t.bopPercent), { grade: a, buckets: i } = P0(t.meta);
   return e !== "periodontitis" ? { diagnosis: e, stage: "na", grade: a, extent: "na", buckets: i } : {
     diagnosis: e,
-    stage: P0(t.teeth, t.meta, t.maxFurcation),
+    stage: C0(t.teeth, t.meta, t.maxFurcation),
     grade: a,
-    extent: T0(t.teeth),
+    extent: G0(t.teeth),
     buckets: i
   };
 }
-const D0 = "http://loinc.org", V2 = {
+const T0 = "http://loinc.org", R2 = {
   panel: { code: "74029-0", display: "Periodontal panel" },
   pd: { code: "32910-2", display: "Probing depth" },
   recession: { code: "32911-0", display: "Gingival recession" },
@@ -13194,17 +13194,17 @@ const D0 = "http://loinc.org", V2 = {
   // Condition evidence Observations.
   smokingStatus: { code: "72166-2", display: "Tobacco smoking status" },
   hba1c: { code: "4548-4", display: "Hemoglobin A1c/Hemoglobin.total in Blood" }
-}, O0 = ["mesial", "distal", "buccal", "lingual"], A0 = {
+}, D0 = ["mesial", "distal", "buccal", "lingual"], O0 = {
   mesial: "Mesial",
   distal: "Distal",
   buccal: "Buccal",
   lingual: "Lingual"
-}, fa = ["mesial", "distal", "buccal", "lingual"], U0 = {
+}, fa = ["mesial", "distal", "buccal", "lingual"], A0 = {
   mesial: "Mesial",
   distal: "Distal",
   buccal: "Buccal",
   lingual: "Lingual"
-}, _4 = ["MB", "B", "DB", "ML", "L", "DL"], E0 = {
+}, _4 = ["MB", "B", "DB", "ML", "L", "DL"], U0 = {
   MB: "Mesio-buccal",
   B: "Buccal",
   DB: "Disto-buccal",
@@ -13212,17 +13212,17 @@ const D0 = "http://loinc.org", V2 = {
   L: "Lingual/palatal",
   DL: "Disto-lingual"
 };
-function F2(t) {
-  return { coding: [{ system: D0, code: t.code, display: t.display }], text: t.display };
+function V2(t) {
+  return { coding: [{ system: T0, code: t.code, display: t.display }], text: t.display };
 }
 function It(t, e) {
   return { coding: [{ system: Ht, code: t, display: e }], text: e };
 }
 function C3(t, e) {
-  return { coding: [{ system: f0, code: t, display: e }], text: e };
+  return { coding: [{ system: p0, code: t, display: e }], text: e };
 }
-const L0 = "http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.component.bodySite";
-function H0(t, e, a) {
+const E0 = "http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.component.bodySite";
+function L0(t, e, a) {
   return {
     coding: [
       { system: V4, code: t },
@@ -13233,24 +13233,24 @@ function H0(t, e, a) {
 }
 function Ki(t, e, a, i) {
   t.extension = [
-    { url: L0, valueCodeableConcept: H0(e, a, i) }
+    { url: E0, valueCodeableConcept: L0(e, a, i) }
   ];
 }
 function ui(t, e, a) {
-  Ki(t, e, `perio-site:${a}`, E0[a]);
+  Ki(t, e, `perio-site:${a}`, U0[a]);
 }
-function j0(t, e, a) {
-  Ki(t, e, `furcation-entrance:${a}`, A0[a]);
+function H0(t, e, a) {
+  Ki(t, e, `furcation-entrance:${a}`, O0[a]);
 }
 function ha(t, e, a) {
-  Ki(t, e, `plaque-surface:${a}`, U0[a]);
+  Ki(t, e, `plaque-surface:${a}`, A0[a]);
 }
 function B1(t) {
   return typeof t == "number" && Number.isFinite(t);
 }
-function N0(t, e, a) {
-  const i = a.perio, r = i && typeof i.pd == "object" ? i.pd : void 0, o = i && typeof i.gm == "object" ? i.gm : {}, n = Array.isArray(i?.bop) ? i.bop.filter((A) => typeof A == "string") : [], d = r ? _4.filter((A) => Object.prototype.hasOwnProperty.call(r, A) && B1(r[A])) : [], l = a.furcation && typeof a.furcation == "object" ? a.furcation : void 0, f = l ? O0.filter((A) => {
-    const H = l[A];
+function j0(t, e, a) {
+  const i = a.perio, r = i && typeof i.pd == "object" ? i.pd : void 0, o = i && typeof i.gm == "object" ? i.gm : {}, n = Array.isArray(i?.bop) ? i.bop.filter((A) => typeof A == "string") : [], d = r ? _4.filter((A) => Object.prototype.hasOwnProperty.call(r, A) && B1(r[A])) : [], s = a.furcation && typeof a.furcation == "object" ? a.furcation : void 0, f = s ? D0.filter((A) => {
+    const H = s[A];
     return B1(H) && Number.isInteger(H) && H >= 1 && H <= 4;
   }) : [], p = Array.isArray(a.plaque) ? a.plaque.filter((A) => typeof A == "string") : [], v = fa.filter((A) => p.includes(A)), k = a.pi && typeof a.pi == "object" ? a.pi : void 0, x = k ? fa.filter((A) => {
     const H = k[A];
@@ -13258,29 +13258,29 @@ function N0(t, e, a) {
   }).map((A) => [A, k[A]]) : [], u = a.gi && typeof a.gi == "object" ? a.gi : void 0, y = u ? fa.filter((A) => {
     const H = u[A];
     return B1(H) && Number.isInteger(H) && H >= 1 && H <= 3;
-  }).map((A) => [A, u[A]]) : [], h = a.mpi && typeof a.mpi == "object" ? a.mpi : void 0, C = h ? fa.filter((A) => {
+  }).map((A) => [A, u[A]]) : [], h = a.mpi && typeof a.mpi == "object" ? a.mpi : void 0, T = h ? fa.filter((A) => {
     const H = h[A];
     return B1(H) && Number.isInteger(H) && H >= 1 && H <= 3;
   }).map((A) => [A, h[A]]) : [], w = a.mbi && typeof a.mbi == "object" ? a.mbi : void 0, g = w ? fa.filter((A) => {
     const H = w[A];
     return B1(H) && Number.isInteger(H) && H >= 1 && H <= 3;
-  }).map((A) => [A, w[A]]) : [], Z = a.kg, G = B1(Z) && Number.isInteger(Z) && Z >= 0 && Z <= 15 ? Z : void 0;
-  if (d.length === 0 && f.length === 0 && v.length === 0 && x.length === 0 && y.length === 0 && G === void 0 && C.length === 0 && g.length === 0) return;
+  }).map((A) => [A, w[A]]) : [], Z = a.kg, P = B1(Z) && Number.isInteger(Z) && Z >= 0 && Z <= 15 ? Z : void 0;
+  if (d.length === 0 && f.length === 0 && v.length === 0 && x.length === 0 && y.length === 0 && P === void 0 && T.length === 0 && g.length === 0) return;
   const I = [];
   for (const A of d) {
-    const H = r[A], R = o[A], N = B1(R) ? R : 0, S = H + N, P = {
-      code: F2(V2.pd),
+    const H = r[A], R = o[A], N = B1(R) ? R : 0, S = H + N, C = {
+      code: V2(R2.pd),
       valueQuantity: { value: H, unit: "mm" }
     };
-    if (ui(P, e, A), I.push(P), N > 0) {
+    if (ui(C, e, A), I.push(C), N > 0) {
       const t1 = {
-        code: F2(V2.recession),
+        code: V2(R2.recession),
         valueQuantity: { value: N, unit: "mm" }
       };
       ui(t1, e, A), I.push(t1);
     }
     const b = {
-      code: F2(V2.cal),
+      code: V2(R2.cal),
       valueQuantity: { value: S, unit: "mm" }
     };
     ui(b, e, A), I.push(b);
@@ -13291,11 +13291,11 @@ function N0(t, e, a) {
     ui(_, e, A), I.push(_);
   }
   for (const A of f) {
-    const H = l[A], R = {
-      code: F2(V2.furcation),
+    const H = s[A], R = {
+      code: V2(R2.furcation),
       valueInteger: H
     };
-    j0(R, e, A), I.push(R);
+    H0(R, e, A), I.push(R);
   }
   for (const A of v) {
     const H = {
@@ -13318,7 +13318,7 @@ function N0(t, e, a) {
     };
     ha(R, e, A), I.push(R);
   }
-  for (const [A, H] of C) {
+  for (const [A, H] of T) {
     const R = { code: It("mod-plaque-index-mombelli", "Modified plaque index (Mombelli)"), valueInteger: H };
     ha(R, e, A), I.push(R);
   }
@@ -13326,25 +13326,25 @@ function N0(t, e, a) {
     const R = { code: It("mod-bleeding-index-mombelli", "Modified sulcus bleeding index (Mombelli)"), valueInteger: H };
     ha(R, e, A), I.push(R);
   }
-  if (G !== void 0) {
+  if (P !== void 0) {
     const A = {
       code: It("keratinized-gingiva-width", "Keratinized gingiva width"),
-      valueQuantity: { value: G, unit: "mm", system: "http://unitsofmeasure.org", code: "mm" }
+      valueQuantity: { value: P, unit: "mm", system: "http://unitsofmeasure.org", code: "mm" }
     };
     Ki(A, e, "site:buccal", "Buccal"), I.push(A);
   }
-  const D = Lt(t, e, F2(V2.panel));
+  const D = Lt(t, e, V2(R2.panel));
   return D.component = I, D;
 }
-function R0(t, e, a = {}) {
+function N0(t, e, a = {}) {
   const i = e && typeof e == "object" && e.teeth && typeof e.teeth == "object" ? e.teeth : {}, r = a.subject ?? Di;
   t.entry || (t.entry = []);
   for (const [o, n] of Object.entries(i)) {
-    const d = n && typeof n == "object" ? n : {}, l = Y4(o, d), f = N0(r, l, d);
+    const d = n && typeof n == "object" ? n : {}, s = Y4(o, d), f = j0(r, s, d);
     f && t.entry.push({ resource: f });
   }
 }
-const V0 = [
+const R0 = [
   18,
   17,
   16,
@@ -13377,81 +13377,81 @@ const V0 = [
   36,
   37,
   38
-], F0 = ["MB", "DB", "ML", "DL"], B0 = ["B", "L"], Q4 = /* @__PURE__ */ new Set(["unknown", "never", "former", "current"]), K0 = /* @__PURE__ */ new Set(["unknown", "none", "present"]), q0 = /* @__PURE__ */ new Set(["health", "gingivitis", "periodontitis"]), Y0 = /* @__PURE__ */ new Set(["I", "II", "III", "IV"]), W0 = /* @__PURE__ */ new Set(["A", "B", "C"]), J0 = /* @__PURE__ */ new Set(["localized", "generalized", "molar-incisor"]);
-function _0(t) {
+], V0 = ["MB", "DB", "ML", "DL"], F0 = ["B", "L"], Q4 = /* @__PURE__ */ new Set(["unknown", "never", "former", "current"]), B0 = /* @__PURE__ */ new Set(["unknown", "none", "present"]), K0 = /* @__PURE__ */ new Set(["health", "gingivitis", "periodontitis"]), q0 = /* @__PURE__ */ new Set(["I", "II", "III", "IV"]), Y0 = /* @__PURE__ */ new Set(["A", "B", "C"]), W0 = /* @__PURE__ */ new Set(["localized", "generalized", "molar-incisor"]);
+function J0(t) {
   const e = typeof t == "string" && t ? t : "tooth-base";
   return e !== "none" && e !== "implant";
 }
-function Q0(t) {
+function _0(t) {
   const e = t && typeof t == "object" && t.teeth && typeof t.teeth == "object" ? t.teeth : {};
   let a = 0, i = 0, r = null;
-  const o = V0.map((f) => {
-    const p = e[String(f)] ?? {}, v = _0(p.toothSelection), k = p.perio && typeof p.perio.pd == "object" ? p.perio.pd : void 0, x = p.perio && typeof p.perio.gm == "object" ? p.perio.gm : {}, u = Array.isArray(p.perio?.bop) ? p.perio.bop.filter((g) => typeof g == "string") : [];
-    let y = 0, h = 0, C = 0;
+  const o = R0.map((f) => {
+    const p = e[String(f)] ?? {}, v = J0(p.toothSelection), k = p.perio && typeof p.perio.pd == "object" ? p.perio.pd : void 0, x = p.perio && typeof p.perio.gm == "object" ? p.perio.gm : {}, u = Array.isArray(p.perio?.bop) ? p.perio.bop.filter((g) => typeof g == "string") : [];
+    let y = 0, h = 0, T = 0;
     if (k)
       for (const g of _4) {
         const Z = k[g];
         if (!B1(Z)) continue;
-        a++, u.includes(g) && i++, Z > C && (C = Z);
-        const G = x[g], I = Z + (B1(G) ? G : 0);
-        F0.includes(g) && I > y && (y = I), B0.includes(g) && I > h && (h = I);
+        a++, u.includes(g) && i++, Z > T && (T = Z);
+        const P = x[g], I = Z + (B1(P) ? P : 0);
+        V0.includes(g) && I > y && (y = I), F0.includes(g) && I > h && (h = I);
       }
     const w = p.furcation && typeof p.furcation == "object" ? p.furcation : void 0;
     if (w)
       for (const g of Object.values(w))
         B1(g) && (r === null || g > r) && (r = g);
-    return { toothNo: f, interdentalCal: y, buccalOralCal: h, maxPd: C, present: v };
-  }), n = a > 0 ? Math.round(i / a * 1e3) / 10 : 0, d = t && typeof t == "object" ? t.case : void 0, l = {
+    return { toothNo: f, interdentalCal: y, buccalOralCal: h, maxPd: T, present: v };
+  }), n = a > 0 ? Math.round(i / a * 1e3) / 10 : 0, d = t && typeof t == "object" ? t.case : void 0, s = {
     age: B1(d?.age) ? d.age : null,
     maxRblPercent: B1(d?.maxRblPercent) ? d.maxRblPercent : null,
     toothLossPerio: B1(d?.toothLossPerio) ? d.toothLossPerio : null,
     smokingStatus: Q4.has(d?.smokingStatus) ? d.smokingStatus : "unknown",
     cigarettesPerDay: B1(d?.cigarettesPerDay) ? d.cigarettesPerDay : null,
-    diabetesStatus: K0.has(d?.diabetesStatus) ? d.diabetesStatus : "unknown",
+    diabetesStatus: B0.has(d?.diabetesStatus) ? d.diabetesStatus : "unknown",
     hba1c: B1(d?.hba1c) ? d.hba1c : null
   };
-  return { teeth: o, bopPercent: n, maxFurcation: r, meta: l };
+  return { teeth: o, bopPercent: n, maxFurcation: r, meta: s };
 }
-function X0(t) {
-  const e = J4(Q0(t)), a = t && typeof t == "object" ? t.case : void 0;
+function Q0(t) {
+  const e = J4(_0(t)), a = t && typeof t == "object" ? t.case : void 0;
   return {
-    diagnosis: q0.has(a?.diagnosisOverride) ? a.diagnosisOverride : e.diagnosis,
-    stage: Y0.has(a?.stageOverride) ? a.stageOverride : e.stage,
-    grade: W0.has(a?.gradeOverride) ? a.gradeOverride : e.grade,
-    extent: J0.has(a?.extentOverride) ? a.extentOverride : e.extent
+    diagnosis: K0.has(a?.diagnosisOverride) ? a.diagnosisOverride : e.diagnosis,
+    stage: q0.has(a?.stageOverride) ? a.stageOverride : e.stage,
+    grade: Y0.has(a?.gradeOverride) ? a.gradeOverride : e.grade,
+    extent: W0.has(a?.extentOverride) ? a.extentOverride : e.extent
   };
 }
-const X4 = "odontogram-perio-condition", $0 = `urn:uuid:${X4}`, $4 = "odontogram-perio-smoking-observation", go = `urn:uuid:${$4}`, tn = "odontogram-perio-hba1c-observation", yo = `urn:uuid:${tn}`, ts = {
+const X4 = "odontogram-perio-condition", X0 = `urn:uuid:${X4}`, $4 = "odontogram-perio-smoking-observation", go = `urn:uuid:${$4}`, tn = "odontogram-perio-hba1c-observation", yo = `urn:uuid:${tn}`, $0 = {
   never: { code: "smoking-never", display: "Never smoker" },
   former: { code: "smoking-former", display: "Former smoker" },
   current: { code: "smoking-current", display: "Current smoker" }
 };
-function es(t, e) {
-  const a = Lt(t, "", F2(V2.smokingStatus));
+function ts(t, e) {
+  const a = Lt(t, "", V2(R2.smokingStatus));
   delete a.bodySite, a.id = $4;
-  const i = ts[e];
+  const i = $0[e];
   return a.valueCodeableConcept = It(i.code, i.display), a;
 }
-function as(t, e) {
-  const a = Lt(t, "", F2(V2.hba1c));
+function es(t, e) {
+  const a = Lt(t, "", V2(R2.hba1c));
   return delete a.bodySite, a.id = tn, a.valueQuantity = { value: e, unit: "%", system: "http://unitsofmeasure.org", code: "%" }, a;
 }
-const is = {
+const as = {
   I: "Stage I",
   II: "Stage II",
   III: "Stage III",
   IV: "Stage IV"
-}, rs = {
+}, is = {
   A: "Grade A",
   B: "Grade B",
   C: "Grade C"
-}, os = {
+}, rs = {
   localized: "Localized",
   generalized: "Generalized",
   "molar-incisor": "Molar-incisor pattern"
 };
-function ns(t, e, a = {}) {
-  const i = X0(e);
+function os(t, e, a = {}) {
+  const i = Q0(e);
   if (i.diagnosis === "health") return;
   const r = a.subject ?? Di;
   t.entry || (t.entry = []);
@@ -13469,24 +13469,24 @@ function ns(t, e, a = {}) {
   }, d = [];
   i.diagnosis === "periodontitis" && i.stage !== "na" && i.stage !== "indeterminate" && d.push({
     type: It("periodontal-stage", "Periodontal stage"),
-    summary: It(`stage-${i.stage}`, is[i.stage])
+    summary: It(`stage-${i.stage}`, as[i.stage])
   }), i.grade !== "indeterminate" && d.push({
     type: It("periodontal-grade", "Periodontal grade"),
-    summary: It(`grade-${i.grade}`, rs[i.grade])
+    summary: It(`grade-${i.grade}`, is[i.grade])
   }), i.extent !== "na" && d.push({
     type: It("periodontal-extent", "Periodontal extent"),
-    summary: It(`extent-${i.extent}`, os[i.extent])
+    summary: It(`extent-${i.extent}`, rs[i.extent])
   }), d.length > 0 && (n.stage = d);
-  const l = e && typeof e == "object" ? e.case : void 0, f = Q4.has(l?.smokingStatus) && l?.smokingStatus !== "unknown" ? es(r, l.smokingStatus) : void 0, p = B1(l?.hba1c) ? as(r, l.hba1c) : void 0, v = [];
-  f && v.push(go), p && v.push(yo), v.length > 0 && (n.evidence = [{ detail: v.map((k) => ({ reference: k })) }]), t.entry.push({ fullUrl: $0, resource: n }), f && t.entry.push({ fullUrl: go, resource: f }), p && t.entry.push({ fullUrl: yo, resource: p });
+  const s = e && typeof e == "object" ? e.case : void 0, f = Q4.has(s?.smokingStatus) && s?.smokingStatus !== "unknown" ? ts(r, s.smokingStatus) : void 0, p = B1(s?.hba1c) ? es(r, s.hba1c) : void 0, v = [];
+  f && v.push(go), p && v.push(yo), v.length > 0 && (n.evidence = [{ detail: v.map((k) => ({ reference: k })) }]), t.entry.push({ fullUrl: X0, resource: n }), f && t.entry.push({ fullUrl: go, resource: f }), p && t.entry.push({ fullUrl: yo, resource: p });
 }
-function ls(t, e = {}) {
-  const a = x0(t, e);
-  return R0(a, t, e), ns(a, t, e), a;
+function ns(t, e = {}) {
+  const a = b0(t, e);
+  return N0(a, t, e), os(a, t, e), a;
 }
 const en = {};
 for (const t of ie) en[t.finding.local] = t;
-function ss(t) {
+function ls(t) {
   const e = {}, a = {}, i = t?.entry;
   if (Array.isArray(i))
     for (const r of i) {
@@ -13494,13 +13494,13 @@ function ss(t) {
       if (!o || o.resourceType !== "Observation") continue;
       const n = Ut(o.code);
       if (!n) continue;
-      const d = o.bodySite?.coding?.find((v) => typeof v.code == "string")?.code, l = d ? k0(d) ?? d : void 0;
+      const d = o.bodySite?.coding?.find((v) => typeof v.code == "string")?.code, s = d ? u0(d) ?? d : void 0;
       if (n === "edentulous") {
         a.edentulous = o.valueBoolean === !0;
         continue;
       }
-      if (!l) continue;
-      const f = u0(e, l);
+      if (!s) continue;
+      const f = y0(e, s);
       if (n === "tooth-note") {
         const v = o.note?.[0]?.text;
         typeof v == "string" && (f.note = v);
@@ -13574,8 +13574,8 @@ function ss(t) {
     }
   return { version: "2.20", globals: a, teeth: e };
 }
-function cs(t) {
-  return ss(t);
+function ss(t) {
+  return ls(t);
 }
 const Te = {
   crown: { materials: ["emax", "gold", "gradia", "zircon", "metal", "metal-ceramic", "telescope", "temporary"] },
@@ -13598,13 +13598,13 @@ function ko(t) {
 function an(t, e, a) {
   return t === "none" || e === "none" ? [] : t === "onlay" && a !== "occlusal" ? Oi("inlay", e, a) ? [`${e}-inlay`] : [] : Oi(t, e, a) ? t === "bridge" ? [...ko(e), `${e}-bridge-connector`] : t === "crown" ? ko(e) : [`${e}-${t}`] : [];
 }
-function ds(t) {
+function cs(t) {
   const e = an(t.type, t.material, t.view);
   if (!t.bridgePillar || t.material === "none" || t.type === "none") return e;
   const a = `${t.material}-bridge-connector`;
   return e.includes(a) ? e : [...e, a];
 }
-function ps() {
+function ds() {
   const t = /* @__PURE__ */ new Set();
   for (const e of Object.keys(Te))
     for (const a of Te[e].materials)
@@ -13612,25 +13612,25 @@ function ps() {
         an(e, a, i).forEach((r) => t.add(r));
   return [...t];
 }
-const fs = ["crown", "bridge"], hs = ["healing-abutment", "locator", "locator-denture", "bar", "bar-denture"], ms = ["removable-partial", "removable-full"], vs = ["bridge"];
-function gs(t, e = {}) {
+const ps = ["crown", "bridge"], fs = ["healing-abutment", "locator", "locator-denture", "bar", "bar-denture"], hs = ["removable-partial", "removable-full"], ms = ["bridge"];
+function vs(t, e = {}) {
   const a = [
     { restorationType: "none", restorationMaterial: "none", labelKey: "restoration.none" }
-  ], i = !e.isImplant && e.toothSelection === "none", r = e.isImplant ? fs : i ? vs : Object.keys(Te);
+  ], i = !e.isImplant && e.toothSelection === "none", r = e.isImplant ? ps : i ? ms : Object.keys(Te);
   for (const n of r) {
     const d = Te[n];
     if (!(d.occlusalOnly && t !== "occlusal"))
-      for (const l of d.materials)
+      for (const s of d.materials)
         a.push({
           restorationType: n,
-          restorationMaterial: l,
+          restorationMaterial: s,
           labelKey: "",
           prefixKey: "restoration.prefix.fixed",
           typeLabelKey: uo.type(n),
-          materialLabelKey: uo.material(l)
+          materialLabelKey: uo.material(s)
         });
   }
-  const o = e.isImplant ? hs : i ? ms : [];
+  const o = e.isImplant ? fs : i ? hs : [];
   for (const n of o)
     a.push({
       restorationType: "none",
@@ -13641,7 +13641,7 @@ function gs(t, e = {}) {
     });
   return a;
 }
-const ys = [
+const gs = [
   "tooth-base",
   "tooth-healthy-pulp",
   "tooth-inflam-pulp",
@@ -13818,7 +13818,7 @@ const ys = [
   "arrow-down",
   "arrow-rotation"
 ];
-function us() {
+function ys() {
   const t = [];
   for (const e of ie) for (const a of e.values ?? []) {
     const i = a.svgLayer == null ? [] : Array.isArray(a.svgLayer) ? a.svgLayer : [a.svgLayer];
@@ -13826,13 +13826,13 @@ function us() {
   }
   return t;
 }
-function ks() {
-  const t = new Set(ys);
-  for (const e of us()) t.add(e);
-  for (const e of ps()) t.add(e);
+function us() {
+  const t = new Set(gs);
+  for (const e of ys()) t.add(e);
+  for (const e of ds()) t.add(e);
   return [...t];
 }
-function bs(t, e, a) {
+function ks(t, e, a) {
   const i = t.toothSelection;
   return {
     isImplant: i === "implant",
@@ -13847,15 +13847,15 @@ function bs(t, e, a) {
     extractionPlanAllowed: ["tooth-base", "milktooth", "implant", "tooth-under-gum"].includes(i)
   };
 }
-function xs(t, e, a, i) {
+function bs(t, e, a, i) {
   for (const r of ie)
     if (r.kind === "boolean" && r.svgLayer)
       e[r.field] === !0 && (!r.appliesWhen || r.appliesWhen(a, e)) && i.setActive(i.svgGetById(t, r.svgLayer), !0);
     else if (r.kind === "set" && r.id === "mods") {
       const o = e.mods ?? [];
       for (const n of o) {
-        const d = r.values?.find((f) => f.id === n), l = d?.svgLayer == null ? [n] : Array.isArray(d.svgLayer) ? d.svgLayer : [d.svgLayer];
-        for (const f of l) i.setActive(i.svgGetById(t, f), !0);
+        const d = r.values?.find((f) => f.id === n), s = d?.svgLayer == null ? [n] : Array.isArray(d.svgLayer) ? d.svgLayer : [d.svgLayer];
+        for (const f of s) i.setActive(i.svgGetById(t, f), !0);
       }
     }
 }
@@ -13863,7 +13863,7 @@ function z1(t) {
   const e = ie.find((a) => a.id === t);
   return new Set((e?.values ?? []).map((a) => a.id));
 }
-function Ms() {
+function xs() {
   return new Set(Object.keys(mr.fillingSurfaces));
 }
 function rn(t, e = {}) {
@@ -13873,7 +13873,7 @@ function rn(t, e = {}) {
 function re(t, e = {}, a = {}) {
   return rn(t, a) ? (ie.find((r) => r.id === t)?.uiOptions ?? []).filter((r) => r.when ? r.when(e) : !0).map((r) => ({ value: r.value, labelKey: r.labelKey })) : [];
 }
-const on = "http://www.w3.org/2000/svg", ws = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], Zs = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], Ss = [ws, Zs], nn = 0.72, zs = 1 - nn, Is = 0.09, Cs = 0.12, Ps = {
+const on = "http://www.w3.org/2000/svg", Ms = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], ws = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], Zs = [Ms, ws], nn = 0.72, Ss = 1 - nn, zs = 0.09, Is = 0.12, Cs = {
   emax: "#e9e1d2",
   gold: "#ece614",
   gradia: "#55ff98",
@@ -13884,25 +13884,25 @@ const on = "http://www.w3.org/2000/svg", ws = [18, 17, 16, 15, 14, 13, 12, 11, 2
   temporary: "#ffffff"
 };
 function vr(t) {
-  return Ps[t] ?? "#8a8f98";
+  return Cs[t] ?? "#8a8f98";
 }
-function Gs(t) {
+function Ps(t) {
   return t ? t.bridgePillar === !0 ? "abutment" : t.restorationType !== "bridge" ? null : t.toothSelection === "none" ? "pontic" : "unit" : null;
 }
-function Ts(t) {
-  return Gs(t) !== null;
+function Gs(t) {
+  return Ps(t) !== null;
 }
 function ln(t) {
   const e = [];
-  for (const a of Ss) {
+  for (const a of Zs) {
     let i = [];
     for (const r of a)
-      Ts(t(r)) ? i.push(r) : (i.length >= 2 && e.push(i), i = []);
+      Gs(t(r)) ? i.push(r) : (i.length >= 2 && e.push(i), i = []);
     i.length >= 2 && e.push(i);
   }
   return e;
 }
-function Ds(t, e) {
+function Ts(t, e) {
   for (const a of t) {
     const i = e(a);
     if (i && i.restorationType === "bridge" && i.restorationMaterial && i.restorationMaterial !== "none")
@@ -13917,26 +13917,26 @@ function Ds(t, e) {
 function sn(t, e, a, i) {
   const r = [];
   for (const o of t) {
-    const n = i(Ds(o, e)), l = o[0] >= 31 ? zs : nn;
+    const n = i(Ts(o, e)), s = o[0] >= 31 ? Ss : nn;
     for (let f = 0; f < o.length - 1; f++) {
       const p = a(o[f]), v = a(o[f + 1]);
       if (!p || !v || p.width <= 0 || p.height <= 0 || v.width <= 0 || v.height <= 0) continue;
-      const k = p.x <= v.x ? p : v, x = p.x <= v.x ? v : p, u = k.connector, y = x.connector, h = (A) => A.width > A.height * 2.5 ? A.x + A.width - A.height * 1.2 : A.x, C = (A) => A.width > A.height * 2.5 ? A.x + A.height * 1.2 : A.x + A.width, w = Math.min(k.width, x.width) * Cs, g = u ? h(u) : k.x + k.width - w, G = (y ? C(y) : x.x + w) - g;
-      if (G <= 0) continue;
-      const I = u && y ? Math.min(u.height, y.height) : k.height * Is, D = u && y ? (u.y + u.height / 2 + (y.y + y.height / 2)) / 2 : k.y + k.height * l;
-      r.push({ x: g, y: D - I / 2, width: G, height: I, fill: n });
+      const k = p.x <= v.x ? p : v, x = p.x <= v.x ? v : p, u = k.connector, y = x.connector, h = (A) => A.width > A.height * 2.5 ? A.x + A.width - A.height * 1.2 : A.x, T = (A) => A.width > A.height * 2.5 ? A.x + A.height * 1.2 : A.x + A.width, w = Math.min(k.width, x.width) * Is, g = u ? h(u) : k.x + k.width - w, P = (y ? T(y) : x.x + w) - g;
+      if (P <= 0) continue;
+      const I = u && y ? Math.min(u.height, y.height) : k.height * zs, D = u && y ? (u.y + u.height / 2 + (y.y + y.height / 2)) / 2 : k.y + k.height * s;
+      r.push({ x: g, y: D - I / 2, width: P, height: I, fill: n });
     }
   }
   return r;
 }
-const bo = "bridge-overlay", Os = "bridge-overlay-bar";
-function As(t, e) {
+const bo = "bridge-overlay", Ds = "bridge-overlay-bar";
+function Os(t, e) {
   return t.querySelector(
     `.tooth-tile.side-view[data-tooth="${e}"]`
   );
 }
 function cn(t, e, a) {
-  const i = As(t, a);
+  const i = Os(t, a);
   if (!i) return null;
   const r = i.getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return null;
@@ -13961,7 +13961,7 @@ function cn(t, e, a) {
     ...n ? { connector: n } : {}
   };
 }
-function Us(t) {
+function As(t) {
   const { grid: e } = t;
   if (!e) return;
   const a = t.materialColor ?? vr;
@@ -13976,14 +13976,14 @@ function Us(t) {
   }
   const o = e.getBoundingClientRect(), n = (p) => cn(e, o, p), d = sn(r, t.getState, n, a);
   for (i || (i = document.createElementNS(on, "svg"), i.setAttribute("class", bo), i.setAttribute("aria-hidden", "true"), e.appendChild(i)); i.firstChild; ) i.removeChild(i.firstChild);
-  const l = Math.max(1, Math.round(o.width)), f = Math.max(1, Math.round(o.height));
-  i.setAttribute("width", String(l)), i.setAttribute("height", String(f)), i.setAttribute("viewBox", `0 0 ${l} ${f}`);
+  const s = Math.max(1, Math.round(o.width)), f = Math.max(1, Math.round(o.height));
+  i.setAttribute("width", String(s)), i.setAttribute("height", String(f)), i.setAttribute("viewBox", `0 0 ${s} ${f}`);
   for (const p of d)
     i.appendChild(dn(p));
 }
 function dn(t) {
   const e = document.createElementNS(on, "rect");
-  e.setAttribute("class", Os), e.setAttribute("x", String(t.x)), e.setAttribute("y", String(t.y)), e.setAttribute("width", String(t.width)), e.setAttribute("height", String(t.height));
+  e.setAttribute("class", Ds), e.setAttribute("x", String(t.x)), e.setAttribute("y", String(t.y)), e.setAttribute("width", String(t.width)), e.setAttribute("height", String(t.height));
   const a = Math.min(t.height * 0.2, t.width / 2);
   return e.setAttribute("rx", String(a)), e.setAttribute("ry", String(a)), e.setAttribute("fill", t.fill), e.setAttribute("stroke", "#1b3f1c"), e.setAttribute("stroke-width", "0.5"), e;
 }
@@ -14028,17 +14028,17 @@ async function hn() {
     throw ka = null, t;
   })), ka;
 }
-function Es() {
+function Us() {
   ka = null;
 }
 function Ai(t) {
   const a = (t.documentElement.getAttribute("viewBox") || "0 0 40 71").trim().split(/\s+/).map(Number);
   return { x: a[0] ?? 0, y: a[1] ?? 0, w: a[2] ?? 40, h: a[3] ?? 71 };
 }
-function Ls(t) {
+function Es(t) {
   return t % 10;
 }
-function Hs(t) {
+function Ls(t) {
   const e = /* @__PURE__ */ new Set(), a = /url\(#([^)]+)\)/g, i = (r) => {
     const o = `${r.getAttribute("fill") || ""} ${r.getAttribute("style") || ""}`;
     let n;
@@ -14047,7 +14047,7 @@ function Hs(t) {
   };
   return i(t), e;
 }
-function js(t, e) {
+function Hs(t, e) {
   if (e.size === 0) return null;
   const a = document.createElementNS(Y1, "defs");
   let i = !1;
@@ -14057,7 +14057,7 @@ function js(t, e) {
   }
   return i ? a : null;
 }
-function Ns(t, e = pn) {
+function js(t, e = pn) {
   const a = new Set(e);
   if (a.has(t.getAttribute("id") || "")) {
     t.remove();
@@ -14069,51 +14069,51 @@ function Ns(t, e = pn) {
   });
   for (const r of i) r.remove();
 }
-function Rs(t, e, a = {}) {
+function Ns(t, e, a = {}) {
   const i = l2(), r = a.milktooth === !0 && a.implant !== !0, o = r ? i.primaryToothTemplate?.get(e) : void 0, n = o ?? i.toothTemplate.get(e);
   if (!n) throw new Error(`perioGraphic: no TOOTH_TEMPLATE entry for tooth ${e}`);
-  const d = n.tpl, l = t.get(d);
-  if (!l) throw new Error(`perioGraphic: template ${d} not loaded in the given cache (tooth ${e})`);
-  const f = a.implant === !0, p = !!o, v = r && !p && !!l.querySelector("#milktooth-base"), k = f ? "implant" : r ? "milktooth" : "normal", x = f ? "implant-base" : p ? "tooth-base" : v ? "milktooth-base" : "tooth-base", u = l.querySelector(`#${x}`);
+  const d = n.tpl, s = t.get(d);
+  if (!s) throw new Error(`perioGraphic: template ${d} not loaded in the given cache (tooth ${e})`);
+  const f = a.implant === !0, p = !!o, v = r && !p && !!s.querySelector("#milktooth-base"), k = f ? "implant" : r ? "milktooth" : "normal", x = f ? "implant-base" : p ? "tooth-base" : v ? "milktooth-base" : "tooth-base", u = s.querySelector(`#${x}`);
   if (!u) throw new Error(`perioGraphic: #${x} not found in template ${d}`);
   const y = u.cloneNode(!0);
-  Ns(y, pn.filter((R) => R !== x));
-  const h = Hs(y), C = js(l, h), { w, h: g } = Ai(l), Z = fn(l, d, k), G = document.createElementNS(Y1, "g");
-  G.setAttribute("data-tooth", String(e)), G.setAttribute("data-tpl", String(d)), f && G.setAttribute("data-implant", "1"), r && G.setAttribute("data-milktooth", "1"), C && G.appendChild(C);
+  js(y, pn.filter((R) => R !== x));
+  const h = Ls(y), T = Hs(s, h), { w, h: g } = Ai(s), Z = fn(s, d, k), P = document.createElementNS(Y1, "g");
+  P.setAttribute("data-tooth", String(e)), P.setAttribute("data-tpl", String(d)), f && P.setAttribute("data-implant", "1"), r && P.setAttribute("data-milktooth", "1"), T && P.appendChild(T);
   const I = document.createElementNS(Y1, "g");
   I.setAttribute("transform", `matrix(1 0 0 -1 0 ${w1(g)})`), I.appendChild(y);
   const D = document.createElementNS(Y1, "g");
   if (n.mirror) {
     D.setAttribute("data-perio-mirror", "1");
-    const { x: R } = Ai(l);
+    const { x: R } = Ai(s);
     D.setAttribute("transform", `matrix(-1 0 0 1 ${w1(2 * R + w)} 0)`);
   }
   D.appendChild(I);
-  const A = Ls(e), H = document.createElementNS(Y1, "g");
+  const A = Es(e), H = document.createElementNS(Y1, "g");
   if (i.layout === "uniform16" && A === 2)
     H.setAttribute("data-perio-size", `position-2-width-${G3}`), H.setAttribute("transform", `matrix(${G3} 0 0 1 ${w1(w * (1 - G3) / 2)} 0)`);
   else if (i.layout === "uniform16" && A === 3) {
     const R = Z * (1 - P3);
     H.setAttribute("data-perio-size", `position-3-root-${P3}`), H.setAttribute("transform", `matrix(1 0 0 ${P3} 0 ${w1(R)})`);
   }
-  return H.appendChild(D), G.appendChild(H), G;
+  return H.appendChild(D), P.appendChild(H), P;
 }
 function w1(t) {
   return Number(t.toFixed(3)).toString();
 }
-const De = 40, Va = 3, Vs = 15, Fs = 2, C2 = 2, Bs = 1.5, T3 = Bs, Ks = 2.6;
-function qs(t, e) {
+const De = 40, Va = 3, Rs = 15, Vs = 2, I2 = 2, Fs = 1.5, T3 = Fs, Bs = 2.6;
+function Ks(t, e) {
   if (!Number.isFinite(t) || !Number.isFinite(e) || e <= 0)
     return T3;
   const a = t / e;
-  return Number.isFinite(a) ? Math.min(Ks, Math.max(T3, a)) : T3;
+  return Number.isFinite(a) ? Math.min(Bs, Math.max(T3, a)) : T3;
 }
-function Fa(t, e, a = C2, i) {
+function Fa(t, e, a = I2, i) {
   const r = [];
   let o = 0;
   const n = l2().toothTemplate, d = l2().primaryToothTemplate;
-  for (const l of e) {
-    const f = i?.(l) ?? "normal", p = f === "milktooth" ? d?.get(l) ?? n.get(l) : n.get(l);
+  for (const s of e) {
+    const f = i?.(s) ?? "normal", p = f === "milktooth" ? d?.get(s) ?? n.get(s) : n.get(s);
     if (!p) continue;
     const v = p.tpl, k = t.get(v);
     if (!k) continue;
@@ -14124,54 +14124,54 @@ function Fa(t, e, a = C2, i) {
       k,
       f === "implant" ? "data-implant-right" : "data-cervical-right"
     );
-    let C = o + u / 6, w = o + u * 5 / 6;
+    let T = o + u / 6, w = o + u * 5 / 6;
     if (y !== null && h !== null && h > y) {
       const D = p.mirror ? [2 * x + u - h, 2 * x + u - y] : [y, h];
-      C = o + D[0] - x, w = o + D[1] - x;
+      T = o + D[0] - x, w = o + D[1] - x;
     }
-    const g = (w - C) * 0.12, Z = [
-      C + g,
-      (C + w) / 2,
+    const g = (w - T) * 0.12, Z = [
+      T + g,
+      (T + w) / 2,
       w - g
-    ], G = Math.floor(l / 10), I = G === 1 || G === 4 ? [...Z].reverse() : Z;
-    r.push({ toothNo: l, x: o, width: u, siteXs: I }), o += u + a;
+    ], P = Math.floor(s / 10), I = P === 1 || P === 4 ? [...Z].reverse() : Z;
+    r.push({ toothNo: s, x: o, width: u, siteXs: I }), o += u + a;
   }
   return { cejY: De, totalWidth: o, teeth: r };
 }
-function mn(t, e, a = () => !1, i = C2, r) {
+function mn(t, e, a = () => !1, i = I2, r) {
   const o = document.createElementNS(Y1, "g");
   o.setAttribute("class", "perio-tooth-row-buccal");
   const n = Fa(t, e, i, r);
-  for (const { toothNo: d, x: l } of n.teeth) {
+  for (const { toothNo: d, x: s } of n.teeth) {
     const f = r ? r(d) : a(d) ? "implant" : "normal";
     if (f === "missing") continue;
-    const p = Rs(t, d, {
+    const p = Ns(t, d, {
       implant: f === "implant",
       milktooth: f === "milktooth"
     }), v = Number(p.getAttribute("data-tpl")), k = t.get(v), x = De - fn(k, v, f);
-    p.setAttribute("transform", `translate(${w1(l)} ${w1(x)})`), o.appendChild(p);
+    p.setAttribute("transform", `translate(${w1(s)} ${w1(x)})`), o.appendChild(p);
   }
   return { group: o, width: n.totalWidth };
 }
 const xo = 14, Mo = 51;
-function Ys(t) {
+function qs(t) {
   const e = De - Mo - xo, a = 2 * (Mo + xo);
   return { y: e, w: Math.max(t, 1), h: a };
 }
 function vn(t, e, a) {
   const i = document.createElementNS(Y1, "svg");
   i.setAttribute("class", t);
-  const r = Ys(a);
+  const r = qs(a);
   return i.setAttribute("viewBox", `0 ${w1(r.y)} ${w1(r.w)} ${w1(r.h)}`), i.setAttribute("preserveAspectRatio", "xMinYMid meet"), i.setAttribute("aria-hidden", "true"), i.appendChild(e), i;
 }
-function ba(t, e, a = () => !1, i = C2, r) {
+function ba(t, e, a = () => !1, i = I2, r) {
   const { group: o, width: n } = mn(t, e, a, i, r);
   return o.setAttribute("class", "perio-tooth-row-buccal"), o.setAttribute("transform", `matrix(1 0 0 -1 0 ${w1(2 * De)})`), o.insertBefore(
     gn({ cejY: De, mmPx: Va, width: n, flip: !0 }),
     o.firstChild
   ), vn("perio-tooth-arch perio-tooth-arch-buccal", o, n);
 }
-function xa(t, e, a = () => !1, i = C2, r) {
+function xa(t, e, a = () => !1, i = I2, r) {
   const { group: o, width: n } = mn(t, e, a, i, r);
   return o.setAttribute("class", "perio-tooth-row-palatal-inner"), o.insertBefore(
     gn({ cejY: De, mmPx: Va, width: n, flip: !1 }),
@@ -14180,12 +14180,12 @@ function xa(t, e, a = () => !1, i = C2, r) {
 }
 function K3(t, e) {
   const { cejY: a, mmPx: i, siteX: r } = e, o = [], n = [];
-  return t.forEach((d, l) => {
+  return t.forEach((d, s) => {
     if (d.pd === void 0 || d.pd === null) {
       o.push(null), n.push(null);
       return;
     }
-    const f = r(l), p = a + (d.gm ?? 0) * i, v = p + d.pd * i;
+    const f = r(s), p = a + (d.gm ?? 0) * i, v = p + d.pd * i;
     o.push({ x: f, y: p }), n.push({ x: f, y: v });
   }), { cejY: a, marginPts: o, pocketPts: n };
 }
@@ -14206,9 +14206,9 @@ function q3(t, e) {
   i.setAttribute("class", "perio-curve-cej"), i.setAttribute("x1", "0"), i.setAttribute("y1", w1(t.cejY)), i.setAttribute("x2", w1(e.width)), i.setAttribute("y2", w1(t.cejY)), a.appendChild(i);
   const r = wo(t.marginPts), o = wo(t.pocketPts);
   for (let n = 0; n < r.length; n++) {
-    const d = r[n], l = o[n];
-    if (!l || d.length === 0) continue;
-    const f = d.map((k, x) => `${x === 0 ? "M" : "L"}${w1(k.x)} ${w1(k.y)}`).join(" "), p = [...l].reverse().map((k) => `L${w1(k.x)} ${w1(k.y)}`).join(" "), v = document.createElementNS(Y1, "path");
+    const d = r[n], s = o[n];
+    if (!s || d.length === 0) continue;
+    const f = d.map((k, x) => `${x === 0 ? "M" : "L"}${w1(k.x)} ${w1(k.y)}`).join(" "), p = [...s].reverse().map((k) => `L${w1(k.x)} ${w1(k.y)}`).join(" "), v = document.createElementNS(Y1, "path");
     v.setAttribute("class", "perio-curve-band"), v.setAttribute("d", `${f} ${p} Z`), a.appendChild(v);
   }
   for (const n of r) {
@@ -14222,13 +14222,13 @@ function q3(t, e) {
   return a;
 }
 function gn(t) {
-  const { cejY: e, mmPx: a, width: i } = t, r = t.maxMm ?? Vs, o = t.flip ?? !1, n = document.createElementNS(Y1, "g");
+  const { cejY: e, mmPx: a, width: i } = t, r = t.maxMm ?? Rs, o = t.flip ?? !1, n = document.createElementNS(Y1, "g");
   n.setAttribute("class", "perio-mm-grid"), n.setAttribute("aria-hidden", "true");
   for (let d = 1; d <= r; d++) {
-    const l = e + d * a, f = d % 5 === 0, p = document.createElementNS(Y1, "line");
-    if (p.setAttribute("class", f ? "perio-mm-line perio-mm-line-major" : "perio-mm-line perio-mm-line-minor"), p.setAttribute("data-mm", String(d)), p.setAttribute("x1", "0"), p.setAttribute("y1", w1(l)), p.setAttribute("x2", w1(i)), p.setAttribute("y2", w1(l)), n.appendChild(p), f) {
+    const s = e + d * a, f = d % 5 === 0, p = document.createElementNS(Y1, "line");
+    if (p.setAttribute("class", f ? "perio-mm-line perio-mm-line-major" : "perio-mm-line perio-mm-line-minor"), p.setAttribute("data-mm", String(d)), p.setAttribute("x1", "0"), p.setAttribute("y1", w1(s)), p.setAttribute("x2", w1(i)), p.setAttribute("y2", w1(s)), n.appendChild(p), f) {
       const v = document.createElementNS(Y1, "text");
-      v.setAttribute("class", "perio-mm-label"), v.setAttribute("data-mm", String(d)), v.setAttribute("x", w1(Fs)), v.setAttribute("y", w1(l)), o && v.setAttribute("transform", `matrix(1 0 0 -1 0 ${w1(2 * l)})`), v.textContent = String(d), n.appendChild(v);
+      v.setAttribute("class", "perio-mm-label"), v.setAttribute("data-mm", String(d)), v.setAttribute("x", w1(Vs)), v.setAttribute("y", w1(s)), o && v.setAttribute("transform", `matrix(1 0 0 -1 0 ${w1(2 * s)})`), v.textContent = String(d), n.appendChild(v);
     }
   }
   return n;
@@ -14237,69 +14237,69 @@ function So(t, e, a) {
   const { cejY: i, mmPx: r } = a, o = [];
   for (const n of e) {
     if (!(n.pd !== void 0 && n.pd !== null)) continue;
-    const l = n.pd, f = i + (n.gm ?? 0) * r;
-    t === "bop" ? n.bop && o.push({ x: n.x, y: f, kind: "bop" }) : l >= (t === "pd5" ? 5 : 6) && o.push({ x: n.x, y: f + l * r, kind: t });
+    const s = n.pd, f = i + (n.gm ?? 0) * r;
+    t === "bop" ? n.bop && o.push({ x: n.x, y: f, kind: "bop" }) : s >= (t === "pd5" ? 5 : 6) && o.push({ x: n.x, y: f + s * r, kind: t });
   }
   return o;
 }
-function Ws(t) {
+function Ys(t) {
   return t >= 6 ? "deep" : t >= 4 ? "moderate" : "shallow";
 }
-function Js(t) {
+function Ws(t) {
   return t >= 4 ? "deep" : t >= 2 ? "moderate" : "shallow";
 }
 function zo(t, e, a) {
   const { cejY: i, mmPx: r } = a, o = [];
   for (const n of e) {
     if (!(n.pd !== void 0 && n.pd !== null)) continue;
-    const l = n.pd, f = n.gm ?? 0;
+    const s = n.pd, f = n.gm ?? 0;
     if (t === "gr") {
       if (f <= 0) continue;
-      o.push({ x: n.x, y: i + f * r, kind: `heat-${Js(f)}` });
+      o.push({ x: n.x, y: i + f * r, kind: `heat-${Ws(f)}` });
       continue;
     }
-    const p = t === "cal" ? n.cal ?? l + f : l, v = i + (f + l) * r;
-    o.push({ x: n.x, y: v, kind: `heat-${Ws(p)}` });
+    const p = t === "cal" ? n.cal ?? s + f : s, v = i + (f + s) * r;
+    o.push({ x: n.x, y: v, kind: `heat-${Ys(p)}` });
   }
   return o;
 }
 function Io(t, e, a) {
   const i = [];
   for (const r of t) {
-    const o = (f) => r.surfaces.includes(f), n = r.siteXs?.[0] ?? r.x + r.width * 0.2, d = r.siteXs?.[1] ?? r.x + r.width * 0.5, l = r.siteXs?.[2] ?? r.x + r.width * 0.8;
-    e === "buccal" ? (o("mesial") && i.push({ x: n, y: a.cejY, kind: "plaque" }), o("buccal") && i.push({ x: d, y: a.cejY, kind: "plaque" }), o("distal") && i.push({ x: l, y: a.cejY, kind: "plaque" })) : o("lingual") && i.push({ x: d, y: a.cejY, kind: "plaque" });
+    const o = (f) => r.surfaces.includes(f), n = r.siteXs?.[0] ?? r.x + r.width * 0.2, d = r.siteXs?.[1] ?? r.x + r.width * 0.5, s = r.siteXs?.[2] ?? r.x + r.width * 0.8;
+    e === "buccal" ? (o("mesial") && i.push({ x: n, y: a.cejY, kind: "plaque" }), o("buccal") && i.push({ x: d, y: a.cejY, kind: "plaque" }), o("distal") && i.push({ x: s, y: a.cejY, kind: "plaque" })) : o("lingual") && i.push({ x: d, y: a.cejY, kind: "plaque" });
   }
   return i;
 }
-function _s(t, e) {
+function Js(t, e) {
   const a = [];
   for (const i of t)
     i.rt !== "none" && a.push({ x: i.siteXs?.[1] ?? i.x + i.width * 0.5, y: e.cejY, kind: i.rt });
   return a;
 }
-function Qs(t) {
+function _s(t) {
   return t >= 3 ? "deep" : t >= 2 ? "moderate" : "shallow";
 }
 function Co(t, e, a) {
   const i = [];
   for (const r of t) {
     const o = (f, p) => {
-      p && i.push({ x: f, y: a.cejY, kind: `heat-${Qs(p)}` });
-    }, n = r.siteXs?.[0] ?? r.x + r.width * 0.2, d = r.siteXs?.[1] ?? r.x + r.width * 0.5, l = r.siteXs?.[2] ?? r.x + r.width * 0.8;
-    e === "buccal" ? (o(n, r.grades.mesial), o(d, r.grades.buccal), o(l, r.grades.distal)) : o(d, r.grades.lingual);
+      p && i.push({ x: f, y: a.cejY, kind: `heat-${_s(p)}` });
+    }, n = r.siteXs?.[0] ?? r.x + r.width * 0.2, d = r.siteXs?.[1] ?? r.x + r.width * 0.5, s = r.siteXs?.[2] ?? r.x + r.width * 0.8;
+    e === "buccal" ? (o(n, r.grades.mesial), o(d, r.grades.buccal), o(s, r.grades.distal)) : o(d, r.grades.lingual);
   }
   return i;
 }
-function Xs(t) {
+function Qs(t) {
   return t < 2 ? "deep" : t < 4 ? "moderate" : "shallow";
 }
-function $s(t, e) {
+function Xs(t, e) {
   const a = [];
   for (const i of t)
-    i.kg !== null && a.push({ x: i.siteXs?.[1] ?? i.x + i.width * 0.5, y: e.cejY, kind: `heat-${Xs(i.kg)}` });
+    i.kg !== null && a.push({ x: i.siteXs?.[1] ?? i.x + i.width * 0.5, y: e.cejY, kind: `heat-${Qs(i.kg)}` });
   return a;
 }
-const t6 = {
+const $s = {
   bop: 2,
   plaque: 2.6,
   pd5: 3.4,
@@ -14311,12 +14311,12 @@ const t6 = {
   rt2: 3.5,
   rt3: 4.2
 };
-function Bt(t, e) {
+function Ft(t, e) {
   const a = document.createElementNS(Y1, "g");
   a.setAttribute("class", `perio-overlay-layer${e.className ? ` ${e.className}` : ""}`), a.setAttribute("aria-hidden", "true");
   for (const i of t) {
     const r = document.createElementNS(Y1, "circle");
-    r.setAttribute("class", `perio-overlay-mark perio-overlay-${i.kind}`), r.setAttribute("data-kind", i.kind), r.setAttribute("cx", w1(i.x)), r.setAttribute("cy", w1(i.y)), r.setAttribute("r", w1(t6[i.kind])), a.appendChild(r);
+    r.setAttribute("class", `perio-overlay-mark perio-overlay-${i.kind}`), r.setAttribute("data-kind", i.kind), r.setAttribute("cx", w1(i.x)), r.setAttribute("cy", w1(i.y)), r.setAttribute("r", w1($s[i.kind])), a.appendChild(r);
   }
   return a;
 }
@@ -14337,7 +14337,7 @@ const yn = {
   kg: "Keratinized Gingiva (KG)",
   gt: "Gingival Thickness (GT)",
   miller: "Miller Class"
-}, e6 = {
+}, t6 = {
   plaque: "plaque.label",
   bop: "perio.bop",
   cal: "perio.cal",
@@ -14356,11 +14356,11 @@ const yn = {
   miller: "perio.miller.row"
 };
 function o1(t) {
-  return je() === "canonical" ? yn[t] : c(e6[t]);
+  return je() === "canonical" ? yn[t] : c(t6[t]);
 }
-const ze = "http://www.w3.org/2000/svg", a6 = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], i6 = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], Ma = ["MB", "B", "DB"], wa = ["ML", "L", "DL"], Po = ["mesial", "distal", "buccal", "lingual"], r6 = { mesial: "M", distal: "D", buccal: "B", lingual: "L" }, o6 = ["–", "I", "II", "III", "IV"], ki = { 1: "1", 2: "2", 3: "3" }, n6 = { m1: "1", m2: "2", m3: "3" }, l6 = { detectable: "D", "not-detectable": "ND" }, s6 = { mild: "Mi", deep: "Dp" }, c6 = { thin: "Tn", medium: "Md", thick: "Tk" }, d6 = { i: "I", ii: "II", iii: "III", iv: "IV" }, K1 = 150;
+const ze = "http://www.w3.org/2000/svg", e6 = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], a6 = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], Ma = ["MB", "B", "DB"], wa = ["ML", "L", "DL"], Po = ["mesial", "distal", "buccal", "lingual"], i6 = { mesial: "M", distal: "D", buccal: "B", lingual: "L" }, r6 = ["–", "I", "II", "III", "IV"], ki = { 1: "1", 2: "2", 3: "3" }, o6 = { m1: "1", m2: "2", m3: "3" }, n6 = { detectable: "D", "not-detectable": "ND" }, l6 = { mild: "Mi", deep: "Dp" }, s6 = { thin: "Tn", medium: "Md", thick: "Tk" }, c6 = { i: "I", ii: "II", iii: "III", iv: "IV" }, K1 = 150;
 let b1 = 13, Y3 = 8, Ba = !1, Oe = [];
-const p6 = 6, f6 = `
+const d6 = 6, p6 = `
 .perio-curve-cej{ stroke:#e11d48; stroke-width:0.8; opacity:0.85; }
 .perio-curve-band{ fill:#3b82f6; fill-opacity:0.18; stroke:none; }
 .perio-curve-margin{ fill:none; stroke:#f472b6; stroke-width:0.9; stroke-linejoin:round; stroke-linecap:round; }
@@ -14386,8 +14386,8 @@ function qi(t, e, a) {
 function u2(t, e, a, i, r, o) {
   const n = [];
   for (const d of i.teeth)
-    r.forEach((l, f) => {
-      const p = o(d.toothNo, l);
+    r.forEach((s, f) => {
+      const p = o(d.toothNo, s);
       p !== null && n.push({ x: K1 + (r.length === 3 ? d.siteXs[f] : d.x + d.width * (f + 0.5) / r.length), v: p });
     });
   if (Ba && n.length === 0) return !1;
@@ -14398,17 +14398,17 @@ function u2(t, e, a, i, r, o) {
 function ma(t, e, a, i, r) {
   const o = [], n = [];
   for (const d of i.teeth)
-    Po.forEach((l, f) => {
+    Po.forEach((s, f) => {
       const p = K1 + d.x + d.width * (f + 0.5) / Po.length;
-      n.push({ x: p, letter: r6[l] ?? "" });
-      const v = r(d.toothNo, l);
+      n.push({ x: p, letter: i6[s] ?? "" });
+      const v = r(d.toothNo, s);
       v !== null && o.push({ x: p, v });
     });
   if (Ba && o.length === 0) return !1;
   Oe.push({ y: e, w: K1 + i.totalWidth }), qi(t, e, a);
   for (const d of n) {
-    const l = Ct(d.x, e, d.letter);
-    l.setAttribute("class", "perio-surface-letter"), t.appendChild(l);
+    const s = Ct(d.x, e, d.letter);
+    s.setAttribute("class", "perio-surface-letter"), t.appendChild(s);
   }
   for (const d of o) t.appendChild(Ct(d.x, e, d.v));
   return !0;
@@ -14424,15 +14424,15 @@ function be(t, e, a, i, r) {
   for (const n of o) t.appendChild(Ct(n.x, e, n.v));
   return !0;
 }
-function h6(t, e, a, i) {
+function f6(t, e, a, i) {
   const r = [];
   for (const o of i.teeth) {
     const n = yr(o.toothNo);
     if (n.length === 0 || Ur(o.toothNo)) continue;
     const d = Tr(o.toothNo);
-    n.forEach((l, f) => {
-      const p = d[l] ?? 0;
-      r.push({ x: K1 + o.x + o.width * (f + 0.5) / n.length, v: o6[p] ?? "–" });
+    n.forEach((s, f) => {
+      const p = d[s] ?? 0;
+      r.push({ x: K1 + o.x + o.width * (f + 0.5) / n.length, v: r6[p] ?? "–" });
     });
   }
   if (Ba && r.length === 0) return !1;
@@ -14441,29 +14441,29 @@ function h6(t, e, a, i) {
   return !0;
 }
 function Go(t, e, a, i, r, o, n) {
-  const d = o === "buccal" ? ba(e, a, ot, n, lt) : xa(e, a, ot, n, lt), l = (d.getAttribute("viewBox") || "0 0 1 1").trim().split(/\s+/).map(Number), f = l[2] ?? Math.max(i.totalWidth, 1), p = l[3] ?? 1;
+  const d = o === "buccal" ? ba(e, a, rt, n, nt) : xa(e, a, rt, n, nt), s = (d.getAttribute("viewBox") || "0 0 1 1").trim().split(/\s+/).map(Number), f = s[2] ?? Math.max(i.totalWidth, 1), p = s[3] ?? 1;
   d.setAttribute("x", F1(K1)), d.setAttribute("y", F1(r)), d.setAttribute("width", F1(f)), d.setAttribute("height", F1(p));
   const v = o === "buccal" ? ".perio-tooth-row-buccal" : ".perio-tooth-row-palatal-inner", k = d.querySelector(v) ?? d, x = o === "buccal" ? Ma : wa, u = [], y = [];
   for (const w of i.teeth) {
-    if (lt(w.toothNo) === "missing") {
-      x.forEach((G, I) => {
-        u.push({ site: G, pd: void 0, gm: void 0 }), y.push(w.siteXs[I]);
+    if (nt(w.toothNo) === "missing") {
+      x.forEach((P, I) => {
+        u.push({ site: P, pd: void 0, gm: void 0 }), y.push(w.siteXs[I]);
       });
       continue;
     }
-    const g = Pt(w.toothNo), Z = x.some((G) => Object.prototype.hasOwnProperty.call(g.pd, G));
-    x.forEach((G, I) => {
-      const A = Object.prototype.hasOwnProperty.call(g.pd, G) ? g.pd[G] : Z ? 0 : void 0, H = A === void 0 ? void 0 : Object.prototype.hasOwnProperty.call(g.gm, G) ? g.gm[G] : 0;
-      u.push({ site: G, pd: A, gm: H }), y.push(w.siteXs[I]);
+    const g = Pt(w.toothNo), Z = x.some((P) => Object.prototype.hasOwnProperty.call(g.pd, P));
+    x.forEach((P, I) => {
+      const A = Object.prototype.hasOwnProperty.call(g.pd, P) ? g.pd[P] : Z ? 0 : void 0, H = A === void 0 ? void 0 : Object.prototype.hasOwnProperty.call(g.gm, P) ? g.gm[P] : 0;
+      u.push({ site: P, pd: A, gm: H }), y.push(w.siteXs[I]);
     });
   }
-  const h = K3(u, { cejY: i.cejY, mmPx: Va, siteX: (w) => y[w] }), C = q3(h, {
+  const h = K3(u, { cejY: i.cejY, mmPx: Va, siteX: (w) => y[w] }), T = q3(h, {
     width: i.totalWidth,
     className: o === "buccal" ? "perio-curve perio-curve-buccal" : "perio-curve perio-curve-palatal"
   });
-  return k.appendChild(C), t.appendChild(d), p;
+  return k.appendChild(T), t.appendChild(d), p;
 }
-async function m6(t = {}) {
+async function h6(t = {}) {
   let e;
   try {
     e = await hn();
@@ -14473,107 +14473,107 @@ async function m6(t = {}) {
   Y3 = t.fontSize ?? 8, b1 = t.rowHeight ?? 13, Ba = t.showEmptyRows === !1;
   const a = t.toothGap ?? 2, i = t.labelPlacement ?? "center", r = (y) => {
     let h = 0;
-    const C = y.teeth.map((w) => {
-      const g = h - w.x, Z = { ...w, x: h, siteXs: w.siteXs.map((G) => G + g) };
+    const T = y.teeth.map((w) => {
+      const g = h - w.x, Z = { ...w, x: h, siteXs: w.siteXs.map((P) => P + g) };
       return h += w.width + a, Z;
     });
-    return { ...y, teeth: C, totalWidth: h };
+    return { ...y, teeth: T, totalWidth: h };
   }, o = document.createElementNS(ze, "svg"), n = document.createElementNS(ze, "style");
-  n.textContent = f6, o.appendChild(n);
+  n.textContent = p6, o.appendChild(n);
   const d = document.createElementNS(ze, "g");
   d.setAttribute("aria-hidden", "true"), o.appendChild(d), Oe = [];
-  let l = b1, f = K1;
+  let s = b1, f = K1;
   const p = ja(), v = (y) => {
-    const h = r(Fa(e, y, void 0, lt));
+    const h = r(Fa(e, y, void 0, nt));
     if (h.teeth.length === 0) return;
     f = Math.max(f, K1 + h.totalWidth);
-    const C = Yi(y[0]), w = c("perio.buccal"), g = c(C ? "perio.palatal" : "perio.lingual"), Z = y.some((N) => ot(N)), G = Ct(K1 + h.totalWidth / 2, l, c(C ? "perio.export.upperTeeth" : "perio.export.lowerTeeth"), "middle");
-    G.setAttribute("font-weight", "700"), G.setAttribute("font-size", String(Y3 * 1.15)), o.appendChild(G), l += b1;
-    const I = l - b1 * 0.7;
+    const T = Yi(y[0]), w = c("perio.buccal"), g = c(T ? "perio.palatal" : "perio.lingual"), Z = y.some((N) => rt(N)), P = Ct(K1 + h.totalWidth / 2, s, c(T ? "perio.export.upperTeeth" : "perio.export.lowerTeeth"), "middle");
+    P.setAttribute("font-weight", "700"), P.setAttribute("font-size", String(Y3 * 1.15)), o.appendChild(P), s += b1;
+    const I = s - b1 * 0.7;
     for (const N of h.teeth) {
       const S = K1 + N.x + N.width / 2;
-      o.appendChild(Ct(S, l, T2(N.toothNo)));
+      o.appendChild(Ct(S, s, G2(N.toothNo)));
     }
-    l += b1, p.miller && be(o, l, o1("miller"), h, (N) => {
+    s += b1, p.miller && be(o, s, o1("miller"), h, (N) => {
       const S = c3(N);
-      return S === "none" ? null : d6[S] ?? S;
-    }) && (l += b1), p.bop && u2(o, l, `${w} ${o1("bop")}`, h, Ma, (N, S) => {
-      const P = Pt(N);
-      return Object.prototype.hasOwnProperty.call(P.pd, S) && P.bop.includes(S) ? "•" : null;
-    }) && (l += b1), p.cal && u2(o, l, `${w} ${o1("cal")}`, h, Ma, (N, S) => {
-      const P = P2(N).get(S);
-      return P === void 0 ? null : String(P);
-    }) && (l += b1), p.gm && u2(o, l, `${w} ${o1("gm")}`, h, Ma, (N, S) => {
-      const P = Pt(N);
-      return !Object.prototype.hasOwnProperty.call(P.pd, S) || !Object.prototype.hasOwnProperty.call(P.gm, S) ? null : String(P.gm[S]);
-    }) && (l += b1), p.pd && u2(o, l, `${w} ${o1("pd")}`, h, Ma, (N, S) => {
-      const P = Pt(N);
-      return Object.prototype.hasOwnProperty.call(P.pd, S) ? String(P.pd[S]) : null;
-    }) && (l += b1), p.furcation && h6(o, l, o1("furcation"), h) && (l += b1), l += Go(o, e, y, h, l, "buccal", a);
+      return S === "none" ? null : c6[S] ?? S;
+    }) && (s += b1), p.bop && u2(o, s, `${w} ${o1("bop")}`, h, Ma, (N, S) => {
+      const C = Pt(N);
+      return Object.prototype.hasOwnProperty.call(C.pd, S) && C.bop.includes(S) ? "•" : null;
+    }) && (s += b1), p.cal && u2(o, s, `${w} ${o1("cal")}`, h, Ma, (N, S) => {
+      const C = C2(N).get(S);
+      return C === void 0 ? null : String(C);
+    }) && (s += b1), p.gm && u2(o, s, `${w} ${o1("gm")}`, h, Ma, (N, S) => {
+      const C = Pt(N);
+      return !Object.prototype.hasOwnProperty.call(C.pd, S) || !Object.prototype.hasOwnProperty.call(C.gm, S) ? null : String(C.gm[S]);
+    }) && (s += b1), p.pd && u2(o, s, `${w} ${o1("pd")}`, h, Ma, (N, S) => {
+      const C = Pt(N);
+      return Object.prototype.hasOwnProperty.call(C.pd, S) ? String(C.pd[S]) : null;
+    }) && (s += b1), p.furcation && f6(o, s, o1("furcation"), h) && (s += b1), s += Go(o, e, y, h, s, "buccal", a);
     const D = c("perio.band.buccal"), A = c("perio.band.lingual"), H = K1 + h.totalWidth / 2;
-    i === "center" ? o.appendChild(Ct(H, l, `▲ ${D} ▲`, "middle")) : (o.appendChild(Ct(4, l, `▲ ${D}`, "start")), o.appendChild(Ct(K1 + h.totalWidth, l, `${A} ▼`, "end"))), l += b1, p.plaque && ma(
+    i === "center" ? o.appendChild(Ct(H, s, `▲ ${D} ▲`, "middle")) : (o.appendChild(Ct(4, s, `▲ ${D}`, "start")), o.appendChild(Ct(K1 + h.totalWidth, s, `${A} ▼`, "end"))), s += b1, p.plaque && ma(
       o,
-      l,
+      s,
       o1("plaque"),
       h,
       (N, S) => o3(N).includes(S) ? "•" : null
-    ) && (l += b1), p.pi && ma(o, l, o1("pi"), h, (N, S) => {
-      const P = Ya(N, S);
-      return P > 0 ? ki[P] ?? String(P) : null;
-    }) && (l += b1), p.gi && ma(o, l, o1("gi"), h, (N, S) => {
-      const P = Wa(N, S);
-      return P > 0 ? ki[P] ?? String(P) : null;
-    }) && (l += b1), i === "center" && (o.appendChild(Ct(H, l, `▼ ${A} ▼`, "middle")), l += b1), p.mpi && Z && ma(o, l, o1("mpi"), h, (N, S) => {
-      const P = Ja(N, S);
-      return P > 0 ? ki[P] ?? String(P) : null;
-    }) && (l += b1), p.mbi && Z && ma(o, l, o1("mbi"), h, (N, S) => {
-      const P = _a(N, S);
-      return P > 0 ? ki[P] ?? String(P) : null;
-    }) && (l += b1), l += Go(o, e, y, h, l, "palatal", a), p.pd && u2(o, l, `${g} ${o1("pd")}`, h, wa, (N, S) => {
-      const P = Pt(N);
-      return Object.prototype.hasOwnProperty.call(P.pd, S) ? String(P.pd[S]) : null;
-    }) && (l += b1), p.gm && u2(o, l, `${g} ${o1("gm")}`, h, wa, (N, S) => {
-      const P = Pt(N);
-      return !Object.prototype.hasOwnProperty.call(P.pd, S) || !Object.prototype.hasOwnProperty.call(P.gm, S) ? null : String(P.gm[S]);
-    }) && (l += b1), p.cal && u2(o, l, `${g} ${o1("cal")}`, h, wa, (N, S) => {
-      const P = P2(N).get(S);
-      return P === void 0 ? null : String(P);
-    }) && (l += b1), p.bop && u2(o, l, `${g} ${o1("bop")}`, h, wa, (N, S) => {
-      const P = Pt(N);
-      return Object.prototype.hasOwnProperty.call(P.pd, S) && P.bop.includes(S) ? "•" : null;
-    }) && (l += b1), p.mobility && be(o, l, o1("mobility"), h, (N) => {
+    ) && (s += b1), p.pi && ma(o, s, o1("pi"), h, (N, S) => {
+      const C = Ya(N, S);
+      return C > 0 ? ki[C] ?? String(C) : null;
+    }) && (s += b1), p.gi && ma(o, s, o1("gi"), h, (N, S) => {
+      const C = Wa(N, S);
+      return C > 0 ? ki[C] ?? String(C) : null;
+    }) && (s += b1), i === "center" && (o.appendChild(Ct(H, s, `▼ ${A} ▼`, "middle")), s += b1), p.mpi && Z && ma(o, s, o1("mpi"), h, (N, S) => {
+      const C = Ja(N, S);
+      return C > 0 ? ki[C] ?? String(C) : null;
+    }) && (s += b1), p.mbi && Z && ma(o, s, o1("mbi"), h, (N, S) => {
+      const C = _a(N, S);
+      return C > 0 ? ki[C] ?? String(C) : null;
+    }) && (s += b1), s += Go(o, e, y, h, s, "palatal", a), p.pd && u2(o, s, `${g} ${o1("pd")}`, h, wa, (N, S) => {
+      const C = Pt(N);
+      return Object.prototype.hasOwnProperty.call(C.pd, S) ? String(C.pd[S]) : null;
+    }) && (s += b1), p.gm && u2(o, s, `${g} ${o1("gm")}`, h, wa, (N, S) => {
+      const C = Pt(N);
+      return !Object.prototype.hasOwnProperty.call(C.pd, S) || !Object.prototype.hasOwnProperty.call(C.gm, S) ? null : String(C.gm[S]);
+    }) && (s += b1), p.cal && u2(o, s, `${g} ${o1("cal")}`, h, wa, (N, S) => {
+      const C = C2(N).get(S);
+      return C === void 0 ? null : String(C);
+    }) && (s += b1), p.bop && u2(o, s, `${g} ${o1("bop")}`, h, wa, (N, S) => {
+      const C = Pt(N);
+      return Object.prototype.hasOwnProperty.call(C.pd, S) && C.bop.includes(S) ? "•" : null;
+    }) && (s += b1), p.mobility && be(o, s, o1("mobility"), h, (N) => {
       const S = Er(N);
-      return S === "none" ? null : n6[S] ?? S;
-    }) && (l += b1), p.cej && be(o, l, o1("cej"), h, (N) => {
+      return S === "none" ? null : o6[S] ?? S;
+    }) && (s += b1), p.cej && be(o, s, o1("cej"), h, (N) => {
       const S = Qa(N);
-      return S === "none" ? null : l6[S] ?? S;
-    }) && (l += b1), p.rootConcavity && be(o, l, o1("rootConcavity"), h, (N) => {
+      return S === "none" ? null : n6[S] ?? S;
+    }) && (s += b1), p.rootConcavity && be(o, s, o1("rootConcavity"), h, (N) => {
       const S = Xa(N);
-      return S === "none" ? null : s6[S] ?? S;
-    }) && (l += b1), p.kg && be(o, l, o1("kg"), h, (N) => {
+      return S === "none" ? null : l6[S] ?? S;
+    }) && (s += b1), p.kg && be(o, s, o1("kg"), h, (N) => {
       const S = qe(N);
       return S === null ? null : String(S);
-    }) && (l += b1), p.gt && be(o, l, o1("gt"), h, (N) => {
+    }) && (s += b1), p.gt && be(o, s, o1("gt"), h, (N) => {
       const S = s3(N);
-      return S === "unknown" ? null : c6[S] ?? S;
-    }) && (l += b1);
+      return S === "unknown" ? null : s6[S] ?? S;
+    }) && (s += b1);
     const R = (N) => {
       const S = document.createElementNS(ze, "line");
-      S.setAttribute("class", "perio-col-sep"), S.setAttribute("x1", F1(N)), S.setAttribute("y1", F1(I)), S.setAttribute("x2", F1(N)), S.setAttribute("y2", F1(l)), d.appendChild(S);
+      S.setAttribute("class", "perio-col-sep"), S.setAttribute("x1", F1(N)), S.setAttribute("y1", F1(I)), S.setAttribute("x2", F1(N)), S.setAttribute("y2", F1(s)), d.appendChild(S);
     };
     for (const N of h.teeth) R(K1 + N.x);
-    R(K1 + h.totalWidth), l += p6;
+    R(K1 + h.totalWidth), s += d6;
   };
-  v(a6), v(i6), Oe.forEach((y, h) => {
+  v(e6), v(a6), Oe.forEach((y, h) => {
     if (h % 2 === 0) return;
-    const C = document.createElementNS(ze, "rect");
-    C.setAttribute("class", "perio-row-stripe"), C.setAttribute("x", "0"), C.setAttribute("y", F1(y.y - b1 * 0.72)), C.setAttribute("width", F1(y.w)), C.setAttribute("height", F1(b1)), d.appendChild(C);
+    const T = document.createElementNS(ze, "rect");
+    T.setAttribute("class", "perio-row-stripe"), T.setAttribute("x", "0"), T.setAttribute("y", F1(y.y - b1 * 0.72)), T.setAttribute("width", F1(y.w)), T.setAttribute("height", F1(b1)), d.appendChild(T);
   });
-  const k = f, x = l;
+  const k = f, x = s;
   return o.setAttribute("viewBox", `0 0 ${F1(k)} ${F1(x)}`), o.setAttribute("width", F1(k)), o.setAttribute("height", F1(x)), { xml: `<?xml version="1.0" encoding="UTF-8"?>
 ${new XMLSerializer().serializeToString(o)}`, width: k, height: x };
 }
-const p1 = 15, v6 = 6, g6 = 0.55;
+const p1 = 15, m6 = 6, v6 = 0.55;
 function xe(t, e) {
   const a = t.split(/\s+/).filter(Boolean);
   if (a.length === 0) return [];
@@ -14585,7 +14585,7 @@ function xe(t, e) {
   }
   return r && i.push(r), i;
 }
-function y6() {
+function g6() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-");
 }
 const gr = {
@@ -14593,13 +14593,13 @@ const gr = {
   teal: { header: [13, 148, 136], headerText: [255, 255, 255], labelBg: [204, 251, 241], rowBg: [255, 255, 255], rowAlt: [240, 253, 250], border: [178, 213, 207], text: [12, 34, 31], muted: [47, 79, 74] },
   amber: { header: [180, 83, 9], headerText: [255, 255, 255], labelBg: [254, 243, 199], rowBg: [255, 255, 255], rowAlt: [255, 251, 235], border: [228, 214, 180], text: [41, 30, 12], muted: [92, 71, 40] },
   slate: { header: [51, 65, 85], headerText: [255, 255, 255], labelBg: [226, 232, 240], rowBg: [255, 255, 255], rowAlt: [248, 250, 252], border: [203, 213, 225], text: [15, 23, 42], muted: [71, 85, 105] }
-}, u6 = "blue", k6 = [190, 40, 40];
-function b6(t, e, a = () => {
+}, y6 = "blue", u6 = [190, 40, 40];
+function k6(t, e, a = () => {
   throw new Error("assemblePdf: a docFactory is required — jsPDF is lazy-loaded by exportPdf()");
 }) {
   const i = a(), r = e.fontFamily ?? "helvetica", o = e.shapeText ?? ((b) => b);
   i.setFont(r, "normal");
-  const n = (b, _, t1, V) => i.text(o(b), _, t1, V), d = i.internal.pageSize.getWidth(), l = i.internal.pageSize.getHeight(), f = d - p1 * 2;
+  const n = (b, _, t1, V) => i.text(o(b), _, t1, V), d = i.internal.pageSize.getWidth(), s = i.internal.pageSize.getHeight(), f = d - p1 * 2;
   let p = p1;
   const {
     header: v,
@@ -14608,38 +14608,38 @@ function b6(t, e, a = () => {
     rowBg: u,
     rowAlt: y,
     border: h,
-    text: C,
+    text: T,
     muted: w
-  } = e.palette, g = (b) => i.setFillColor(b[0], b[1], b[2]), Z = (b) => i.setDrawColor(b[0], b[1], b[2]), G = (b) => i.setTextColor(b[0], b[1], b[2]), I = (b) => {
-    p + b > l - p1 && (i.addPage(), p = p1);
+  } = e.palette, g = (b) => i.setFillColor(b[0], b[1], b[2]), Z = (b) => i.setDrawColor(b[0], b[1], b[2]), P = (b) => i.setTextColor(b[0], b[1], b[2]), I = (b) => {
+    p + b > s - p1 && (i.addPage(), p = p1);
   }, D = (b) => {
-    I(7.5 + 3), g(v), i.rect(p1, p, f, 7.5, "F"), G(k), i.setFontSize(11.5), i.setFont(r, "bold"), n(b, p1 + 2.5, p + 5.1), p += 7.5 + 3, G(C), i.setFont(r, "normal"), i.setFontSize(10);
+    I(7.5 + 3), g(v), i.rect(p1, p, f, 7.5, "F"), P(k), i.setFontSize(11.5), i.setFont(r, "bold"), n(b, p1 + 2.5, p + 5.1), p += 7.5 + 3, P(T), i.setFont(r, "normal"), i.setFontSize(10);
   }, A = (b) => {
     if (!b) return;
     const _ = Math.max(20, Math.floor(f / 1.6));
-    i.setFontSize(9), i.setFont(r, "italic"), G(w);
+    i.setFontSize(9), i.setFont(r, "italic"), P(w);
     for (const t1 of b.split(`
 `)) {
       const V = t1.trim() === "" ? [""] : xe(t1, _);
       for (const W of V)
         I(4.4), n(W, p1, p + 3.1), p += 4.4;
     }
-    p += 1.5, G(C), i.setFont(r, "normal"), i.setFontSize(10);
+    p += 1.5, P(T), i.setFont(r, "normal"), i.setFontSize(10);
   }, H = (b, _) => {
     if (!b.length) return;
     const t1 = _.fontSize ?? 9, V = _.labelWidth, W = p1 + V, l1 = f - V, z = 1.8, K = t1 * 0.48, L = 1.7 * t1 / 10, q = Math.max(4, Math.floor((V - z * 2) / L)), v1 = Math.max(6, Math.floor((l1 - z * 2) / L));
     b.forEach((R1, I1) => {
       const E1 = R1.label ? xe(R1.label, q) : [""], V1 = R1.value ? xe(R1.value, v1) : [""], dt = Math.max(E1.length, V1.length, 1) * K + z * 2;
-      p + dt > l - p1 && (i.addPage(), p = p1), g(x), i.rect(p1, p, V, dt, "F"), g(I1 % 2 ? y : u), i.rect(W, p, l1, dt, "F"), Z(h), i.setLineWidth(0.15), i.rect(p1, p, f, dt, "S"), i.line(W, p, W, p + dt), i.setFontSize(t1);
+      p + dt > s - p1 && (i.addPage(), p = p1), g(x), i.rect(p1, p, V, dt, "F"), g(I1 % 2 ? y : u), i.rect(W, p, l1, dt, "F"), Z(h), i.setLineWidth(0.15), i.rect(p1, p, f, dt, "S"), i.line(W, p, W, p + dt), i.setFontSize(t1);
       let O1 = p + z + K * 0.72;
-      i.setFont(r, "bold"), G(C);
+      i.setFont(r, "bold"), P(T);
       for (const c1 of E1)
         n(c1, p1 + z, O1), O1 += K;
-      O1 = p + z + K * 0.72, i.setFont(r, "normal"), G(w);
+      O1 = p + z + K * 0.72, i.setFont(r, "normal"), P(w);
       for (const c1 of V1)
         n(c1, W + z, O1), O1 += K;
       p += dt;
-    }), p += 3, G(C), i.setFont(r, "normal"), i.setFontSize(10);
+    }), p += 3, P(T), i.setFont(r, "normal"), i.setFontSize(10);
   }, R = (b) => {
     const _ = b.columns.length;
     if (_ === 0 || b.rows.length === 0) return;
@@ -14647,51 +14647,51 @@ function b6(t, e, a = () => {
       const E1 = L(z), V1 = [[]];
       return I1.forEach((Ot, dt) => {
         const O1 = Ot.label + (dt < I1.length - 1 ? "," : ""), c1 = V1[V1.length - 1];
-        c1.reduce((y1, t2) => y1 + t2.text.length + 1, 0) + O1.length + 1 > E1 && c1.length && V1.push([]), V1[V1.length - 1].push({ text: O1, status: Ot.status });
+        c1.reduce((y1, $t) => y1 + $t.text.length + 1, 0) + O1.length + 1 > E1 && c1.length && V1.push([]), V1[V1.length - 1].push({ text: O1, status: Ot.status });
       }), V1;
     }, v1 = V + W * 2;
-    I(v1 + 4), g(v), i.rect(p1, p, f, v1, "F"), G(k), i.setFont(r, "bold"), i.setFontSize(t1), b.columns.forEach((I1, E1) => n(I1.label, p1 + l1 + E1 * z + W, p + W + V * 0.72)), p += v1;
+    I(v1 + 4), g(v), i.rect(p1, p, f, v1, "F"), P(k), i.setFont(r, "bold"), i.setFontSize(t1), b.columns.forEach((I1, E1) => n(I1.label, p1 + l1 + E1 * z + W, p + W + V * 0.72)), p += v1;
     const R1 = L(l1);
     b.rows.forEach((I1, E1) => {
       const V1 = b.columns.map((c1) => q(I1.cells[c1.key] ?? [])), Ot = xe(I1.label, R1), O1 = Math.max(1, Ot.length, ...V1.map((c1) => c1.length)) * V + W * 2;
-      p + O1 > l - p1 && (i.addPage(), p = p1), g(x), i.rect(p1, p, l1, O1, "F"), g(E1 % 2 ? y : u), i.rect(p1 + l1, p, f - l1, O1, "F"), Z(h), i.setLineWidth(0.15), i.rect(p1, p, f, O1, "S"), i.line(p1 + l1, p, p1 + l1, p + O1);
+      p + O1 > s - p1 && (i.addPage(), p = p1), g(x), i.rect(p1, p, l1, O1, "F"), g(E1 % 2 ? y : u), i.rect(p1 + l1, p, f - l1, O1, "F"), Z(h), i.setLineWidth(0.15), i.rect(p1, p, f, O1, "S"), i.line(p1 + l1, p, p1 + l1, p + O1);
       for (let c1 = 1; c1 < _; c1++) {
         const pt = p1 + l1 + c1 * z;
         i.line(pt, p, pt, p + O1);
       }
-      i.setFont(r, "bold"), i.setFontSize(t1), G(C), Ot.forEach((c1, pt) => n(c1, p1 + W, p + W + V * (pt + 0.72))), b.columns.forEach((c1, pt) => {
+      i.setFont(r, "bold"), i.setFontSize(t1), P(T), Ot.forEach((c1, pt) => n(c1, p1 + W, p + W + V * (pt + 0.72))), b.columns.forEach((c1, pt) => {
         const y1 = p1 + l1 + pt * z;
-        V1[pt].forEach((t2, Z1) => {
-          let Nt = y1 + W;
-          const D2 = p + W + V * (Z1 + 0.72);
-          for (const et of t2)
-            et.status === "problem" ? (i.setFont(r, "bolditalic"), G(k6)) : et.status === "content" ? (i.setFont(r, "bold"), G(v)) : (i.setFont(r, "normal"), G(w)), n(et.text, Nt, D2), Nt += (et.text.length + 1) * K;
+        V1[pt].forEach(($t, Z1) => {
+          let jt = y1 + W;
+          const T2 = p + W + V * (Z1 + 0.72);
+          for (const tt of $t)
+            tt.status === "problem" ? (i.setFont(r, "bolditalic"), P(u6)) : tt.status === "content" ? (i.setFont(r, "bold"), P(v)) : (i.setFont(r, "normal"), P(w)), n(tt.text, jt, T2), jt += (tt.text.length + 1) * K;
         });
       }), p += O1;
-    }), p += 1, i.setFont(r, "italic"), i.setFontSize(7), G(w);
+    }), p += 1, i.setFont(r, "italic"), i.setFontSize(7), P(w);
     for (const I1 of xe(b.legend, Math.max(20, Math.floor(f / 1.3))))
       I(3.4), n(I1, p1, p + 2.4), p += 3.4;
-    p += 2, G(C), i.setFont(r, "normal"), i.setFontSize(10);
+    p += 2, P(T), i.setFont(r, "normal"), i.setFontSize(10);
   }, N = (b, _, t1) => {
     if (!b) return;
-    const V = _ && _.width > 0 ? _.height / _.width : g6, W = f, l1 = l - p1 * 2, z = Math.min(l1, W * V);
-    I(z), i.addImage(b, "PNG", p1, p, W, z), t1 && (i.setDrawColor(t1.color[0], t1.color[1], t1.color[2]), i.setLineWidth(t1.widthMm), i.rect(p1, p, W, z, "S")), p += z + v6;
+    const V = _ && _.width > 0 ? _.height / _.width : v6, W = f, l1 = s - p1 * 2, z = Math.min(l1, W * V);
+    I(z), i.addImage(b, "PNG", p1, p, W, z), t1 && (i.setDrawColor(t1.color[0], t1.color[1], t1.color[2]), i.setLineWidth(t1.widthMm), i.rect(p1, p, W, z, "S")), p += z + m6;
   }, S = (b) => {
-    b && (G(v), i.setFontSize(20), i.setFont(r, "bold"), n(b, p1, p + 7), p += 10, Z(v), i.setLineWidth(0.6), i.line(p1, p, p1 + f, p), p += 6, G(C), i.setFont(r, "normal"), i.setFontSize(10));
-  }, P = (b) => {
+    b && (P(v), i.setFontSize(20), i.setFont(r, "bold"), n(b, p1, p + 7), p += 10, Z(v), i.setLineWidth(0.6), i.line(p1, p, p1 + f, p), p += 6, P(T), i.setFont(r, "normal"), i.setFontSize(10));
+  }, C = (b) => {
     const t1 = Math.max(20, Math.floor(f / 1.35)), V = b.disclaimer ? xe(b.disclaimer, t1) : [], W = (b.generated ? 1 : 0) + (b.repoUrl ? 1 : 0) + (b.doi ? 1 : 0);
     if (V.length === 0 && W === 0) return;
     const l1 = V.length && W ? 2 : 0, z = 3 + V.length * 3.6 + l1 + W * 3.6 + 2;
-    if (p + 8 + z > l - p1 && (i.addPage(), p = p1), p = Math.max(p + 8, l - p1 - z), Z(h), i.setLineWidth(0.3), i.line(p1, p, p1 + f, p), p += 3, i.setFontSize(7.5), V.length) {
-      i.setFont(r, "italic"), G(w);
+    if (p + 8 + z > s - p1 && (i.addPage(), p = p1), p = Math.max(p + 8, s - p1 - z), Z(h), i.setLineWidth(0.3), i.line(p1, p, p1 + f, p), p += 3, i.setFontSize(7.5), V.length) {
+      i.setFont(r, "italic"), P(w);
       for (const K of V)
         n(K, p1, p + 2.6), p += 3.6;
     }
-    W && (V.length && (p += 2), i.setFont(r, "normal"), G(w), b.generated && (n(b.generated, p1, p + 2.6), p += 3.6), G(v), b.repoUrl && (n(`GitHub: ${b.repoUrl}`, p1, p + 2.6), p += 3.6), b.doi && (n(`DOI: ${b.doi}`, p1, p + 2.6), p += 3.6)), G(C);
+    W && (V.length && (p += 2), i.setFont(r, "normal"), P(w), b.generated && (n(b.generated, p1, p + 2.6), p += 3.6), P(v), b.repoUrl && (n(`GitHub: ${b.repoUrl}`, p1, p + 2.6), p += 3.6), b.doi && (n(`DOI: ${b.doi}`, p1, p + 2.6), p += 3.6)), P(T);
   };
-  return S(e.reportTitle), t.patientData && (D(c("pdf.section.patientData")), H(e.patient, { labelWidth: 45, fontSize: 10 })), (t.odontogramChart || t.odontogramDescription) && (D(c("pdf.section.odontogram")), t.odontogramChart && N(e.odontogramPng, e.odontogramImageSize, e.odontogramBorder), t.odontogramDescription && (A(e.odontogramCaption), e.toothTable && R(e.toothTable))), t.odontogramDescription && e.odontogramFindings.length && (D(c("pdf.section.findings")), H(e.odontogramFindings, { labelWidth: 48, fontSize: 9 })), t.individualNotes && e.individualNotes.length && (D(c("toothInfo.notes")), H(e.individualNotes, { labelWidth: 24, fontSize: 9 })), e.hasPerio && t.perioStatus && (p > p1 && (i.addPage(), p = p1), D(c("pdf.section.perioStatus")), N(e.perioPng, e.perioImageSize)), e.hasPerio && t.perioDescription && (e.perioMetrics.length && (D(c("pdf.section.perioDescription")), H(e.perioMetrics, { labelWidth: 55, fontSize: 9.5 })), e.abbreviations.length && (D(c("pdf.footer.title")), H(e.abbreviations.map((b) => ({ label: b.term, value: b.desc })), { labelWidth: 22, fontSize: 7.5 }))), P(e.footer), i.save(`odontogram-report-${y6()}.pdf`), i;
+  return S(e.reportTitle), t.patientData && (D(c("pdf.section.patientData")), H(e.patient, { labelWidth: 45, fontSize: 10 })), (t.odontogramChart || t.odontogramDescription) && (D(c("pdf.section.odontogram")), t.odontogramChart && N(e.odontogramPng, e.odontogramImageSize, e.odontogramBorder), t.odontogramDescription && (A(e.odontogramCaption), e.toothTable && R(e.toothTable))), t.odontogramDescription && e.odontogramFindings.length && (D(c("pdf.section.findings")), H(e.odontogramFindings, { labelWidth: 48, fontSize: 9 })), t.individualNotes && e.individualNotes.length && (D(c("toothInfo.notes")), H(e.individualNotes, { labelWidth: 24, fontSize: 9 })), e.hasPerio && t.perioStatus && (p > p1 && (i.addPage(), p = p1), D(c("pdf.section.perioStatus")), N(e.perioPng, e.perioImageSize)), e.hasPerio && t.perioDescription && (e.perioMetrics.length && (D(c("pdf.section.perioDescription")), H(e.perioMetrics, { labelWidth: 55, fontSize: 9.5 })), e.abbreviations.length && (D(c("pdf.footer.title")), H(e.abbreviations.map((b) => ({ label: b.term, value: b.desc })), { labelWidth: 22, fontSize: 7.5 }))), C(e.footer), i.save(`odontogram-report-${g6()}.pdf`), i;
 }
-const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
+const b6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0 0 39.7 70.8">\r
   <style>\r
@@ -15263,7 +15263,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, M6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, x6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="canine_x5F_tooth" version="1.1" viewBox="0 0 40.3 71">\r
   <style>\r
@@ -15838,7 +15838,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, w6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, M6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0 0 39.8 71.2">\r
   <style>\r
@@ -16429,7 +16429,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, Z6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, w6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0 0 42.9 70.9">\r
   <style>\r
@@ -16965,7 +16965,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, S6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, Z6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0 0 48.8 41.5">\r
   <style>\r
@@ -17332,7 +17332,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, z6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, S6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <svg xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0 0 48.2 41.5">\r
   <style>\r
@@ -17701,7 +17701,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, I6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, z6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=11 src=11 roots=1 apex=4.73 cej=39.81 occl=72.29 root_frac=0.5193 length=67.56 source="Fig. 32a (p. 49)" -->\r
 <svg data-tooth-template="11" data-root-count="1" data-cej-y="39.812" data-cervical-left="10.922" data-cervical-right="30.242" data-crown-left="2.593" data-crown-right="37.176" data-implant-platform-y="45.6" data-implant-left="10.516" data-implant-right="30.311" data-bridge-anchor-y="60.597" data-bridge-anchor-height="2.111" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 80.3">\r
@@ -18274,7 +18274,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, C6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, I6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=12 src=11 roots=1 apex=4.88 cej=40.99 occl=70.50 root_frac=0.5503 length=65.62 source="Fig. 35a (p. 51)" -->\r
 <svg data-tooth-template="12" data-root-count="1" data-cej-y="40.991" data-cervical-left="12.706" data-cervical-right="28.12" data-crown-left="6.729" data-crown-right="32.992" data-implant-platform-y="46.25" data-implant-left="12.43" data-implant-right="28.158" data-bridge-anchor-y="59.878" data-bridge-anchor-height="1.918" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 78.5">\r
@@ -18847,7 +18847,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, P6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, C6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=13 src=13 roots=1 apex=7.29 cej=47.13 occl=77.00 root_frac=0.5714 length=69.71 source="Fig. 45a (p. 61)" -->\r
 <svg data-tooth-template="13" data-root-count="1" data-cej-y="47.126" data-cervical-left="8.084" data-cervical-right="30.02" data-crown-left="5.172" data-crown-right="34.31" data-implant-platform-y="50.02" data-implant-left="9.575" data-implant-right="29.213" data-bridge-anchor-y="66.247" data-bridge-anchor-height="1.942" xmlns="http://www.w3.org/2000/svg" id="canine_x5F_tooth" version="1.1" viewBox="0.0 0.0 40.3 85.0">\r
@@ -19423,7 +19423,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, G6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, P6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=14 src=14 roots=2 apex=14.84 cej=51.78 occl=80.70 root_frac=0.5608 length=65.86 source="Fig. 54a (p. 71)" -->\r
 <svg data-tooth-template="14" data-root-count="2" data-cej-y="51.775" data-cervical-left="9.638" data-cervical-right="29.048" data-crown-left="5.351" data-crown-right="33.993" data-implant-platform-y="55.66" data-implant-left="11.968" data-implant-right="28.71" data-bridge-anchor-y="70.287" data-bridge-anchor-height="1.88" data-furcation-y="31.458" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.8 88.7">\r
@@ -20015,7 +20015,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, T6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, G6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=15 src=14 roots=1 apex=8.49 cej=46.90 occl=73.36 root_frac=0.5921 length=64.88 source="Fig. 56a (p. 73)" -->\r
 <svg data-tooth-template="15" data-root-count="1" data-cej-y="46.897" data-cervical-left="10.151" data-cervical-right="28.559" data-crown-left="6.465" data-crown-right="32.871" data-implant-platform-y="50.46" data-implant-left="12.339" data-implant-right="28.26" data-bridge-anchor-y="63.834" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.8 81.3">\r
@@ -20607,7 +20607,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, D6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, T6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=16 src=16 roots=3 apex=14.50 cej=49.05 occl=78.55 root_frac=0.5394 length=64.05 source="derived from Fig. 70a and Fig. 3" -->\r
 <svg data-tooth-template="16" data-root-count="3" data-cej-y="49.045" data-cervical-left="6.721" data-cervical-right="34.52" data-crown-left="0.459" data-crown-right="41.421" data-implant-platform-y="53.82" data-implant-left="12.244" data-implant-right="31.224" data-bridge-anchor-y="67.927" data-bridge-anchor-height="1.918" data-furcation-y="29.007" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="-1.3 0.0 44.6 86.5">\r
@@ -21144,7 +21144,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, O6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, D6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=17 src=16 roots=3 apex=14.14 cej=47.91 occl=77.88 root_frac=0.5298 length=63.74 source="Fig. 70a (p. 88)" -->\r
 <svg data-tooth-template="17" data-root-count="3" data-cej-y="47.909" data-cervical-left="7.835" data-cervical-right="33.469" data-crown-left="2.572" data-crown-right="39.383" data-implant-platform-y="52.78" data-implant-left="12.929" data-implant-right="30.409" data-bridge-anchor-y="67.09" data-bridge-anchor-height="1.948" data-furcation-y="26.973" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 42.9 85.9">\r
@@ -21681,7 +21681,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, A6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, O6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=18 src=16 roots=3 apex=13.99 cej=47.19 occl=76.76 root_frac=0.5290 length=62.76 source="Fig. 70a (p. 88), simplified representative" -->\r
 <svg data-tooth-template="18" data-root-count="3" data-cej-y="47.193" data-cervical-left="8.075" data-cervical-right="33.223" data-crown-left="3.615" data-crown-right="38.297" data-implant-platform-y="51.98" data-implant-left="13.097" data-implant-right="30.216" data-bridge-anchor-y="66.114" data-bridge-anchor-height="1.922" data-furcation-y="25.281" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 42.9 84.7">\r
@@ -22218,7 +22218,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, U6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, A6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=31 src=11 roots=1 apex=4.92 cej=41.42 occl=68.80 root_frac=0.5715 length=63.88 source="Fig. 38a (p. 52)" -->\r
 <svg data-tooth-template="31" data-root-count="1" data-cej-y="41.424" data-cervical-left="14.161" data-cervical-right="26.387" data-crown-left="9.776" data-crown-right="29.89" data-implant-platform-y="46.29" data-implant-left="13.97" data-implant-right="26.394" data-bridge-anchor-y="58.943" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 76.8">\r
@@ -22791,7 +22791,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, E6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, U6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=32 src=11 roots=1 apex=4.91 cej=41.71 occl=69.30 root_frac=0.5715 length=64.39 source="Fig. 38a (p. 52), lateral dimensions" -->\r
 <svg data-tooth-template="32" data-root-count="1" data-cej-y="41.707" data-cervical-left="13.746" data-cervical-right="26.889" data-crown-left="8.749" data-crown-right="30.95" data-implant-platform-y="46.62" data-implant-left="13.517" data-implant-right="26.919" data-bridge-anchor-y="59.364" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 77.3">\r
@@ -23364,7 +23364,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, L6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, E6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=33 src=13 roots=1 apex=7.16 cej=46.44 occl=75.90 root_frac=0.5715 length=68.74 source="Fig. 45a (p. 61), mandibular dimensions" -->\r
 <svg data-tooth-template="33" data-root-count="1" data-cej-y="46.44" data-cervical-left="8.69" data-cervical-right="29.488" data-crown-left="6.052" data-crown-right="33.42" data-implant-platform-y="49.29" data-implant-left="10.121" data-implant-right="28.677" data-bridge-anchor-y="65.293" data-bridge-anchor-height="1.915" xmlns="http://www.w3.org/2000/svg" id="canine_x5F_tooth" version="1.1" viewBox="0.0 0.0 40.3 83.9">\r
@@ -23940,7 +23940,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, H6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, L6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=34 src=14 roots=1 apex=8.28 cej=46.67 occl=74.15 root_frac=0.5828 length=65.88 source="Fig. 62a (p. 78)" -->\r
 <svg data-tooth-template="34" data-root-count="1" data-cej-y="46.668" data-cervical-left="8.561" data-cervical-right="29.867" data-crown-left="5.585" data-crown-right="33.569" data-implant-platform-y="50.35" data-implant-left="11.224" data-implant-right="29.633" data-bridge-anchor-y="64.259" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.8 82.1">\r
@@ -24532,7 +24532,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, j6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, H6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=35 src=14 roots=1 apex=8.32 cej=45.79 occl=73.95 root_frac=0.5709 length=65.62 source="Fig. 62a (p. 78)" -->\r
 <svg data-tooth-template="35" data-root-count="1" data-cej-y="45.788" data-cervical-left="9.597" data-cervical-right="28.933" data-crown-left="4.88" data-crown-right="34.285" data-implant-platform-y="49.58" data-implant-left="11.93" data-implant-right="28.771" data-bridge-anchor-y="63.809" data-bridge-anchor-height="1.83" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.8 81.9">\r
@@ -25124,7 +25124,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, N6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, j6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=36 src=16 roots=2 apex=16.40 cej=55.73 occl=80.44 root_frac=0.6141 length=64.04 source="Fig. 76a (p. 95)" -->\r
 <svg data-tooth-template="36" data-root-count="2" data-cej-y="55.725" data-cervical-left="5.48" data-cervical-right="35.719" data-crown-left="-1.548" data-crown-right="43.422" data-implant-platform-y="59.73" data-implant-left="11.459" data-implant-right="32.138" data-bridge-anchor-y="71.541" data-bridge-anchor-height="1.8" data-furcation-y="32.131" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="-3.3 0.0 48.6 88.4">\r
@@ -25661,7 +25661,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, R6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, N6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=37 src=16 roots=2 apex=15.77 cej=53.44 occl=79.29 root_frac=0.5930 length=63.52 source="Fig. 76a (p. 95), second-molar dimensions" -->\r
 <svg data-tooth-template="37" data-root-count="2" data-cej-y="53.435" data-cervical-left="5.642" data-cervical-right="35.528" data-crown-left="-0.504" data-crown-right="42.45" data-implant-platform-y="57.64" data-implant-left="11.577" data-implant-right="31.991" data-bridge-anchor-y="69.982" data-bridge-anchor-height="1.8" data-furcation-y="29.706" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="-2.3 0.0 46.6 87.3">\r
@@ -26198,7 +26198,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, V6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, R6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=38 src=16 roots=2 apex=14.97 cej=50.64 occl=77.47 root_frac=0.5706 length=62.50 source="Fig. 76a (p. 95), simplified representative" -->\r
 <svg data-tooth-template="38" data-root-count="2" data-cej-y="50.636" data-cervical-left="5.681" data-cervical-right="35.486" data-crown-left="0.575" data-crown-right="41.385" data-implant-platform-y="54.99" data-implant-left="11.644" data-implant-right="31.924" data-bridge-anchor-y="67.81" data-bridge-anchor-height="1.8" data-furcation-y="26.743" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="-1.3 0.0 44.6 85.4">\r
@@ -26735,7 +26735,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, F6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, V6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=51 src=11 roots=1 apex=4.11 cej=33.94 occl=58.29 root_frac=0.5506 length=54.18 source="derived from 11, Bild 83 (overview)" -->\r
 <svg data-tooth-template="51" data-root-count="1" data-cej-y="33.94" data-cervical-left="12.88" data-cervical-right="27.856" data-crown-left="6.816" data-crown-right="32.861" data-implant-platform-y="38.27" data-implant-left="12.39" data-implant-right="28.151" data-bridge-anchor-y="49.522" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 66.3">\r
@@ -27308,7 +27308,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, B6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, F6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=52 src=11 roots=1 apex=4.26 cej=34.91 occl=56.88 root_frac=0.5824 length=52.62 source="derived from 12, Bild 83 (overview)" -->\r
 <svg data-tooth-template="52" data-root-count="1" data-cej-y="34.906" data-cervical-left="14.353" data-cervical-right="26.145" data-crown-left="9.592" data-crown-right="30.069" data-implant-platform-y="38.82" data-implant-left="14" data-implant-right="26.332" data-bridge-anchor-y="48.97" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 64.9">\r
@@ -27881,7 +27881,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, K6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, B6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=53 src=13 roots=1 apex=5.90 cej=37.10 occl=62.59 root_frac=0.5503 length=56.69 source="Bild 89 (p. 111) / Bild 90 (p. 112) + Bild 83" -->\r
 <svg data-tooth-template="53" data-root-count="1" data-cej-y="37.101" data-cervical-left="10.906" data-cervical-right="27.573" data-crown-left="8.148" data-crown-right="31.347" data-implant-platform-y="39.57" data-implant-left="11.99" data-implant-right="26.839" data-bridge-anchor-y="53.417" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="canine_x5F_tooth" version="1.1" viewBox="0.0 0.0 40.3 70.6">\r
@@ -28457,7 +28457,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, q6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, K6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=54 src=14 roots=3 apex=12.82 cej=44.45 occl=63.43 root_frac=0.6250 length=50.61 source="Bild 91 (p. 113)" -->\r
 <svg data-tooth-template="54" data-root-count="3" data-cej-y="44.448" data-cervical-left="9.383" data-cervical-right="29.24" data-crown-left="5.045" data-crown-right="34.262" data-implant-platform-y="47.01" data-implant-left="11.47" data-implant-right="29.23" data-bridge-anchor-y="56.596" data-bridge-anchor-height="1.8" data-furcation-y="44.448" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.8 71.4">\r
@@ -29049,7 +29049,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, Y6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, q6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=55 src=16 roots=3 apex=12.28 cej=41.07 occl=64.66 root_frac=0.5497 length=52.38 source="Bild 92 (p. 114)" -->\r
 <svg data-tooth-template="55" data-root-count="3" data-cej-y="41.071" data-cervical-left="9.324" data-cervical-right="32.062" data-crown-left="4.46" data-crown-right="37.535" data-implant-platform-y="44.89" data-implant-left="13.49" data-implant-right="29.685" data-bridge-anchor-y="56.166" data-bridge-anchor-height="1.8" data-furcation-y="41.071" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 42.9 72.6">\r
@@ -29586,7 +29586,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, W6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, Y6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=71 src=11 roots=1 apex=4.31 cej=35.70 occl=55.39 root_frac=0.6146 length=51.08 source="derived from 31, Bild 83 (overview)" -->\r
 <svg data-tooth-template="71" data-root-count="1" data-cej-y="35.704" data-cervical-left="15.546" data-cervical-right="24.78" data-crown-left="11.797" data-crown-right="27.878" data-implant-platform-y="39.21" data-implant-left="15.26" data-implant-right="24.934" data-bridge-anchor-y="48.306" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 63.4">\r
@@ -30159,7 +30159,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, J6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, W6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=72 src=11 roots=1 apex=4.36 cej=35.53 occl=56.01 root_frac=0.6035 length=51.65 source="derived from 32, Bild 83 (overview)" -->\r
 <svg data-tooth-template="72" data-root-count="1" data-cej-y="35.529" data-cervical-left="15.012" data-cervical-right="25.402" data-crown-left="10.797" data-crown-right="28.882" data-implant-platform-y="39.17" data-implant-left="14.69" data-implant-right="25.559" data-bridge-anchor-y="48.635" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="incisor_x5F_tooth" version="1.1" viewBox="0.0 0.0 39.7 64.0">\r
@@ -30732,7 +30732,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, _6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, J6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=73 src=13 roots=1 apex=5.75 cej=35.88 occl=60.51 root_frac=0.5501 length=54.76 source="Bild 90 (p. 112) + Bild 83" -->\r
 <svg data-tooth-template="73" data-root-count="1" data-cej-y="35.877" data-cervical-left="11.768" data-cervical-right="26.743" data-crown-left="9.292" data-crown-right="30.146" data-implant-platform-y="38.26" data-implant-left="12.75" data-implant-right="26.125" data-bridge-anchor-y="51.645" data-bridge-anchor-height="1.8" xmlns="http://www.w3.org/2000/svg" id="canine_x5F_tooth" version="1.1" viewBox="0.0 0.0 40.3 68.5">\r
@@ -31308,7 +31308,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, Q6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, _6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=74 src=16 roots=2 apex=13.48 cej=45.31 occl=64.46 root_frac=0.6245 length=50.98 source="Bild 93 (p. 117)" -->\r
 <svg data-tooth-template="74" data-root-count="2" data-cej-y="45.313" data-cervical-left="10.105" data-cervical-right="31.317" data-crown-left="5.549" data-crown-right="36.432" data-implant-platform-y="48.41" data-implant-left="13.89" data-implant-right="29.203" data-bridge-anchor-y="57.565" data-bridge-anchor-height="1.8" data-furcation-y="45.313" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 42.9 72.4">\r
@@ -31845,7 +31845,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, X6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, Q6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=75 src=16 roots=2 apex=12.40 cej=41.39 occl=65.17 root_frac=0.5494 length=52.77 source="p. 117 section 3.4.3.2 + derived from 36" -->\r
 <svg data-tooth-template="75" data-root-count="2" data-cej-y="41.387" data-cervical-left="6.917" data-cervical-right="34.316" data-crown-left="1.057" data-crown-right="40.925" data-implant-platform-y="45.24" data-implant-left="11.91" data-implant-right="31.527" data-bridge-anchor-y="56.605" data-bridge-anchor-height="1.8" data-furcation-y="41.387" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="-1.1 0.0 44.2 73.1">\r
@@ -32382,7 +32382,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, $6 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, X6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=14_occl src=14_occl view=occlusal ratio=1.250 target=1.25 source="Bild 53 (p. 71) 1.24 / Bild 55 (p. 73) 1.26" -->\r
 <svg data-tooth-template="14_occl" data-cusp-count="2" data-groove-pattern="central" data-crown-left="10.42" data-crown-right="39.29" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -32746,7 +32746,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, t7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, $6 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=15_occl src=14_occl view=occlusal ratio=1.351 target=1.35 source="Wheeler/Ash & Nelson BL/MD means; rounder than first premolar" -->\r
 <svg data-tooth-template="15_occl" data-cusp-count="2" data-groove-pattern="short-central" data-crown-left="11.51" data-crown-right="38.23" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -33110,7 +33110,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, e7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, t7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=34_occl src=14_occl view=occlusal ratio=1.049 target=1.05 source="Bild 59 (p. 77) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="34_occl" data-cusp-count="2" data-groove-pattern="transverse" data-crown-left="7.64" data-crown-right="42.03" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -33475,7 +33475,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, a7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, e7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=35_occl src=14_occl view=occlusal ratio=1.080 target=1.08 source="Bild 61 (p. 78) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="35_occl" data-cusp-count="3" data-groove-pattern="y3" data-crown-left="8.15" data-crown-right="41.57" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -33841,7 +33841,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, i7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, a7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=16_occl src=16_occl view=occlusal ratio=1.110 target=1.11 source="Bild 65 (p. 85) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="16_occl" data-cusp-count="4" data-groove-pattern="oblique" data-crown-left="7.176" data-crown-right="39.7" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -34206,7 +34206,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, r7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, i7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=17_occl src=16_occl view=occlusal ratio=1.140 target=1.14 source="Bild 69 (p. 87) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="17_occl" data-cusp-count="4" data-groove-pattern="compact-oblique" data-crown-left="7.626" data-crown-right="39.27" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -34571,7 +34571,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, o7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, r7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=18_occl src=16_occl view=occlusal ratio=1.240 target=1.24 source="compact representative; third molars are highly variable" -->\r
 <svg data-tooth-template="18_occl" data-cusp-count="3" data-groove-pattern="irregular" data-crown-left="8.898" data-crown-right="38" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -34935,7 +34935,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, n7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, o7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=36_occl src=16_occl view=occlusal ratio=0.940 target=0.94 source="Bild 75 (p. 95) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="36_occl" data-cusp-count="5" data-groove-pattern="y5" data-crown-left="4.243" data-crown-right="42.65" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -35302,7 +35302,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, l7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, n7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=37_occl src=16_occl view=occlusal ratio=0.930 target=0.93 source="Bild 77 (p. 97) + standard BL/MD dimensions" -->\r
 <svg data-tooth-template="37_occl" data-cusp-count="4" data-groove-pattern="cross" data-crown-left="4.043" data-crown-right="42.85" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -35667,7 +35667,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, s7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, l7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=38_occl src=16_occl view=occlusal ratio=0.950 target=0.95 source="compact representative; third molars are highly variable" -->\r
 <svg data-tooth-template="38_occl" data-cusp-count="4" data-groove-pattern="irregular-cross" data-crown-left="4.443" data-crown-right="42.43" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="molar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.2 41.5">\r
@@ -36032,7 +36032,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, c7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, s7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=54_occl src=14_occl view=occlusal ratio=1.259 target=1.26 source="Bild 91 (p. 113) + primary crown proportions" -->\r
 <svg data-tooth-template="54_occl" data-cusp-count="4" data-groove-pattern="transverse" data-crown-left="10.52" data-crown-right="39.18" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -36402,7 +36402,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, d7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, c7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=55_occl src=14_occl view=occlusal ratio=1.280 target=1.28 source="Bild 92 (p. 114) + primary crown proportions" -->\r
 <svg data-tooth-template="55_occl" data-cusp-count="4" data-groove-pattern="oblique" data-crown-left="10.75" data-crown-right="38.95" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -36772,7 +36772,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, p7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, d7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=74_occl src=14_occl view=occlusal ratio=0.850 target=0.85 source="Bild 93 (p. 117) + primary crown proportions" -->\r
 <svg data-tooth-template="74_occl" data-cusp-count="4" data-groove-pattern="cross" data-crown-left="3.59" data-crown-right="46.07" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -37142,7 +37142,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, f7 = `<?xml version='1.0' encoding='utf-8'?>\r
+`, p7 = `<?xml version='1.0' encoding='utf-8'?>\r
 <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. Part of React Odontogram Modul - https://github.com/ZoliQua/React-Odontogram-Modul - SVG Version: 2.5.0 -->\r
 <!-- toothgen: template=75_occl src=14_occl view=occlusal ratio=0.910 target=0.91 source="Bild 94 / p. 117 description + primary crown proportions" -->\r
 <svg data-tooth-template="75_occl" data-cusp-count="5" data-groove-pattern="y5" data-crown-left="5.02" data-crown-right="44.68" data-bridge-anchor-y="20.944" data-bridge-anchor-height="2.8" xmlns="http://www.w3.org/2000/svg" id="premolar_x5F_tooth" version="1.1" viewBox="0.0 0.0 48.8 41.5">\r
@@ -37516,15 +37516,15 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
       </g>\r
     </g>\r
   </svg>\r
-`, h7 = {
-  11: x6,
-  13: M6,
-  14: w6,
-  16: Z6
-}, m7 = {
-  14: S6,
-  16: z6
-}, v7 = /* @__PURE__ */ new Map([
+`, f7 = {
+  11: b6,
+  13: x6,
+  14: M6,
+  16: w6
+}, h7 = {
+  14: Z6,
+  16: S6
+}, m7 = /* @__PURE__ */ new Map([
   // 11 template
   [11, { tpl: 11, rot: 0, mirror: !1 }],
   [12, { tpl: 11, rot: 0, mirror: !1 }],
@@ -37561,61 +37561,61 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   [46, { tpl: 16, rot: 180, mirror: !0 }],
   [47, { tpl: 16, rot: 180, mirror: !0 }],
   [48, { tpl: 16, rot: 180, mirror: !0 }]
-]), un = { 11: 32.2, 13: 32.4, 14: 32.1, 16: 31 }, g7 = { 11: 33, 13: 35.4, 14: 34.6, 16: 34.3 }, y7 = { ...un }, kn = {
-  templates: h7,
-  templatesOccl: m7,
-  toothTemplate: v7,
+]), un = { 11: 32.2, 13: 32.4, 14: 32.1, 16: 31 }, v7 = { 11: 33, 13: 35.4, 14: 34.6, 16: 34.3 }, g7 = { ...un }, kn = {
+  templates: f7,
+  templatesOccl: h7,
+  toothTemplate: m7,
   tplNos: [11, 13, 14, 16],
   occlNos: [14, 16],
   layout: "uniform16",
   cejY: un,
-  implantCejY: g7,
-  milktoothCejY: y7
+  implantCejY: v7,
+  milktoothCejY: g7
+}, y7 = {
+  11: z6,
+  12: I6,
+  13: C6,
+  14: P6,
+  15: G6,
+  16: T6,
+  17: D6,
+  18: O6,
+  31: A6,
+  32: U6,
+  33: E6,
+  34: L6,
+  35: H6,
+  36: j6,
+  37: N6,
+  38: R6
 }, u7 = {
-  11: I6,
-  12: C6,
-  13: P6,
-  14: G6,
-  15: T6,
-  16: D6,
-  17: O6,
-  18: A6,
-  31: U6,
-  32: E6,
-  33: L6,
-  34: H6,
-  35: j6,
-  36: N6,
-  37: R6,
-  38: V6
+  14: X6,
+  15: $6,
+  34: t7,
+  35: e7,
+  16: a7,
+  17: i7,
+  18: r7,
+  36: o7,
+  37: n7,
+  38: l7
 }, k7 = {
-  14: $6,
-  15: t7,
-  34: e7,
-  35: a7,
-  16: i7,
-  17: r7,
-  18: o7,
-  36: n7,
-  37: l7,
-  38: s7
+  51: V6,
+  52: F6,
+  53: B6,
+  54: K6,
+  55: q6,
+  71: Y6,
+  72: W6,
+  73: J6,
+  74: _6,
+  75: Q6
 }, b7 = {
-  51: F6,
-  52: B6,
-  53: K6,
-  54: q6,
-  55: Y6,
-  71: W6,
-  72: J6,
-  73: _6,
-  74: Q6,
-  75: X6
-}, x7 = {
-  54: c7,
-  55: d7,
-  74: p7,
-  75: f7
-}, M7 = /* @__PURE__ */ new Map([
+  54: s7,
+  55: c7,
+  74: d7,
+  75: p7
+}, x7 = /* @__PURE__ */ new Map([
   // upper central incisor
   [11, { tpl: 11, rot: 0, mirror: !1 }],
   [21, { tpl: 11, rot: 0, mirror: !0 }],
@@ -37656,7 +37656,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   [47, { tpl: 37, rot: 180, mirror: !0 }],
   [38, { tpl: 38, rot: 180, mirror: !1 }],
   [48, { tpl: 38, rot: 180, mirror: !0 }]
-]), w7 = /* @__PURE__ */ new Map([
+]), M7 = /* @__PURE__ */ new Map([
   [14, { tpl: 14, rot: 0, mirror: !1 }],
   [24, { tpl: 14, rot: 0, mirror: !0 }],
   [15, { tpl: 15, rot: 0, mirror: !1 }],
@@ -37677,7 +37677,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   [47, { tpl: 37, rot: 180, mirror: !0 }],
   [38, { tpl: 38, rot: 180, mirror: !1 }],
   [48, { tpl: 38, rot: 180, mirror: !0 }]
-]), Z7 = /* @__PURE__ */ new Map([
+]), w7 = /* @__PURE__ */ new Map([
   [11, { tpl: 51, rot: 0, mirror: !1 }],
   [21, { tpl: 51, rot: 0, mirror: !0 }],
   [12, { tpl: 52, rot: 0, mirror: !1 }],
@@ -37698,7 +37698,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   [44, { tpl: 74, rot: 180, mirror: !0 }],
   [35, { tpl: 75, rot: 180, mirror: !1 }],
   [45, { tpl: 75, rot: 180, mirror: !0 }]
-]), S7 = /* @__PURE__ */ new Map([
+]), Z7 = /* @__PURE__ */ new Map([
   [14, { tpl: 54, rot: 0, mirror: !1 }],
   [24, { tpl: 54, rot: 0, mirror: !0 }],
   [15, { tpl: 55, rot: 0, mirror: !1 }],
@@ -37707,7 +37707,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   [44, { tpl: 74, rot: 180, mirror: !0 }],
   [35, { tpl: 75, rot: 180, mirror: !1 }],
   [45, { tpl: 75, rot: 180, mirror: !0 }]
-]), z7 = {
+]), S7 = {
   11: 40.5,
   12: 37.5,
   13: 37.9,
@@ -37724,7 +37724,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   36: 32.7,
   37: 33.9,
   38: 34.8
-}, I7 = {
+}, z7 = {
   11: 34.7,
   12: 32.2,
   13: 35,
@@ -37741,7 +37741,7 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   36: 28.7,
   37: 29.7,
   38: 30.4
-}, C7 = {
+}, I7 = {
   51: 32.4,
   52: 30,
   53: 33.5,
@@ -37752,36 +37752,36 @@ const x6 = `<?xml version='1.0' encoding='utf-8'?>\r
   73: 32.6,
   74: 27.1,
   75: 31.7
-}, P7 = {
-  templates: u7,
-  templatesOccl: k7,
-  toothTemplate: M7,
-  occlusalTemplate: w7,
-  primaryTemplates: b7,
-  primaryTemplatesOccl: x7,
-  primaryToothTemplate: Z7,
-  primaryOcclusalTemplate: S7,
+}, C7 = {
+  templates: y7,
+  templatesOccl: u7,
+  toothTemplate: x7,
+  occlusalTemplate: M7,
+  primaryTemplates: k7,
+  primaryTemplatesOccl: b7,
+  primaryToothTemplate: w7,
+  primaryOcclusalTemplate: Z7,
   tplNos: [11, 12, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38],
   occlNos: [14, 15, 34, 35, 16, 17, 18, 36, 37, 38],
   primaryTplNos: [51, 52, 53, 54, 55, 71, 72, 73, 74, 75],
   primaryOcclNos: [54, 55, 74, 75],
   layout: "twoArch",
-  cejY: z7,
-  implantCejY: I7,
-  milktoothCejY: C7
-}, G7 = {
+  cejY: S7,
+  implantCejY: z7,
+  milktoothCejY: I7
+}, P7 = {
   classic: kn,
-  measured: P7
+  measured: C7
 };
 let Ae = "classic";
 function To() {
   return Ae;
 }
-function T7(t) {
-  t !== Ae && (Ae = t, Es(), X());
+function G7(t) {
+  t !== Ae && (Ae = t, Us(), X());
 }
 function l2() {
-  return G7[Ae] ?? kn;
+  return P7[Ae] ?? kn;
 }
 const s1 = [
   18,
@@ -37822,9 +37822,9 @@ const s1 = [
   "tooth-broken-distal",
   "tooth-broken-mesial-incisal",
   "tooth-broken-mesial"
-]), D7 = /* @__PURE__ */ new Set([11, 12, 13, 14, 15, 21, 22, 23, 24, 25, 31, 32, 33, 34, 35, 41, 42, 43, 44, 45]), O7 = /* @__PURE__ */ new Set([11, 12, 16, 21, 22, 26, 31, 32, 36, 41, 42, 46]), A7 = /* @__PURE__ */ new Set([13, 14, 15, 23, 24, 25, 33, 34, 35, 43, 44, 45]), U7 = /* @__PURE__ */ new Set([17, 18, 27, 28, 37, 38, 47, 48]), E7 = /* @__PURE__ */ new Set([11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43]);
+]), T7 = /* @__PURE__ */ new Set([11, 12, 13, 14, 15, 21, 22, 23, 24, 25, 31, 32, 33, 34, 35, 41, 42, 43, 44, 45]), D7 = /* @__PURE__ */ new Set([11, 12, 16, 21, 22, 26, 31, 32, 36, 41, 42, 46]), O7 = /* @__PURE__ */ new Set([13, 14, 15, 23, 24, 25, 33, 34, 35, 43, 44, 45]), A7 = /* @__PURE__ */ new Set([17, 18, 27, 28, 37, 38, 47, 48]), U7 = /* @__PURE__ */ new Set([11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43]);
 function Mn(t) {
-  return E7.has(t);
+  return U7.has(t);
 }
 function Yi(t) {
   const e = Math.floor(t / 10);
@@ -37835,10 +37835,10 @@ function yr(t) {
   return o && i ? ["mesial", "distal", "buccal"] : o && r ? ["buccal", "lingual"] : e === 4 && i ? ["mesial", "distal"] : [];
 }
 const wn = re("mods");
-function L7() {
+function E7() {
   return re("periapicalType").map((t) => ({ value: t.value, label: c(t.labelKey) }));
 }
-const H7 = {
+const L7 = {
   emax: "emax",
   gold: "gold",
   gradia: "gradia",
@@ -37856,7 +37856,7 @@ const H7 = {
   "removable-partial": "prosthesis.type.removablePartial",
   "removable-full": "prosthesis.type.removableFull"
 }, $2 = ["MB", "B", "DB", "ML", "L", "DL"];
-function h1() {
+function m1() {
   return {
     toothSelection: "tooth-base",
     // none | tooth-base | milktooth | implant | variants
@@ -38022,7 +38022,7 @@ function $(t, e = {}, a = []) {
 function Y(t, e) {
   t && t.setAttribute("data-active", e ? "1" : "0");
 }
-function j7(t) {
+function H7(t) {
   const e = Ve("[id]", t);
   for (const a of e) {
     const i = a.getAttribute("style");
@@ -38033,7 +38033,7 @@ function j7(t) {
     }
   }
 }
-function N7(t) {
+function j7(t) {
   const e = ["mods", "tooth-variants", "endos", "surfaces", "restorations", "specials"];
   for (const a of e) {
     const i = t.getElementById ? t.getElementById(a) : Q("#" + a, t);
@@ -38095,26 +38095,26 @@ function Ji(t, e, a, i) {
   const r = Za(e, a, i);
   return r === null ? t : r;
 }
-function Wt() {
+function qt() {
   return { ...J };
 }
-function R7(t) {
+function N7(t) {
   const e = Ji(J.age, t, 0, 120);
   e !== J.age && (J.age = e, X());
 }
-function V7(t) {
+function R7(t) {
   const e = Ji(J.cigarettesPerDay, t, 0, 99);
   e !== J.cigarettesPerDay && (J.cigarettesPerDay = e, X());
 }
-function F7(t) {
+function V7(t) {
   const e = Ji(J.toothLossPerio, t, 0, 32);
   e !== J.toothLossPerio && (J.toothLossPerio = e, X());
 }
-function B7(t) {
+function F7(t) {
   const e = Ji(J.maxRblPercent, t, 0, 100);
   e !== J.maxRblPercent && (J.maxRblPercent = e, X());
 }
-function K7(t) {
+function B7(t) {
   if (t === null) {
     J.hba1c !== null && (J.hba1c = null, X());
     return;
@@ -38124,34 +38124,34 @@ function K7(t) {
   const a = Math.max(3, Math.min(20, Math.round(e * 10) / 10));
   a !== J.hba1c && (J.hba1c = a, X());
 }
-function q7(t) {
+function K7(t) {
   zn.has(t) && t !== J.smokingStatus && (J.smokingStatus = t, X());
 }
-function Y7(t) {
+function q7(t) {
   In.has(t) && t !== J.diabetesStatus && (J.diabetesStatus = t, X());
 }
-function W7(t) {
+function Y7(t) {
   if (t === null) {
     J.diagnosisOverride !== null && (J.diagnosisOverride = null, X());
     return;
   }
   Cn.has(t) && t !== J.diagnosisOverride && (J.diagnosisOverride = t, X());
 }
-function J7(t) {
+function W7(t) {
   if (t === null) {
     J.stageOverride !== null && (J.stageOverride = null, X());
     return;
   }
   Pn.has(t) && t !== J.stageOverride && (J.stageOverride = t, X());
 }
-function _7(t) {
+function J7(t) {
   if (t === null) {
     J.gradeOverride !== null && (J.gradeOverride = null, X());
     return;
   }
   Gn.has(t) && t !== J.gradeOverride && (J.gradeOverride = t, X());
 }
-function Q7(t) {
+function _7(t) {
   if (t === null) {
     J.extentOverride !== null && (J.extentOverride = null, X());
     return;
@@ -38176,7 +38176,7 @@ function _3(t) {
   const e = t.trim();
   e !== J.examDate && (J.examDate = e, X());
 }
-function X7(t) {
+function Q7(t) {
   if (t === null) {
     J.patientDob !== null && (J.patientDob = null, X());
     return;
@@ -38199,7 +38199,7 @@ function On(t) {
   const e = {};
   return t.age !== null && (e.age = t.age), t.smokingStatus !== "unknown" && (e.smokingStatus = t.smokingStatus), t.cigarettesPerDay !== null && (e.cigarettesPerDay = t.cigarettesPerDay), t.diabetesStatus !== "unknown" && (e.diabetesStatus = t.diabetesStatus), t.hba1c !== null && (e.hba1c = t.hba1c), t.toothLossPerio !== null && (e.toothLossPerio = t.toothLossPerio), t.maxRblPercent !== null && (e.maxRblPercent = t.maxRblPercent), t.diagnosisOverride !== null && (e.diagnosisOverride = t.diagnosisOverride), t.stageOverride !== null && (e.stageOverride = t.stageOverride), t.gradeOverride !== null && (e.gradeOverride = t.gradeOverride), t.extentOverride !== null && (e.extentOverride = t.extentOverride), t.patientName !== null && (e.patientName = t.patientName), t.patientDob !== null && (e.patientDob = t.patientDob), t.examDate !== null && (e.examDate = t.examDate), e;
 }
-function $7(t) {
+function X7(t) {
   if (J = ur(), !(!t || typeof t != "object")) {
     J.age = Za(t.age, 0, 120), zn.has(t.smokingStatus) && (J.smokingStatus = t.smokingStatus), J.cigarettesPerDay = Za(t.cigarettesPerDay, 0, 99), In.has(t.diabetesStatus) && (J.diabetesStatus = t.diabetesStatus);
     {
@@ -38209,7 +38209,7 @@ function $7(t) {
     J.toothLossPerio = Za(t.toothLossPerio, 0, 32), J.maxRblPercent = Za(t.maxRblPercent, 0, 100), J.diagnosisOverride = Cn.has(t.diagnosisOverride) ? t.diagnosisOverride : null, J.stageOverride = Pn.has(t.stageOverride) ? t.stageOverride : null, J.gradeOverride = Gn.has(t.gradeOverride) ? t.gradeOverride : null, J.extentOverride = Tn.has(t.extentOverride) ? t.extentOverride : null, J.patientName = typeof t.patientName == "string" && t.patientName.trim() !== "" ? t.patientName.trim() : null, J.patientDob = typeof t.patientDob == "string" && Ui.test(t.patientDob.trim()) ? t.patientDob.trim() : null, J.examDate = typeof t.examDate == "string" && Ui.test(t.examDate.trim()) ? t.examDate.trim() : null;
   }
 }
-function t8(t) {
+function $7(t) {
   const e = [];
   return t.age !== null && e.push(c("case.summary.age", { age: t.age })), t.smokingStatus === "never" ? e.push(c("case.summary.smokingNever")) : t.smokingStatus === "former" ? e.push(c("case.summary.smokingFormer")) : t.smokingStatus === "current" && e.push(t.cigarettesPerDay !== null ? c("case.summary.smokingCurrentCigs", { n: t.cigarettesPerDay }) : c("case.summary.smokingCurrent")), t.diabetesStatus === "none" ? e.push(c("case.summary.diabetesNone")) : t.diabetesStatus === "present" && e.push(t.hba1c !== null ? c("case.summary.diabetesPresentHba1c", { value: t.hba1c }) : c("case.summary.diabetesPresent")), t.maxRblPercent !== null && e.push(c("case.summary.rbl", { value: t.maxRblPercent })), t.toothLossPerio !== null && e.push(c(`case.summary.toothLoss${t.toothLossPerio === 1 ? "One" : "Other"}`, { n: t.toothLossPerio })), e.join(" · ");
 }
@@ -38217,15 +38217,15 @@ let Dt = !1;
 function Fe() {
   return s2;
 }
-function e8(t, e) {
+function t8(t, e) {
   e.clear();
   for (const [a, i] of t) e.set(a, He(Tt(i)));
 }
 const o2 = /* @__PURE__ */ new Set();
 function An(t) {
-  A1.plan.set(t, He(Tt(A1.status.get(t) ?? h1()), !1));
+  A1.plan.set(t, He(Tt(A1.status.get(t) ?? m1()), !1));
 }
-function jt(t, e) {
+function Qt(t, e) {
   if (s2 === "plan") {
     e() !== !1 && o2.add(t);
     return;
@@ -38267,23 +38267,23 @@ function Be(t, e) {
   }
   e(), a();
 }
-let _t = null;
-function a8() {
-  return _t !== null;
+let Wt = null;
+function e8() {
+  return Wt !== null;
 }
 function Un(t, e) {
-  _t || (_t = { apply: t, revert: e }, X());
+  Wt || (Wt = { apply: t, revert: e }, X());
+}
+function a8() {
+  const t = Wt;
+  Wt = null, t && t.apply(), X();
 }
 function i8() {
-  const t = _t;
-  _t = null, t && t.apply(), X();
-}
-function r8() {
-  const t = _t;
-  _t = null, t && t.revert(), X();
+  const t = Wt;
+  Wt = null, t && t.revert(), X();
 }
 function En() {
-  E != null && u1(U.get(E));
+  E != null && k1(U.get(E));
 }
 function br() {
   const t = s2 === "plan", e = Q("#chartModeStatus"), a = Q("#chartModePlan"), i = Q(".chart"), r = Q("#chartModePlanBadge");
@@ -38291,84 +38291,84 @@ function br() {
 }
 function Q3(t) {
   if (!(t !== "status" && t !== "plan") && t !== s2) {
-    t === "plan" && !Dt && (e8(A1.status, A1.plan), Dt = !0, o2.clear()), s2 = t, U = A1[t];
+    t === "plan" && !Dt && (t8(A1.status, A1.plan), Dt = !0, o2.clear()), s2 = t, U = A1[t];
     for (const e of s1)
-      tt(e), yt(e), ae(e);
-    E && u1(U.get(E)), X(), br();
+      ct(e), bt(e), ae(e);
+    E && k1(U.get(E)), X(), br();
   }
 }
 const n2 = /* @__PURE__ */ new Map(), gt = /* @__PURE__ */ new Map(), D3 = /* @__PURE__ */ new WeakMap(), Ue = /* @__PURE__ */ new Map(), Ee = /* @__PURE__ */ new Map();
-let E = null, a1 = /* @__PURE__ */ new Set(), Qt = !1, Oa = !0, S2 = !0, Pe = !0, Jt = !0, te = !1, c2 = "FDI", q1 = !1, $t = !1, Do = {}, Ka = !1;
+let E = null, a1 = /* @__PURE__ */ new Set(), Jt = !1, Oa = !0, Z2 = !0, Pe = !0, Yt = !0, te = !1, c2 = "FDI", q1 = !1, Xt = !1, Do = {}, Ka = !1;
 function Oo(t) {
-  Ka = !!t, E && u1(U.get(E));
+  Ka = !!t, E && k1(U.get(E));
 }
-function oh() {
+function rh() {
   return Ka;
 }
 let Le = "aae";
 function Ao(t) {
   const e = t === "simple" || t === "latin" ? t : "aae";
   if (e !== Le) {
-    Le = e, E && u1(U.get(E)), X();
+    Le = e, E && k1(U.get(E)), X();
     for (const a of s1)
       ee(a);
   }
 }
-function o8() {
+function r8() {
   return Le;
 }
 let Ln = "complex";
 function Uo(t) {
-  Ln = t === "simple" ? "simple" : "complex", E && u1(U.get(E));
+  Ln = t === "simple" ? "simple" : "complex", E && k1(U.get(E));
 }
-function n8() {
+function o8() {
   return Ln;
 }
 let Hn = "complex";
 function Eo(t) {
-  Hn = t === "simple" ? "simple" : "complex", E && u1(U.get(E));
+  Hn = t === "simple" ? "simple" : "complex", E && k1(U.get(E));
 }
-function l8() {
+function n8() {
   return Hn;
 }
 let Aa = "full";
 function Lo(t) {
   const e = t === "simple" ? "simple" : "full";
   if (e !== Aa) {
-    Aa = e, E && u1(U.get(E)), X();
+    Aa = e, E && k1(U.get(E)), X();
     for (const a of s1)
       ee(a);
   }
 }
-function nh() {
+function oh() {
   return Aa;
 }
 let xr = "standard";
 function Ho(t) {
-  xr = t === "simple" || t === "full" ? t : "standard", E && u1(U.get(E));
+  xr = t === "simple" || t === "full" ? t : "standard", E && k1(U.get(E));
 }
-function lh() {
+function nh() {
   return xr;
 }
 let _i = "simple";
 function jo(t) {
-  _i = t === "severity" ? t : "simple", E && u1(U.get(E));
+  _i = t === "severity" ? t : "simple", E && k1(U.get(E));
 }
-function sh() {
+function lh() {
   return _i;
 }
 let Qi = "off";
 function No(t) {
-  Qi = t === "threeLevel" || t === "detailed" ? t : "off", E && u1(U.get(E));
+  Qi = t === "threeLevel" || t === "detailed" ? t : "off", E && k1(U.get(E));
 }
-function ch() {
+function sh() {
   return Qi;
 }
 let qa = !0;
 function Ro(t) {
-  qa = t !== !1, E && u1(U.get(E));
+  qa = t !== !1, E && k1(U.get(E));
 }
-function dh() {
+function ch() {
   return qa;
 }
 let za = null;
@@ -38396,7 +38396,7 @@ function $3(t) {
 }
 function Xi() {
   const t = Q("#toothGrid");
-  Us({ grid: t, getState: $3, materialColor: vr });
+  As({ grid: t, getState: $3, materialColor: vr });
 }
 let Ia = null, B2 = null;
 function jn() {
@@ -38418,7 +38418,7 @@ function Nn() {
 }
 let Ua = [];
 const tr = /* @__PURE__ */ new Map(), Vo = () => window.matchMedia("(pointer: coarse)").matches;
-let Fo = 0, Bo = 0, Ko = 0, bi = !1, Yt = null;
+let Fo = 0, Bo = 0, Ko = 0, bi = !1, Kt = null;
 const qo = 500, Yo = 10;
 let Rn = 0, Ce = 1, Ea = !1, Ii = "both", St = null;
 const Wo = /* @__PURE__ */ new WeakMap();
@@ -38427,7 +38427,7 @@ function Q1(t, e, a) {
   let i = Wo.get(t);
   i || (i = /* @__PURE__ */ new Set(), Wo.set(t, i)), !i.has(e) && (i.add(e), t.addEventListener(e, a));
 }
-async function s8(t) {
+async function l8(t) {
   if (!t) return;
   const e = t.dataset.iconSrc;
   if (e)
@@ -38442,38 +38442,38 @@ function Vn(t) {
   const e = t.getAttribute("aria-pressed") === "true", a = t.querySelector("#x-line");
   a && (a.style.display = e ? "none" : "");
 }
-function c8(t) {
-  cd(t);
+function s8(t) {
+  sd(t);
 }
-function d8(t) {
+function c8(t) {
   if (!t) return null;
   const e = t.closest ? t.closest("label") : null;
   return e || (t.id ? document.querySelector(`label[for="${t.id}"]`) : null);
 }
-function p8(t) {
-  const e = d8(t);
+function d8(t) {
+  const e = c8(t);
   e && (e.style.display = t.disabled ? "none" : "");
 }
 function Ci(t, e) {
-  t && (t.disabled = !!e, p8(t));
+  t && (t.disabled = !!e, d8(t));
 }
 function $i(t, e) {
   t && (t.setAttribute("aria-pressed", e ? "true" : "false"), Vn(t));
 }
-function f8(t, e) {
+function p8(t, e) {
   return c(e ? "actions.expand" : "actions.collapse", { label: c(t) });
 }
-function z2(t, e, a) {
+function S2(t, e, a) {
   if (!t) return;
-  const i = f8(e, a);
+  const i = p8(e, a);
   t.setAttribute("title", i), t.setAttribute("aria-label", i);
 }
-const h8 = {
+const f8 = {
   btnToggleStatusCard: "status.title",
   btnToggleCariesCard: "caries.title",
   btnToggleFillingCard: "filling.title",
   btnToggleRootPeriodontiumCard: "card.rootPeriodontium"
-}, m8 = {
+}, h8 = {
   btnToggleControlsCard: "controls",
   btnToggleStatusCard: "status",
   btnToggleCariesCard: "caries",
@@ -38483,52 +38483,52 @@ const h8 = {
 function Fn(t) {
   const a = t.target?.closest?.(".icon-btn");
   if (!a) return;
-  const i = a.querySelector(".toggle-icon"), r = m8[a.id];
+  const i = a.querySelector(".toggle-icon"), r = h8[a.id];
   if (!r) return;
   if (a.id === "btnToggleControlsCard") {
-    const l = document.querySelector("#controlsActions");
-    if (!l) return;
-    const f = l.classList.toggle("hidden");
-    z2(a, "panel.controls", f), i && (i.textContent = f ? "+" : "−"), Do.controls = f, X();
+    const s = document.querySelector("#controlsActions");
+    if (!s) return;
+    const f = s.classList.toggle("hidden");
+    S2(a, "panel.controls", f), i && (i.textContent = f ? "+" : "−"), Do.controls = f, X();
     return;
   }
-  const o = h8[a.id];
+  const o = f8[a.id];
   if (!o) return;
   const n = a.closest(".card");
   if (!n) return;
   const d = n.classList.toggle("collapsed");
-  z2(a, o, d), i && (i.textContent = d ? "+" : "−"), Do[r] = d, X();
+  S2(a, o, d), i && (i.textContent = d ? "+" : "−"), Do[r] = d, X();
 }
 function Bn(t) {
   const e = t.target?.closest?.("button");
   if (e)
     switch (e.id) {
       case "btnWisdomVisible":
-        C5(!Oa);
+        I5(!Oa);
         break;
       case "btnOcclView":
         Pr(!Pe);
         break;
       case "btnBoneVisible":
-        ji(!S2);
+        ji(!Z2);
         break;
       case "btnPulpVisible":
-        Ha(!Jt);
+        Ha(!Yt);
         break;
     }
 }
-function nt(t) {
+function ot(t) {
   return t !== "none" && t !== "implant";
 }
 function d2(t) {
   return t === "tooth-under-gum";
 }
-function Xt(t) {
+function _t(t) {
   return t === "no-tooth-after-extraction";
 }
 function Mr(t) {
   const e = t?.toothSelection;
-  return !nt(e) || d2(e) || Xt(e);
+  return !ot(e) || d2(e) || _t(e);
 }
 function wr(t) {
   const e = U.get(t);
@@ -38536,18 +38536,18 @@ function wr(t) {
   const a = Math.floor(t / 10), i = t % 10;
   return (a === 1 ? 5 : a === 2 ? 6 : a === 3 ? 7 : 8) * 10 + i;
 }
-function yt(t) {
+function bt(t) {
   if (!gt.get(t)) return;
   const a = X2(wr(t), c2), i = Ue.get(t);
   i && (i.textContent = a);
   const r = Ee.get(t);
   r && (r.textContent = a), ae(t);
 }
-function v8() {
+function m8() {
   for (const t of s1)
-    yt(t);
+    bt(t);
 }
-function g8(t, e, a) {
+function v8(t, e, a) {
   if (t) {
     t.innerHTML = "";
     for (const i of e) {
@@ -38561,59 +38561,59 @@ function Jo(t) {
   return re("endo", { isMilktooth: !!t }).map((e) => ({ value: e.value, label: c(e.labelKey) }));
 }
 let La = !0, Ei = "complex", Li = !0;
-const y8 = ["amalgam", "composite", "gic", "temporary"], Ca = { amalgam: !0, composite: !0, gic: !0, temporary: !0 };
+const g8 = ["amalgam", "composite", "gic", "temporary"], Ca = { amalgam: !0, composite: !0, gic: !0, temporary: !0 };
 function Kn() {
   return La;
 }
 function _o(t) {
   const e = !!t;
-  e !== La && (La = e, E && u1(U.get(E)), X());
+  e !== La && (La = e, E && k1(U.get(E)), X());
 }
-function u8() {
+function y8() {
   return Ei;
 }
 function Qo(t) {
   const e = t === "simple" ? "simple" : "complex";
-  e !== Ei && (Ei = e, E && u1(U.get(E)), X());
+  e !== Ei && (Ei = e, E && k1(U.get(E)), X());
 }
-function k8() {
+function u8() {
   return Li;
 }
 function Xo(t) {
   const e = !!t;
-  e !== Li && (Li = e, E && u1(U.get(E)), X());
+  e !== Li && (Li = e, E && k1(U.get(E)), X());
 }
-function b8() {
+function k8() {
   return { ...Ca };
 }
 function $o(t, e) {
   if (!Object.prototype.hasOwnProperty.call(Ca, t)) return;
   const a = !!e;
-  Ca[t] !== a && (Ca[t] = a, E && u1(U.get(E)), X());
+  Ca[t] !== a && (Ca[t] = a, E && k1(U.get(E)), X());
+}
+function b8() {
+  return g8.filter((t) => Ca[t]);
 }
 function x8() {
-  return y8.filter((t) => Ca[t]);
-}
-function M8() {
   return ["none", "marginal", "fracture", "wear"].map((t) => ({ value: t, label: c("fillingDefect." + t) }));
 }
-function w8(t) {
+function M8(t) {
   const e = {
     amalgam: c("filling.option.amalgam"),
     composite: c("filling.option.composite"),
     gic: c("filling.option.gic"),
     temporary: c("filling.option.temporary")
-  }, a = x8().filter((i) => !(t && i === "amalgam"));
+  }, a = b8().filter((i) => !(t && i === "amalgam"));
   return [
     { value: "none", label: c("filling.option.none") },
     ...a.map((i) => ({ value: i, label: e[i] }))
   ];
 }
-const Z8 = /* @__PURE__ */ new Set([14, 15, 24, 25, 34, 35, 44, 45, 16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48]);
-function S8(t) {
-  return typeof t == "number" && Z8.has(t) ? "occlusal" : "front";
+const w8 = /* @__PURE__ */ new Set([14, 15, 24, 25, 34, 35, 44, 45, 16, 17, 18, 26, 27, 28, 36, 37, 38, 46, 47, 48]);
+function Z8(t) {
+  return typeof t == "number" && w8.has(t) ? "occlusal" : "front";
 }
-function z8() {
+function S8() {
   return [
     { value: "natural", label: c("substrate.natural") },
     { value: "radix", label: c("substrate.radix") },
@@ -38622,7 +38622,7 @@ function z8() {
   ];
 }
 function t4(t, e = {}) {
-  return gs(t, { isImplant: !!e.isImplant, toothSelection: e.toothSelection }).map((a) => a.prosthesis ? {
+  return vs(t, { isImplant: !!e.isImplant, toothSelection: e.toothSelection }).map((a) => a.prosthesis ? {
     value: `prosthesis|${a.prosthesis}`,
     label: `${c(a.prefixKey ?? "restoration.prefix.removable")}: ${c(Wi[a.prosthesis] ?? a.prosthesis)}`
   } : {
@@ -38631,10 +38631,10 @@ function t4(t, e = {}) {
   });
 }
 function Zr(t) {
-  const e = t?.toothSelection === "milktooth", a = d2(t?.toothSelection), i = Xt(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
+  const e = t?.toothSelection === "milktooth", a = d2(t?.toothSelection), i = _t(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
   return e || a || i || t?.toothSubstrate === "radix";
 }
-function I8(t, e) {
+function z8(t, e) {
   if (e.startsWith("prosthesis|"))
     t.prosthesis = e.slice(11), t.restorationType = "none", t.restorationMaterial = "none", t.bridgePillar = !1, t.crownReplace = !1;
   else {
@@ -38648,7 +38648,7 @@ function Sr(t, e) {
   return `${c(`restoration.type.${t}`)} – ${c(a)}`;
 }
 function qn(t) {
-  if (o8() === "latin") {
+  if (r8() === "latin") {
     if (t.pulpLatin && t.pulpLatin !== "none")
       return c("pulpLatin." + $1(t.pulpLatin));
     if (t.pulpDx && t.pulpDx !== "normal") {
@@ -38663,7 +38663,7 @@ function Yn(t) {
   let e = c("apicalDx." + $1(t.apicalDx));
   return t.periapicalType && t.periapicalType !== "none" && (e += " (" + c("periapical.type." + $1(t.periapicalType)) + ")"), e;
 }
-function C8(t) {
+function I8(t) {
   return !t.resorptionType || t.resorptionType === "none" ? null : c("resorption.type." + $1(t.resorptionType));
 }
 function Wn(t) {
@@ -38678,9 +38678,9 @@ function _n(t) {
 function t3(t, e, a) {
   const i = [];
   for (const r of K2) {
-    if (!M2.has(r)) continue;
+    if (!x2.has(r)) continue;
     const o = e(t, r);
-    o > 0 && i.push(`${Z2(r, t)}: ${o}`);
+    o > 0 && i.push(`${w2(r, t)}: ${o}`);
   }
   return i.length === 0 ? null : `${c(a)} (${i.join(", ")})`;
 }
@@ -38712,7 +38712,7 @@ function r5(t) {
   return [
     qn(t),
     Yn(t),
-    C8(t)
+    I8(t)
   ].filter((e) => !!e);
 }
 function o5(t) {
@@ -38726,14 +38726,14 @@ function o5(t) {
   const a = e <= 2 ? "superficial" : e <= 4 ? "moderate" : "deep";
   return c("summary.severity." + a);
 }
-function P8(t) {
+function C8(t) {
   return t.brokenMesial || t.brokenIncisal || t.brokenDistal ? c("summary.fracture") : null;
 }
-function G8(t) {
+function P8(t) {
   const e = !!t.brokenMesial, a = !!t.brokenIncisal, i = !!t.brokenDistal;
   return e && i && a ? "tooth-broken-mesial-distal-incisal" : e && i ? "tooth-broken-mesial-distal" : i && a ? "tooth-broken-distal-incisal" : e && a ? "tooth-broken-mesial-incisal" : i ? "tooth-broken-distal" : e ? "tooth-broken-mesial" : a ? "tooth-broken-incisal" : null;
 }
-function T8() {
+function G8() {
   const t = re("toothSelection").map((i) => ({ value: i.value, label: c(i.labelKey) }));
   if (Fe() !== "plan") return t;
   const e = /* @__PURE__ */ new Set(["none", "tooth-base", "implant"]), a = E ? U.get(E)?.toothSelection : void 0;
@@ -38748,22 +38748,22 @@ function n5() {
 function e4() {
   return Si?.arches || null;
 }
-function D8() {
+function T8() {
   return re("mobility").map((t) => ({ value: t.value, label: c(t.labelKey) }));
 }
-function O8(t) {
-  const e = t?.toothSelection === "implant", a = d2(t?.toothSelection), i = Xt(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
+function D8(t) {
+  const e = t?.toothSelection === "implant", a = d2(t?.toothSelection), i = _t(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
   return e || a || i;
 }
-function A8(t) {
-  const e = t?.toothSelection === "implant", a = Xt(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
+function O8(t) {
+  const e = t?.toothSelection === "implant", a = _t(t?.toothSelection) || t?.toothSelection === "none" && t?.extractionWound;
   return t?.toothSelection === "none" || a || e;
 }
 const a4 = /* @__PURE__ */ new Set([1, 2, 3, 4, 5, 6]);
 function l5(t) {
   return t <= 2 ? 1 : t <= 4 ? 2 : 3;
 }
-function U8(t) {
+function A8(t) {
   return t === "deep" ? 6 : t === "dentin" ? 4 : 2;
 }
 function s5(t) {
@@ -38777,7 +38777,7 @@ function c5() {
     { value: 6, label: c("caries.depth.deep") }
   ];
 }
-const E8 = {
+const U8 = {
   0: "caries.cars.0",
   1: "caries.cars.1",
   2: "caries.cars.2",
@@ -38786,19 +38786,19 @@ const E8 = {
   5: "caries.cars.5",
   6: "caries.cars.6"
 };
-function L8(t = xr) {
-  return (t === "simple" ? [0, 3] : t === "full" ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 3, 6]).map((a) => ({ value: a, label: c(E8[a]) }));
+function E8(t = xr) {
+  return (t === "simple" ? [0, 3] : t === "full" ? [0, 1, 2, 3, 4, 5, 6] : [0, 1, 3, 6]).map((a) => ({ value: a, label: c(U8[a]) }));
 }
-function H8(t = _i) {
-  return t === "severity" ? Array.from(R5).map((e) => ({ value: e, label: c("rootCaries." + $1(e)) })) : [
+function L8(t = _i) {
+  return t === "severity" ? Array.from(N5).map((e) => ({ value: e, label: c("rootCaries." + $1(e)) })) : [
     { value: "none", label: c("rootCaries.none") },
     { value: "active-cavitated", label: c("rootCaries.present") }
   ];
 }
-function j8(t, e) {
+function H8(t, e) {
   return t === "simple" ? e && e !== "none" ? "active-cavitated" : "none" : e || "none";
 }
-function N8(t = Qi) {
+function j8(t = Qi) {
   return t === "off" ? [] : t === "threeLevel" ? [
     { value: "none", label: c("radiographicDepth.none") },
     { value: "E1", label: c("radiographicDepth.superficial") },
@@ -38806,12 +38806,12 @@ function N8(t = Qi) {
     { value: "D3", label: c("radiographicDepth.deep") }
   ] : ["none", "E1", "E2", "D1", "D2", "D3"].map((e) => ({ value: e, label: c("radiographicDepth." + e) }));
 }
-function R8(t, e, a) {
+function N8(t, e, a) {
   if (!t.fillingSurfaceMaterials.has(e)) return;
   const i = `caries-${e}`;
   a > 0 ? (t.caries.add(i), t.cariesSeverity.set(e, a)) : (t.caries.delete(i), t.cariesSeverity.delete(e));
 }
-function V8(t, e, a) {
+function R8(t, e, a) {
   a && a !== "none" ? t.set(e, a) : t.delete(e);
 }
 function d5(t, e, a) {
@@ -38820,7 +38820,7 @@ function d5(t, e, a) {
 function $1(t) {
   return String(t).replace(/-([a-z])/g, (e, a) => a.toUpperCase());
 }
-const F8 = {
+const V8 = {
   none: "normal",
   "pulpa-sana": "normal",
   "hyperaemia-pulpae": "reversible-pulpitis",
@@ -38837,32 +38837,32 @@ const F8 = {
   "irreversible-pulpitis": "pulpitis-acuta-serosa",
   necrosis: "necrosis-pulpae"
 };
-function B8(t) {
-  return t === "latin" && rn("pulpLatin", { latinPulpDetail: !0 }) ? Array.from(D5).filter((e) => e !== "none").map((e) => ({ value: e, labelKey: "pulpLatin." + $1(e) })) : t === "simple" ? [
+function F8(t) {
+  return t === "latin" && rn("pulpLatin", { latinPulpDetail: !0 }) ? Array.from(T5).filter((e) => e !== "none").map((e) => ({ value: e, labelKey: "pulpLatin." + $1(e) })) : t === "simple" ? [
     { value: "normal", labelKey: "pulpDx.normal" },
     { value: "irreversible-pulpitis", labelKey: "pulpDx.irreversiblePulpitis" }
-  ] : Array.from(T5).map((e) => ({ value: e, labelKey: "pulpDx." + $1(e) }));
+  ] : Array.from(G5).map((e) => ({ value: e, labelKey: "pulpDx." + $1(e) }));
 }
-function K8(t) {
+function B8(t) {
   return t.apicalDx === "symptomatic-apical-periodontitis" || t.apicalDx === "asymptomatic-apical-periodontitis";
 }
-function q8(t, e) {
-  return t === "latin" ? { pulpLatin: e, pulpDx: F8[e] ?? "normal" } : { pulpDx: e, pulpLatin: "none" };
+function K8(t, e) {
+  return t === "latin" ? { pulpLatin: e, pulpDx: V8[e] ?? "normal" } : { pulpDx: e, pulpLatin: "none" };
 }
-function Y8(t, e) {
+function q8(t, e) {
   const a = e.pulpDx ?? "normal", i = e.pulpLatin ?? "none";
   return t === "simple" ? a === "normal" ? "normal" : "irreversible-pulpitis" : t === "latin" ? i !== "none" ? i : p5[a] ?? "pulpa-sana" : a;
 }
-function W8() {
-  return B8(Le).map((t) => ({ value: t.value, label: c(t.labelKey) }));
+function Y8() {
+  return F8(Le).map((t) => ({ value: t.value, label: c(t.labelKey) }));
 }
 function f5(t) {
-  return t !== "none" && P5.has(t);
+  return t !== "none" && C5.has(t);
 }
-function J8(t) {
-  return t.endo && t.endo !== "none" ? t.endo : Y8(Le, t);
+function W8(t) {
+  return t.endo && t.endo !== "none" ? t.endo : q8(Le, t);
 }
-function _8(t, e) {
+function J8(t, e) {
   if (e === "none") {
     t.endo = "none";
     return;
@@ -38871,38 +38871,38 @@ function _8(t, e) {
     t.endo = e, t.pulpDx = "normal", t.pulpLatin = "none";
   else {
     t.endo = "none";
-    const a = q8(Le, e);
+    const a = K8(Le, e);
     t.pulpDx = a.pulpDx, t.pulpLatin = a.pulpLatin;
   }
 }
+function _8() {
+  return Array.from(D5).map((t) => ({ value: t, label: c("apicalDx." + $1(t)) }));
+}
 function Q8() {
-  return Array.from(O5).map((t) => ({ value: t, label: c("apicalDx." + $1(t)) }));
+  return Array.from(O5).map((t) => ({ value: t, label: c("resorption.type." + $1(t)) }));
 }
 function X8() {
-  return Array.from(A5).map((t) => ({ value: t, label: c("resorption.type." + $1(t)) }));
+  return Array.from(A5).map((t) => ({ value: t, label: c("wearType." + t) }));
 }
 function $8() {
   return Array.from(U5).map((t) => ({ value: t, label: c("wearType." + t) }));
 }
 function tc() {
-  return Array.from(E5).map((t) => ({ value: t, label: c("wearType." + t) }));
-}
-function ec() {
-  return Array.from(L5).map((t) => ({ value: t, label: c("discoloration." + t) }));
+  return Array.from(E5).map((t) => ({ value: t, label: c("discoloration." + t) }));
 }
 function h5() {
-  return Array.from(H5).map((t) => ({ value: t, label: c("ortho.appliance." + t) }));
+  return Array.from(L5).map((t) => ({ value: t, label: c("ortho.appliance." + t) }));
 }
 function m5() {
-  return Array.from(j5).map((t) => ({ value: t, label: c("ortho.drift." + t) }));
+  return Array.from(H5).map((t) => ({ value: t, label: c("ortho.drift." + t) }));
 }
 function v5() {
-  return Array.from(N5).map((t) => ({ value: t, label: c("ortho.vertical." + t) }));
+  return Array.from(j5).map((t) => ({ value: t, label: c("ortho.vertical." + t) }));
 }
 function zr(t) {
   return t?.toothSelection === "tooth-base" && t?.restorationType === "none" && t?.toothSubstrate === "natural";
 }
-const ac = {
+const ec = {
   tetracycline: "#9c8f7a",
   fluorosis: "#d9c9a3",
   nonvital: "#a89a8a",
@@ -38915,9 +38915,9 @@ function e3(t) {
 function a3(t) {
   return t?.toothSelection === "tooth-base" || t?.toothSelection === "milktooth";
 }
-function ic() {
+function ac() {
   if (E == null) return null;
-  const t = U.get(E) ?? h1(), e = h5();
+  const t = U.get(E) ?? m1(), e = h5();
   e.some((n) => n.value === t.orthoAppliance) || (t.orthoAppliance = e[0]?.value ?? "none");
   const a = m5();
   a.some((n) => n.value === t.orthoDrift) || (t.orthoDrift = a[0]?.value ?? "none");
@@ -38935,38 +38935,38 @@ function ic() {
     visible: o
   };
 }
-function rc(t) {
+function ic(t) {
   n1((e) => {
     e.orthoAppliance = t;
   });
 }
-function oc(t) {
+function rc(t) {
   n1((e) => {
     e.orthoDrift = t;
   });
 }
-function nc(t) {
+function oc(t) {
   n1((e) => {
     e.orthoVertical = t;
   });
 }
-function lc(t) {
+function nc(t) {
   n1((e) => {
     e.orthoRotation = t;
   });
 }
-const sc = [
+const lc = [
   { value: "caries-buccal", surface: "buccal", pos: "buccal" },
   { value: "caries-mesial", surface: "mesial", pos: "mesial" },
   { value: "caries-occlusal", surface: "occlusal", pos: "occlusal" },
   { value: "caries-distal", surface: "distal", pos: "distal" },
   { value: "caries-lingual", surface: "lingual", pos: "lingual" }
 ];
-function cc() {
-  const t = (E != null ? U.get(E) : null) ?? h1(), e = Fe() === "plan", a = E ?? null, i = t.restorationType !== "none", r = t.toothSelection === "none" && (t.prosthesis === "removable-partial" || t.prosthesis === "removable-full"), o = i || r;
+function sc() {
+  const t = (E != null ? U.get(E) : null) ?? m1(), e = Fe() === "plan", a = E ?? null, i = t.restorationType !== "none", r = t.toothSelection === "none" && (t.prosthesis === "removable-partial" || t.prosthesis === "removable-full"), o = i || r;
   return {
-    surfaces: sc.map((d) => {
-      const l = t.cariesSeverity.get(d.surface) || 2, f = t.radiographicDepth?.get(d.surface), p = Qi !== "off" && f && f !== "none" ? f : null;
+    surfaces: lc.map((d) => {
+      const s = t.cariesSeverity.get(d.surface) || 2, f = t.radiographicDepth?.get(d.surface), p = Qi !== "off" && f && f !== "none" ? f : null;
       return {
         value: d.value,
         surface: d.surface,
@@ -38976,8 +38976,8 @@ function cc() {
         checked: t.caries.has(d.value),
         // Same disable predicate the sync used for the 5 surface checkboxes.
         disabled: o || i,
-        depth: s5(l),
-        icdas: l,
+        depth: s5(s),
+        icdas: s,
         isIcdas: Ka,
         radio: p
       };
@@ -38986,15 +38986,15 @@ function cc() {
     subcrownDisabled: !i,
     subcrownLabel: c("surface.subcrown"),
     cariesActiveDepth: t.cariesActiveDepth,
-    rootCariesDisplay: j8(_i, t.rootCaries),
+    rootCariesDisplay: H8(_i, t.rootCaries),
     cariesDepthVisible: qa && !e,
-    rootCariesVisible: nt(t.toothSelection) && !e,
-    cariesSectionVisible: dc(t, e)
+    rootCariesVisible: ot(t.toothSelection) && !e,
+    cariesSectionVisible: cc(t, e)
   };
 }
-function dc(t, e) {
-  const a = d2(t.toothSelection), i = Xt(t.toothSelection) || t.toothSelection === "none" && t.extractionWound, r = a1.size > 0 ? Array.from(a1) : [], o = r.length > 0 && r.some((l) => {
-    const f = U.get(l)?.toothSelection;
+function cc(t, e) {
+  const a = d2(t.toothSelection), i = _t(t.toothSelection) || t.toothSelection === "none" && t.extractionWound, r = a1.size > 0 ? Array.from(a1) : [], o = r.length > 0 && r.some((s) => {
+    const f = U.get(s)?.toothSelection;
     return f === "implant" || f === "none" || f === "tooth-under-gum" || f === "no-tooth-after-extraction";
   }), n = t.toothSelection === "implant" || t.toothSelection === "none" || a || i || o, d = t.toothSubstrate === "radix";
   return !(n || d || e);
@@ -39004,28 +39004,28 @@ function i4(t, e) {
     e ? (a.caries.add(t), t !== "caries-subcrown" && a.cariesSeverity.set(t.replace("caries-", ""), a.cariesActiveDepth)) : (a.caries.delete(t), a.cariesSeverity.delete(t.replace("caries-", "")));
   });
 }
-function pc(t) {
+function dc(t) {
   n1((e) => {
     e.cariesActiveDepth = Number(t);
   });
 }
-function fc(t) {
+function pc(t) {
   n1((e) => {
     e.rootCaries = t;
   });
 }
-const hc = [
+const fc = [
   { value: "buccal", surface: "buccal", pos: "buccal" },
   { value: "mesial", surface: "mesial", pos: "mesial" },
   { value: "occlusal", surface: "occlusal", pos: "occlusal" },
   { value: "distal", surface: "distal", pos: "distal" },
   { value: "lingual", surface: "lingual", pos: "lingual" }
 ];
-function mc() {
-  const t = E != null ? U.get(E) : null, e = t ?? h1(), a = E ?? null, i = e.toothSelection === "milktooth", r = w8(i);
+function hc() {
+  const t = E != null ? U.get(E) : null, e = t ?? m1(), a = E ?? null, i = e.toothSelection === "milktooth", r = M8(i);
   let o = e.fillingMaterial;
   r.some((I) => I.value === o) || (o = r[0]?.value ?? "none", t && (t.fillingMaterial = o));
-  const n = hc.map((I) => {
+  const n = fc.map((I) => {
     const D = I.surface, A = e.fillingSurfaceMaterials.has(D), H = A && e.caries.has(`caries-${D}`), R = e.cariesSeverity.get(D) || 2, N = e.fillingDefect?.get(D), S = A && !!N && N !== "none";
     return {
       value: I.value,
@@ -39043,43 +39043,43 @@ function mc() {
       hasDefect: S,
       defectValue: S ? String(N) : null
     };
-  }), d = e.restorationType !== "none", l = o !== "none" && !d, f = Ei === "simple", p = e.fillingSurfaceMaterials.size, v = [...e.fillingSurfaceMaterials.keys()][0], k = v ? e.fillingDefect?.get(v) ?? "none" : "none", x = a1.size > 0 ? Array.from(a1) : [], u = x.length > 0 ? x : E != null ? [E] : [], y = u.length > 0 && u.every((I) => {
+  }), d = e.restorationType !== "none", s = o !== "none" && !d, f = Ei === "simple", p = e.fillingSurfaceMaterials.size, v = [...e.fillingSurfaceMaterials.keys()][0], k = v ? e.fillingDefect?.get(v) ?? "none" : "none", x = a1.size > 0 ? Array.from(a1) : [], u = x.length > 0 ? x : E != null ? [E] : [], y = u.length > 0 && u.every((I) => {
     const D = U.get(I);
     return !!D && D.toothSelection === "tooth-base" && bn.has(I);
-  }), h = u.length === 0 ? !0 : y && Li, C = d2(e.toothSelection), w = Xt(e.toothSelection) || e.toothSelection === "none" && e.extractionWound, g = x.length > 0 && x.some((I) => {
+  }), h = u.length === 0 ? !0 : y && Li, T = d2(e.toothSelection), w = _t(e.toothSelection) || e.toothSelection === "none" && e.extractionWound, g = x.length > 0 && x.some((I) => {
     const D = U.get(I)?.toothSelection;
     return D === "implant" || D === "none" || D === "tooth-under-gum" || D === "no-tooth-after-extraction";
-  }), Z = e.toothSelection === "implant" || e.toothSelection === "none" || C || w || g, G = e.toothSelection === "tooth-base" && d;
+  }), Z = e.toothSelection === "implant" || e.toothSelection === "none" || T || w || g, P = e.toothSelection === "tooth-base" && d;
   return {
     surfaces: n,
     fillingMaterial: o,
     fillingOptions: r,
-    surfaceGridVisible: l && !f,
+    surfaceGridVisible: s && !f,
     defectDisabled: !La,
     simpleMode: f,
-    simpleRowVisible: l && f,
+    simpleRowVisible: s && f,
     simpleToggleChecked: p > 0,
-    simpleDefectRowVisible: l && f && La && p > 0,
+    simpleDefectRowVisible: s && f && La && p > 0,
     simpleDefectValue: k,
-    simpleDefectOptions: M8(),
+    simpleDefectOptions: x8(),
     fissureSealing: !!e.fissureSealing,
     fissureRowVisible: h,
-    fillingSectionVisible: !(Z || G),
-    subcariesSummary: pd(x, (I) => U.get(I)),
-    defectSummary: hd(x, (I) => U.get(I))
+    fillingSectionVisible: !(Z || P),
+    subcariesSummary: dd(x, (I) => U.get(I)),
+    defectSummary: fd(x, (I) => U.get(I))
   };
 }
-function vc(t) {
+function mc(t) {
   n1((e) => {
     e.fillingMaterial = t, t === "none" && (e.fillingSurfaces.clear(), e.fillingSurfaceMaterials.clear());
   });
 }
-function gc(t, e) {
+function vc(t, e) {
   n1((a) => {
     e && a.fillingMaterial !== "none" ? (a.fillingSurfaces.add(t), a.fillingSurfaceMaterials.set(t, a.fillingMaterial)) : (a.fillingSurfaces.delete(t), a.fillingSurfaceMaterials.delete(t));
   });
 }
-function yc(t) {
+function gc(t) {
   n1((e) => {
     if (t) {
       const a = e.fillingMaterial !== "none" ? e.fillingMaterial : "composite";
@@ -39089,39 +39089,39 @@ function yc(t) {
       e.fillingSurfaceMaterials.clear(), e.fillingSurfaces.clear(), e.fillingDefect.clear();
   });
 }
-function uc(t) {
+function yc(t) {
   n1((e) => {
     for (const a of e.fillingSurfaceMaterials.keys())
       d5(e.fillingDefect, a, t);
   });
 }
-function kc(t) {
+function uc(t) {
   n1((e) => {
     e.fissureSealing = t;
   });
 }
-function bc() {
-  return Array.from(V5).map((t) => ({ value: t, label: c("periImplant." + $1(t)) }));
+function kc() {
+  return Array.from(R5).map((t) => ({ value: t, label: c("periImplant." + $1(t)) }));
 }
-function xc(t, e) {
+function bc(t, e) {
   t.periImplant = e;
 }
-function Mc() {
-  const t = (E != null ? U.get(E) : null) ?? h1(), e = Fe() === "plan", a = t.toothSelection === "milktooth", i = t.toothSelection === "implant", r = nt(t.toothSelection), o = d2(t.toothSelection), n = Xt(t.toothSelection) || t.toothSelection === "none" && t.extractionWound, d = Q8();
+function xc() {
+  const t = (E != null ? U.get(E) : null) ?? m1(), e = Fe() === "plan", a = t.toothSelection === "milktooth", i = t.toothSelection === "implant", r = ot(t.toothSelection), o = d2(t.toothSelection), n = _t(t.toothSelection) || t.toothSelection === "none" && t.extractionWound, d = _8();
   d.some((D) => D.value === t.apicalDx) || (t.apicalDx = d[0]?.value ?? "normal");
-  const l = L7();
-  l.some((D) => D.value === t.periapicalType) || (t.periapicalType = l[0]?.value ?? "none");
-  const f = X8();
+  const s = E7();
+  s.some((D) => D.value === t.periapicalType) || (t.periapicalType = s[0]?.value ?? "none");
+  const f = Q8();
   f.some((D) => D.value === t.resorptionType) || (t.resorptionType = f[0]?.value ?? "none");
-  const p = D8();
+  const p = T8();
   p.some((D) => D.value === t.mobility) || (t.mobility = p[0]?.value ?? "none");
-  const v = bc();
+  const v = kc();
   v.some((D) => D.value === t.periImplant) || (t.periImplant = v[0]?.value ?? "none");
-  const k = J8(t);
+  const k = W8(t);
   let x = null, u, y;
   if (!e)
     u = [
-      { label: c("pulpEndo.groupVital"), options: W8() },
+      { label: c("pulpEndo.groupVital"), options: Y8() },
       { label: c("pulpEndo.groupTreated"), options: Jo(a).filter((D) => D.value !== "none") }
     ], y = k;
   else {
@@ -39130,10 +39130,10 @@ function Mc() {
       { label: c("pulpEndo.groupTreated"), options: D.filter((H) => H.value !== "none") }
     ], y = f5(k) ? k : "none";
   }
-  const h = !r || o || n, C = a1.size > 0 ? Array.from(a1) : [], w = C.length > 0 && C.some((D) => {
+  const h = !r || o || n, T = a1.size > 0 ? Array.from(a1) : [], w = T.length > 0 && T.some((D) => {
     const A = U.get(D)?.toothSelection;
     return A === "implant" || A === "none" || A === "tooth-under-gum" || A === "no-tooth-after-extraction";
-  }), g = C.length > 0 && C.some((D) => U.get(D)?.toothSelection === "none"), Z = i || t.toothSelection === "none" || o || n || w, G = t.toothSelection === "none" || g, I = wn.map((D) => D.value === "parodontal" ? {
+  }), g = T.length > 0 && T.some((D) => U.get(D)?.toothSelection === "none"), Z = i || t.toothSelection === "none" || o || n || w, P = t.toothSelection === "none" || g, I = wn.map((D) => D.value === "parodontal" ? {
     value: "parodontal",
     label: c("mods.parodontal"),
     checked: t.mods.has("parodontal"),
@@ -39151,9 +39151,9 @@ function Mc() {
   return {
     // The section collapses only when BOTH blocks would be gone; the root block
     // stays visible in Plan so endo TREATMENT remains plannable.
-    sectionVisible: !(Z && (G || e)),
+    sectionVisible: !(Z && (P || e)),
     rootBlockVisible: !Z,
-    perioBlockVisible: !(G || e),
+    perioBlockVisible: !(P || e),
     pulpEndoValue: y,
     pulpEndoNoneOption: x,
     pulpEndoGroups: u,
@@ -39163,8 +39163,8 @@ function Mc() {
     apicalDxDisabled: h,
     apicalDxRowVisible: !e,
     periapicalTypeValue: t.periapicalType,
-    periapicalTypeOptions: l,
-    periapicalRowVisible: K8(t) && !e,
+    periapicalTypeOptions: s,
+    periapicalRowVisible: B8(t) && !e,
     resorptionValue: t.resorptionType,
     resorptionOptions: f,
     resorptionDisabled: h,
@@ -39175,8 +39175,8 @@ function Mc() {
     parapulpalPinDisabled: h,
     mobilityValue: t.mobility,
     mobilityOptions: p,
-    mobilityDisabled: A8(t),
-    mobilityRowVisible: !O8(t),
+    mobilityDisabled: O8(t),
+    mobilityRowVisible: !D8(t),
     perioRowVisible: !Mr(t),
     mods: I,
     calculusChecked: !!t.calculus,
@@ -39189,64 +39189,64 @@ function Mc() {
     periImplantRowVisible: i
   };
 }
-function wc(t) {
+function Mc(t) {
   n1((e) => {
-    _8(e, t);
+    J8(e, t);
   });
 }
-function Zc(t) {
+function wc(t) {
   n1((e) => {
     e.apicalDx = t, t !== "symptomatic-apical-periodontitis" && t !== "asymptomatic-apical-periodontitis" && (e.periapicalType = "none");
   });
 }
-function Sc(t) {
+function Zc(t) {
   n1((e) => {
     e.periapicalType = t;
   });
 }
-function zc(t) {
+function Sc(t) {
   n1((e) => {
     e.resorptionType = t;
   });
 }
-function Ic(t) {
+function zc(t) {
   n1((e) => {
     e.endoResection = t;
   });
 }
-function Cc(t) {
+function Ic(t) {
   n1((e) => {
     e.parapulpalPin = t;
   });
 }
-function Pc(t) {
+function Cc(t) {
   n1((e) => {
     e.mobility = t;
   });
 }
-function Gc(t, e) {
+function Pc(t, e) {
   n1((a) => {
     e ? a.mods.add(t) : a.mods.delete(t);
   });
 }
-function Tc(t) {
+function Gc(t) {
   n1((e) => {
     e.calculus = t;
   });
 }
-function Dc(t) {
+function Tc(t) {
   n1((e) => {
-    xc(e, t);
+    bc(e, t);
   });
 }
-function Oc() {
+function Dc() {
   const t = a1.size > 0 ? Array.from(a1) : [], e = t.length > 0 ? t.some((a) => W3.has(Number(a))) : E ? W3.has(E) : !1;
-  return T8().map((a) => a.value === "milktooth" ? { ...a, disabled: e } : a);
+  return G8().map((a) => a.value === "milktooth" ? { ...a, disabled: e } : a);
 }
-function Ac() {
-  const t = Fe() === "plan", e = Oc(), a = z8(), i = $8(), r = tc(), o = ec(), n = S8(E);
+function Oc() {
+  const t = Fe() === "plan", e = Dc(), a = S8(), i = X8(), r = $8(), o = tc(), n = Z8(E);
   if (!(E != null)) {
-    const V = h1(), W = t4(n, { isImplant: !1, toothSelection: V.toothSelection });
+    const V = m1(), W = t4(n, { isImplant: !1, toothSelection: V.toothSelection });
     return {
       toothSelectValue: V.toothSelection,
       toothSelectOptions: e,
@@ -39294,199 +39294,199 @@ function Ac() {
       crownNeededRowVisible: !0
     };
   }
-  const l = U.get(E) ?? h1(), f = l.toothSelection === "milktooth", p = l.toothSelection === "implant", v = d2(l.toothSelection), k = Xt(l.toothSelection) || l.toothSelection === "none" && l.extractionWound;
-  i.some((V) => V.value === l.wearEdge) || (l.wearEdge = i[0]?.value ?? "none"), r.some((V) => V.value === l.wearCervical) || (l.wearCervical = r[0]?.value ?? "none"), o.some((V) => V.value === l.discoloration) || (l.discoloration = o[0]?.value ?? "none"), a.some((V) => V.value === l.toothSubstrate) || (l.toothSubstrate = a[0]?.value ?? "natural");
-  const x = t4(n, { isImplant: p, toothSelection: l.toothSelection }), u = l.prosthesis && l.prosthesis !== "none" ? `prosthesis|${l.prosthesis}` : `${l.restorationType}|${l.restorationMaterial}`;
+  const s = U.get(E) ?? m1(), f = s.toothSelection === "milktooth", p = s.toothSelection === "implant", v = d2(s.toothSelection), k = _t(s.toothSelection) || s.toothSelection === "none" && s.extractionWound;
+  i.some((V) => V.value === s.wearEdge) || (s.wearEdge = i[0]?.value ?? "none"), r.some((V) => V.value === s.wearCervical) || (s.wearCervical = r[0]?.value ?? "none"), o.some((V) => V.value === s.discoloration) || (s.discoloration = o[0]?.value ?? "none"), a.some((V) => V.value === s.toothSubstrate) || (s.toothSubstrate = a[0]?.value ?? "natural");
+  const x = t4(n, { isImplant: p, toothSelection: s.toothSelection }), u = s.prosthesis && s.prosthesis !== "none" ? `prosthesis|${s.prosthesis}` : `${s.restorationType}|${s.restorationMaterial}`;
   let y = x.some((V) => V.value === u) ? u : x[0]?.value ?? "";
   if (y.startsWith("prosthesis|")) {
     const V = y.slice(11);
-    l.prosthesis !== V && (l.prosthesis = V), l.restorationType = "none", l.restorationMaterial = "none";
+    s.prosthesis !== V && (s.prosthesis = V), s.restorationType = "none", s.restorationMaterial = "none";
   } else {
     const [V, W] = y.split("|");
-    (V !== l.restorationType || W !== l.restorationMaterial) && (l.restorationType = V || "none", l.restorationMaterial = W || "none"), l.prosthesis !== "none" && (l.prosthesis = "none");
+    (V !== s.restorationType || W !== s.restorationMaterial) && (s.restorationType = V || "none", s.restorationMaterial = W || "none"), s.prosthesis !== "none" && (s.prosthesis = "none");
   }
-  (f || v || k || l.toothSubstrate === "radix") && (l.restorationType = "none", l.restorationMaterial = "none", y = "none|none"), l.toothSelection !== "tooth-base" && (l.toothSubstrate = "natural");
-  const h = a1.size > 0 ? Array.from(a1) : [], C = h.length > 0 ? h : E ? [E] : [], w = Zr(l), g = l.toothSelection !== "tooth-base", Z = C.length > 0 && C.every((V) => {
+  (f || v || k || s.toothSubstrate === "radix") && (s.restorationType = "none", s.restorationMaterial = "none", y = "none|none"), s.toothSelection !== "tooth-base" && (s.toothSubstrate = "natural");
+  const h = a1.size > 0 ? Array.from(a1) : [], T = h.length > 0 ? h : E ? [E] : [], w = Zr(s), g = s.toothSelection !== "tooth-base", Z = T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return !(!(W && (W.toothSelection === "tooth-base" || W.toothSelection === "milktooth" || xn.has(W.toothSelection))) || W.toothSelection === "tooth-base" && W.restorationType !== "none");
-  }), G = !t && C.length > 0 && C.every((V) => {
+  }), P = !t && T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && zr(W);
-  }), I = !t && C.length > 0 && C.every((V) => {
+  }), I = !t && T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && e3(W);
-  }), D = C.length > 0 && C.every((V) => {
+  }), D = T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && ["tooth-base", "milktooth", "implant", "tooth-under-gum"].includes(W.toothSelection);
-  }), A = C.length > 0 && C.every((V) => {
+  }), A = T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && W.toothSelection === "tooth-base" && W.restorationType !== "none";
-  }), H = C.length > 0 && C.every((V) => {
+  }), H = T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && W.toothSelection === "tooth-base" && W.restorationType === "none" && ["natural", "broken", "crownprep"].includes(W.toothSubstrate);
-  }), R = C.length > 0 && C.every((V) => {
+  }), R = T.length > 0 && T.every((V) => {
     const W = U.get(V);
     return W && W.toothSelection === "none";
-  }), N = w, S = !N && l.restorationType !== "none", P = !N && (l.restorationType === "crown" || l.restorationType === "bridge"), b = l.toothSubstrate === "broken" && l.toothSelection === "tooth-base";
+  }), N = w, S = !N && s.restorationType !== "none", C = !N && (s.restorationType === "crown" || s.restorationType === "bridge"), b = s.toothSubstrate === "broken" && s.toothSelection === "tooth-base";
   let _, t1;
-  return b ? (_ = "brokenCrownRow", t1 = !1) : G ? (_ = "bruxismRow", t1 = !1) : (_ = "crownActionsRow", t1 = D), {
-    toothSelectValue: l.toothSelection,
+  return b ? (_ = "brokenCrownRow", t1 = !1) : P ? (_ = "bruxismRow", t1 = !1) : (_ = "crownActionsRow", t1 = D), {
+    toothSelectValue: s.toothSelection,
     toothSelectOptions: e,
-    substrateValue: l.toothSubstrate,
+    substrateValue: s.toothSubstrate,
     substrateOptions: a,
     substrateRowVisible: !g,
-    extractionWoundChecked: !!l.extractionWound,
-    extractionRowVisible: l.toothSelection === "none",
-    missingClosedChecked: !!l.missingClosed,
+    extractionWoundChecked: !!s.extractionWound,
+    extractionRowVisible: s.toothSelection === "none",
+    missingClosedChecked: !!s.missingClosed,
     missingClosedRowVisible: R,
     restorationValue: y,
     restorationOptions: x,
     restorationRowVisible: !w,
-    crownLeakageChecked: !!l.crownLeakage,
-    crownLeakageRowVisible: P,
-    brokenMesialChecked: !!l.brokenMesial,
-    brokenIncisalChecked: !!l.brokenIncisal,
-    brokenDistalChecked: !!l.brokenDistal,
-    brokenCrownRowVisible: !(l.toothSubstrate !== "broken" || g),
-    contactMesialChecked: !!l.contactMesial,
-    contactDistalChecked: !!l.contactDistal,
+    crownLeakageChecked: !!s.crownLeakage,
+    crownLeakageRowVisible: C,
+    brokenMesialChecked: !!s.brokenMesial,
+    brokenIncisalChecked: !!s.brokenIncisal,
+    brokenDistalChecked: !!s.brokenDistal,
+    brokenCrownRowVisible: !(s.toothSubstrate !== "broken" || g),
+    contactMesialChecked: !!s.contactMesial,
+    contactDistalChecked: !!s.contactDistal,
     contactPointRowVisible: Z,
-    bruxismRowVisible: G,
-    wearSimple: n8() === "simple",
-    wearEdgeValue: l.wearEdge,
+    bruxismRowVisible: P,
+    wearSimple: o8() === "simple",
+    wearEdgeValue: s.wearEdge,
     wearEdgeOptions: i,
-    wearEdgeToggleChecked: l.wearEdge !== "none",
-    wearCervicalValue: l.wearCervical,
+    wearEdgeToggleChecked: s.wearEdge !== "none",
+    wearCervicalValue: s.wearCervical,
     wearCervicalOptions: r,
-    wearCervicalToggleChecked: l.wearCervical !== "none",
+    wearCervicalToggleChecked: s.wearCervical !== "none",
     discolorationRowVisible: I,
-    discoSimple: l8() === "simple",
-    discolorationValue: l.discoloration,
+    discoSimple: n8() === "simple",
+    discolorationValue: s.discoloration,
     discolorationOptions: o,
-    discolorationToggleChecked: l.discoloration !== "none",
+    discolorationToggleChecked: s.discoloration !== "none",
     crownActionsRowVisible: t1,
-    bridgePillarChecked: !!l.bridgePillar,
+    bridgePillarChecked: !!s.bridgePillar,
     bridgePillarRowVisible: S,
-    extractionPlanChecked: !!l.extractionPlan,
+    extractionPlanChecked: !!s.extractionPlan,
     extractionPlanRowVisible: D,
     extractionPlanParent: _,
-    crownReplaceChecked: !!l.crownReplace,
+    crownReplaceChecked: !!s.crownReplace,
     crownReplaceRowVisible: A,
-    crownNeededChecked: !!l.crownNeeded,
+    crownNeededChecked: !!s.crownNeeded,
     crownNeededRowVisible: H
   };
 }
-function Uc(t) {
+function Ac(t) {
   n1((e, a) => {
     if (t === "milktooth" && W3.has(a))
       return;
-    const i = h1();
+    const i = m1();
     i.toothSelection = t, ["tooth-base", "milktooth", "implant", "tooth-under-gum"].includes(t) || (i.extractionPlan = !1), t !== "none" && (i.extractionWound = !1), (t === "implant" || t === "none") && (i.caries.clear(), i.endo = "none", i.pulpDx = "normal", i.fillingMaterial = "none", i.fillingSurfaces.clear()), U.set(a, i);
   }), t !== "none" && Ke(!1);
 }
-function Ec(t) {
+function Uc(t) {
   n1((e) => {
     e.toothSubstrate = t, t !== "broken" && (e.brokenMesial = !1, e.brokenIncisal = !1, e.brokenDistal = !1), (!["natural", "broken", "crownprep"].includes(t) || e.restorationType !== "none") && (e.crownNeeded = !1);
   }), Ke(!1);
 }
-function Lc(t) {
+function Ec(t) {
   const e = String(t);
   n1((a) => {
-    I8(a, e);
+    z8(a, e);
   }), Ke(!1);
 }
-function Hc(t) {
+function Lc(t) {
   n1((e) => {
     e.extractionWound = t;
   });
 }
-function jc(t) {
+function Hc(t) {
   n1((e) => {
     e.extractionPlan = t;
   });
 }
-function Nc(t) {
+function jc(t) {
   n1((e) => {
     e.crownReplace = t;
   });
 }
-function Rc(t) {
+function Nc(t) {
   n1((e) => {
     e.crownNeeded = t;
   });
 }
-function Vc(t) {
+function Rc(t) {
   n1((e) => {
     e.crownLeakage = t;
   });
 }
-function Fc(t) {
+function Vc(t) {
   n1((e) => {
     e.missingClosed = t;
   });
 }
-function Bc(t) {
+function Fc(t) {
   n1((e) => {
     e.contactMesial = t;
   });
 }
-function Kc(t) {
+function Bc(t) {
   n1((e) => {
     e.contactDistal = t;
   });
 }
-function qc(t) {
+function Kc(t) {
   n1((e) => {
     e.bridgePillar = t;
   });
 }
-function Yc(t) {
+function qc(t) {
   n1((e) => {
     e.brokenMesial = t;
   });
 }
-function Wc(t) {
+function Yc(t) {
   n1((e) => {
     e.brokenIncisal = t;
   });
 }
-function Jc(t) {
+function Wc(t) {
   n1((e) => {
     e.brokenDistal = t;
   });
 }
-function _c(t) {
+function Jc(t) {
   n1((e) => {
     e.wearEdge = t;
   });
 }
-function Qc(t) {
+function _c(t) {
   n1((e) => {
     e.wearCervical = t;
   });
 }
-function Xc(t) {
+function Qc(t) {
   n1((e) => {
     e.discoloration = t;
   });
 }
-function $c(t) {
+function Xc(t) {
   n1((e) => {
     e.wearEdge = t ? "attrition" : "none";
   });
 }
-function td(t) {
+function $c(t) {
   n1((e) => {
     e.wearCervical = t ? "abrasion" : "none";
   });
 }
-function ed(t) {
+function td(t) {
   n1((e) => {
     e.discoloration = t ? "other" : "none";
   });
 }
-function ph() {
-  a1.size !== 0 && vd(Array.from(a1));
+function dh() {
+  a1.size !== 0 && md(Array.from(a1));
 }
 function r4(t, e) {
   for (let a = 1; a <= 8; a++)
@@ -39499,17 +39499,17 @@ function g5(t, e, a = U.get(t)) {
     const D = F(e, I);
     D && D.hasAttribute("data-active") && D.setAttribute("data-active", "1");
   }
-  for (const I of ks()) Y(F(e, I), !1);
-  const r = a.restorationType !== "none", o = a.toothSubstrate === "broken" ? G8(a) : null, n = a.toothSelection === "implant", d = a.toothSelection === "milktooth", l = d && e.getAttribute("data-dentition-variant") === "primary", f = d2(a.toothSelection), p = Xt(a.toothSelection) || a.toothSelection === "none" && a.extractionWound, v = a.toothSelection === "none" && (a.prosthesis === "removable-partial" || a.prosthesis === "removable-full"), k = a.toothSelection === "none", x = r || v, u = e.querySelector('[id$="-onlay"]') ? "occlusal" : "front", y = {
+  for (const I of us()) Y(F(e, I), !1);
+  const r = a.restorationType !== "none", o = a.toothSubstrate === "broken" ? P8(a) : null, n = a.toothSelection === "implant", d = a.toothSelection === "milktooth", s = d && e.getAttribute("data-dentition-variant") === "primary", f = d2(a.toothSelection), p = _t(a.toothSelection) || a.toothSelection === "none" && a.extractionWound, v = a.toothSelection === "none" && (a.prosthesis === "removable-partial" || a.prosthesis === "removable-full"), k = a.toothSelection === "none", x = r || v, u = e.querySelector('[id$="-onlay"]') ? "occlusal" : "front", y = {
     setActive: Y,
     svgGetById: F,
-    isToothPresent: nt,
+    isToothPresent: ot,
     isUnderGum: d2,
-    isExtraction: Xt,
+    isExtraction: _t,
     fissureAllowedTeeth: bn,
     brokenVariants: xn
   };
-  if (xs(e, a, bs(a, t, y), y), a.resorptionType !== "none" && nt(a.toothSelection) && Y(F(e, "endo-resorption"), !0), a.toothSelection === "tooth-base" && a.restorationType === "none" && a.toothSubstrate === "natural" && (a.wearEdge !== "none" && Y(F(e, "tooth-bruxism-wear"), !0), a.wearCervical !== "none" && Y(F(e, "tooth-bruxism-neck-wear"), !0)), a.rootCaries !== "none" && nt(a.toothSelection) && u === "front") {
+  if (bs(e, a, ks(a, t, y), y), a.resorptionType !== "none" && ot(a.toothSelection) && Y(F(e, "endo-resorption"), !0), a.toothSelection === "tooth-base" && a.restorationType === "none" && a.toothSubstrate === "natural" && (a.wearEdge !== "none" && Y(F(e, "tooth-bruxism-wear"), !0), a.wearCervical !== "none" && Y(F(e, "tooth-bruxism-neck-wear"), !0)), a.rootCaries !== "none" && ot(a.toothSelection) && u === "front") {
     const I = F(e, "caries-root");
     Y(I, !0), I && (I.style.opacity = a.rootCaries === "active" ? "0.5" : a.rootCaries === "arrested" ? "0.7" : "1");
   }
@@ -39518,19 +39518,19 @@ function g5(t, e, a = U.get(t)) {
     const I = F(e, "peri-implant-bone-loss"), D = a.periImplant === "peri-implantitis-mild" ? "0.4" : a.periImplant === "peri-implantitis-moderate" ? "0.7" : a.periImplant === "peri-implantitis-severe" ? "1" : "";
     Y(I, D !== ""), I && D !== "" && (I.style.opacity = D);
   }
-  const C = a.pulpDx !== "normal", w = a.pulpDx === "reversible-pulpitis" || a.pulpLatin === "hyperaemia-pulpae", g = a.endo !== "none";
-  if (Y(F(e, "base"), S2), Y(F(e, "implant"), n), Y(F(e, "milktooth"), d && !l), n)
+  const T = a.pulpDx !== "normal", w = a.pulpDx === "reversible-pulpitis" || a.pulpLatin === "hyperaemia-pulpae", g = a.endo !== "none";
+  if (Y(F(e, "base"), Z2), Y(F(e, "implant"), n), Y(F(e, "milktooth"), d && !s), n)
     Y(F(e, "implant-base"), !0);
   else if (d) {
-    const I = l ? "tooth" : "milktooth";
+    const I = s ? "tooth" : "milktooth";
     Y(F(e, I + "-base"), !0), Y(
       F(e, I + "-base-beauty"),
-      l && a.toothSubstrate === "natural" && a.restorationType === "none"
-    ), Y(F(e, I + "-beauty"), !l), C ? g || (Y(F(e, I + "-inflam-pulp"), !0), r4(e, !w)) : Jt && !g && Y(F(e, I + "-healthy-pulp"), !0);
-  } else nt(a.toothSelection) && (a.toothSelection === "tooth-base" ? (Y(F(e, "tooth-base"), !0), Y(F(e, "tooth-base-beauty"), a.toothSubstrate === "natural" && a.restorationType === "none")) : Y(F(e, a.toothSelection), !0), !f && !p && (C ? g || (Y(F(e, "tooth-inflam-pulp"), !0), r4(e, !w)) : Jt && !g && Y(F(e, "tooth-healthy-pulp"), !0)));
+      s && a.toothSubstrate === "natural" && a.restorationType === "none"
+    ), Y(F(e, I + "-beauty"), !s), T ? g || (Y(F(e, I + "-inflam-pulp"), !0), r4(e, !w)) : Yt && !g && Y(F(e, I + "-healthy-pulp"), !0);
+  } else ot(a.toothSelection) && (a.toothSelection === "tooth-base" ? (Y(F(e, "tooth-base"), !0), Y(F(e, "tooth-base-beauty"), a.toothSubstrate === "natural" && a.restorationType === "none")) : Y(F(e, a.toothSelection), !0), !f && !p && (T ? g || (Y(F(e, "tooth-inflam-pulp"), !0), r4(e, !w)) : Yt && !g && Y(F(e, "tooth-healthy-pulp"), !0)));
   o && a.toothSelection === "tooth-base" && (Y(F(e, "tooth-base"), !1), Y(F(e, o), !0)), a.toothSubstrate === "radix" && a.toothSelection === "tooth-base" && (Y(F(e, "tooth-base"), !1), Y(F(e, "tooth-radix"), !0)), a.toothSubstrate === "crownprep" && a.toothSelection === "tooth-base" && (Y(F(e, "tooth-base"), !1), Y(F(e, "tooth-crownprep"), !0)), a.toothSelection === "none" && a.extractionWound && Y(F(e, "no-tooth-after-extraction"), !0);
   {
-    const I = e3(a) && a.discoloration !== "none", D = I && ac[a.discoloration] || "", A = a.toothSelection === "milktooth" && !l ? "milktooth-base" : "tooth-base";
+    const I = e3(a) && a.discoloration !== "none", D = I && ec[a.discoloration] || "", A = a.toothSelection === "milktooth" && !s ? "milktooth-base" : "tooth-base";
     for (const H of ["tooth-base", "milktooth-base"]) {
       const R = F(e, H);
       if (!R) continue;
@@ -39546,14 +39546,14 @@ function g5(t, e, a = U.get(t)) {
     };
     D("ortho-bracket", I && a.orthoAppliance === "bracket"), D("ortho-ring", I && a.orthoAppliance === "band"), D("arrow-mesial", I && a.orthoDrift === "mesial"), D("arrow-distal", I && a.orthoDrift === "distal"), D("arrow-up", I && a.orthoVertical === "extrusion"), D("arrow-down", I && a.orthoVertical === "intrusion"), D("arrow-rotation", I && a.orthoRotation === !0);
   }
-  const Z = nt(a.toothSelection) ? a.apicalDx !== "normal" : a.toothSelection === "implant" ? !1 : a.mods.has("inflammation");
+  const Z = ot(a.toothSelection) ? a.apicalDx !== "normal" : a.toothSelection === "implant" ? !1 : a.mods.has("inflammation");
   if (Z) {
     Y(F(e, "inflammation"), !0);
     const I = a.periapicalType === "cyst" ? "cysta" : a.periapicalType === "abscess" || a.apicalDx === "acute-apical-abscess" || a.apicalDx === "chronic-apical-abscess" ? "abscess" : "granuloma";
     Y(F(e, I), !0);
   } else n && Y(F(e, "inflammation"), !1);
-  if (a.mobility !== "none" && a.toothSelection !== "none" && !p && !n && Y(F(e, "mobility"), !0), nt(a.toothSelection) && !f && !p && (a.endo === "endo-medical-filling" ? Y(F(e, "endo-medical-filling"), !0) : a.endo === "endo-filling" ? Y(F(e, "endo-filling"), !0) : a.endo === "endo-glass-pin" ? (Y(F(e, "endo-filling"), !0), Y(F(e, "endo-glass-pin"), !0)) : a.endo === "endo-filling-incomplete" ? Y(F(e, "endo-filling-incomplete"), !0) : a.endo === "endo-metal-pin" && (Y(F(e, "endo-filling"), !0), Y(F(e, "endo-metal-pin"), !0))), v && (Y(F(e, "prosthesis"), !0), Y(F(e, "prosthesis-crown"), !0), Y(F(e, "prosthesis-connector"), !0)), n && (a.prosthesis === "healing-abutment" ? Y(F(e, "implant-healing-abutment"), !0) : a.restorationType === "crown" || a.restorationType === "bridge" ? Y(F(e, "implant-connector"), !0) : a.prosthesis === "locator" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0)) : a.prosthesis === "locator-denture" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0)) : a.prosthesis === "bar" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "implant-bar"), !0)) : a.prosthesis === "bar-denture" && (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "implant-bar"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0))), k && (Y(F(e, "restorations"), !0), a.prosthesis === "bar" ? (Y(F(e, "implant"), !0), Y(F(e, "implant-bar"), !0)) : a.prosthesis === "bar-denture" && (Y(F(e, "implant"), !0), Y(F(e, "implant-bar"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0))), a.restorationType !== "none" && a.restorationMaterial !== "none") {
-    const I = H7[a.restorationMaterial], D = ds({
+  if (a.mobility !== "none" && a.toothSelection !== "none" && !p && !n && Y(F(e, "mobility"), !0), ot(a.toothSelection) && !f && !p && (a.endo === "endo-medical-filling" ? Y(F(e, "endo-medical-filling"), !0) : a.endo === "endo-filling" ? Y(F(e, "endo-filling"), !0) : a.endo === "endo-glass-pin" ? (Y(F(e, "endo-filling"), !0), Y(F(e, "endo-glass-pin"), !0)) : a.endo === "endo-filling-incomplete" ? Y(F(e, "endo-filling-incomplete"), !0) : a.endo === "endo-metal-pin" && (Y(F(e, "endo-filling"), !0), Y(F(e, "endo-metal-pin"), !0))), v && (Y(F(e, "prosthesis"), !0), Y(F(e, "prosthesis-crown"), !0), Y(F(e, "prosthesis-connector"), !0)), n && (a.prosthesis === "healing-abutment" ? Y(F(e, "implant-healing-abutment"), !0) : a.restorationType === "crown" || a.restorationType === "bridge" ? Y(F(e, "implant-connector"), !0) : a.prosthesis === "locator" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0)) : a.prosthesis === "locator-denture" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0)) : a.prosthesis === "bar" ? (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "implant-bar"), !0)) : a.prosthesis === "bar-denture" && (Y(F(e, "restorations"), !0), Y(F(e, "implant"), !0), Y(F(e, "implant-connector"), !0), Y(F(e, "implant-locator-screw"), !0), Y(F(e, "implant-bar"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0))), k && (Y(F(e, "restorations"), !0), a.prosthesis === "bar" ? (Y(F(e, "implant"), !0), Y(F(e, "implant-bar"), !0)) : a.prosthesis === "bar-denture" && (Y(F(e, "implant"), !0), Y(F(e, "implant-bar"), !0), Y(F(e, "prosthesis-implant"), !0), Y(F(e, "prosthesis-implant-crown"), !0), Y(F(e, "prosthesis-implant-gum"), !0))), a.restorationType !== "none" && a.restorationMaterial !== "none") {
+    const I = L7[a.restorationMaterial], D = cs({
       type: a.restorationType,
       material: a.restorationMaterial,
       view: u,
@@ -39594,49 +39594,49 @@ function g5(t, e, a = U.get(t)) {
       for (const [I, D] of a.fillingDefect)
         D && D !== "none" && a.fillingSurfaceMaterials.has(I) && Y(F(e, `defect-${I}`), !0);
   }
-  const G = F(e, "inflammation");
-  if (G) {
-    !D3.has(G) && G.parentElement && D3.set(G, { parent: G.parentElement, next: G.nextSibling });
-    const I = a.endoResection && nt(a.toothSelection) && !f && !p, D = a.resorptionType !== "none" && nt(a.toothSelection);
+  const P = F(e, "inflammation");
+  if (P) {
+    !D3.has(P) && P.parentElement && D3.set(P, { parent: P.parentElement, next: P.nextSibling });
+    const I = a.endoResection && ot(a.toothSelection) && !f && !p, D = a.resorptionType !== "none" && ot(a.toothSelection);
     if ((I || D) && Z) {
       const H = F(e, "tooth"), R = H && H.parentElement || e;
-      R.lastElementChild !== G && R.appendChild(G);
+      R.lastElementChild !== P && R.appendChild(P);
     } else {
-      const H = D3.get(G);
+      const H = D3.get(P);
       if (H && H.parent) {
         const R = H.next && H.next.parentElement === H.parent ? H.next : null;
-        (G.parentElement !== H.parent || G.nextSibling !== R) && H.parent.insertBefore(G, R);
+        (P.parentElement !== H.parent || P.nextSibling !== R) && H.parent.insertBefore(P, R);
       }
     }
   }
-  c8(a);
+  s8(a);
 }
-const ad = "4 2", id = "#5b7a9d";
-function rd(t) {
+const ed = "4 2", ad = "#5b7a9d";
+function id(t) {
   const e = t.querySelectorAll ? t.querySelectorAll('[data-proposed="1"]') : [];
   for (const a of Array.from(e))
     a.getAttribute("data-base-dash") !== null && (a.style.strokeDasharray = a.getAttribute("data-base-dash") || ""), a.getAttribute("data-base-pstroke") !== null && (a.style.stroke = a.getAttribute("data-base-pstroke") || ""), a.removeAttribute("data-proposed");
 }
-function od(t) {
-  t.getAttribute("data-proposed") !== "1" && (t.getAttribute("data-base-dash") === null && t.setAttribute("data-base-dash", t.style.strokeDasharray || ""), t.getAttribute("data-base-pstroke") === null && t.setAttribute("data-base-pstroke", t.style.stroke || ""), t.style.strokeDasharray = ad, t.style.stroke = id, t.setAttribute("data-proposed", "1"));
+function rd(t) {
+  t.getAttribute("data-proposed") !== "1" && (t.getAttribute("data-base-dash") === null && t.setAttribute("data-base-dash", t.style.strokeDasharray || ""), t.getAttribute("data-base-pstroke") === null && t.setAttribute("data-base-pstroke", t.style.stroke || ""), t.style.strokeDasharray = ed, t.style.stroke = ad, t.setAttribute("data-proposed", "1"));
 }
-function nd(t, e) {
-  if (rd(e), s2 !== "plan" || !Dt) return;
+function od(t, e) {
+  if (id(e), s2 !== "plan" || !Dt) return;
   const a = new Set(o4(e).map((o) => o.id)), i = e.cloneNode(!0);
-  g5(t, i, A1.status.get(t) ?? h1());
+  g5(t, i, A1.status.get(t) ?? m1());
   const r = new Set(o4(i).map((o) => o.id));
   for (const o of a) {
     if (r.has(o)) continue;
     const n = F(e, o);
-    n && od(n);
+    n && rd(n);
   }
 }
-function tt(t) {
-  op(t);
+function ct(t) {
+  rp(t);
   const e = n2.get(t);
   if (e) {
     for (const a of e)
-      g5(t, a), nd(t, a);
+      g5(t, a), od(t, a);
     y5(t), ee(t);
   }
 }
@@ -39656,8 +39656,8 @@ function o4(t) {
       }
     }
     if (o || n) continue;
-    const l = (r.getAttribute("style") || "").match(/opacity:\s*([0-9.]+)/);
-    i.push({ id: r.getAttribute("id"), opacity: l ? l[1] : "", cls: r.getAttribute("class") || "" });
+    const s = (r.getAttribute("style") || "").match(/opacity:\s*([0-9.]+)/);
+    i.push({ id: r.getAttribute("id"), opacity: s ? s[1] : "", cls: r.getAttribute("class") || "" });
   }
   return i;
 }
@@ -39665,32 +39665,32 @@ function y5(t) {
   if (Ua.length === 0) return;
   const e = n2.get(t);
   if (!e) return;
-  const a = U.get(t), i = Pl(t);
+  const a = U.get(t), i = Cl(t);
   for (const r of e) {
     let o = tr.get(t);
     o || (o = /* @__PURE__ */ new Map(), tr.set(t, o));
     for (const n of Ua) {
       const d = o.get(n.id);
       d && d.parentElement && d.remove();
-      const l = a?.customStates?.[n.id];
+      const s = a?.customStates?.[n.id];
       let f;
       try {
-        f = n.renderSvg(t, i, l);
+        f = n.renderSvg(t, i, s);
       } catch {
         continue;
       }
       if (!f) continue;
-      const p = d0(f);
+      const p = c0(f);
       if (!p) {
         console.warn(`odontogram plugin "${n.id}": renderSvg() output was fully removed by sanitization — overlay skipped`);
         continue;
       }
       const v = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      v.setAttribute("data-plugin", n.id), v.setAttribute("data-layer", n.layer), v.innerHTML = p, ld(r, v, n.layer), o.set(n.id, v);
+      v.setAttribute("data-plugin", n.id), v.setAttribute("data-layer", n.layer), v.innerHTML = p, nd(r, v, n.layer), o.set(n.id, v);
     }
   }
 }
-function ld(t, e, a) {
+function nd(t, e, a) {
   const i = Wr[a] ?? 6, r = t.querySelectorAll("g[data-plugin]");
   let o = !1;
   for (const n of r) {
@@ -39731,7 +39731,7 @@ function u5(t) {
   }
   if (e.fillingDefect && e.fillingDefect.size > 0 && e.restorationType === "none")
     for (const [r, o] of e.fillingDefect)
-      o && o !== "none" && e.fillingSurfaceMaterials.has(r) && a.push(`${c("fillingDefect.label")} (${Z2(r, t)}: ${c("fillingDefect." + o)})`);
+      o && o !== "none" && e.fillingSurfaceMaterials.has(r) && a.push(`${c("fillingDefect.label")} (${w2(r, t)}: ${c("fillingDefect." + o)})`);
   if (e.caries.size > 0) {
     const r = o5(e);
     a.push(r ? `${c("caries.title")} (${r})` : c("caries.title"));
@@ -39788,7 +39788,7 @@ function u5(t) {
   }
   e.crownLeakage && !Zr(e) && (e.restorationType === "crown" || e.restorationType === "bridge") && a.push(c("crownLeakage.label")), e.endoResection && a.push(c("endo.resection")), e.fissureSealing && a.push(c("filling.fissureSealing")), e.parapulpalPin && a.push(c("endo.parapulpalPin"));
   {
-    const r = P8(e);
+    const r = C8(e);
     r && a.push(r);
   }
   e.contactMesial && a.push(c("tooth.contact.mesialMissing")), e.contactDistal && a.push(c("tooth.contact.distalMissing")), zr(e) && (e.wearEdge !== "none" && a.push(`${c("tooth.bruxism.edgeWear")}: ${c("wearType." + e.wearEdge)}`), e.wearCervical !== "none" && a.push(`${c("tooth.bruxism.neckWear")}: ${c("wearType." + e.wearCervical)}`)), e3(e) && e.discoloration !== "none" && a.push(`${c("discoloration.label")}: ${c("discoloration." + e.discoloration)}`), a3(e) && (e.orthoAppliance !== "none" && a.push(`${c("ortho.appliance.label")}: ${c("ortho.appliance." + e.orthoAppliance)}`), e.orthoDrift !== "none" && a.push(`${c("ortho.drift.label")}: ${c("ortho.drift." + e.orthoDrift)}`), e.orthoVertical !== "none" && a.push(`${c("ortho.vertical.label")}: ${c("ortho.vertical." + e.orthoVertical)}`), e.orthoRotation === !0 && a.push(c("ortho.rotation.label"))), e.extractionPlan && a.push(c("tooth.extractionPlan")), e.crownReplace && a.push(c("tooth.crownReplace")), e.crownNeeded && a.push(c("tooth.crownNeeded")), e.bridgePillar && a.push(c("tooth.bridgePillar")), e.extractionWound && a.push(c("tooth.extractionWound")), e.missingClosed && a.push(c("tooth.missingClosed"));
@@ -39805,7 +39805,7 @@ function u5(t) {
 function ee(t) {
   const e = gt.get(t);
   if (!e) return;
-  const a = u5(t), i = U.get(t), r = $t && i?.note ? i.note : "";
+  const a = u5(t), i = U.get(t), r = Xt && i?.note ? i.note : "";
   let o = a.length > 0 ? a.join(" · ") : "";
   r && (o = o ? o + `
 📝 ` + r : "📝 " + r);
@@ -39813,7 +39813,7 @@ function ee(t) {
     o ? n.setAttribute("title", o) : n.removeAttribute("title");
 }
 function ae(t) {
-  const e = U.get(t), a = $t && !!e?.note;
+  const e = U.get(t), a = Xt && !!e?.note;
   for (const i of [Ue, Ee]) {
     const r = i.get(t);
     if (!r) continue;
@@ -39821,50 +39821,50 @@ function ae(t) {
     a ? o || (o = $("span", { class: "tooth-note-icon", "aria-hidden": "true" }), o.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>', r.appendChild(o)) : o && o.remove();
   }
 }
-function sd(t) {
+function ld(t) {
   const e = [], a = t.toothSelection === "none", i = t.toothSelection === "implant";
   return t.endo !== "none" && (a || i) && e.push(c("warn.endoOnMissing")), t.fillingMaterial !== "none" && a && e.push(c("warn.fillingOnMissing")), t.crownReplace && !(t.toothSelection === "tooth-base" && t.restorationType !== "none") && e.push(c("warn.crownReplaceNoCrown")), t.caries.size > 0 && a && e.push(c("warn.cariesOnMissing")), t.bridgePillar && !(t.toothSelection === "tooth-base" && t.restorationType !== "none") && e.push(c("warn.pillarNoCrown")), Oi(t.restorationType, t.restorationMaterial, "occlusal") || e.push(c("warn.invalidRestorationCombo")), e;
 }
-function cd(t) {
+function sd(t) {
   const e = Q("#warnings");
   if (!e) return;
-  const a = sd(t);
+  const a = ld(t);
   e.innerHTML = "";
   for (const i of a) {
     const r = $("div", { class: "warning-item", text: "⚠ " + i });
     e.appendChild(r);
   }
 }
-function dd(t, e) {
+function cd(t, e) {
   if (!e || !e.caries || !e.fillingSurfaceMaterials) return "";
   const a = [];
   for (const i of K2)
-    i !== "subcrown" && e.caries.has(`caries-${i}`) && e.fillingSurfaceMaterials.has(i) && a.push(Z2(i, t));
+    i !== "subcrown" && e.caries.has(`caries-${i}`) && e.fillingSurfaceMaterials.has(i) && a.push(w2(i, t));
   return a.join("");
 }
-function pd(t, e) {
+function dd(t, e) {
   const a = new Set(t), i = [];
   for (const o of s1) {
     if (!a.has(o)) continue;
-    const n = dd(o, e(o));
+    const n = cd(o, e(o));
     n && i.push(`${o} (${n})`);
   }
   if (i.length === 0) return "";
   const r = i.length > 1 ? "filling.subcariesSummaryMultiple" : "filling.subcariesSummarySingle";
   return c(r, { teeth: i.join(", ") });
 }
-function fd(t, e) {
+function pd(t, e) {
   if (!e || !e.fillingDefect || !e.fillingSurfaceMaterials || e.restorationType && e.restorationType !== "none") return "";
   const a = [];
   for (const i of K2)
-    i !== "subcrown" && e.fillingDefect.has(i) && e.fillingSurfaceMaterials.has(i) && a.push(Z2(i, t));
+    i !== "subcrown" && e.fillingDefect.has(i) && e.fillingSurfaceMaterials.has(i) && a.push(w2(i, t));
   return a.join("");
 }
-function hd(t, e) {
+function fd(t, e) {
   const a = new Set(t), i = [];
   for (const o of s1) {
     if (!a.has(o)) continue;
-    const n = fd(o, e(o));
+    const n = pd(o, e(o));
     n && i.push(`${o} (${n})`);
   }
   if (i.length === 0) return "";
@@ -39874,25 +39874,25 @@ function hd(t, e) {
 function k5(t, e = E) {
   const a = Q("#perioRow"), i = Mr(t);
   if (a && a.classList.toggle("hidden", i), i || e == null) return;
-  const r = Pt(e), o = P2(e);
+  const r = Pt(e), o = C2(e);
   for (const d of $2) {
-    const l = Q(`#perio-pd-${d}`);
-    if (!l) continue;
+    const s = Q(`#perio-pd-${d}`);
+    if (!s) continue;
     const f = Q(`#perio-gm-${d}`), p = Q(`#perio-bop-${d}`), v = Q(`#perio-sup-${d}`), k = Object.prototype.hasOwnProperty.call(r.pd, d);
-    l.value = k ? String(r.pd[d]) : "", f.value = k && Object.prototype.hasOwnProperty.call(r.gm, d) ? String(r.gm[d]) : "", p.checked = r.bop.includes(d), v.checked = r.sup.includes(d), Ci(f, !k), Ci(p, !k), Ci(v, !k);
+    s.value = k ? String(r.pd[d]) : "", f.value = k && Object.prototype.hasOwnProperty.call(r.gm, d) ? String(r.gm[d]) : "", p.checked = r.bop.includes(d), v.checked = r.sup.includes(d), Ci(f, !k), Ci(p, !k), Ci(v, !k);
   }
   const n = Q("#perioReadout");
   if (n) {
-    const d = $2.filter((l) => Object.prototype.hasOwnProperty.call(r.pd, l));
+    const d = $2.filter((s) => Object.prototype.hasOwnProperty.call(r.pd, s));
     if (d.length === 0)
       n.textContent = c("perio.readout.empty");
     else {
-      const l = d.map((v) => `${v} ${c("perio.cal")} ${o.get(v)}`).join("   "), f = r.bop.length, p = Math.round(f / d.length * 1e3) / 10;
-      n.textContent = `${l}   ${c("perio.bopPercent")} ${p}% (${f}/${d.length})`;
+      const s = d.map((v) => `${v} ${c("perio.cal")} ${o.get(v)}`).join("   "), f = r.bop.length, p = Math.round(f / d.length * 1e3) / 10;
+      n.textContent = `${s}   ${c("perio.bopPercent")} ${p}% (${f}/${d.length})`;
     }
   }
 }
-function md(t) {
+function hd(t) {
   if (!t || t.childElementCount > 0) return;
   t.innerHTML = "";
   const e = (a, i) => {
@@ -39902,8 +39902,8 @@ function md(t) {
         $("div", { class: "perio-site-label", title: c(`perio.site.${o}`), text: o })
       ]), d = $("input", { type: "number", id: `perio-pd-${o}`, "data-site": o, "data-field": "pd", min: "1", max: "15", step: "1" });
       n.appendChild($("label", { class: "perio-field" }, [$("span", { text: c("perio.pd") }), d]));
-      const l = $("input", { type: "number", id: `perio-gm-${o}`, "data-site": o, "data-field": "gm", min: "-10", max: "20", step: "1" });
-      n.appendChild($("label", { class: "perio-field" }, [$("span", { text: c("perio.gm") }), l]));
+      const s = $("input", { type: "number", id: `perio-gm-${o}`, "data-site": o, "data-field": "gm", min: "-10", max: "20", step: "1" });
+      n.appendChild($("label", { class: "perio-field" }, [$("span", { text: c("perio.gm") }), s]));
       const f = $("input", { type: "checkbox", id: `perio-bop-${o}`, "data-site": o, "data-field": "bop" });
       n.appendChild($("label", { class: "perio-check" }, [f, $("span", { text: c("perio.bop") })]));
       const p = $("input", { type: "checkbox", id: `perio-sup-${o}`, "data-site": o, "data-field": "sup" });
@@ -39915,9 +39915,9 @@ function md(t) {
         if (E == null) return;
         const k = d.value.trim();
         Zt(E, o, { pd: k === "" ? null : Number(k) }), v();
-      }), l.addEventListener("change", () => {
+      }), s.addEventListener("change", () => {
         if (E == null) return;
-        const k = l.value.trim();
+        const k = s.value.trim();
         k !== "" && (Zt(E, o, { gm: Number(k) }), v());
       }), f.addEventListener("change", () => {
         E != null && (Zt(E, o, { bop: f.checked }), v());
@@ -39929,8 +39929,8 @@ function md(t) {
   };
   e($2.slice(0, 3), "perio-buccal-row"), e($2.slice(3, 6), "perio-lingual-row");
 }
-function u1(t) {
-  k5(t), x5();
+function k1(t) {
+  k5(t), b5();
 }
 function n1(t) {
   if (a1.size === 0) return;
@@ -39938,52 +39938,47 @@ function n1(t) {
   Be(e, () => {
     for (const a of e) {
       const i = U.get(a);
-      i && (t(i, a), tt(a), yt(a));
+      i && (t(i, a), ct(a), bt(a));
     }
-    E && a1.has(E) && u1(U.get(E)), Qt && !te && Ke(!1), i3(), X();
+    E && a1.has(E) && k1(U.get(E)), Jt && !te && Ke(!1), i3(), X();
   });
 }
-function b5(t) {
-  jt(t, () => {
-    U.set(t, h1()), tt(t), yt(t), E === t && u1(U.get(t));
-  });
-}
-function vd(t) {
+function md(t) {
   t.length !== 0 && Be(t, () => {
-    Qt && (Qt = !1);
+    Jt && (Jt = !1);
     for (const e of t)
-      U.set(e, h1()), tt(e), yt(e);
-    E && (Hi(!0), u1(U.get(E))), X();
+      U.set(e, m1()), ct(e), bt(e);
+    E && (Hi(!0), k1(U.get(E))), X();
   });
 }
-function fh() {
+function ph() {
   Ke(!1), Dn();
   for (const t of s1)
-    U.set(t, h1()), tt(t), yt(t);
-  E && (Hi(!0), u1(U.get(E))), X();
+    U.set(t, m1()), ct(t), bt(t);
+  E && (Hi(!0), k1(U.get(E))), X();
+}
+function vd() {
+  const t = (a) => {
+    const i = m1();
+    return i.toothSelection = T7.has(a) ? "milktooth" : "none", i;
+  }, e = s1.filter((a) => JSON.stringify(Tt(U.get(a) ?? m1())) !== JSON.stringify(Tt(t(a))));
+  Be(e, () => {
+    Jt = !1, te = !0;
+    for (const a of s1)
+      U.set(a, t(a)), ct(a), bt(a);
+    te = !1, E && k1(U.get(E)), X();
+  });
 }
 function gd() {
   const t = (a) => {
-    const i = h1();
-    return i.toothSelection = D7.has(a) ? "milktooth" : "none", i;
-  }, e = s1.filter((a) => JSON.stringify(Tt(U.get(a) ?? h1())) !== JSON.stringify(Tt(t(a))));
+    const i = m1();
+    return D7.has(a) ? i.toothSelection = "tooth-base" : O7.has(a) ? i.toothSelection = "milktooth" : A7.has(a) && (i.toothSelection = "none"), i;
+  }, e = s1.filter((a) => JSON.stringify(Tt(U.get(a) ?? m1())) !== JSON.stringify(Tt(t(a))));
   Be(e, () => {
-    Qt = !1, te = !0;
+    Jt = !1, te = !0;
     for (const a of s1)
-      U.set(a, t(a)), tt(a), yt(a);
-    te = !1, E && u1(U.get(E)), X();
-  });
-}
-function yd() {
-  const t = (a) => {
-    const i = h1();
-    return O7.has(a) ? i.toothSelection = "tooth-base" : A7.has(a) ? i.toothSelection = "milktooth" : U7.has(a) && (i.toothSelection = "none"), i;
-  }, e = s1.filter((a) => JSON.stringify(Tt(U.get(a) ?? h1())) !== JSON.stringify(Tt(t(a))));
-  Be(e, () => {
-    Qt = !1, te = !0;
-    for (const a of s1)
-      U.set(a, t(a)), tt(a), yt(a);
-    te = !1, E && u1(U.get(E)), X();
+      U.set(a, t(a)), ct(a), bt(a);
+    te = !1, E && k1(U.get(E)), X();
   });
 }
 function Ir() {
@@ -40010,25 +40005,25 @@ function Hi(t) {
     e.id !== "statusExtraSelect" && Ci(e, !t);
   });
 }
-function x5() {
+function b5() {
   for (const t of wn) {
     const e = Q(`#lbl-${t.value}`);
     e && (e.textContent = c(t.labelKey));
   }
 }
-function ud() {
+function yd() {
   const t = Q("#statusExtraSelect");
   if (!t) return;
   const e = n5();
   if (!e.length) return;
   const a = e.map((r) => ({ value: r.id, label: r.label })), i = t.value || a[0]?.value;
-  g8(t, a, i);
+  v8(t, a, i);
 }
-function kd() {
+function ud() {
   const t = Q("#statusCard"), e = Q("#btnToggleStatusCard");
-  t && e && z2(e, "status.title", t.classList.contains("collapsed"));
+  t && e && S2(e, "status.title", t.classList.contains("collapsed"));
   const a = Q("#controlsActions"), i = Q("#btnToggleControlsCard");
-  a && i && z2(i, "panel.controls", a.classList.contains("hidden"));
+  a && i && S2(i, "panel.controls", a.classList.contains("hidden"));
   const r = [
     { card: "#cariesSection", btn: "#btnToggleCariesCard", labelKey: "caries.title" },
     { card: "#fillingSection", btn: "#btnToggleFillingCard", labelKey: "filling.title" },
@@ -40036,27 +40031,27 @@ function kd() {
   ];
   for (const o of r) {
     const n = Q(o.card), d = Q(o.btn);
-    !n || !d || z2(d, o.labelKey, n.classList.contains("collapsed"));
+    !n || !d || S2(d, o.labelKey, n.classList.contains("collapsed"));
   }
 }
-function bd() {
-  ud();
+function kd() {
+  yd();
 }
 function n4() {
-  bd(), x5(), kd(), Ir(), Id(), E && u1(U.get(E));
+  kd(), b5(), ud(), Ir(), zd(), E && k1(U.get(E));
 }
-function bt() {
+function kt() {
   Ve(".tooth-tile").forEach((t) => {
     const e = Number(t.dataset.tooth), a = a1.has(e);
     t.classList.toggle("active", a), t.hasAttribute("role") && t.setAttribute("aria-selected", String(a));
-  }), i3(), Ir(), E && a1.has(E) ? (Hi(!0), u1(U.get(E))) : (u1(h1()), Hi(!1)), X();
+  }), i3(), Ir(), E && a1.has(E) ? (Hi(!0), k1(U.get(E))) : (k1(m1()), Hi(!1)), X();
 }
-function xd(t) {
-  qt(), b2();
-  const e = n2.get(t), a = e?.find((C, w) => gt.get(t)?.[w]?.classList.contains("side-view")) || e?.[0];
+function bd(t) {
+  i2(), F2();
+  const e = n2.get(t), a = e?.find((h, T) => gt.get(t)?.[T]?.classList.contains("side-view")) || e?.[0];
   if (!a) return;
-  const i = $("div", { class: "odon-zoom-overlay" }), r = $("div", { class: "odon-zoom-popover" }), o = X2(t, c2), n = $("div", { class: "odon-zoom-header" }), d = $("span", { class: "odon-zoom-title", text: c("touch.zoom.title", { tooth: o }) }), l = $("button", { class: "odon-zoom-close", text: "✕" });
-  l.addEventListener("click", qt), n.appendChild(d), n.appendChild(l);
+  const i = $("div", { class: "odon-zoom-overlay" }), r = $("div", { class: "odon-zoom-popover" }), o = X2(t, c2), n = $("div", { class: "odon-zoom-header" }), d = $("span", { class: "odon-zoom-title", text: c("touch.zoom.title", { tooth: o }) }), s = $("button", { class: "odon-zoom-close", text: "✕" });
+  s.addEventListener("click", i2), n.appendChild(d), n.appendChild(s);
   const f = $("div", { class: "odon-zoom-svg" }), p = a.cloneNode(!0);
   f.appendChild(p);
   const v = $("div", { class: "odon-zoom-actions" }), k = a1.has(t), x = $("button", {
@@ -40064,76 +40059,68 @@ function xd(t) {
     text: c(k ? "touch.zoom.deselect" : "touch.zoom.select")
   });
   x.addEventListener("click", () => {
-    a1.has(t) ? (a1.delete(t), E === t && (E = a1.values().next().value ?? null)) : (a1.add(t), E = t), bt(), qt();
+    a1.has(t) ? (a1.delete(t), E === t && (E = a1.values().next().value ?? null)) : (a1.add(t), E = t), kt(), i2();
   });
   const u = $("button", { class: "odon-zoom-btn", text: c("touch.zoom.info") });
   u.addEventListener("click", () => {
-    a1 = /* @__PURE__ */ new Set([t]), E = t, bt(), qt();
-    const C = Q("#controlsActions");
-    C && C.scrollIntoView({ behavior: "smooth", block: "start" });
+    a1 = /* @__PURE__ */ new Set([t]), E = t, kt(), i2();
+    const h = Q("#controlsActions");
+    h && h.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  const y = $("button", { class: "odon-zoom-btn danger", text: c("touch.ctx.reset") });
-  y.addEventListener("click", () => {
-    b5(t), qt();
-  });
-  const h = $("button", { class: "odon-zoom-btn", text: c("touch.zoom.close") });
-  if (h.addEventListener("click", qt), v.appendChild(x), v.appendChild(u), $t && !q1) {
-    const C = $("button", { class: "odon-zoom-btn", text: c("note.title") });
-    C.addEventListener("click", () => {
-      qt(), M5(t);
-    }), v.appendChild(C);
+  const y = $("button", { class: "odon-zoom-btn", text: c("touch.zoom.close") });
+  if (y.addEventListener("click", i2), v.appendChild(x), v.appendChild(u), Xt && !q1) {
+    const h = $("button", { class: "odon-zoom-btn", text: c("note.title") });
+    h.addEventListener("click", () => {
+      i2(), x5(t);
+    }), v.appendChild(h);
   }
-  v.appendChild(y), v.appendChild(h), r.appendChild(n), r.appendChild(f), r.appendChild(v), i.addEventListener("click", (C) => {
-    C.target === i && qt();
+  v.appendChild(y), r.appendChild(n), r.appendChild(f), r.appendChild(v), i.addEventListener("click", (h) => {
+    h.target === i && i2();
   }), i.appendChild(r), document.body.appendChild(i);
 }
-function qt() {
+function i2() {
   const t = document.querySelector(".odon-zoom-overlay");
   t && t.remove();
 }
-function Md(t, e) {
-  b2(), qt();
+function xd(t, e) {
+  F2(), i2();
   const a = $("div", { class: "odon-ctx-menu" });
   if (a1.has(t)) {
-    const l = $("button", { class: "odon-ctx-item", text: c("touch.ctx.deselect") });
-    l.addEventListener("click", () => {
-      a1.delete(t), E === t && (E = a1.values().next().value ?? null), bt(), b2();
-    }), a.appendChild(l);
+    const d = $("button", { class: "odon-ctx-item", text: c("touch.ctx.deselect") });
+    d.addEventListener("click", () => {
+      a1.delete(t), E === t && (E = a1.values().next().value ?? null), kt(), F2();
+    }), a.appendChild(d);
   } else {
-    const l = $("button", { class: "odon-ctx-item", text: c("touch.ctx.select") });
-    if (l.addEventListener("click", () => {
-      a1 = /* @__PURE__ */ new Set([t]), E = t, bt(), b2();
-    }), a.appendChild(l), a1.size > 0) {
-      const f = $("button", { class: "odon-ctx-item", text: c("touch.ctx.multiSelect") });
-      f.addEventListener("click", () => {
-        a1.add(t), E = t, bt(), b2();
-      }), a.appendChild(f);
+    const d = $("button", { class: "odon-ctx-item", text: c("touch.ctx.select") });
+    if (d.addEventListener("click", () => {
+      a1 = /* @__PURE__ */ new Set([t]), E = t, kt(), F2();
+    }), a.appendChild(d), a1.size > 0) {
+      const s = $("button", { class: "odon-ctx-item", text: c("touch.ctx.multiSelect") });
+      s.addEventListener("click", () => {
+        a1.add(t), E = t, kt(), F2();
+      }), a.appendChild(s);
     }
   }
   a.appendChild($("div", { class: "odon-ctx-divider" }));
-  const r = $("button", { class: "odon-ctx-item danger", text: c("touch.ctx.reset") });
-  r.addEventListener("click", () => {
-    b5(t), b2();
-  }), a.appendChild(r);
-  const o = Math.min(e.clientX, window.innerWidth - 200), n = Math.min(e.clientY - 10, window.innerHeight - 200);
-  a.style.left = o + "px", a.style.top = n + "px", document.body.appendChild(a);
-  const d = (l) => {
-    a.contains(l.target) || (b2(), document.removeEventListener("touchstart", d, !0), document.removeEventListener("click", d, !0));
+  const r = Math.min(e.clientX, window.innerWidth - 200), o = Math.min(e.clientY - 10, window.innerHeight - 200);
+  a.style.left = r + "px", a.style.top = o + "px", document.body.appendChild(a);
+  const n = (d) => {
+    a.contains(d.target) || (F2(), document.removeEventListener("touchstart", n, !0), document.removeEventListener("click", n, !0));
   };
   setTimeout(() => {
-    document.addEventListener("touchstart", d, !0), document.addEventListener("click", d, !0);
+    document.addEventListener("touchstart", n, !0), document.addEventListener("click", n, !0);
   }, 50);
 }
-function b2() {
+function F2() {
   const t = document.querySelector(".odon-ctx-menu");
   t && t.remove();
 }
-function M5(t) {
-  if (Ie(), !$t || q1) return;
+function x5(t) {
+  if (Ie(), !Xt || q1) return;
   const e = U.get(t);
   if (!e) return;
-  const a = gt.get(t), i = a?.find((u) => u.classList.contains("side-view")) || a?.[0], r = X2(t, c2), o = $("div", { class: "odon-note-popover" }), n = $("div", { class: "odon-note-header" }), d = $("span", { class: "odon-note-title", text: c("note.title") + " — " + r }), l = $("button", { class: "odon-zoom-close", text: "✕" });
-  l.addEventListener("click", Ie), n.appendChild(d), n.appendChild(l);
+  const a = gt.get(t), i = a?.find((u) => u.classList.contains("side-view")) || a?.[0], r = X2(t, c2), o = $("div", { class: "odon-note-popover" }), n = $("div", { class: "odon-note-header" }), d = $("span", { class: "odon-note-title", text: c("note.title") + " — " + r }), s = $("button", { class: "odon-zoom-close", text: "✕" });
+  s.addEventListener("click", Ie), n.appendChild(d), n.appendChild(s);
   const f = document.createElement("textarea");
   f.className = "odon-note-textarea", f.value = e.note || "", f.placeholder = c("note.placeholder"), f.rows = 3;
   const p = $("div", { class: "odon-note-actions" }), v = $("button", { class: "odon-zoom-btn", text: c("note.save") });
@@ -40147,8 +40134,8 @@ function M5(t) {
   const x = $("div", { class: "odon-note-backdrop" });
   if (x.addEventListener("click", Ie), x.appendChild(o), document.body.appendChild(x), o.addEventListener("click", (u) => u.stopPropagation()), i) {
     const u = i.getBoundingClientRect(), y = 320;
-    let h = u.left + u.width / 2 - y / 2, C = u.bottom + 8;
-    h < 8 && (h = 8), h + y > window.innerWidth - 8 && (h = window.innerWidth - y - 8), C + 200 > window.innerHeight && (C = u.top - 208), o.style.position = "fixed", o.style.left = h + "px", o.style.top = C + "px";
+    let h = u.left + u.width / 2 - y / 2, T = u.bottom + 8;
+    h < 8 && (h = 8), h + y > window.innerWidth - 8 && (h = window.innerWidth - y - 8), T + 200 > window.innerHeight && (T = u.top - 208), o.style.position = "fixed", o.style.left = h + "px", o.style.top = T + "px";
   }
   f.focus();
 }
@@ -40182,32 +40169,32 @@ function r3(t, e) {
     occlusal: "surface.occlusal"
   }[t] || t;
 }
-function wd(t, e, a) {
+function Md(t, e, a) {
   Ge();
   const i = e.getBoundingClientRect(), r = $("div", { class: "odon-depth-popup" }), o = E != null ? U.get(E) : null, n = !!o?.fillingSurfaceMaterials?.has(t), d = n ? "caries.recurrentTitle" : "caries.primaryTitle";
   r.appendChild($("div", { class: "odon-depth-title", text: `${c(d)} – ${c(r3(t, a))}` }));
-  const l = (y, h, C, w) => {
+  const s = (y, h, T, w) => {
     if (!(!h || h.length === 0)) {
       r.appendChild($("div", { class: "odon-depth-group-label", text: c(y) }));
       for (const g of h) {
         const Z = $("button", { class: "odon-depth-option", text: g.label });
-        Z.title = g.title || "", C != null && String(g.value) === String(C) && Z.classList.add("is-active"), Z.addEventListener("click", (G) => {
-          G.stopPropagation(), w(g.value), Ge();
+        Z.title = g.title || "", T != null && String(g.value) === String(T) && Z.classList.add("is-active"), Z.addEventListener("click", (P) => {
+          P.stopPropagation(), w(g.value), Ge();
         }), r.appendChild(Z);
       }
     }
   };
-  n ? l("caries.secondaryLabel", L8(), o?.cariesSeverity?.get(t) ?? 0, (y) => {
+  n ? s("caries.secondaryLabel", E8(), o?.cariesSeverity?.get(t) ?? 0, (y) => {
     n1((h) => {
-      R8(h, t, Number(y));
+      N8(h, t, Number(y));
     });
-  }) : qa && l("caries.depthLabel", c5(), o?.cariesSeverity?.get(t), (y) => {
+  }) : qa && s("caries.depthLabel", c5(), o?.cariesSeverity?.get(t), (y) => {
     n1((h) => {
       h.caries.has(`caries-${t}`) && h.cariesSeverity.set(t, Number(y));
     });
-  }), l("caries.radiographicLabel", N8(), o?.radiographicDepth?.get(t) ?? "none", (y) => {
+  }), s("caries.radiographicLabel", j8(), o?.radiographicDepth?.get(t) ?? "none", (y) => {
     n1((h) => {
-      V8(h.radiographicDepth, t, String(y));
+      R8(h.radiographicDepth, t, String(y));
     });
   }), document.body.appendChild(r);
   const f = r.offsetWidth || 140, p = Math.min(i.left, window.innerWidth - f - 8), v = Math.min(i.bottom + 4, window.innerHeight - r.offsetHeight - 8);
@@ -40224,13 +40211,13 @@ function wd(t, e, a) {
     document.addEventListener("mousedown", k, !0), document.addEventListener("keydown", x, !0);
   }, 0);
 }
-function w5(t, e) {
-  wd(t, e, E);
+function M5(t, e) {
+  Md(t, e, E);
 }
-function Zd(t, e) {
-  Sd(t, e, E);
+function wd(t, e) {
+  Zd(t, e, E);
 }
-function Sd(t, e, a) {
+function Zd(t, e, a) {
   Ge();
   const i = E != null ? U.get(E) : null;
   if (!i?.fillingSurfaceMaterials?.has(t)) return;
@@ -40240,13 +40227,13 @@ function Sd(t, e, a) {
   for (const u of ["none", "marginal", "fracture", "wear"]) {
     const y = $("button", { class: "odon-depth-option" + (u === n ? " is-active" : ""), text: c("fillingDefect." + u) });
     y.addEventListener("click", (h) => {
-      h.stopPropagation(), n1((C) => {
-        d5(C.fillingDefect, t, u);
+      h.stopPropagation(), n1((T) => {
+        d5(T.fillingDefect, t, u);
       }), Ge();
     }), d.appendChild(y);
   }
   o.appendChild(d), document.body.appendChild(o);
-  const l = o.offsetWidth || 140, f = Math.min(r.left, window.innerWidth - l - 8), p = Math.min(r.bottom + 4, window.innerHeight - o.offsetHeight - 8);
+  const s = o.offsetWidth || 140, f = Math.min(r.left, window.innerWidth - s - 8), p = Math.min(r.bottom + 4, window.innerHeight - o.offsetHeight - 8);
   o.style.left = `${Math.max(8, f)}px`, o.style.top = `${Math.max(8, p)}px`;
   const v = (u) => {
     o.contains(u.target) || x();
@@ -40260,24 +40247,24 @@ function Sd(t, e, a) {
     document.addEventListener("mousedown", v, !0), document.addEventListener("keydown", k, !0);
   }, 0);
 }
-function Z5(t, e) {
+function w5(t, e) {
   const a = t.clientX - e.clientX, i = t.clientY - e.clientY;
   return Math.sqrt(a * a + i * i);
 }
-function S5(t) {
+function Z5(t) {
   if (t.touches.length === 2) {
-    Ea = !0, Rn = Z5(t.touches[0], t.touches[1]);
+    Ea = !0, Rn = w5(t.touches[0], t.touches[1]);
     const e = Q("#toothGrid");
     e && e.classList.add("odon-pinch-active"), t.preventDefault();
   }
 }
-function z5(t) {
+function S5(t) {
   if (Ea && t.touches.length === 2) {
-    const e = Z5(t.touches[0], t.touches[1]), a = Math.max(0.5, Math.min(3, e / Rn * Ce)), i = Q("#toothGrid");
+    const e = w5(t.touches[0], t.touches[1]), a = Math.max(0.5, Math.min(3, e / Rn * Ce)), i = Q("#toothGrid");
     i && (i.style.transform = `scale(${a})`), t.preventDefault();
   }
 }
-function I5(t) {
+function z5(t) {
   if (Ea && t.touches.length < 2) {
     Ea = !1;
     const e = Q("#toothGrid");
@@ -40287,7 +40274,7 @@ function I5(t) {
     }
   }
 }
-function zd() {
+function Sd() {
   const t = Q("#toothGrid");
   if (!t) return;
   St && St.remove(), St = $("div", { class: "odon-arch-toggle" });
@@ -40297,33 +40284,33 @@ function zd() {
   }
   e.addEventListener("click", () => r(Ii === "upper" ? "both" : "upper")), a.addEventListener("click", () => r(Ii === "lower" ? "both" : "lower")), i.addEventListener("click", () => r("both")), St.appendChild(e), St.appendChild(i), St.appendChild(a), t.parentElement?.insertBefore(St, t);
 }
-function Id() {
+function zd() {
   if (!St) return;
   const t = St.querySelectorAll(".odon-arch-btn");
   t[0] && (t[0].textContent = c("touch.arch.upper")), t[1] && (t[1].textContent = c("touch.arch.both")), t[2] && (t[2].textContent = c("touch.arch.lower"));
 }
-function Cd(t, e) {
+function Id(t, e) {
   t.addEventListener("touchstart", (a) => {
     if (q1 || a.touches.length !== 1) return;
     Fo = Date.now(), Bo = a.touches[0].clientX, Ko = a.touches[0].clientY, bi = !1;
     const i = a.touches[0];
-    Yt = setTimeout(() => {
-      bi || Md(e, i);
+    Kt = setTimeout(() => {
+      bi || xd(e, i);
     }, qo);
   }, { passive: !0 }), t.addEventListener("touchmove", (a) => {
     if (a.touches.length !== 1) return;
     const i = a.touches[0].clientX - Bo, r = a.touches[0].clientY - Ko;
-    (Math.abs(i) > Yo || Math.abs(r) > Yo) && (bi = !0, Yt && (clearTimeout(Yt), Yt = null));
+    (Math.abs(i) > Yo || Math.abs(r) > Yo) && (bi = !0, Kt && (clearTimeout(Kt), Kt = null));
   }, { passive: !0 }), t.addEventListener("touchend", (a) => {
     if (q1) return;
-    Yt && (clearTimeout(Yt), Yt = null);
+    Kt && (clearTimeout(Kt), Kt = null);
     const i = Date.now() - Fo;
-    !bi && i < qo && (a.preventDefault(), xd(e));
+    !bi && i < qo && (a.preventDefault(), bd(e));
   });
 }
 function er(t, e) {
   if (q1) return;
-  e.metaKey || e.ctrlKey ? a1.has(t) ? a1.delete(t) : (a1.add(t), E = t) : (a1 = /* @__PURE__ */ new Set([t]), E = t), E && !a1.has(E) && (E = a1.values().next().value ?? null), bt();
+  e.metaKey || e.ctrlKey ? a1.has(t) ? a1.delete(t) : (a1.add(t), E = t) : (a1 = /* @__PURE__ */ new Set([t]), E = t), E && !a1.has(E) && (E = a1.values().next().value ?? null), kt();
 }
 const va = [
   [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28],
@@ -40333,7 +40320,7 @@ function Me(t) {
   const e = gt.get(t);
   return !e || e.length === 0 ? !1 : e.some((a) => !a.classList.contains("wisdom-hidden") && !a.classList.contains("placeholder"));
 }
-function Pd(t, e) {
+function Cd(t, e) {
   const a = va.findIndex((n) => n.includes(t));
   if (a < 0) return;
   const i = va[a], r = i.indexOf(t);
@@ -40353,40 +40340,40 @@ function Pd(t, e) {
   } else if (e === "ArrowDown") {
     if (a < va.length - 1) {
       const n = va[a + 1], d = Math.min(r, n.length - 1);
-      for (let l = d; l < n.length; l++)
-        if (Me(n[l])) {
-          o = n[l];
+      for (let s = d; s < n.length; s++)
+        if (Me(n[s])) {
+          o = n[s];
           break;
         }
       if (!o) {
-        for (let l = d - 1; l >= 0; l--)
-          if (Me(n[l])) {
-            o = n[l];
+        for (let s = d - 1; s >= 0; s--)
+          if (Me(n[s])) {
+            o = n[s];
             break;
           }
       }
     }
   } else if (e === "ArrowUp" && a > 0) {
     const n = va[a - 1], d = Math.min(r, n.length - 1);
-    for (let l = d; l < n.length; l++)
-      if (Me(n[l])) {
-        o = n[l];
+    for (let s = d; s < n.length; s++)
+      if (Me(n[s])) {
+        o = n[s];
         break;
       }
     if (!o) {
-      for (let l = d - 1; l >= 0; l--)
-        if (Me(n[l])) {
-          o = n[l];
+      for (let s = d - 1; s >= 0; s--)
+        if (Me(n[s])) {
+          o = n[s];
           break;
         }
     }
   }
   if (o !== null) {
-    const d = gt.get(o)?.find((l) => l.classList.contains("side-view"));
+    const d = gt.get(o)?.find((s) => s.classList.contains("side-view"));
     d && d.focus();
   }
 }
-function Gd(t, e) {
+function Pd(t, e) {
   if (!q1)
     switch (e.key) {
       case "Enter":
@@ -40397,10 +40384,10 @@ function Gd(t, e) {
       case "ArrowLeft":
       case "ArrowUp":
       case "ArrowDown":
-        e.preventDefault(), Pd(t, e.key);
+        e.preventDefault(), Cd(t, e.key);
         break;
       case "Escape":
-        e.preventDefault(), cp();
+        e.preventDefault(), sp();
         break;
     }
 }
@@ -40416,36 +40403,36 @@ function mt() {
   a1 = new Set([...a1].filter((e) => {
     const a = gt.get(e);
     return !a || a.length === 0 ? !0 : !a.every((i) => i.classList.contains("wisdom-hidden"));
-  })), E && !a1.has(E) && (E = a1.values().next().value ?? null), bt();
+  })), E && !a1.has(E) && (E = a1.values().next().value ?? null), kt();
 }
 function Ke(t) {
   if (t) {
     const e = JSON.stringify(Tt((() => {
-      const i = h1();
+      const i = m1();
       return i.toothSelection = "none", i;
-    })())), a = s1.filter((i) => JSON.stringify(Tt(U.get(i) ?? h1())) !== e);
+    })())), a = s1.filter((i) => JSON.stringify(Tt(U.get(i) ?? m1())) !== e);
     Be(a, () => {
-      Qt = !0, te = !0;
+      Jt = !0, te = !0;
       for (const i of s1) {
-        const r = h1();
-        r.toothSelection = "none", U.set(i, r), tt(i), yt(i);
+        const r = m1();
+        r.toothSelection = "none", U.set(i, r), ct(i), bt(i);
       }
-      te = !1, E && u1(U.get(E)), X();
+      te = !1, E && k1(U.get(E)), X();
     });
     return;
   }
-  Qt = !1, X();
+  Jt = !1, X();
 }
-function Td() {
-  return Qt;
+function Gd() {
+  return Jt;
 }
-function C5(t) {
+function I5(t) {
   Oa = !!t, $i(Q("#btnWisdomVisible"), Oa), mt(), Xi();
 }
 function ji(t) {
-  S2 = t, $i(Q("#btnBoneVisible"), S2);
+  Z2 = t, $i(Q("#btnBoneVisible"), Z2);
   for (const e of s1)
-    tt(e);
+    ct(e);
 }
 function Pr(t) {
   Pe = !!t, $i(Q("#btnOcclView"), Pe), Ve(".tooth-tile.occl-view").forEach((e) => {
@@ -40453,9 +40440,9 @@ function Pr(t) {
   }), Xi();
 }
 function Ha(t) {
-  Jt = !!t, $i(Q("#btnPulpVisible"), Jt);
+  Yt = !!t, $i(Q("#btnPulpVisible"), Yt);
   for (const e of s1)
-    tt(e);
+    ct(e);
 }
 function Tt(t) {
   return {
@@ -40549,20 +40536,20 @@ function Tt(t) {
     ...t.note ? { note: t.note } : {}
   };
 }
-const Dd = z1("toothSelection"), P5 = z1("endo"), l4 = z1("fillingMaterial"), Od = z1("prosthesis"), G5 = z1("mobility"), Ad = z1("toothSubstrate"), Ud = z1("restorationType"), Ed = z1("restorationMaterial"), Ld = z1("mods"), Hd = z1("periapicalType"), jd = z1("caries"), T5 = z1("pulpDx"), D5 = z1("pulpLatin"), O5 = z1("apicalDx"), A5 = z1("resorptionType"), U5 = z1("wearEdge"), E5 = z1("wearCervical"), L5 = z1("discoloration"), H5 = z1("orthoAppliance"), j5 = z1("orthoDrift"), N5 = z1("orthoVertical"), R2 = Ms(), R5 = z1("rootCaries"), V5 = z1("periImplant"), F5 = z1("cejVisibility"), B5 = z1("rootConcavity"), K5 = z1("gingivalThickness"), q5 = z1("millerClass"), Nd = /* @__PURE__ */ new Set([0, 1, 2, 3, 4, 5, 6]), Rd = /* @__PURE__ */ new Set([0, 1, 2, 3, 4, 5, 6]), Vd = /* @__PURE__ */ new Set(["none", "E1", "E2", "D1", "D2", "D3"]), Fd = /* @__PURE__ */ new Set(["marginal", "fracture", "wear"]), Bd = /* @__PURE__ */ new Set(["mesial", "distal", "buccal", "lingual"]), Y5 = /* @__PURE__ */ new Set([1, 2, 3, 4]), M2 = /* @__PURE__ */ new Set(["mesial", "distal", "buccal", "lingual"]);
+const Td = z1("toothSelection"), C5 = z1("endo"), l4 = z1("fillingMaterial"), Dd = z1("prosthesis"), P5 = z1("mobility"), Od = z1("toothSubstrate"), Ad = z1("restorationType"), Ud = z1("restorationMaterial"), Ed = z1("mods"), Ld = z1("periapicalType"), Hd = z1("caries"), G5 = z1("pulpDx"), T5 = z1("pulpLatin"), D5 = z1("apicalDx"), O5 = z1("resorptionType"), A5 = z1("wearEdge"), U5 = z1("wearCervical"), E5 = z1("discoloration"), L5 = z1("orthoAppliance"), H5 = z1("orthoDrift"), j5 = z1("orthoVertical"), N2 = xs(), N5 = z1("rootCaries"), R5 = z1("periImplant"), V5 = z1("cejVisibility"), F5 = z1("rootConcavity"), B5 = z1("gingivalThickness"), K5 = z1("millerClass"), jd = /* @__PURE__ */ new Set([0, 1, 2, 3, 4, 5, 6]), Nd = /* @__PURE__ */ new Set([0, 1, 2, 3, 4, 5, 6]), Rd = /* @__PURE__ */ new Set(["none", "E1", "E2", "D1", "D2", "D3"]), Vd = /* @__PURE__ */ new Set(["marginal", "fracture", "wear"]), Fd = /* @__PURE__ */ new Set(["mesial", "distal", "buccal", "lingual"]), q5 = /* @__PURE__ */ new Set([1, 2, 3, 4]), x2 = /* @__PURE__ */ new Set(["mesial", "distal", "buccal", "lingual"]);
 function O3(t, e) {
   return Array.isArray(t) ? new Set(t.filter((a) => typeof a == "string" && e.has(a))) : /* @__PURE__ */ new Set();
 }
 function P1(t, e, a) {
   return typeof t == "string" && e.has(t) ? t : a;
 }
-const Kd = { pd: [1, 15], gm: [-10, 20] };
+const Bd = { pd: [1, 15], gm: [-10, 20] };
 function Ni(t, e) {
   if (typeof e != "number" || !Number.isFinite(e) || !Number.isInteger(e)) return null;
-  const [a, i] = Kd[t];
+  const [a, i] = Bd[t];
   return t === "pd" && e < a ? null : Math.min(i, Math.max(a, e));
 }
-function W5(t) {
+function Y5(t) {
   if (typeof t != "string" || t.trim() === "") return !0;
   const a = ((r) => r.split(".").map((o) => {
     const n = parseInt(o, 10);
@@ -40575,7 +40562,7 @@ function W5(t) {
   return !1;
 }
 function He(t, e = !0) {
-  const a = h1();
+  const a = m1();
   if (!t || typeof t != "object") return a;
   const i = t.bridgeUnit === "zircon" || t.bridgeUnit === "metal" || t.bridgeUnit === "temporary";
   if (t.restorationType === void 0 && (t.crownMaterial !== void 0 || i)) {
@@ -40597,52 +40584,52 @@ function He(t, e = !0) {
     };
     t.toothSelection === "implant" && typeof t.crownMaterial == "string" && g[t.crownMaterial] ? t.prosthesis = g[t.crownMaterial] : t.toothSelection === "none" && typeof t.bridgeUnit == "string" && Z[t.bridgeUnit] && (t.prosthesis = Z[t.bridgeUnit]);
   }
-  a.toothSelection = P1(t.toothSelection, Dd, a.toothSelection);
+  a.toothSelection = P1(t.toothSelection, Td, a.toothSelection);
   const o = t.pulpInflam ? "irreversible-pulpitis" : "normal";
-  a.pulpDx = P1(t.pulpDx, T5, o), a.pulpLatin = P1(t.pulpLatin, D5, "none"), a.endoResection = !!t.endoResection;
+  a.pulpDx = P1(t.pulpDx, G5, o), a.pulpLatin = P1(t.pulpLatin, T5, "none"), a.endoResection = !!t.endoResection;
   const n = t.rootResorption ? "external-cervical" : "none";
-  a.resorptionType = P1(t.resorptionType, A5, n), a.mods = O3(t.mods, Ld), a.periapicalType = P1(t.periapicalType, Hd, "none");
+  a.resorptionType = P1(t.resorptionType, O5, n), a.mods = O3(t.mods, Ed), a.periapicalType = P1(t.periapicalType, Ld, "none");
   let d = "normal";
-  a.mods.has("inflammation") && nt(a.toothSelection) && (d = a.periapicalType === "abscess" ? "acute-apical-abscess" : "asymptomatic-apical-periodontitis", a.mods.delete("inflammation")), a.apicalDx = P1(t.apicalDx, O5, d), nt(a.toothSelection) && a.apicalDx !== "symptomatic-apical-periodontitis" && a.apicalDx !== "asymptomatic-apical-periodontitis" && (a.periapicalType = "none"), a.endo = P1(t.endo, P5, a.endo), a.endo && a.endo !== "none" && (a.pulpDx !== "normal" || a.pulpLatin !== "none") && (a.pulpDx = "normal", a.pulpLatin = "none"), a.caries = O3(t.caries, jd);
-  const l = (g) => {
+  a.mods.has("inflammation") && ot(a.toothSelection) && (d = a.periapicalType === "abscess" ? "acute-apical-abscess" : "asymptomatic-apical-periodontitis", a.mods.delete("inflammation")), a.apicalDx = P1(t.apicalDx, D5, d), ot(a.toothSelection) && a.apicalDx !== "symptomatic-apical-periodontitis" && a.apicalDx !== "asymptomatic-apical-periodontitis" && (a.periapicalType = "none"), a.endo = P1(t.endo, C5, a.endo), a.endo && a.endo !== "none" && (a.pulpDx !== "normal" || a.pulpLatin !== "none") && (a.pulpDx = "normal", a.pulpLatin = "none"), a.caries = O3(t.caries, Hd);
+  const s = (g) => {
     if (typeof g == "number" && a4.has(g)) return g;
     if (typeof g == "string") {
-      if (g === "surface" || g === "dentin" || g === "deep") return U8(g);
+      if (g === "surface" || g === "dentin" || g === "deep") return A8(g);
       const Z = Number(g);
       if (a4.has(Z)) return Z;
     }
     return null;
   };
-  a.cariesActiveDepth = l(t.cariesActiveDepth) ?? 2;
+  a.cariesActiveDepth = s(t.cariesActiveDepth) ?? 2;
   const f = /* @__PURE__ */ new Map();
   if (t.cariesSeverity && typeof t.cariesSeverity == "object")
     for (const [g, Z] of Object.entries(t.cariesSeverity)) {
-      const G = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
-      R2.has(g) && Rd.has(G) && f.set(g, G);
+      const P = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
+      N2.has(g) && Nd.has(P) && f.set(g, P);
     }
   const p = /* @__PURE__ */ new Map();
   if (t.cariesDepths && typeof t.cariesDepths == "object")
     for (const [g, Z] of Object.entries(t.cariesDepths)) {
-      const G = l(Z);
-      R2.has(g) && G !== null && p.set(g, G);
+      const P = s(Z);
+      N2.has(g) && P !== null && p.set(g, P);
     }
   const v = /* @__PURE__ */ new Map();
   if (t.secondaryCaries && typeof t.secondaryCaries == "object")
     for (const [g, Z] of Object.entries(t.secondaryCaries)) {
-      const G = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
-      R2.has(g) && Nd.has(G) && v.set(g, G);
+      const P = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
+      N2.has(g) && jd.has(P) && v.set(g, P);
     }
-  if (a.rootCaries = P1(t.rootCaries, R5, "none"), a.periImplant = P1(t.periImplant, V5, "none"), a.toothSelection === "implant" && a.periImplant === "none" && (a.mods.has("inflammation") && (a.periImplant = "mucositis", a.mods.delete("inflammation")), a.mods.has("parodontal") && (a.periImplant = "mucositis", a.mods.delete("parodontal"))), a.cejVisibility = P1(t.cejVisibility, F5, "none"), a.rootConcavity = P1(t.rootConcavity, B5, "none"), a.gingivalThickness = P1(t.gingivalThickness, K5, "unknown"), a.millerClass = P1(t.millerClass, q5, "none"), a.radiographicDepth = /* @__PURE__ */ new Map(), t.radiographicDepth && typeof t.radiographicDepth == "object")
+  if (a.rootCaries = P1(t.rootCaries, N5, "none"), a.periImplant = P1(t.periImplant, R5, "none"), a.toothSelection === "implant" && a.periImplant === "none" && (a.mods.has("inflammation") && (a.periImplant = "mucositis", a.mods.delete("inflammation")), a.mods.has("parodontal") && (a.periImplant = "mucositis", a.mods.delete("parodontal"))), a.cejVisibility = P1(t.cejVisibility, V5, "none"), a.rootConcavity = P1(t.rootConcavity, F5, "none"), a.gingivalThickness = P1(t.gingivalThickness, B5, "unknown"), a.millerClass = P1(t.millerClass, K5, "none"), a.radiographicDepth = /* @__PURE__ */ new Map(), t.radiographicDepth && typeof t.radiographicDepth == "object")
     for (const [g, Z] of Object.entries(t.radiographicDepth))
-      R2.has(g) && typeof Z == "string" && Vd.has(Z) && a.radiographicDepth.set(g, Z);
+      N2.has(g) && typeof Z == "string" && Rd.has(Z) && a.radiographicDepth.set(g, Z);
   if (a.fillingDefect = /* @__PURE__ */ new Map(), t.fillingDefect && typeof t.fillingDefect == "object")
     for (const [g, Z] of Object.entries(t.fillingDefect))
-      R2.has(g) && typeof Z == "string" && Fd.has(Z) && a.fillingDefect.set(g, Z);
-  a.fillingMaterial = P1(t.fillingMaterial, l4, a.fillingMaterial), a.fillingSurfaces = O3(t.fillingSurfaces, R2), a.fillingSurfaceMaterials = /* @__PURE__ */ new Map();
+      N2.has(g) && typeof Z == "string" && Vd.has(Z) && a.fillingDefect.set(g, Z);
+  a.fillingMaterial = P1(t.fillingMaterial, l4, a.fillingMaterial), a.fillingSurfaces = O3(t.fillingSurfaces, N2), a.fillingSurfaceMaterials = /* @__PURE__ */ new Map();
   const k = t.fillingSurfaceMaterials;
   if (k && typeof k == "object")
     for (const [g, Z] of Object.entries(k))
-      R2.has(g) && typeof Z == "string" && l4.has(Z) && Z !== "none" && a.fillingSurfaceMaterials.set(g, Z);
+      N2.has(g) && typeof Z == "string" && l4.has(Z) && Z !== "none" && a.fillingSurfaceMaterials.set(g, Z);
   else if (a.fillingMaterial !== "none" && a.fillingSurfaces.size > 0)
     for (const g of a.fillingSurfaces)
       a.fillingSurfaceMaterials.set(g, a.fillingMaterial);
@@ -40665,9 +40652,9 @@ function He(t, e = !0) {
     a.caries.has("caries-" + g) && a.cariesSeverity.get(g) === 0 && (a.caries.delete("caries-" + g), a.cariesSeverity.delete(g));
   a.fissureSealing = !!t.fissureSealing, a.calculus = !!t.calculus, a.contactMesial = !!t.contactMesial, a.contactDistal = !!t.contactDistal;
   const u = t.bruxismWear ? "attrition" : "none";
-  a.wearEdge = P1(t.wearEdge, U5, u);
+  a.wearEdge = P1(t.wearEdge, A5, u);
   const y = t.bruxismNeckWear ? "abrasion" : "none";
-  if (a.wearCervical = P1(t.wearCervical, E5, y), a.discoloration = P1(t.discoloration, L5, "none"), a.orthoAppliance = P1(t.orthoAppliance, H5, "none"), a.orthoDrift = P1(t.orthoDrift, j5, "none"), a.orthoVertical = P1(t.orthoVertical, N5, "none"), a.orthoRotation = t.orthoRotation === !0, a.brokenMesial = !!t.brokenMesial, a.brokenIncisal = !!t.brokenIncisal, a.brokenDistal = !!t.brokenDistal, a.extractionWound = !!t.extractionWound, a.extractionPlan = !!t.extractionPlan, a.parapulpalPin = !!t.parapulpalPin, a.crownReplace = !!t.crownReplace, a.crownNeeded = !!t.crownNeeded, a.missingClosed = !!t.missingClosed, a.bridgePillar = !!t.bridgePillar, a.prosthesis = P1(t.prosthesis, Od, "none"), a.mobility = P1(t.mobility, G5, a.mobility), a.toothSubstrate = P1(t.toothSubstrate, Ad, a.toothSubstrate), a.restorationType = P1(t.restorationType, Ud, a.restorationType), a.restorationMaterial = P1(t.restorationMaterial, Ed, a.restorationMaterial), a.toothSubstrate === "radix" && a.restorationType !== "none" && (a.restorationType = "none", a.restorationMaterial = "none"), !Oi(a.restorationType, a.restorationMaterial, "occlusal")) {
+  if (a.wearCervical = P1(t.wearCervical, U5, y), a.discoloration = P1(t.discoloration, E5, "none"), a.orthoAppliance = P1(t.orthoAppliance, L5, "none"), a.orthoDrift = P1(t.orthoDrift, H5, "none"), a.orthoVertical = P1(t.orthoVertical, j5, "none"), a.orthoRotation = t.orthoRotation === !0, a.brokenMesial = !!t.brokenMesial, a.brokenIncisal = !!t.brokenIncisal, a.brokenDistal = !!t.brokenDistal, a.extractionWound = !!t.extractionWound, a.extractionPlan = !!t.extractionPlan, a.parapulpalPin = !!t.parapulpalPin, a.crownReplace = !!t.crownReplace, a.crownNeeded = !!t.crownNeeded, a.missingClosed = !!t.missingClosed, a.bridgePillar = !!t.bridgePillar, a.prosthesis = P1(t.prosthesis, Dd, "none"), a.mobility = P1(t.mobility, P5, a.mobility), a.toothSubstrate = P1(t.toothSubstrate, Od, a.toothSubstrate), a.restorationType = P1(t.restorationType, Ad, a.restorationType), a.restorationMaterial = P1(t.restorationMaterial, Ud, a.restorationMaterial), a.toothSubstrate === "radix" && a.restorationType !== "none" && (a.restorationType = "none", a.restorationMaterial = "none"), !Oi(a.restorationType, a.restorationMaterial, "occlusal")) {
     const g = Te[a.restorationType];
     g && g.materials.length > 0 ? a.restorationMaterial = g.materials[0] : (a.restorationType = "none", a.restorationMaterial = "none");
   }
@@ -40677,13 +40664,13 @@ function He(t, e = !0) {
     if (h.pd && typeof h.pd == "object")
       for (const [g, Z] of Object.entries(h.pd)) {
         if (!$2.includes(g)) continue;
-        const G = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN, I = Ni("pd", G);
+        const P = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN, I = Ni("pd", P);
         I !== null && a.perio.pd.set(g, I);
       }
     if (h.gm && typeof h.gm == "object")
       for (const [g, Z] of Object.entries(h.gm)) {
         if (!a.perio.pd.has(g)) continue;
-        const G = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN, I = Ni("gm", G);
+        const P = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN, I = Ni("gm", P);
         I !== null && a.perio.gm.set(g, I);
       }
     if (Array.isArray(h.bop))
@@ -40693,91 +40680,91 @@ function He(t, e = !0) {
       for (const g of h.sup)
         typeof g == "string" && a.perio.pd.has(g) && a.perio.sup.add(g);
   }
-  const C = t.furcation;
-  if (C && typeof C == "object")
-    for (const [g, Z] of Object.entries(C)) {
-      if (!Bd.has(g)) continue;
-      const G = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
-      Number.isInteger(G) && Y5.has(G) && a.furcation.set(g, G);
+  const T = t.furcation;
+  if (T && typeof T == "object")
+    for (const [g, Z] of Object.entries(T)) {
+      if (!Fd.has(g)) continue;
+      const P = typeof Z == "number" ? Z : typeof Z == "string" ? Number(Z) : NaN;
+      Number.isInteger(P) && q5.has(P) && a.furcation.set(g, P);
     }
   const w = t.plaque;
   if (Array.isArray(w))
     for (const g of w)
-      typeof g == "string" && M2.has(g) && a.plaque.add(g);
+      typeof g == "string" && x2.has(g) && a.plaque.add(g);
   if (t.pi && typeof t.pi == "object")
     for (const [g, Z] of Object.entries(t.pi))
-      M2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.pi.set(g, Z);
+      x2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.pi.set(g, Z);
   if (t.gi && typeof t.gi == "object")
     for (const [g, Z] of Object.entries(t.gi))
-      M2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.gi.set(g, Z);
+      x2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.gi.set(g, Z);
   if (t.mpi && typeof t.mpi == "object")
     for (const [g, Z] of Object.entries(t.mpi))
-      M2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.mpi.set(g, Z);
+      x2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.mpi.set(g, Z);
   if (t.mbi && typeof t.mbi == "object")
     for (const [g, Z] of Object.entries(t.mbi))
-      M2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.mbi.set(g, Z);
-  if (a.kg = _5(t.kg), typeof t.note == "string" && (a.note = t.note), t.customStates && typeof t.customStates == "object") {
+      x2.has(g) && (Z === 1 || Z === 2 || Z === 3) && a.mbi.set(g, Z);
+  if (a.kg = J5(t.kg), typeof t.note == "string" && (a.note = t.note), t.customStates && typeof t.customStates == "object") {
     const g = new Set(Ua.map((Z) => Z.id));
-    for (const [Z, G] of Object.entries(t.customStates))
-      g.has(Z) && (a.customStates[Z] = G);
+    for (const [Z, P] of Object.entries(t.customStates))
+      g.has(Z) && (a.customStates[Z] = P);
   }
   return a;
 }
 function ar(t) {
   const e = {};
   for (const a of s1) {
-    const i = t.get(a) ?? h1();
+    const i = t.get(a) ?? m1();
     e[a] = Tt(i);
   }
   return e;
 }
-function J5() {
+function W5() {
   return {
     wisdomVisible: Oa,
-    showBase: S2,
+    showBase: Z2,
     occlusalVisible: Pe,
-    showHealthyPulp: Jt,
-    edentulous: Qt
+    showHealthyPulp: Yt,
+    edentulous: Jt
   };
 }
 function Gr() {
   const t = ar(A1.status), e = Dt ? ar(A1.plan) : null, a = e !== null && JSON.stringify(e) !== JSON.stringify(t);
   return {
     version: "2.20",
-    globals: J5(),
+    globals: W5(),
     teeth: t,
     ...kr(J) ? {} : { case: On(J) },
     ...a ? { plan: e } : {}
   };
 }
-function qd() {
+function Kd() {
   return Gr();
 }
-function hh() {
+function fh() {
   return {
     version: "2.20",
-    globals: J5(),
+    globals: W5(),
     teeth: ar(A1.plan),
     ...kr(J) ? {} : { case: On(J) }
   };
 }
-function mh(t) {
+function hh(t) {
   if (!t || typeof t != "object") return;
-  const e = W5(t.version), a = t.teeth || {};
+  const e = Y5(t.version), a = t.teeth || {};
   for (const i of s1) {
     const r = a[i];
     A1.plan.set(i, He(r, e));
   }
-  if (Dt = !0, o2.clear(), _t = null, Fe() === "plan") {
+  if (Dt = !0, o2.clear(), Wt = null, Fe() === "plan") {
     for (const i of s1)
-      tt(i), yt(i), ae(i);
-    E && u1(U.get(E)), X();
+      ct(i), bt(i), ae(i);
+    E && k1(U.get(E)), X();
   }
 }
-const Yd = Object.fromEntries(
+const qd = Object.fromEntries(
   re("toothSelection").map((t) => [t.value, t.labelKey])
 );
-function Wd(t) {
+function Yd(t) {
   const e = t.perio;
   if (!e || !e.pd || e.pd.size === 0) return c("planChange.none");
   let a = 0, i = null;
@@ -40789,7 +40776,7 @@ function Wd(t) {
   const r = Math.round(a / e.pd.size * 1e3) / 10;
   return c("planChange.perioSummary", { sites: e.pd.size, bop: r, cal: i ?? 0 });
 }
-function Jd(t) {
+function Wd(t) {
   const e = t.furcation;
   if (!e || e.size === 0) return c("planChange.none");
   let a = 0;
@@ -40797,16 +40784,16 @@ function Jd(t) {
     i > a && (a = i);
   return a > 0 ? c(`furcation.grade.${a}`) : c("planChange.none");
 }
-function _d(t) {
+function Jd(t) {
   const e = t.plaque;
   return !e || e.size === 0 ? c("planChange.none") : `${e.size}/4`;
 }
-const Qd = [
+const _d = [
   {
     key: "presence",
     labelKey: "planChange.axis.presence",
     label: (t) => {
-      const e = c(Yd[t.toothSelection] ?? "toothSelect.none");
+      const e = c(qd[t.toothSelection] ?? "toothSelect.none");
       return t.extractionPlan ? `${e} (${c("tooth.extractionPlan")})` : e;
     }
   },
@@ -40865,29 +40852,29 @@ const Qd = [
     // per-site entries.
     key: "perio",
     labelKey: "planChange.axis.perio",
-    label: (t) => Wd(t)
+    label: (t) => Yd(t)
   },
   {
     // ONE summary-level entry per tooth (see furcationSummaryLabel above) —
     // never one per entrance.
     key: "furcation",
     labelKey: "planChange.axis.furcation",
-    label: (t) => Jd(t)
+    label: (t) => Wd(t)
   },
   {
     // ONE summary-level entry per tooth (see plaqueSummaryLabel above) — never
     // one per surface.
     key: "plaque",
     labelKey: "planChange.axis.plaque",
-    label: (t) => _d(t)
+    label: (t) => Jd(t)
   }
 ];
-function Xd() {
+function Qd() {
   if (!Dt) return [];
   const t = [];
   for (const e of s1) {
-    const a = A1.status.get(e) ?? h1(), i = A1.plan.get(e) ?? h1();
-    for (const r of Qd) {
+    const a = A1.status.get(e) ?? m1(), i = A1.plan.get(e) ?? m1();
+    for (const r of _d) {
       const o = r.label(a), n = r.label(i);
       o !== n && t.push({ toothNo: e, axis: r.key, from: o, to: n });
     }
@@ -40897,7 +40884,7 @@ function Xd() {
 function Zt(t, e, a) {
   if (!$2.includes(e)) return;
   let i = U.get(t);
-  i || (i = h1(), U.set(t, i)), jt(t, () => {
+  i || (i = m1(), U.set(t, i)), Qt(t, () => {
     const r = i.perio;
     let o = !1;
     if ("pd" in a) {
@@ -40926,22 +40913,22 @@ function Pt(t) {
     sup: Array.from(a.sup)
   };
 }
-function $d(t, e, a) {
+function Xd(t, e, a) {
   if (!yr(t).includes(e)) return;
   let i = U.get(t);
-  i || (i = h1(), U.set(t, i)), jt(t, () => {
+  i || (i = m1(), U.set(t, i)), Qt(t, () => {
     const r = i.furcation;
-    return a == null ? r.has(e) ? (r.delete(e), X(), !0) : !1 : !Number.isInteger(a) || !Y5.has(a) ? !1 : r.get(e) !== a ? (r.set(e, a), X(), !0) : !1;
+    return a == null ? r.has(e) ? (r.delete(e), X(), !0) : !1 : !Number.isInteger(a) || !q5.has(a) ? !1 : r.get(e) !== a ? (r.set(e, a), X(), !0) : !1;
   });
 }
 function Tr(t) {
   const a = U.get(t)?.furcation;
   return !a || a.size === 0 ? {} : Object.fromEntries(a);
 }
-function t9(t, e, a) {
-  if (!M2.has(e)) return;
+function $d(t, e, a) {
+  if (!x2.has(e)) return;
   let i = U.get(t);
-  i || (i = h1(), U.set(t, i)), jt(t, () => {
+  i || (i = m1(), U.set(t, i)), Qt(t, () => {
     const r = i.plaque;
     if (a) {
       if (!r.has(e))
@@ -40960,9 +40947,9 @@ function n3(t, e) {
   return a === 1 || a === 2 || a === 3 ? a : 0;
 }
 function l3(t, e, a, i) {
-  if (!M2.has(a)) return;
+  if (!x2.has(a)) return;
   let r = U.get(t);
-  r || (r = h1(), U.set(t, r)), !((e === "mpi" || e === "mbi") && r.toothSelection !== "implant") && jt(t, () => {
+  r || (r = m1(), U.set(t, r)), !((e === "mpi" || e === "mbi") && r.toothSelection !== "implant") && Qt(t, () => {
     const o = r[e];
     return i === 0 ? o.has(a) ? (o.delete(a), X(), !0) : !1 : (i === 1 || i === 2 || i === 3) && o.get(a) !== i ? (o.set(a, i), X(), !0) : !1;
   });
@@ -40970,28 +40957,28 @@ function l3(t, e, a, i) {
 function Ya(t, e) {
   return n3(U.get(t)?.pi ?? /* @__PURE__ */ new Map(), e);
 }
-function e9(t, e, a) {
+function t9(t, e, a) {
   l3(t, "pi", e, a);
 }
 function Wa(t, e) {
   return n3(U.get(t)?.gi ?? /* @__PURE__ */ new Map(), e);
 }
-function a9(t, e, a) {
+function e9(t, e, a) {
   l3(t, "gi", e, a);
 }
 function Ja(t, e) {
   return n3(U.get(t)?.mpi ?? /* @__PURE__ */ new Map(), e);
 }
-function i9(t, e, a) {
+function a9(t, e, a) {
   l3(t, "mpi", e, a);
 }
 function _a(t, e) {
   return n3(U.get(t)?.mbi ?? /* @__PURE__ */ new Map(), e);
 }
-function r9(t, e, a) {
+function i9(t, e, a) {
   l3(t, "mbi", e, a);
 }
-function _5(t) {
+function J5(t) {
   if (t == null) return null;
   const e = Number(t);
   return Number.isFinite(e) ? Math.max(0, Math.min(15, Math.round(e))) : null;
@@ -41000,102 +40987,102 @@ function qe(t) {
   const e = U.get(t)?.kg;
   return typeof e == "number" ? e : null;
 }
-function o9(t, e) {
+function r9(t, e) {
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a));
-  const i = e === null ? null : _5(e);
-  e !== null && i === null || jt(t, () => a.kg === i ? !1 : (a.kg = i, X(), !0));
+  a || (a = m1(), U.set(t, a));
+  const i = e === null ? null : J5(e);
+  e !== null && i === null || Qt(t, () => a.kg === i ? !1 : (a.kg = i, X(), !0));
 }
-function n9(t, e) {
-  if (!F5.has(e)) return;
+function o9(t, e) {
+  if (!V5.has(e)) return;
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a)), jt(t, () => a.cejVisibility === e ? !1 : (a.cejVisibility = e, X(), !0));
+  a || (a = m1(), U.set(t, a)), Qt(t, () => a.cejVisibility === e ? !1 : (a.cejVisibility = e, X(), !0));
 }
 function Qa(t) {
   return U.get(t)?.cejVisibility ?? "none";
 }
-function l9(t, e) {
-  if (!B5.has(e)) return;
+function n9(t, e) {
+  if (!F5.has(e)) return;
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a)), jt(t, () => a.rootConcavity === e ? !1 : (a.rootConcavity = e, X(), !0));
+  a || (a = m1(), U.set(t, a)), Qt(t, () => a.rootConcavity === e ? !1 : (a.rootConcavity = e, X(), !0));
 }
 function Xa(t) {
   return U.get(t)?.rootConcavity ?? "none";
 }
-function s9(t, e) {
-  if (!K5.has(e)) return;
+function l9(t, e) {
+  if (!B5.has(e)) return;
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a)), jt(t, () => a.gingivalThickness === e ? !1 : (a.gingivalThickness = e, X(), !0));
+  a || (a = m1(), U.set(t, a)), Qt(t, () => a.gingivalThickness === e ? !1 : (a.gingivalThickness = e, X(), !0));
 }
 function s3(t) {
   return U.get(t)?.gingivalThickness ?? "unknown";
 }
-function c9(t, e) {
-  if (!q5.has(e)) return;
+function s9(t, e) {
+  if (!K5.has(e)) return;
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a)), jt(t, () => a.millerClass === e ? !1 : (a.millerClass = e, X(), !0));
+  a || (a = m1(), U.set(t, a)), Qt(t, () => a.millerClass === e ? !1 : (a.millerClass = e, X(), !0));
 }
 function c3(t) {
   return U.get(t)?.millerClass ?? "none";
 }
-function P2(t) {
+function C2(t) {
   const e = /* @__PURE__ */ new Map(), a = U.get(t);
   if (!a || !a.perio) return e;
   for (const [i, r] of a.perio.pd)
     e.set(i, r + (a.perio.gm.get(i) ?? 0));
   return e;
 }
-const d9 = 1;
+const c9 = 1;
 function Dr(t) {
   const e = U.get(t);
   if (!e || !e.perio) return "none";
   const a = e.perio.gm.get("B");
   if (a === void 0 || a <= 0) return "none";
-  const i = P2(t), r = i.get("B") ?? 0, o = Math.max(i.get("MB") ?? 0, i.get("DB") ?? 0);
-  return o < d9 ? "rt1" : o <= r ? "rt2" : "rt3";
+  const i = C2(t), r = i.get("B") ?? 0, o = Math.max(i.get("MB") ?? 0, i.get("DB") ?? 0);
+  return o < c9 ? "rt1" : o <= r ? "rt2" : "rt3";
 }
-function G2() {
+function P2() {
   let t = 0, e = 0, a = null, i = null, r = null, o = 0, n = 0;
-  for (const P of s1) {
-    const b = U.get(P);
+  for (const C of s1) {
+    const b = U.get(C);
     if (!b || !b.perio) continue;
     const _ = b.perio.pd, t1 = b.perio.gm, V = b.perio.bop;
     for (const [W, l1] of _) {
       t++, V.has(W) && e++;
       const z = l1 + (t1.get(W) ?? 0);
-      o += l1, n += z, (a === null || z > a) && (a = z, i = P), (r === null || l1 > r) && (r = l1);
+      o += l1, n += z, (a === null || z > a) && (a = z, i = C), (r === null || l1 > r) && (r = l1);
     }
   }
-  const d = t > 0 ? Math.round(e / t * 1e3) / 10 : 0, l = t > 0 ? Math.round(o / t * 10) / 10 : null, f = t > 0 ? Math.round(n / t * 10) / 10 : null;
+  const d = t > 0 ? Math.round(e / t * 1e3) / 10 : 0, s = t > 0 ? Math.round(o / t * 10) / 10 : null, f = t > 0 ? Math.round(n / t * 10) / 10 : null;
   let p = null;
-  for (const P of s1) {
-    const b = U.get(P);
+  for (const C of s1) {
+    const b = U.get(C);
     if (!(!b || !b.furcation))
       for (const _ of b.furcation.values())
         (p === null || _ > p) && (p = _);
   }
   let v = 0, k = 0;
-  for (const P of s1) {
-    const b = U.get(P);
-    b && nt(b.toothSelection) && (v++, k += b.plaque?.size ?? 0);
+  for (const C of s1) {
+    const b = U.get(C);
+    b && ot(b.toothSelection) && (v++, k += b.plaque?.size ?? 0);
   }
   const x = v > 0 ? Math.round(k / (v * 4) * 1e3) / 10 : 0;
-  let u = 0, y = 0, h = 0, C = 0, w = 0;
+  let u = 0, y = 0, h = 0, T = 0, w = 0;
   const g = { thin: 0, medium: 0, thick: 0 }, Z = { i: 0, ii: 0, iii: 0, iv: 0 };
-  for (const P of s1) {
-    const b = U.get(P);
+  for (const C of s1) {
+    const b = U.get(C);
     if (b) {
       if (b.pi) for (const _ of b.pi.values())
         u += _, y++;
       if (b.gi) for (const _ of b.gi.values())
-        h += _, C++;
+        h += _, T++;
       typeof b.kg == "number" && b.kg < 2 && w++, b.gingivalThickness === "thin" ? g.thin++ : b.gingivalThickness === "medium" ? g.medium++ : b.gingivalThickness === "thick" && g.thick++, b.millerClass === "i" ? Z.i++ : b.millerClass === "ii" ? Z.ii++ : b.millerClass === "iii" ? Z.iii++ : b.millerClass === "iv" && Z.iv++;
     }
   }
-  const G = y > 0 ? Math.round(u / y * 10) / 10 : null, I = C > 0 ? Math.round(h / C * 10) / 10 : null;
+  const P = y > 0 ? Math.round(u / y * 10) / 10 : null, I = T > 0 ? Math.round(h / T * 10) / 10 : null;
   let D = 0, A = 0, H = 0, R = 0;
-  for (const P of s1) {
-    const b = U.get(P);
+  for (const C of s1) {
+    const b = U.get(C);
     if (b && b.toothSelection === "implant") {
       if (b.mpi) for (const _ of b.mpi.values())
         D += _, A++;
@@ -41111,11 +41098,11 @@ function G2() {
     worstCal: a,
     worstCalTooth: i,
     maxPd: r,
-    avgPd: l,
+    avgPd: s,
     avgCal: f,
     maxFurcation: p,
     plaquePercent: x,
-    piScore: G,
+    piScore: P,
     giScore: I,
     kgDeficientTeeth: w,
     gtDistribution: g,
@@ -41125,19 +41112,19 @@ function G2() {
   };
 }
 function Ri() {
-  const t = G2();
+  const t = P2();
   if (t.chartedSites > 0 || t.maxFurcation !== null || t.plaquePercent > 0 || t.piScore !== null || t.giScore !== null || t.kgDeficientTeeth > 0 || t.gtDistribution.thin > 0 || t.gtDistribution.medium > 0 || t.gtDistribution.thick > 0 || t.millerDistribution.i > 0 || t.millerDistribution.ii > 0 || t.millerDistribution.iii > 0 || t.millerDistribution.iv > 0 || t.mpiScore !== null || t.mbiScore !== null) return !0;
   for (const e of s1)
     if (qe(e) !== null || Qa(e) !== "none" || Xa(e) !== "none") return !0;
   return !1;
 }
 function s4() {
-  if (!$t) return !1;
+  if (!Xt) return !1;
   for (const t of U.values())
     if (t.note && t.note.trim() !== "") return !0;
   return !1;
 }
-function p9() {
+function d9() {
   const t = {};
   for (const e of s1) {
     const a = U.get(e);
@@ -41150,17 +41137,17 @@ function p9() {
   }
   return t;
 }
-function f9() {
+function p9() {
   const t = ["MB", "DB", "ML", "DL"], e = ["B", "L"], a = s1.map((o) => {
-    const n = U.get(o), d = nt((n ?? h1()).toothSelection), l = P2(o);
+    const n = U.get(o), d = ot((n ?? m1()).toothSelection), s = C2(o);
     let f = 0;
     for (const k of t) {
-      const x = l.get(k);
+      const x = s.get(k);
       x !== void 0 && x > f && (f = x);
     }
     let p = 0;
     for (const k of e) {
-      const x = l.get(k);
+      const x = s.get(k);
       x !== void 0 && x > p && (p = x);
     }
     let v = 0;
@@ -41168,7 +41155,7 @@ function f9() {
       for (const k of n.perio.pd.values())
         k > v && (v = k);
     return { toothNo: o, interdentalCal: f, buccalOralCal: p, maxPd: v, present: d };
-  }), i = G2(), r = Wt();
+  }), i = P2(), r = qt();
   return {
     teeth: a,
     bopPercent: i.bopPercent,
@@ -41185,7 +41172,7 @@ function f9() {
   };
 }
 function Vi() {
-  const t = J4(f9());
+  const t = J4(p9());
   return {
     diagnosis: J.diagnosisOverride ?? t.diagnosis,
     stage: J.stageOverride ?? t.stage,
@@ -41200,22 +41187,22 @@ function Vi() {
     }
   };
 }
-function h9(t) {
+function f9(t) {
   return t === "molar-incisor" ? "molarIncisor" : t;
 }
-function m9(t) {
+function h9(t) {
   const e = t.overridden.diagnosis || t.overridden.stage || t.overridden.grade || t.overridden.extent;
   if (t.diagnosis === "health" && !e) return "";
   const a = [c("perio.class.summary.dx", { dx: c(`perio.class.dx.${t.diagnosis}`) })], i = t.diagnosis === "periodontitis";
-  return (i || t.overridden.stage) && t.stage !== "na" && t.stage !== "indeterminate" && a.push(c("perio.class.summary.stage", { stage: t.stage })), (i || t.overridden.grade) && t.grade !== "indeterminate" && a.push(c("perio.class.summary.grade", { grade: t.grade })), (i || t.overridden.extent) && t.extent !== "na" && a.push(c(`perio.class.extent.${h9(t.extent)}`)), a.join(" · ");
+  return (i || t.overridden.stage) && t.stage !== "na" && t.stage !== "indeterminate" && a.push(c("perio.class.summary.stage", { stage: t.stage })), (i || t.overridden.grade) && t.grade !== "indeterminate" && a.push(c("perio.class.summary.grade", { grade: t.grade })), (i || t.overridden.extent) && t.extent !== "na" && a.push(c(`perio.class.extent.${f9(t.extent)}`)), a.join(" · ");
 }
-const v9 = ["pd", "gm"], g9 = [
+const m9 = ["pd", "gm"], v9 = [
   ["MB", "B", "DB"],
   ["ML", "L", "DL"]
 ], Or = (() => {
   const t = [];
-  for (const e of v9)
-    for (const a of g9)
+  for (const e of m9)
+    for (const a of v9)
       for (const i of s1)
         for (const r of a)
           t.push({ toothNo: i, site: r, row: e });
@@ -41224,55 +41211,55 @@ const v9 = ["pd", "gm"], g9 = [
 function Ar(t) {
   return `${t.row}:${t.toothNo}:${t.site}`;
 }
-const Q5 = new Map(
+const _5 = new Map(
   Or.map((t, e) => [Ar(t), e])
 );
 function A3(t) {
-  const e = Q5.get(Ar(t));
+  const e = _5.get(Ar(t));
   return e === void 0 ? null : Or[e + 1] ?? null;
 }
-function y9(t) {
-  const e = Q5.get(Ar(t));
+function g9(t) {
+  const e = _5.get(Ar(t));
   return e === void 0 || e === 0 ? null : Or[e - 1] ?? null;
 }
 function Ur(t) {
   return Mr(U.get(t));
 }
-function ot(t) {
+function rt(t) {
   return U.get(t)?.toothSelection === "implant";
 }
-function lt(t) {
+function nt(t) {
   const e = U.get(t)?.toothSelection;
   return e === "implant" ? "implant" : e === "milktooth" ? "milktooth" : e === "none" || e === "no-tooth-after-extraction" ? "missing" : "normal";
 }
 function Er(t) {
   return U.get(t)?.mobility ?? "none";
 }
-function u9(t, e) {
-  if (!G5.has(e)) return;
+function y9(t, e) {
+  if (!P5.has(e)) return;
   let a = U.get(t);
-  a || (a = h1(), U.set(t, a)), a.mobility !== e && jt(t, () => {
-    a.mobility = e, tt(t), yt(t), t === E && u1(U.get(t)), X();
+  a || (a = m1(), U.set(t, a)), a.mobility !== e && Qt(t, () => {
+    a.mobility = e, ct(t), bt(t), t === E && k1(U.get(t)), X();
   });
 }
 let Lr = !1;
-function k9() {
+function u9() {
   Lr = !0, X();
 }
-function X5() {
+function Q5() {
   Lr = !1, X();
 }
-function b9() {
+function k9() {
   return Lr;
 }
 let ir = "toggle";
 function c4() {
   return ir;
 }
-function x9(t) {
+function b9(t) {
   t !== ir && (ir = t, X());
 }
-const M9 = [
+const x9 = [
   "plaque",
   "bop",
   "cal",
@@ -41290,33 +41277,33 @@ const M9 = [
   "gt",
   "miller"
 ];
-function w9() {
+function M9() {
   const t = {};
-  for (const e of M9) t[e] = !0;
+  for (const e of x9) t[e] = !0;
   return t;
 }
-let Pi = w9();
+let Pi = M9();
 function ja() {
   return Pi;
 }
-function Z9(t, e) {
+function w9(t, e) {
   Pi[t] !== e && (Pi = { ...Pi, [t]: e }, X());
 }
 let rr = "translated";
 function je() {
   return rr;
 }
-function S9(t) {
+function Z9(t) {
   t !== rr && (rr = t, X());
 }
 let or = "none";
 function ga() {
   return or;
 }
-function z9(t) {
+function S9(t) {
   t !== or && (or = t, X());
 }
-function $5(t, e) {
+function X5(t, e) {
   const a = new Blob([JSON.stringify(t, null, 2)], { type: "application/json" }), i = URL.createObjectURL(a), r = document.createElement("a"), o = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-");
   r.href = i, r.download = `${e}-${o}.json`, document.body.appendChild(r), r.click(), r.remove(), URL.revokeObjectURL(i);
 }
@@ -41324,34 +41311,34 @@ function Fi(t, e) {
   const a = document.createElement("a");
   a.href = t, a.download = e, document.body.appendChild(a), a.click(), a.remove();
 }
-let I2 = null, ct = !1;
+let z2 = null, st = !1;
 function $a() {
-  if (I2) return;
+  if (z2) return;
   const t = $("div", { class: "odon-export-card" }, [
     $("div", { class: "odon-export-title", text: c("export.progress.title") }),
     $("div", { class: "odon-export-pct", id: "odonExportPct", text: "0%" }),
     $("div", { class: "odon-export-phase", id: "odonExportPhase", text: c("export.progress.preparing") })
   ]);
-  I2 = $("div", { class: "odon-export-overlay", role: "status", "aria-live": "polite" }, [t]), document.body.appendChild(I2);
+  z2 = $("div", { class: "odon-export-overlay", role: "status", "aria-live": "polite" }, [t]), document.body.appendChild(z2);
 }
 function N1(t, e) {
-  const a = Math.max(0, Math.min(100, Math.round(t))), i = I2?.querySelector("#odonExportPct"), r = I2?.querySelector("#odonExportPhase");
+  const a = Math.max(0, Math.min(100, Math.round(t))), i = z2?.querySelector("#odonExportPct"), r = z2?.querySelector("#odonExportPhase");
   i && (i.textContent = `${a}%`), r && (r.textContent = c(e));
 }
 function ti() {
-  I2 && (I2.remove(), I2 = null);
+  z2 && (z2.remove(), z2 = null);
 }
 const ya = "http://www.w3.org/2000/svg";
-function tl(t, e) {
+function $5(t, e) {
   const a = Array.from(t.children), i = Array.from(e.children);
   for (let r = 0; r < a.length; r++) {
     const o = a[r], n = i[r];
     if (!n) continue;
-    const d = window.getComputedStyle(o), l = d.opacity !== "" && Number(d.opacity) === 0;
-    d.display === "none" || d.visibility === "hidden" || l ? n.remove() : tl(o, n);
+    const d = window.getComputedStyle(o), s = d.opacity !== "" && Number(d.opacity) === 0;
+    d.display === "none" || d.visibility === "hidden" || s ? n.remove() : $5(o, n);
   }
 }
-function I9(t, e) {
+function z9(t, e) {
   const a = (o) => o.replace(/url\(#([^)]+)\)/g, (n, d) => `url(#${e}${d})`), i = ["fill", "stroke", "clip-path", "mask", "filter"];
   t.querySelectorAll("[id]").forEach((o) => {
     const n = o.getAttribute("id");
@@ -41359,9 +41346,9 @@ function I9(t, e) {
   });
   const r = [t, ...Array.from(t.querySelectorAll("*"))];
   for (const o of r) {
-    for (const l of i) {
-      const f = o.getAttribute(l);
-      f && f.includes("url(#") && o.setAttribute(l, a(f));
+    for (const s of i) {
+      const f = o.getAttribute(s);
+      f && f.includes("url(#") && o.setAttribute(s, a(f));
     }
     const n = o.getAttribute("style");
     n && n.includes("url(#") && o.setAttribute("style", a(n));
@@ -41369,7 +41356,7 @@ function I9(t, e) {
     d && d.startsWith("#") && (o.setAttribute("href", "#" + e + d.slice(1)), o.removeAttributeNS("http://www.w3.org/1999/xlink", "href"));
   }
 }
-function C9(t = {}) {
+function I9(t = {}) {
   const e = document.querySelector("#toothGrid, .tooth-grid");
   if (!e) return null;
   const a = [];
@@ -41381,25 +41368,25 @@ function C9(t = {}) {
       });
     }
   try {
-    return P9(e, t);
+    return C9(e, t);
   } finally {
     for (const i of a) i();
   }
 }
-function P9(t, e = {}) {
+function C9(t, e = {}) {
   const a = t.getBoundingClientRect(), i = Math.max(1, Math.round(a.width)), r = Math.max(1, Math.round(a.height)), o = document.createElementNS(ya, "svg");
   o.setAttribute("xmlns", ya), o.setAttribute("width", String(i)), o.setAttribute("height", String(r)), o.setAttribute("viewBox", `0 0 ${i} ${r}`);
   const n = document.createElementNS(ya, "rect");
   n.setAttribute("x", "0"), n.setAttribute("y", "0"), n.setAttribute("width", String(i)), n.setAttribute("height", String(r)), n.setAttribute("fill", "#ffffff"), o.appendChild(n);
   const d = e.packFactor ?? 1;
-  let l = 0, f = 0;
+  let s = 0, f = 0;
   t.querySelectorAll(".tooth-svg > svg").forEach((x) => {
     const u = x.getBoundingClientRect();
     if (u.width === 0 || u.height === 0) return;
     const y = x.cloneNode(!0);
-    tl(x, y), I9(y, `t${f++}-`);
-    const h = document.createElementNS(ya, "svg"), C = (u.left - a.left) * d;
-    l = Math.max(l, C + u.width), h.setAttribute("x", String(C)), h.setAttribute("y", String(u.top - a.top)), h.setAttribute("width", String(u.width)), h.setAttribute("height", String(u.height));
+    $5(x, y), z9(y, `t${f++}-`);
+    const h = document.createElementNS(ya, "svg"), T = (u.left - a.left) * d;
+    s = Math.max(s, T + u.width), h.setAttribute("x", String(T)), h.setAttribute("y", String(u.top - a.top)), h.setAttribute("width", String(u.width)), h.setAttribute("height", String(u.height));
     const w = x.getAttribute("viewBox");
     for (w && h.setAttribute("viewBox", w), h.setAttribute("preserveAspectRatio", "xMidYMid meet"); y.firstChild; ) h.appendChild(y.firstChild);
     o.appendChild(h);
@@ -41414,47 +41401,47 @@ function P9(t, e = {}) {
     if (!u) return;
     const y = x.getBoundingClientRect();
     if (y.width === 0 || y.height === 0) return;
-    const h = window.getComputedStyle(x), C = document.createElementNS(ya, "text"), w = (y.left - a.left) * d + y.width / 2;
-    l = Math.max(l, w + y.width / 2), C.setAttribute("x", String(w)), C.setAttribute("y", String(y.top - a.top + y.height / 2)), C.setAttribute("text-anchor", "middle"), C.setAttribute("dominant-baseline", "central"), C.setAttribute("font-family", h.fontFamily);
+    const h = window.getComputedStyle(x), T = document.createElementNS(ya, "text"), w = (y.left - a.left) * d + y.width / 2;
+    s = Math.max(s, w + y.width / 2), T.setAttribute("x", String(w)), T.setAttribute("y", String(y.top - a.top + y.height / 2)), T.setAttribute("text-anchor", "middle"), T.setAttribute("dominant-baseline", "central"), T.setAttribute("font-family", h.fontFamily);
     const g = parseFloat(h.fontSize) || 12;
-    C.setAttribute("font-size", `${g * (e.labelFontScale ?? 1)}px`), C.setAttribute("font-weight", h.fontWeight), C.setAttribute("fill", h.color), C.textContent = u, o.appendChild(C);
+    T.setAttribute("font-size", `${g * (e.labelFontScale ?? 1)}px`), T.setAttribute("font-weight", h.fontWeight), T.setAttribute("fill", h.color), T.textContent = u, o.appendChild(T);
   });
-  const v = d < 1 ? Math.max(1, Math.ceil(l)) : i;
+  const v = d < 1 ? Math.max(1, Math.ceil(s)) : i;
   return v !== i && (o.setAttribute("width", String(v)), o.setAttribute("viewBox", `0 0 ${v} ${r}`), n.setAttribute("width", String(v))), { xml: `<?xml version="1.0" encoding="UTF-8"?>
 ${new XMLSerializer().serializeToString(o)}`, width: v, height: r };
 }
-const G9 = { thin: 2, medium: 3.5, thick: 6 };
+const P9 = { thin: 2, medium: 3.5, thick: 6 };
 function Hr(t) {
-  const e = Ne(), a = S2, i = Jt;
-  e.showBone !== S2 && ji(e.showBone), e.showHealthyPulp !== Jt && Ha(e.showHealthyPulp);
+  const e = Ne(), a = Z2, i = Yt;
+  e.showBone !== Z2 && ji(e.showBone), e.showHealthyPulp !== Yt && Ha(e.showHealthyPulp);
   let r;
   try {
-    r = C9({
-      labelFontScale: F9[e.toothNumberSize],
-      packFactor: V9[e.toothSpacing]
+    r = I9({
+      labelFontScale: V9[e.toothNumberSize],
+      packFactor: R9[e.toothSpacing]
     });
   } finally {
-    S2 !== a && ji(a), Jt !== i && Ha(i);
+    Z2 !== a && ji(a), Yt !== i && Ha(i);
   }
   if (r && t && e.border) {
-    const o = G9[e.borderThickness], [n, d, l] = gr[e.colorTheme].header, f = o / 2, p = `<rect x="${f}" y="${f}" width="${r.width - o}" height="${r.height - o}" fill="none" stroke="rgb(${n},${d},${l})" stroke-width="${o}"/>`;
+    const o = P9[e.borderThickness], [n, d, s] = gr[e.colorTheme].header, f = o / 2, p = `<rect x="${f}" y="${f}" width="${r.width - o}" height="${r.height - o}" fill="none" stroke="rgb(${n},${d},${s})" stroke-width="${o}"/>`;
     r = { ...r, xml: r.xml.replace("</svg>", `${p}</svg>`) };
   }
   return r;
 }
 function jr() {
-  const t = Ne(), e = K9[t.perioFontSize];
-  return m6({
+  const t = Ne(), e = B9[t.perioFontSize];
+  return h6({
     fontSize: e.fontSize,
     rowHeight: e.rowHeight,
-    toothGap: q9[t.perioToothSpacing],
+    toothGap: K9[t.perioToothSpacing],
     showEmptyRows: t.perioShowEmptyRows,
     labelPlacement: t.perioLabelPlacement
   });
 }
-async function T9() {
-  if (!ct) {
-    ct = !0, $a(), N1(30, "export.progress.preparing");
+async function G9() {
+  if (!st) {
+    st = !0, $a(), N1(30, "export.progress.preparing");
     try {
       const t = Hr(!0);
       if (!t) throw new Error("Odontogram grid not found");
@@ -41462,14 +41449,14 @@ async function T9() {
       const e = new Blob([t.xml], { type: "image/svg+xml;charset=utf-8" }), a = URL.createObjectURL(e), i = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-"), r = document.createElement("a");
       r.href = a, r.download = `odontogram-${i}.svg`, document.body.appendChild(r), r.click(), r.remove(), URL.revokeObjectURL(a), N1(100, "export.progress.done"), await new Promise((o) => window.setTimeout(o, 300));
     } finally {
-      ti(), ct = !1;
+      ti(), st = !1;
     }
   }
 }
 async function Nr(t, e, a, i = 2) {
   const r = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(t), o = new Image();
-  await new Promise((l, f) => {
-    o.onload = () => l(), o.onerror = () => f(new Error("SVG rasterization failed")), o.src = r;
+  await new Promise((s, f) => {
+    o.onload = () => s(), o.onerror = () => f(new Error("SVG rasterization failed")), o.src = r;
   });
   const n = document.createElement("canvas");
   n.width = Math.max(1, Math.round(e * i)), n.height = Math.max(1, Math.round(a * i));
@@ -41481,8 +41468,8 @@ async function d4(t, e, a, i = 2) {
   return (await Nr(t, e, a, i)).toDataURL("image/png");
 }
 async function p4(t = "png") {
-  if (!ct) {
-    ct = !0, $a(), N1(10, "export.progress.preparing");
+  if (!st) {
+    st = !0, $a(), N1(10, "export.progress.preparing");
     try {
       const e = Hr(!0);
       if (!e) throw new Error("Odontogram grid not found");
@@ -41492,26 +41479,26 @@ async function p4(t = "png") {
       const i = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-");
       t === "jpg" ? Fi(a.toDataURL("image/jpeg", 0.92), `odontogram-${i}.jpg`) : Fi(a.toDataURL("image/png"), `odontogram-${i}.png`), N1(100, "export.progress.done"), await new Promise((r) => window.setTimeout(r, 300));
     } finally {
-      ti(), ct = !1;
+      ti(), st = !1;
     }
   }
 }
-async function D9() {
-  if (!ct) {
-    ct = !0, $a(), N1(10, "export.progress.preparing");
+async function T9() {
+  if (!st) {
+    st = !0, $a(), N1(10, "export.progress.preparing");
     try {
       const t = await jr();
       if (!t) throw new Error("Perio chart could not be built");
       const e = new Blob([t.xml], { type: "image/svg+xml;charset=utf-8" }), a = URL.createObjectURL(e), i = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-"), r = document.createElement("a");
       r.href = a, r.download = `perio-${i}.svg`, document.body.appendChild(r), r.click(), r.remove(), URL.revokeObjectURL(a), N1(100, "export.progress.done"), await new Promise((o) => window.setTimeout(o, 200));
     } finally {
-      ti(), ct = !1;
+      ti(), st = !1;
     }
   }
 }
 async function f4(t = "png") {
-  if (!ct) {
-    ct = !0, $a(), N1(10, "export.progress.preparing");
+  if (!st) {
+    st = !0, $a(), N1(10, "export.progress.preparing");
     try {
       const e = await jr();
       if (!e) throw new Error("Perio chart could not be built");
@@ -41521,16 +41508,16 @@ async function f4(t = "png") {
       const i = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[:T]/g, "-");
       t === "jpg" ? Fi(a.toDataURL("image/jpeg", 0.92), `perio-${i}.jpg`) : Fi(a.toDataURL("image/png"), `perio-${i}.png`), N1(100, "export.progress.done"), await new Promise((r) => window.setTimeout(r, 300));
     } finally {
-      ti(), ct = !1;
+      ti(), st = !1;
     }
   }
 }
-const O9 = /* @__PURE__ */ new Set(["iso", "dmy", "mdy"]), h4 = /* @__PURE__ */ new Set(["wide", "medium", "close"]), A9 = /* @__PURE__ */ new Set(["thin", "medium", "thick"]), U9 = /* @__PURE__ */ new Set(["small", "normal", "xlarge"]), E9 = /* @__PURE__ */ new Set(["center", "edge"]), L9 = /* @__PURE__ */ new Set(["small", "normal", "xlarge"]), H9 = /* @__PURE__ */ new Set(["whole", "jaw", "quadrant", "sextant"]), j9 = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, T1 = {
+const D9 = /* @__PURE__ */ new Set(["iso", "dmy", "mdy"]), h4 = /* @__PURE__ */ new Set(["wide", "medium", "close"]), O9 = /* @__PURE__ */ new Set(["thin", "medium", "thick"]), A9 = /* @__PURE__ */ new Set(["small", "normal", "xlarge"]), U9 = /* @__PURE__ */ new Set(["center", "edge"]), E9 = /* @__PURE__ */ new Set(["small", "normal", "xlarge"]), L9 = /* @__PURE__ */ new Set(["whole", "jaw", "quadrant", "sextant"]), H9 = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, T1 = {
   defaultName: "John Doe",
   defaultDob: "1980-01-01",
   showAge: !0,
   dateFormat: "iso",
-  colorTheme: u6,
+  colorTheme: y6,
   showBone: !0,
   showHealthyPulp: !0,
   toothSpacing: "medium",
@@ -41554,14 +41541,14 @@ const O9 = /* @__PURE__ */ new Set(["iso", "dmy", "mdy"]), h4 = /* @__PURE__ */ 
 function Ne() {
   return { ...T1 };
 }
-function N9(t) {
+function j9(t) {
   let e = !1;
   const a = (r) => {
     typeof t[r] == "string" && t[r] !== T1[r] && (T1[r] = t[r], e = !0);
   }, i = (r) => {
     typeof t[r] == "boolean" && t[r] !== T1[r] && (T1[r] = t[r], e = !0);
   };
-  a("defaultName"), a("defaultDob"), a("disclaimerText"), i("showAge"), i("showBone"), i("showHealthyPulp"), i("border"), i("includeOdontogramText"), i("includeOdontogramTable"), i("perioShowEmptyRows"), i("includePerioTable"), i("includePerioAbbrev"), i("showDisclaimer"), i("showGenerator"), t.dateFormat && O9.has(t.dateFormat) && t.dateFormat !== T1.dateFormat && (T1.dateFormat = t.dateFormat, e = !0), t.colorTheme && t.colorTheme in gr && t.colorTheme !== T1.colorTheme && (T1.colorTheme = t.colorTheme, e = !0), t.toothSpacing && h4.has(t.toothSpacing) && t.toothSpacing !== T1.toothSpacing && (T1.toothSpacing = t.toothSpacing, e = !0), t.borderThickness && A9.has(t.borderThickness) && t.borderThickness !== T1.borderThickness && (T1.borderThickness = t.borderThickness, e = !0), t.toothNumberSize && U9.has(t.toothNumberSize) && t.toothNumberSize !== T1.toothNumberSize && (T1.toothNumberSize = t.toothNumberSize, e = !0), typeof t.borderColor == "string" && j9.test(t.borderColor) && t.borderColor !== T1.borderColor && (T1.borderColor = t.borderColor, e = !0), t.perioToothSpacing && h4.has(t.perioToothSpacing) && t.perioToothSpacing !== T1.perioToothSpacing && (T1.perioToothSpacing = t.perioToothSpacing, e = !0), t.perioLabelPlacement && E9.has(t.perioLabelPlacement) && t.perioLabelPlacement !== T1.perioLabelPlacement && (T1.perioLabelPlacement = t.perioLabelPlacement, e = !0), t.perioFontSize && L9.has(t.perioFontSize) && t.perioFontSize !== T1.perioFontSize && (T1.perioFontSize = t.perioFontSize, e = !0), t.summaryGrouping && H9.has(t.summaryGrouping) && t.summaryGrouping !== T1.summaryGrouping && (T1.summaryGrouping = t.summaryGrouping, e = !0), e && X();
+  a("defaultName"), a("defaultDob"), a("disclaimerText"), i("showAge"), i("showBone"), i("showHealthyPulp"), i("border"), i("includeOdontogramText"), i("includeOdontogramTable"), i("perioShowEmptyRows"), i("includePerioTable"), i("includePerioAbbrev"), i("showDisclaimer"), i("showGenerator"), t.dateFormat && D9.has(t.dateFormat) && t.dateFormat !== T1.dateFormat && (T1.dateFormat = t.dateFormat, e = !0), t.colorTheme && t.colorTheme in gr && t.colorTheme !== T1.colorTheme && (T1.colorTheme = t.colorTheme, e = !0), t.toothSpacing && h4.has(t.toothSpacing) && t.toothSpacing !== T1.toothSpacing && (T1.toothSpacing = t.toothSpacing, e = !0), t.borderThickness && O9.has(t.borderThickness) && t.borderThickness !== T1.borderThickness && (T1.borderThickness = t.borderThickness, e = !0), t.toothNumberSize && A9.has(t.toothNumberSize) && t.toothNumberSize !== T1.toothNumberSize && (T1.toothNumberSize = t.toothNumberSize, e = !0), typeof t.borderColor == "string" && H9.test(t.borderColor) && t.borderColor !== T1.borderColor && (T1.borderColor = t.borderColor, e = !0), t.perioToothSpacing && h4.has(t.perioToothSpacing) && t.perioToothSpacing !== T1.perioToothSpacing && (T1.perioToothSpacing = t.perioToothSpacing, e = !0), t.perioLabelPlacement && U9.has(t.perioLabelPlacement) && t.perioLabelPlacement !== T1.perioLabelPlacement && (T1.perioLabelPlacement = t.perioLabelPlacement, e = !0), t.perioFontSize && E9.has(t.perioFontSize) && t.perioFontSize !== T1.perioFontSize && (T1.perioFontSize = t.perioFontSize, e = !0), t.summaryGrouping && L9.has(t.summaryGrouping) && t.summaryGrouping !== T1.summaryGrouping && (T1.summaryGrouping = t.summaryGrouping, e = !0), e && X();
 }
 function U3(t, e) {
   const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
@@ -41569,24 +41556,24 @@ function U3(t, e) {
   const [, i, r, o] = a;
   return e === "dmy" ? `${o}-${r}-${i}` : e === "mdy" ? `${r}-${o}-${i}` : `${i}-${r}-${o}`;
 }
-function R9(t, e) {
+function N9(t, e) {
   const a = t.split("-").map(Number), i = e.split("-").map(Number);
   if (a.length !== 3 || i.length !== 3 || [...a, ...i].some((o) => !Number.isFinite(o))) return null;
   let r = i[0] - a[0];
   return (i[1] < a[1] || i[1] === a[1] && i[2] < a[2]) && r--, r >= 0 && r <= 200 ? r : null;
 }
-const V9 = { wide: 0.85, medium: 0.72, close: 0.6 }, F9 = { small: 1.5, normal: 2, xlarge: 2.6 }, B9 = { thin: 0.3, medium: 0.7, thick: 1.2 }, K9 = {
+const R9 = { wide: 0.85, medium: 0.72, close: 0.6 }, V9 = { small: 1.5, normal: 2, xlarge: 2.6 }, F9 = { thin: 0.3, medium: 0.7, thick: 1.2 }, B9 = {
   small: { fontSize: 10, rowHeight: 16 },
   normal: { fontSize: 13, rowHeight: 21 },
   xlarge: { fontSize: 16, rowHeight: 26 }
-}, q9 = { wide: 8, medium: 2, close: -2 };
-function Y9() {
-  const t = G2(), e = (o) => s1.some(o), a = [], i = t.gtDistribution, r = t.millerDistribution;
+}, K9 = { wide: 8, medium: 2, close: -2 };
+function q9() {
+  const t = P2(), e = (o) => s1.some(o), a = [], i = t.gtDistribution, r = t.millerDistribution;
   return t.plaquePercent > 0 && a.push({ term: "Plaque", desc: c("perio.info.plaque") }), t.piScore !== null && a.push({ term: "PI", desc: c("perio.info.pi") }), t.giScore !== null && a.push({ term: "GI", desc: c("perio.info.gi") }), t.mpiScore !== null && a.push({ term: "mPI", desc: c("perio.info.mpi") }), t.mbiScore !== null && a.push({ term: "mBI", desc: c("perio.info.mbi") }), e((o) => qe(o) !== null) && a.push({ term: "KG", desc: c("perio.info.kg") }), i.thin + i.medium + i.thick > 0 && a.push({ term: "GT (Tn/Md/Tk)", desc: `${c("perio.info.gt")} — Tn: ${c("perio.gt.thin")}, Md: ${c("perio.gt.medium")}, Tk: ${c("perio.gt.thick")}` }), e((o) => Qa(o) !== "none") && a.push({ term: "CEJ (D/ND)", desc: `${c("perio.info.cej")} — D: ${c("perio.cej.detectable")}, ND: ${c("perio.cej.notDetectable")}` }), e((o) => Xa(o) !== "none") && a.push({ term: "Mi / Dp", desc: `${c("perio.info.rootConcavity")} — Mi: ${c("perio.rootConcavity.mild")}, Dp: ${c("perio.rootConcavity.deep")}` }), t.maxFurcation !== null && a.push({ term: "Furcation (I–IV)", desc: c("perio.info.furcation") }), r.i + r.ii + r.iii + r.iv > 0 && a.push({ term: "Miller (I–IV)", desc: c("perio.info.miller") }), e((o) => Er(o) !== "none") && a.push({ term: "Mobility (1–3)", desc: c("perio.info.mobility") }), a;
 }
-async function W9(t) {
-  if (!ct) {
-    ct = !0, $a(), N1(10, "export.progress.preparing");
+async function Y9(t) {
+  if (!st) {
+    st = !0, $a(), N1(10, "export.progress.preparing");
     try {
       const e = Ne();
       let a = null;
@@ -41602,22 +41589,22 @@ async function W9(t) {
         n = await d4(L.xml, L.width, L.height), d = { width: L.width, height: L.height };
       }
       N1(80, "export.progress.encoding");
-      const l = dl(), f = G2(), p = e.includeOdontogramText ? l.overview : "", v = [];
+      const s = cl(), f = P2(), p = e.includeOdontogramText ? s.overview : "", v = [];
       if (e.includeOdontogramTable) {
-        for (const L of l.sections)
+        for (const L of s.sections)
           L.items.length && v.push({ label: L.heading, value: L.items.join(", ") });
-        !r && l.periodontalHasFindings && v.push({ label: l.periodontalTitle, value: l.periodontalText });
+        !r && s.periodontalHasFindings && v.push({ label: s.periodontalTitle, value: s.periodontalText });
       }
-      const k = (l.individualNotes?.items ?? []).map((L) => {
+      const k = (s.individualNotes?.items ?? []).map((L) => {
         const q = L.indexOf(": ");
         return q > 0 ? { label: L.slice(0, q), value: L.slice(q + 2) } : { label: "", value: L };
-      }), x = f.worstCal === null ? "–" : `${f.worstCal}${f.worstCalTooth !== null ? ` (${T2(f.worstCalTooth)})` : ""}`, u = Vi(), y = (L) => c(`perio.class.dx.${L}`), h = (L) => c(L === "na" ? "perio.class.stage.na" : L === "indeterminate" ? "perio.class.stage.indeterminate" : `perio.class.stage.${L}`), C = (L) => c(L === "indeterminate" ? "perio.class.grade.indeterminate" : `perio.class.grade.${L}`), w = (L) => c(L === "na" ? "perio.class.extent.na" : L === "molar-incisor" ? "perio.class.extent.molarIncisor" : `perio.class.extent.${L}`), g = e.includePerioTable ? [
+      }), x = f.worstCal === null ? "–" : `${f.worstCal}${f.worstCalTooth !== null ? ` (${G2(f.worstCalTooth)})` : ""}`, u = Vi(), y = (L) => c(`perio.class.dx.${L}`), h = (L) => c(L === "na" ? "perio.class.stage.na" : L === "indeterminate" ? "perio.class.stage.indeterminate" : `perio.class.stage.${L}`), T = (L) => c(L === "indeterminate" ? "perio.class.grade.indeterminate" : `perio.class.grade.${L}`), w = (L) => c(L === "na" ? "perio.class.extent.na" : L === "molar-incisor" ? "perio.class.extent.molarIncisor" : `perio.class.extent.${L}`), g = e.includePerioTable ? [
         { label: c("perio.bopPercent"), value: `${f.bopPercent}%` },
         { label: c("perio.summary.worstCal"), value: x },
         { label: c("perio.summary.maxPd"), value: f.maxPd === null ? "–" : String(f.maxPd) },
         { label: c("perio.class.diagnosis"), value: y(u.diagnosis) },
         { label: c("perio.class.stage"), value: h(u.stage) },
-        { label: c("perio.class.grade"), value: C(u.grade) },
+        { label: c("perio.class.grade"), value: T(u.grade) },
         { label: c("perio.class.extent"), value: w(u.extent) }
       ] : [], Z = e.includePerioAbbrev ? [
         ...c("pdf.footer.legend").split(";").map((L) => L.trim()).filter(Boolean).map((L) => {
@@ -41627,10 +41614,10 @@ async function W9(t) {
         // Append every ADDITIONAL perio abbreviation/code actually charted in this
         // case (PI/GI/KG/GT/CEJ/root-concavity/furcation/Miller/mobility/mPI/mBI) —
         // the base PD/GM/CAL/BOP/ICDAS/CARS come from the legend above.
-        ...Y9()
-      ] : [], G = gr[e.colorTheme], I = Wt(), D = /* @__PURE__ */ new Date(), A = (L) => String(L).padStart(2, "0"), H = `${D.getFullYear()}-${A(D.getMonth() + 1)}-${A(D.getDate())}`, R = I.patientName && I.patientName.trim() !== "" ? I.patientName : e.defaultName, N = I.patientDob ?? e.defaultDob, S = I.examDate ?? H, P = U3(N, e.dateFormat), b = R9(N, S), _ = [
+        ...q9()
+      ] : [], P = gr[e.colorTheme], I = qt(), D = /* @__PURE__ */ new Date(), A = (L) => String(L).padStart(2, "0"), H = `${D.getFullYear()}-${A(D.getMonth() + 1)}-${A(D.getDate())}`, R = I.patientName && I.patientName.trim() !== "" ? I.patientName : e.defaultName, N = I.patientDob ?? e.defaultDob, S = I.examDate ?? H, C = U3(N, e.dateFormat), b = N9(N, S), _ = [
         { label: c("pdf.field.patientName"), value: R },
-        { label: c("pdf.field.patientDob"), value: e.showAge && b !== null ? `${P} (${b})` : P },
+        { label: c("pdf.field.patientDob"), value: e.showAge && b !== null ? `${C} (${b})` : C },
         { label: c("pdf.field.examDate"), value: U3(S, e.dateFormat) }
       ], t1 = `${U3(H, e.dateFormat)} ${A(D.getHours())}:${A(D.getMinutes())}`, V = {
         disclaimer: e.showDisclaimer ? e.disclaimerText.trim() || c("pdf.disclaimer") : "",
@@ -41641,45 +41628,45 @@ async function W9(t) {
         hasPerio: r,
         reportTitle: c("pdf.reportTitle"),
         footer: V,
-        palette: G,
+        palette: P,
         patient: _,
         odontogramPng: i,
         odontogramCaption: p,
-        toothTable: e.includeOdontogramTable ? l.toothTable : null,
+        toothTable: e.includeOdontogramTable ? s.toothTable : null,
         odontogramFindings: v,
         individualNotes: k,
         odontogramImageSize: a ? { width: a.width, height: a.height } : void 0,
         // The border colour always uses the active theme's accent (palette.header)
         // so it matches the report.
-        odontogramBorder: e.border && t.odontogramChart ? { widthMm: B9[e.borderThickness], color: G.header } : null,
+        odontogramBorder: e.border && t.odontogramChart ? { widthMm: F9[e.borderThickness], color: P.header } : null,
         perioPng: n,
         perioMetrics: g,
         perioImageSize: d,
         abbreviations: Z
       }, { jsPDF: l1 } = await import("jspdf"), { loadPdfFont: z } = await import("./loader-BN_gLe6T.js"), K = await z(hr());
-      W.fontFamily = K.family, W.shapeText = K.transform, b6(t, W, () => {
+      W.fontFamily = K.family, W.shapeText = K.transform, k6(t, W, () => {
         const L = new l1();
         return K.register(L), L;
       }), N1(100, "export.progress.done"), await new Promise((L) => window.setTimeout(L, 300));
     } finally {
-      ti(), ct = !1;
+      ti(), st = !1;
     }
   }
 }
-function J9() {
-  $5(Gr(), "odontogram-status");
+function W9() {
+  X5(Gr(), "odontogram-status");
+}
+function J9(t) {
+  const e = ns(Gr(), t);
+  X5(e, "odontogram-fhir");
 }
 function _9(t) {
-  const e = ls(Gr(), t);
-  $5(e, "odontogram-fhir");
-}
-function Q9(t) {
-  const e = W5(t.version), a = t.teeth || {};
+  const e = Y5(t.version), a = t.teeth || {};
   for (const i of s1) {
     const r = a[i];
     A1.status.set(i, He(r, e));
   }
-  if ($7(t.case), t.plan && typeof t.plan == "object") {
+  if (X7(t.case), t.plan && typeof t.plan == "object") {
     for (const i of s1) {
       const r = t.plan[i];
       A1.plan.set(i, He(r, e));
@@ -41687,20 +41674,20 @@ function Q9(t) {
     Dt = !0;
   } else
     A1.plan.clear(), Dt = !1;
-  o2.clear(), _t = null;
+  o2.clear(), Wt = null;
 }
-function X9() {
+function Q9() {
   s2 = "status", U = A1.status;
 }
 function Rr(t) {
   if (!(!t || typeof t != "object")) {
-    Q9(t), X9();
+    _9(t), Q9();
     for (const e of s1)
-      tt(e), yt(e), ae(e);
-    t.globals && (typeof t.globals.wisdomVisible == "boolean" && C5(t.globals.wisdomVisible), typeof t.globals.showBase == "boolean" && ji(t.globals.showBase), typeof t.globals.occlusalVisible == "boolean" && Pr(t.globals.occlusalVisible), typeof t.globals.showHealthyPulp == "boolean" && Ha(t.globals.showHealthyPulp), typeof t.globals.edentulous == "boolean" && (Qt = t.globals.edentulous)), i3(), bt(), X(), br();
+      ct(e), bt(e), ae(e);
+    t.globals && (typeof t.globals.wisdomVisible == "boolean" && I5(t.globals.wisdomVisible), typeof t.globals.showBase == "boolean" && ji(t.globals.showBase), typeof t.globals.occlusalVisible == "boolean" && Pr(t.globals.occlusalVisible), typeof t.globals.showHealthyPulp == "boolean" && Ha(t.globals.showHealthyPulp), typeof t.globals.edentulous == "boolean" && (Jt = t.globals.edentulous)), i3(), kt(), X(), br();
   }
 }
-function $9(t) {
+function X9(t) {
   let e = t;
   if (typeof t == "string")
     try {
@@ -41709,44 +41696,44 @@ function $9(t) {
       console.error("Invalid FHIR JSON", i);
       return;
     }
-  const a = cs(e);
+  const a = ss(e);
   Rr(a);
 }
-function tp(t) {
+function $9(t) {
   if (!t) return;
   const e = e4(), a = (p) => e?.[p] || [], i = (p) => e?.wisdom?.[p] || [], r = /* @__PURE__ */ new Map(), o = (p, v) => {
     for (const k of p) {
-      const x = r.get(k) ?? U.get(k) ?? h1(), u = He(Tt(x), !1), y = v(u, k) || u;
+      const x = r.get(k) ?? U.get(k) ?? m1(), u = He(Tt(x), !1), y = v(u, k) || u;
       r.set(k, y);
     }
   }, n = () => {
-    const p = [...r.entries()].filter(([k, x]) => JSON.stringify(Tt(x)) !== JSON.stringify(Tt(U.get(k) ?? h1()))), v = p.map(([k]) => k);
+    const p = [...r.entries()].filter(([k, x]) => JSON.stringify(Tt(x)) !== JSON.stringify(Tt(U.get(k) ?? m1()))), v = p.map(([k]) => k);
     Be(v, () => {
       for (const [k, x] of p)
-        U.set(k, x), tt(k), yt(k);
-      E && u1(U.get(E)), i3(), X();
+        U.set(k, x), ct(k), bt(k);
+      E && k1(U.get(E)), i3(), X();
     });
-  }, d = (p) => p === "metal" ? "metal-ceramic" : p, l = (p, v) => {
+  }, d = (p) => p === "metal" ? "metal-ceramic" : p, s = (p, v) => {
     p.toothSubstrate = "crownprep", p.restorationType = "crown", p.restorationMaterial = d(v), p.bridgePillar = !0, p.brokenMesial = !1, p.brokenIncisal = !1, p.brokenDistal = !1;
   }, f = (p, v) => {
     p.restorationType = "bridge", p.restorationMaterial = d(v);
   };
   if (t.type === "span") {
     o(t.teeth || [], (p) => {
-      p.toothSelection === "tooth-base" ? l(p, t.material) : p.toothSelection === "none" && f(p, t.material);
+      p.toothSelection === "tooth-base" ? s(p, t.material) : p.toothSelection === "none" && f(p, t.material);
     }), n();
     return;
   }
   if (t.type === "arch-bridge") {
     const p = a(t.arch), v = new Set(i(t.arch)), k = p.filter((x) => U.get(x)?.toothSelection === "tooth-base");
     if (k.length >= 2) {
-      const x = k[0], u = k[k.length - 1], y = p.indexOf(x), h = p.indexOf(u), C = y < h ? p.slice(y + 1, h) : [];
+      const x = k[0], u = k[k.length - 1], y = p.indexOf(x), h = p.indexOf(u), T = y < h ? p.slice(y + 1, h) : [];
       o(p, (w, g) => {
-        v.has(g) || (w.toothSelection === "tooth-base" ? l(w, t.material) : w.toothSelection === "none" && C.includes(g) && f(w, t.missingMaterial || t.material));
+        v.has(g) || (w.toothSelection === "tooth-base" ? s(w, t.material) : w.toothSelection === "none" && T.includes(g) && f(w, t.missingMaterial || t.material));
       });
     } else
       o(p, (x, u) => {
-        v.has(u) || x.toothSelection === "tooth-base" && l(x, t.material);
+        v.has(u) || x.toothSelection === "tooth-base" && s(x, t.material);
       });
     n();
     return;
@@ -41761,7 +41748,7 @@ function tp(t) {
   if (t.type === "full-removable") {
     const p = a(t.arch), v = new Set(i(t.arch));
     o(p, (k, x) => {
-      const u = h1();
+      const u = m1();
       return u.toothSelection = "none", u.prosthesis = v.has(x) ? "none" : "removable-full", u;
     }), n();
     return;
@@ -41769,54 +41756,54 @@ function tp(t) {
   if (t.type === "bar-denture") {
     const p = t.implants || [], v = t.missing || [], x = (t.arch ? e4()?.[t.arch] || [] : []).filter((u) => [7, 8].includes(u % 10));
     o(p, (u, y) => {
-      const h = h1();
+      const h = m1();
       return h.toothSelection = "implant", h.prosthesis = "bar-denture", h;
     }), o(v, (u, y) => {
-      const h = h1();
+      const h = m1();
       return h.toothSelection = "none", h.prosthesis = "bar-denture", h;
     }), o(x, (u, y) => {
-      const h = h1();
+      const h = m1();
       return h.toothSelection = "none", h;
     }), n();
   }
 }
 let Gt = !1, r2 = 0;
-function el(t) {
+function tl(t) {
   const i = new DOMParser().parseFromString(t, "image/svg+xml").documentElement;
-  return j7(i), N7(i), i;
+  return H7(i), j7(i), i;
 }
 async function m4(t) {
-  return el(t);
+  return tl(t);
 }
-let nr = /* @__PURE__ */ new Map(), lr = /* @__PURE__ */ new Map(), al = /* @__PURE__ */ new Map(), il = /* @__PURE__ */ new Map();
-const ep = /* @__PURE__ */ new Map(), ap = /* @__PURE__ */ new Map(), ip = /* @__PURE__ */ new Map(), rp = /* @__PURE__ */ new Map();
+let nr = /* @__PURE__ */ new Map(), lr = /* @__PURE__ */ new Map(), el = /* @__PURE__ */ new Map(), al = /* @__PURE__ */ new Map();
+const tp = /* @__PURE__ */ new Map(), ep = /* @__PURE__ */ new Map(), ap = /* @__PURE__ */ new Map(), ip = /* @__PURE__ */ new Map();
 function xi(t) {
   let e = t.get(Ae);
   return e || (e = /* @__PURE__ */ new Map(), t.set(Ae, e)), e;
 }
-function rl(t, e, a) {
+function il(t, e, a) {
   const i = l2(), r = e === "occl" ? i.primaryOcclusalTemplate : i.primaryToothTemplate, o = e === "occl" ? i.occlusalTemplate : i.toothTemplate, n = a && !!r?.get(t), d = (n ? r : o)?.get(t);
   if (!d) return null;
-  const l = n ? e === "occl" ? il : al : e === "occl" ? lr : nr;
-  let f = l.get(d.tpl);
+  const s = n ? e === "occl" ? al : el : e === "occl" ? lr : nr;
+  let f = s.get(d.tpl);
   if (!f && n) {
     const v = e === "occl" ? i.primaryTemplatesOccl?.[d.tpl] : i.primaryTemplates?.[d.tpl];
-    v && (f = el(v), l.set(d.tpl, f));
+    v && (f = tl(v), s.set(d.tpl, f));
   }
   if (!f) return null;
   const p = f.cloneNode(!0);
   return d.rot === 180 && Zn(p), d.mirror && Sn(p), p.setAttribute("data-dentition-variant", n ? "primary" : "permanent"), { svg: p, tplNo: d.tpl };
 }
-function op(t) {
+function rp(t) {
   if (!l2().primaryToothTemplate) return;
   const a = U.get(t)?.toothSelection === "milktooth", i = gt.get(t) || [];
   let r = !1;
   for (const o of i) {
-    const n = o.classList.contains("occl-view") ? "occl" : "side", d = rl(t, n, a);
+    const n = o.classList.contains("occl-view") ? "occl" : "side", d = il(t, n, a);
     if (!d) continue;
-    const l = o.querySelector(".tooth-svg > svg"), f = a ? "primary" : "permanent";
-    if (!(l?.getAttribute("data-dentition-variant") === f && l?.getAttribute("data-tooth-template") === String(d.tplNo))) {
-      l?.replaceWith(d.svg);
+    const s = o.querySelector(".tooth-svg > svg"), f = a ? "primary" : "permanent";
+    if (!(s?.getAttribute("data-dentition-variant") === f && s?.getAttribute("data-tooth-template") === String(d.tplNo))) {
+      s?.replaceWith(d.svg);
       for (const p of Array.from(o.classList))
         p.startsWith("tpl-") && o.classList.remove(p);
       o.classList.add(`tpl-${d.tplNo}`), r = !0;
@@ -41827,14 +41814,14 @@ function op(t) {
     i.map((o) => o.querySelector(".tooth-svg > svg")).filter(Boolean)
   );
 }
-async function ol(t) {
+async function rl(t) {
   if (!Gt || t !== r2) return;
   const e = Q("#toothGrid");
   if (!e) return;
   e.innerHTML = "";
   const a = l2();
   let i = e;
-  nr = xi(ep), lr = xi(ap), al = xi(ip), il = xi(rp);
+  nr = xi(tp), lr = xi(ep), el = xi(ap), al = xi(ip);
   const r = nr, o = lr, n = a.tplNos, d = a.occlNos;
   if (await Promise.all([
     ...n.filter((w) => !r.has(w)).map(async (w) => {
@@ -41844,29 +41831,29 @@ async function ol(t) {
       o.set(w, await m4(a.templatesOccl[w]));
     })
   ]), !Gt || t !== r2) return;
-  function l({ toothNo: w, tplNo: g, rot: Z, mirror: G, view: I, clickable: D }) {
+  function s({ toothNo: w, tplNo: g, rot: Z, mirror: P, view: I, clickable: D }) {
     if (!Gt || t !== r2) return;
-    U.has(w) || U.set(w, h1());
-    const A = U.get(w)?.toothSelection === "milktooth", H = rl(w, I === "occl" ? "occl" : "side", A), R = I === "occl" ? o.get(g) : r.get(g);
+    U.has(w) || U.set(w, m1());
+    const A = U.get(w)?.toothSelection === "milktooth", H = il(w, I === "occl" ? "occl" : "side", A), R = I === "occl" ? o.get(g) : r.get(g);
     if (!H && !R) return;
     const N = H?.svg ?? R.cloneNode(!0), S = H?.tplNo ?? g;
-    H || (Z === 180 && Zn(N), G && Sn(N), N.setAttribute("data-dentition-variant", "permanent"));
-    const P = [
+    H || (Z === 180 && Zn(N), P && Sn(N), N.setAttribute("data-dentition-variant", "permanent"));
+    const C = [
       "tooth-tile",
       `tpl-${S}`,
       w >= 31 ? "lower-row" : "upper-row",
       I === "occl" ? "occl-view" : "side-view"
-    ], b = $("div", { class: P.join(" "), "data-tooth": String(w) }, [
+    ], b = $("div", { class: C.join(" "), "data-tooth": String(w) }, [
       $("div", { class: "tooth-svg" })
     ]);
     Q(".tooth-svg", b).appendChild(N), b.addEventListener("click", (_) => er(w, _)), b.addEventListener("dblclick", () => {
-      !$t || q1 || M5(w);
-    }), b.addEventListener("keydown", (_) => Gd(w, _)), I === "side" && (b.setAttribute("role", "option"), b.setAttribute("aria-selected", "false"), b.setAttribute("tabindex", q1 ? "-1" : "0"), b.setAttribute("aria-label", X2(w, c2))), Vo() && Cd(b, w), i.appendChild(b), n2.has(w) || n2.set(w, []), n2.get(w).push(N), gt.has(w) || gt.set(w, []), gt.get(w).push(b), tt(w);
+      !Xt || q1 || x5(w);
+    }), b.addEventListener("keydown", (_) => Pd(w, _)), I === "side" && (b.setAttribute("role", "option"), b.setAttribute("aria-selected", "false"), b.setAttribute("tabindex", q1 ? "-1" : "0"), b.setAttribute("aria-label", X2(w, c2))), Vo() && Id(b, w), i.appendChild(b), n2.has(w) || n2.set(w, []), n2.get(w).push(N), gt.has(w) || gt.set(w, []), gt.get(w).push(b), ct(w);
   }
   function f(w) {
     for (const g of w) {
-      const Z = a.toothTemplate.get(g), G = Z ? Z.tpl : 16;
-      l({ toothNo: g, tplNo: G, rot: Z?.rot ?? 0, mirror: Z?.mirror ?? !1, view: "side", clickable: !0 });
+      const Z = a.toothTemplate.get(g), P = Z ? Z.tpl : 16;
+      s({ toothNo: g, tplNo: P, rot: Z?.rot ?? 0, mirror: Z?.mirror ?? !1, view: "side", clickable: !0 });
     }
   }
   function p(w) {
@@ -41886,44 +41873,44 @@ async function ol(t) {
           v();
           continue;
         }
-        l({ toothNo: Z, tplNo: D.tpl, rot: D.rot, mirror: D.mirror, view: "occl", clickable: !0 });
+        s({ toothNo: Z, tplNo: D.tpl, rot: D.rot, mirror: D.mirror, view: "occl", clickable: !0 });
         continue;
       }
-      const G = a.toothTemplate.get(Z), I = p(Z);
-      if (g.has(Z) || !I || !G) {
+      const P = a.toothTemplate.get(Z), I = p(Z);
+      if (g.has(Z) || !I || !P) {
         v();
         continue;
       }
-      l({ toothNo: Z, tplNo: I, rot: G.rot, mirror: G.mirror, view: "occl", clickable: !0 });
+      s({ toothNo: Z, tplNo: I, rot: P.rot, mirror: P.mirror, view: "occl", clickable: !0 });
     }
   }
   function x(w, g) {
     const Z = $("div", { class: "tooth-label-row", "aria-hidden": "true" });
-    for (const G of w) {
-      const I = $("div", { class: "tooth-label-cell", text: X2(G, c2), tabindex: "-1" });
-      I.addEventListener("click", (D) => er(G, D)), Z.appendChild(I), g.set(G, I);
+    for (const P of w) {
+      const I = $("div", { class: "tooth-label-cell", text: X2(P, c2), tabindex: "-1" });
+      I.addEventListener("click", (D) => er(P, D)), Z.appendChild(I), g.set(P, I);
     }
     i.appendChild(Z);
   }
-  const u = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], y = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], h = /* @__PURE__ */ new Set([13, 12, 11, 21, 22, 23]), C = /* @__PURE__ */ new Set([43, 42, 41, 31, 32, 33]);
+  const u = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], y = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], h = /* @__PURE__ */ new Set([13, 12, 11, 21, 22, 23]), T = /* @__PURE__ */ new Set([43, 42, 41, 31, 32, 33]);
   if (!(!Gt || t !== r2)) {
     if (a.layout === "twoArch") {
       const w = $("div", { class: "tooth-arch upper-arch", role: "presentation" }), g = $("div", { class: "tooth-arch lower-arch", role: "presentation" });
-      e.appendChild(w), e.appendChild(g), i = w, x(u, Ue), f(u), k(u, h), i = g, k(y, C), f(y), x(y, Ee), i = e;
+      e.appendChild(w), e.appendChild(g), i = w, x(u, Ue), f(u), k(u, h), i = g, k(y, T), f(y), x(y, Ee), i = e;
     } else
-      x(u, Ue), f(u), k(u, h), k(y, C), f(y), x(y, Ee);
-    e.setAttribute("role", "listbox"), e.setAttribute("aria-multiselectable", "true"), a1 = /* @__PURE__ */ new Set(), E = null, bt(), mt(), Pr(Pe), Ha(Jt), Vo() && (e.addEventListener("touchstart", S5, { passive: !1 }), e.addEventListener("touchmove", z5, { passive: !1 }), e.addEventListener("touchend", I5), zd());
+      x(u, Ue), f(u), k(u, h), k(y, T), f(y), x(y, Ee);
+    e.setAttribute("role", "listbox"), e.setAttribute("aria-multiselectable", "true"), a1 = /* @__PURE__ */ new Set(), E = null, kt(), mt(), Pr(Pe), Ha(Yt), Vo() && (e.addEventListener("touchstart", Z5, { passive: !1 }), e.addEventListener("touchmove", S5, { passive: !1 }), e.addEventListener("touchend", z5), Sd());
   }
 }
 let sr = "status";
 function v4(t) {
   sr = t === "fhir" ? "fhir" : "status";
 }
-function nl() {
+function ol() {
   document.addEventListener("click", Fn), document.addEventListener("click", Bn), ["btnOcclView", "btnWisdomVisible", "btnBoneVisible", "btnPulpVisible"].forEach((y) => {
     const h = Q(`#${y}`);
-    h && s8(h).then(() => Vn(h));
-  }), md(Q("#perioGrid")), Q1(Q("#btnSelectAll"), "click", () => {
+    h && l8(h).then(() => Vn(h));
+  }), hd(Q("#perioGrid")), Q1(Q("#btnSelectAll"), "click", () => {
     a1 = new Set(s1), E = s1[0], mt();
   }), Q1(Q("#btnSelectAllPresent"), "click", () => {
     const y = s1.filter((h) => U.get(h)?.toothSelection !== "none");
@@ -41957,111 +41944,111 @@ function nl() {
     const y = [38, 37, 36, 46, 47, 48];
     a1 = new Set(y), E = y[0], mt();
   }), Q1(Q("#btnSelectNone"), "click", () => {
-    a1 = /* @__PURE__ */ new Set(), E = null, bt();
+    a1 = /* @__PURE__ */ new Set(), E = null, kt();
   }), Q1(Q("#btnSelectNoneChart"), "click", () => {
-    a1 = /* @__PURE__ */ new Set(), E = null, bt();
+    a1 = /* @__PURE__ */ new Set(), E = null, kt();
   }), Q1(Q("#chartModeStatus"), "click", () => Q3("status")), Q1(Q("#chartModePlan"), "click", () => Q3("plan"));
   const e = Q("#statusCard"), a = Q("#btnToggleStatusCard");
-  e && a && z2(a, "status.title", e.classList.contains("collapsed"));
+  e && a && S2(a, "status.title", e.classList.contains("collapsed"));
   const i = Q("#btnToggleControlsCard"), r = Q("#controlsActions");
-  i && r && z2(i, "panel.controls", r.classList.contains("hidden")), [
+  i && r && S2(i, "panel.controls", r.classList.contains("hidden")), [
     { card: "#cariesSection", btn: "#btnToggleCariesCard", labelKey: "caries.title" },
     { card: "#fillingSection", btn: "#btnToggleFillingCard", labelKey: "filling.title" },
     { card: "#rootPeriodontiumSection", btn: "#btnToggleRootPeriodontiumCard", labelKey: "card.rootPeriodontium" }
-  ].forEach(({ card: y, btn: h, labelKey: C }) => {
+  ].forEach(({ card: y, btn: h, labelKey: T }) => {
     const w = Q(y), g = Q(h);
-    !w || !g || z2(g, C, w.classList.contains("collapsed"));
+    !w || !g || S2(g, T, w.classList.contains("collapsed"));
   });
-  const o = Q("#btnStatusExport"), n = Q("#btnStatusFhirExport"), d = Q("#btnStatusImport"), l = Q("#statusImportInput");
-  o && (o.onclick = () => J9()), n && (n.onclick = () => _9());
+  const o = Q("#btnStatusExport"), n = Q("#btnStatusFhirExport"), d = Q("#btnStatusImport"), s = Q("#statusImportInput");
+  o && (o.onclick = () => W9()), n && (n.onclick = () => J9());
   const f = Q("#btnStatusPngExport"), p = Q("#btnStatusJpgExport"), v = Q("#btnStatusSvgExport");
   f && (f.onclick = () => {
     p4("png").catch((y) => console.error("PNG export failed", y));
   }), p && (p.onclick = () => {
     p4("jpg").catch((y) => console.error("JPG export failed", y));
   }), v && (v.onclick = () => {
-    T9().catch((y) => console.error("SVG export failed", y));
+    G9().catch((y) => console.error("SVG export failed", y));
   });
   const k = Q("#btnPerioSvgExport"), x = Q("#btnPerioPngExport"), u = Q("#btnPerioJpgExport");
   k && (k.onclick = () => {
-    D9().catch((y) => console.error("Perio SVG export failed", y));
+    T9().catch((y) => console.error("Perio SVG export failed", y));
   }), x && (x.onclick = () => {
     f4("png").catch((y) => console.error("Perio PNG export failed", y));
   }), u && (u.onclick = () => {
     f4("jpg").catch((y) => console.error("Perio JPG export failed", y));
-  }), d && l && (d.onclick = () => {
-    l.value = "", l.click();
-  }, l.onchange = async () => {
-    const y = l.files?.[0];
+  }), d && s && (d.onclick = () => {
+    s.value = "", s.click();
+  }, s.onchange = async () => {
+    const y = s.files?.[0];
     if (!y) return;
     const h = sr;
     try {
-      const C = await y.text(), w = JSON.parse(C);
-      h === "fhir" ? $9(w) : Rr(w);
-    } catch (C) {
-      console.error("Odontogram import failed", C);
+      const T = await y.text(), w = JSON.parse(T);
+      h === "fhir" ? X9(w) : Rr(w);
+    } catch (T) {
+      console.error("Odontogram import failed", T);
     } finally {
-      l.value = "", sr = "status";
+      s.value = "", sr = "status";
     }
   });
 }
-function np(t) {
-  t !== c2 && (c2 = t, v8(), Ir());
+function op(t) {
+  t !== c2 && (c2 = t, m8(), Ir());
 }
-async function lp() {
+async function np() {
   if (Gt) return;
   Gt = !0;
   const t = ++r2;
-  if (nl(), await ol(t), !(!Gt || t !== r2)) {
-    if (za || (za = Sl(() => n4())), n4(), E != null) {
+  if (ol(), await rl(t), !(!Gt || t !== r2)) {
+    if (za || (za = Zl(() => n4())), n4(), E != null) {
       const e = U.get(E);
-      e && u1(e);
+      e && k1(e);
     }
     jn(), X(), br();
   }
 }
-function sp() {
+function lp() {
   if (!Gt) return;
   Gt = !1, r2++, Nn(), document.removeEventListener("click", Fn), document.removeEventListener("click", Bn), za && (za(), za = null);
   const t = Q("#toothGrid");
-  t && (t.removeEventListener("touchstart", S5), t.removeEventListener("touchmove", z5), t.removeEventListener("touchend", I5), t.style.transform = "", t.classList.remove("odon-pinch-active", "odon-arch-upper", "odon-arch-lower"), t.innerHTML = ""), St && (St.remove(), St = null), qt(), b2(), Ie(), Yt && (clearTimeout(Yt), Yt = null), Ce = 1, Ea = !1, Ii = "both", q1 = !1, $t = !1, tr.clear(), A1.status.clear(), A1.plan.clear(), Dt = !1, o2.clear(), _t = null, s2 = "status", U = A1.status, Dn(), n2.clear(), gt.clear(), Ue.clear(), Ee.clear(), a1 = /* @__PURE__ */ new Set(), E = null;
+  t && (t.removeEventListener("touchstart", Z5), t.removeEventListener("touchmove", S5), t.removeEventListener("touchend", z5), t.style.transform = "", t.classList.remove("odon-pinch-active", "odon-arch-upper", "odon-arch-lower"), t.innerHTML = ""), St && (St.remove(), St = null), i2(), F2(), Ie(), Kt && (clearTimeout(Kt), Kt = null), Ce = 1, Ea = !1, Ii = "both", q1 = !1, Xt = !1, tr.clear(), A1.status.clear(), A1.plan.clear(), Dt = !1, o2.clear(), Wt = null, s2 = "status", U = A1.status, Dn(), n2.clear(), gt.clear(), Ue.clear(), Ee.clear(), a1 = /* @__PURE__ */ new Set(), E = null;
 }
-function ll() {
-  if (Gt && (nl(), E != null)) {
+function nl() {
+  if (Gt && (ol(), E != null)) {
     const t = U.get(E);
-    t && u1(t);
+    t && k1(t);
   }
 }
-async function sl() {
+async function ll() {
   if (!Gt) return;
   const t = new Set(a1), e = E;
   n2.clear(), gt.clear(), Ue.clear(), Ee.clear();
   const a = ++r2;
-  if (await ol(a), !(!Gt || a !== r2) && (a1 = t, E = e, bt(), jn(), E != null)) {
+  if (await rl(a), !(!Gt || a !== r2) && (a1 = t, E = e, kt(), jn(), E != null)) {
     const i = U.get(E);
-    i && u1(i);
+    i && k1(i);
   }
 }
-function cp() {
-  a1 = /* @__PURE__ */ new Set(), E = null, bt();
+function sp() {
+  a1 = /* @__PURE__ */ new Set(), E = null, kt();
 }
-function dp(t) {
+function cp(t) {
   Ua = [...t];
   for (const e of s1)
     y5(e), ee(e);
 }
-function vh(t, e, a) {
+function mh(t, e, a) {
   const i = U.get(t);
-  i && (a === void 0 ? delete i.customStates[e] : i.customStates[e] = a, tt(t), yt(t));
+  i && (a === void 0 ? delete i.customStates[e] : i.customStates[e] = a, ct(t), bt(t));
 }
-function gh(t, e) {
+function vh(t, e) {
   return U.get(t)?.customStates?.[e];
 }
-function yh(t) {
+function gh(t) {
   return u5(t);
 }
 const K2 = ["buccal", "mesial", "occlusal", "distal", "lingual", "subcrown"];
-function Z2(t, e) {
+function w2(t, e) {
   return Cr(t, e);
 }
 const cr = {
@@ -42070,27 +42057,27 @@ const cr = {
   "endo-filling-incomplete": "endo.option.incompleteFilling",
   "endo-glass-pin": "endo.option.glassPin",
   "endo-metal-pin": "endo.option.metalPin"
-}, pp = {
+}, dp = {
   active: "rootCaries.active",
   arrested: "rootCaries.arrested",
   "active-cavitated": "rootCaries.activeCavitated"
 };
-function T2(t) {
+function G2(t) {
   return X2(wr(t), c2);
 }
-function cl(t) {
+function sl(t) {
   return !!(t.caries && t.caries.size > 0 || t.rootCaries && t.rootCaries !== "none" || t.pulpDx && t.pulpDx !== "normal" || t.apicalDx && t.apicalDx !== "normal" || t.periapicalType && t.periapicalType !== "none" || t.resorptionType && t.resorptionType !== "none" || t.mods && typeof t.mods.has == "function" && t.mods.has("inflammation") || t.periImplant && t.periImplant !== "none" || t.mobility && t.mobility !== "none" || t.wearEdge && t.wearEdge !== "none" || t.wearCervical && t.wearCervical !== "none" || t.discoloration && t.discoloration !== "none");
 }
+function pp(t) {
+  return sl(t) || !!(t.restorationType && t.restorationType !== "none" || t.prosthesis && t.prosthesis !== "none" || t.fillingSurfaceMaterials && t.fillingSurfaceMaterials.size > 0 || t.fillingMaterial && t.fillingMaterial !== "none" || t.endo && t.endo !== "none" || t.calculus || t.crownNeeded || t.crownReplace || t.extractionPlan || t.orthoRotation || t.orthoAppliance && t.orthoAppliance !== "none" || t.orthoDrift && t.orthoDrift !== "none" || t.orthoVertical && t.orthoVertical !== "none" || t.toothSubstrate && t.toothSubstrate !== "natural");
+}
 function fp(t) {
-  return cl(t) || !!(t.restorationType && t.restorationType !== "none" || t.prosthesis && t.prosthesis !== "none" || t.fillingSurfaceMaterials && t.fillingSurfaceMaterials.size > 0 || t.fillingMaterial && t.fillingMaterial !== "none" || t.endo && t.endo !== "none" || t.calculus || t.crownNeeded || t.crownReplace || t.extractionPlan || t.orthoRotation || t.orthoAppliance && t.orthoAppliance !== "none" || t.orthoDrift && t.orthoDrift !== "none" || t.orthoVertical && t.orthoVertical !== "none" || t.toothSubstrate && t.toothSubstrate !== "natural");
+  return sl(t) ? "problem" : pp(t) ? "content" : "empty";
 }
 function hp(t) {
-  return cl(t) ? "problem" : fp(t) ? "content" : "empty";
-}
-function mp(t) {
   return t === "none" ? "missing" : t === "implant" ? "implant" : t === "milktooth" ? "primary" : "permanent";
 }
-function vp(t, e) {
+function mp(t, e) {
   const a = Math.floor(t / 10), i = t % 10;
   if (e === "whole") return "whole";
   if (e === "jaw") return a === 1 || a === 2 ? "upper" : "lower";
@@ -42098,7 +42085,7 @@ function vp(t, e) {
   const r = i >= 4;
   return a === 1 ? r ? "s_ur" : "s_ua" : a === 2 ? r ? "s_ul" : "s_ua" : a === 4 ? r ? "s_lr" : "s_la" : r ? "s_ll" : "s_la";
 }
-const gp = {
+const vp = {
   whole: [{ key: "whole", labelKey: "summary.group.wholeMouth" }],
   jaw: [
     { key: "upper", labelKey: "summary.group.upperJaw" },
@@ -42118,74 +42105,74 @@ const gp = {
     { key: "s_la", labelKey: "summary.group.lowerAnterior" },
     { key: "s_ll", labelKey: "summary.group.lowerLeftPost" }
   ]
-}, yp = ["primary", "permanent", "implant", "missing"];
-function up(t, e) {
-  const a = new Set(t.map((o) => o.category)), i = yp.filter((o) => a.has(o)).map((o) => ({ key: o, label: c(`summary.col.${o}`) })), r = gp[e].map((o) => {
+}, gp = ["primary", "permanent", "implant", "missing"];
+function yp(t, e) {
+  const a = new Set(t.map((o) => o.category)), i = gp.filter((o) => a.has(o)).map((o) => ({ key: o, label: c(`summary.col.${o}`) })), r = vp[e].map((o) => {
     const n = {};
     for (const d of i) n[d.key] = [];
     for (const d of t)
-      vp(d.toothNo, e) === o.key && (n[d.category] ??= []).push({ toothNo: d.toothNo, label: T2(d.toothNo), status: d.status });
+      mp(d.toothNo, e) === o.key && (n[d.category] ??= []).push({ toothNo: d.toothNo, label: G2(d.toothNo), status: d.status });
     return { key: o.key, label: c(o.labelKey), cells: n };
   }).filter((o) => i.some((n) => (o.cells[n.key] ?? []).length > 0));
   return { columns: i, rows: r, legend: c("summary.legend") };
 }
-function dl() {
-  const t = T2, e = [], a = [], i = [], r = [];
+function cl() {
+  const t = G2, e = [], a = [], i = [], r = [];
   let o = 0;
-  const n = [], d = [], l = [], f = [], p = [], v = [], k = [], x = [], u = [], y = [];
+  const n = [], d = [], s = [], f = [], p = [], v = [], k = [], x = [], u = [], y = [];
   for (const S of s1) {
-    const P = U.get(S);
-    if (!P) continue;
-    $t && P.note && P.note.trim() !== "" && y.push(`${T2(S)}: ${P.note.trim()}`);
-    const b = P.toothSelection;
-    if (b === "none" ? i.push(S) : b === "implant" ? r.push(S) : b === "milktooth" ? o++ : a.push(S), e.push({ toothNo: S, category: mp(b), status: hp(P) }), P.caries && P.caries.size > 0) {
+    const C = U.get(S);
+    if (!C) continue;
+    Xt && C.note && C.note.trim() !== "" && y.push(`${G2(S)}: ${C.note.trim()}`);
+    const b = C.toothSelection;
+    if (b === "none" ? i.push(S) : b === "implant" ? r.push(S) : b === "milktooth" ? o++ : a.push(S), e.push({ toothNo: S, category: hp(b), status: fp(C) }), C.caries && C.caries.size > 0) {
       const z = [], K = [];
       for (const q of K2) {
-        if (!P.caries.has("caries-" + q)) continue;
-        const v1 = Z2(q, S);
-        P.fillingSurfaceMaterials && P.fillingSurfaceMaterials.has(q) ? K.push(v1) : z.push(v1);
+        if (!C.caries.has("caries-" + q)) continue;
+        const v1 = w2(q, S);
+        C.fillingSurfaceMaterials && C.fillingSurfaceMaterials.has(q) ? K.push(v1) : z.push(v1);
       }
       const L = [];
       if (z.length && L.push(z.join(", ")), K.length && L.push(K.join(", ") + " - " + c("toothInfo.secondary")), L.length) {
-        const q = o5(P);
+        const q = o5(C);
         n.push(`${t(S)} (${L.join("; ")})${q ? " – " + q : ""}`);
       }
     }
-    if (P.rootCaries && P.rootCaries !== "none") {
-      const z = pp[P.rootCaries];
+    if (C.rootCaries && C.rootCaries !== "none") {
+      const z = dp[C.rootCaries];
       z && n.push(`${t(S)} (${c(z)})`);
     }
-    if (P.radiographicDepth && P.radiographicDepth.size > 0) {
-      const z = K2.filter((K) => P.radiographicDepth.has(K)).map((K) => `${Z2(K, S)}: ${c("radiographicDepth." + P.radiographicDepth.get(K))}`);
+    if (C.radiographicDepth && C.radiographicDepth.size > 0) {
+      const z = K2.filter((K) => C.radiographicDepth.has(K)).map((K) => `${w2(K, S)}: ${c("radiographicDepth." + C.radiographicDepth.get(K))}`);
       z.length && n.push(`${t(S)} (${z.join(", ")})`);
     }
-    if (P.fillingSurfaceMaterials && P.fillingSurfaceMaterials.size > 0) {
-      const z = K2.filter((K) => P.fillingSurfaceMaterials.has(K)).map((K) => Z2(K, S));
+    if (C.fillingSurfaceMaterials && C.fillingSurfaceMaterials.size > 0) {
+      const z = K2.filter((K) => C.fillingSurfaceMaterials.has(K)).map((K) => w2(K, S));
       if (z.length) {
-        const K = P.restorationType === "none" ? K2.filter((q) => P.fillingDefect?.has(q) && P.fillingSurfaceMaterials.has(q)).map((q) => `${Z2(q, S)}: ${c("fillingDefect." + P.fillingDefect.get(q))}`) : [], L = K.length ? ` – ${c("fillingDefect.label")}: ${K.join(", ")}` : "";
+        const K = C.restorationType === "none" ? K2.filter((q) => C.fillingDefect?.has(q) && C.fillingSurfaceMaterials.has(q)).map((q) => `${w2(q, S)}: ${c("fillingDefect." + C.fillingDefect.get(q))}`) : [], L = K.length ? ` – ${c("fillingDefect.label")}: ${K.join(", ")}` : "";
         d.push(`${t(S)} (${z.join(", ")})${L}`);
       }
     }
-    if (P.endo && P.endo !== "none" || P.endoResection) {
-      let z = cr[P.endo] ? c(cr[P.endo]) : "";
-      P.endo === "endo-resection" ? z = c("toothInfo.resected") : P.endoResection && (z = z ? `${z}, ${c("toothInfo.resected")}` : c("toothInfo.resected")), l.push(`${t(S)} (${z})`);
+    if (C.endo && C.endo !== "none" || C.endoResection) {
+      let z = cr[C.endo] ? c(cr[C.endo]) : "";
+      C.endo === "endo-resection" ? z = c("toothInfo.resected") : C.endoResection && (z = z ? `${z}, ${c("toothInfo.resected")}` : c("toothInfo.resected")), s.push(`${t(S)} (${z})`);
     }
-    if (P.restorationType && P.restorationType !== "none" && f.push(`${t(S)}: ${Sr(P.restorationType, P.restorationMaterial)}`), P.prosthesis && P.prosthesis !== "none" && f.push(`${t(S)}: ${c(Wi[P.prosthesis] || P.prosthesis)}`), P.crownLeakage && !Zr(P) && (P.restorationType === "crown" || P.restorationType === "bridge") && f.push(`${t(S)} (${c("crownLeakage.label")})`), P.mods && (P.mods.has("inflammation") || P.mods.has("parodontal"))) {
+    if (C.restorationType && C.restorationType !== "none" && f.push(`${t(S)}: ${Sr(C.restorationType, C.restorationMaterial)}`), C.prosthesis && C.prosthesis !== "none" && f.push(`${t(S)}: ${c(Wi[C.prosthesis] || C.prosthesis)}`), C.crownLeakage && !Zr(C) && (C.restorationType === "crown" || C.restorationType === "bridge") && f.push(`${t(S)} (${c("crownLeakage.label")})`), C.mods && (C.mods.has("inflammation") || C.mods.has("parodontal"))) {
       let z;
-      P.periapicalType && P.periapicalType !== "none" ? z = c("periapical.type." + P.periapicalType) : P.mods.has("parodontal") ? z = c("mods.parodontal") : z = c("mods.periapicalInflammation"), p.push(`${t(S)} (${z})`);
+      C.periapicalType && C.periapicalType !== "none" ? z = c("periapical.type." + C.periapicalType) : C.mods.has("parodontal") ? z = c("mods.parodontal") : z = c("mods.periapicalInflammation"), p.push(`${t(S)} (${z})`);
     }
-    const l1 = r5(P);
-    if (l1.length && v.push(`${t(S)} (${l1.join("; ")})`), zr(P)) {
+    const l1 = r5(C);
+    if (l1.length && v.push(`${t(S)} (${l1.join("; ")})`), zr(C)) {
       const z = [];
-      P.wearEdge !== "none" && z.push(`${c("tooth.bruxism.edgeWear")}: ${c("wearType." + P.wearEdge)}`), P.wearCervical !== "none" && z.push(`${c("tooth.bruxism.neckWear")}: ${c("wearType." + P.wearCervical)}`), z.length && k.push(`${t(S)} (${z.join(", ")})`);
+      C.wearEdge !== "none" && z.push(`${c("tooth.bruxism.edgeWear")}: ${c("wearType." + C.wearEdge)}`), C.wearCervical !== "none" && z.push(`${c("tooth.bruxism.neckWear")}: ${c("wearType." + C.wearCervical)}`), z.length && k.push(`${t(S)} (${z.join(", ")})`);
     }
-    if (e3(P) && P.discoloration !== "none" && x.push(`${t(S)} (${c("discoloration." + P.discoloration)})`), a3(P)) {
+    if (e3(C) && C.discoloration !== "none" && x.push(`${t(S)} (${c("discoloration." + C.discoloration)})`), a3(C)) {
       const z = [];
-      P.orthoAppliance !== "none" && z.push(c("ortho.appliance." + P.orthoAppliance)), P.orthoDrift !== "none" && z.push(c("ortho.drift." + P.orthoDrift)), P.orthoVertical !== "none" && z.push(c("ortho.vertical." + P.orthoVertical)), P.orthoRotation === !0 && z.push(c("ortho.rotation.label")), z.length && u.push(`${t(S)} (${z.join(", ")})`);
+      C.orthoAppliance !== "none" && z.push(c("ortho.appliance." + C.orthoAppliance)), C.orthoDrift !== "none" && z.push(c("ortho.drift." + C.orthoDrift)), C.orthoVertical !== "none" && z.push(c("ortho.vertical." + C.orthoVertical)), C.orthoRotation === !0 && z.push(c("ortho.rotation.label")), z.length && u.push(`${t(S)} (${z.join(", ")})`);
     }
-    P.calculus && p.push(`${t(S)} (${c("calculus.label")})`), P.mobility && P.mobility !== "none" && P.toothSelection !== "implant" && p.push(`${t(S)} (${c("inflammation.mobilityLabel")} ${c("mobility." + P.mobility)})`);
+    C.calculus && p.push(`${t(S)} (${c("calculus.label")})`), C.mobility && C.mobility !== "none" && C.toothSelection !== "implant" && p.push(`${t(S)} (${c("inflammation.mobilityLabel")} ${c("mobility." + C.mobility)})`);
     {
-      const z = Wn(P);
+      const z = Wn(C);
       z && p.push(`${t(S)} (${z})`);
     }
     {
@@ -42193,11 +42180,11 @@ function dl() {
       z !== "none" && p.push(`${t(S)} (${c(`perio.recession.${z}`)})`);
     }
     {
-      const z = Jn(P);
+      const z = Jn(C);
       z && p.push(`${t(S)} (${z})`);
     }
     {
-      const z = _n(P);
+      const z = _n(C);
       z && p.push(`${t(S)} (${z})`);
     }
     {
@@ -42229,13 +42216,13 @@ function dl() {
       z && p.push(`${t(S)} (${z})`);
     }
   }
-  const h = (S, P) => c(`${S}${P === 1 ? "One" : "Other"}`, { n: P }), C = h("toothInfo.milk", o), w = o > 0 ? c("toothInfo.milkFragment", { milk: C }) : "", g = h("toothInfo.present", a.length), Z = h("toothInfo.missing", i.length);
-  let G;
-  a.length === 0 && r.length === 0 && o > 0 ? G = c("toothInfo.overviewMilkOnly", { milk: C }) : r.length > 0 ? G = c("toothInfo.overviewImplant", { present: g, milk: w, missing: Z, implant: h("toothInfo.implant", r.length) }) : G = c("toothInfo.overview", { present: g, milk: w, missing: Z });
+  const h = (S, C) => c(`${S}${C === 1 ? "One" : "Other"}`, { n: C }), T = h("toothInfo.milk", o), w = o > 0 ? c("toothInfo.milkFragment", { milk: T }) : "", g = h("toothInfo.present", a.length), Z = h("toothInfo.missing", i.length);
+  let P;
+  a.length === 0 && r.length === 0 && o > 0 ? P = c("toothInfo.overviewMilkOnly", { milk: T }) : r.length > 0 ? P = c("toothInfo.overviewImplant", { present: g, milk: w, missing: Z, implant: h("toothInfo.implant", r.length) }) : P = c("toothInfo.overview", { present: g, milk: w, missing: Z });
   const I = a.length ? c("toothInfo.permanentList", { count: a.length, list: a.map(t).join(", ") }) : null, D = i.length ? c("toothInfo.missingList", { count: i.length, list: i.map(t).join(", ") }) : null, A = [
     { key: "caries", heading: c("toothInfo.caries"), items: n, emptyText: c("toothInfo.cariesEmpty") },
     { key: "fillings", heading: c("toothInfo.fillings"), items: d, emptyText: c("toothInfo.fillingsEmpty") },
-    { key: "endo", heading: c("toothInfo.endo"), items: l, emptyText: c("toothInfo.endoEmpty") },
+    { key: "endo", heading: c("toothInfo.endo"), items: s, emptyText: c("toothInfo.endoEmpty") },
     { key: "diagnoses", heading: c("toothInfo.diagnoses"), items: v, emptyText: c("toothInfo.diagnosesEmpty") },
     { key: "wear", heading: c("toothInfo.wear"), items: k, emptyText: c("toothInfo.wearEmpty") },
     { key: "discoloration", heading: c("toothInfo.discoloration"), items: x, emptyText: c("toothInfo.discolorationEmpty") },
@@ -42244,29 +42231,29 @@ function dl() {
   ];
   let H = p.length ? c("toothInfo.periodontalInflamed", { list: p.join(", ") }) : c("toothInfo.periodontalHealthy");
   if (!kr(J)) {
-    const S = t8(J);
+    const S = $7(J);
     S && (H = `${H} – ${S}`);
   }
   {
-    const S = m9(Vi());
+    const S = h9(Vi());
     S && (H = `${H} – ${S}`);
   }
   const R = r.length ? { heading: c("toothInfo.implants"), text: r.map(t).join(", ") } : null, N = y.length ? { heading: c("toothInfo.notes"), items: y } : null;
   return {
-    overview: G,
+    overview: P,
     permanentList: I,
     missingList: D,
-    toothTable: up(e, Ne().summaryGrouping),
+    toothTable: yp(e, Ne().summaryGrouping),
     periodontalHasFindings: p.length > 0,
     sections: A,
     implants: R,
     periodontalTitle: c("toothInfo.periodontalTitle"),
     periodontalText: H,
-    plannedChanges: Xd(),
+    plannedChanges: Qd(),
     individualNotes: N
   };
 }
-function kp(t) {
+function up(t) {
   q1 = t;
   const e = Q("#toothGrid");
   e && e.classList.toggle("read-only", q1);
@@ -42283,14 +42270,14 @@ function _2() {
   return q1;
 }
 function g4(t) {
-  $t = t;
+  Xt = t;
   for (const e of s1)
     ee(e), ae(e);
 }
-function uh() {
-  return $t;
+function yh() {
+  return Xt;
 }
-const bp = {
+const kp = {
   chartedSites: 0,
   bleedingSites: 0,
   bopPercent: 0,
@@ -42308,7 +42295,7 @@ const bp = {
   millerDistribution: { i: 0, ii: 0, iii: 0, iv: 0 },
   mpiScore: null,
   mbiScore: null
-}, xp = {
+}, bp = {
   age: null,
   smokingStatus: "unknown",
   cigarettesPerDay: null,
@@ -42323,7 +42310,7 @@ const bp = {
   patientName: null,
   patientDob: null,
   examDate: null
-}, Mp = {
+}, xp = {
   diagnosis: "health",
   stage: "na",
   grade: "indeterminate",
@@ -42336,7 +42323,7 @@ const bp = {
     buckets: { smoking: "A", diabetes: "A", direct: null }
   },
   overridden: { diagnosis: !1, stage: !1, grade: !1, extent: !1 }
-}, wp = ["–", "I", "II", "III", "IV"];
+}, Mp = ["–", "I", "II", "III", "IV"];
 function y4(t) {
   return c(`perio.class.dx.${t}`);
 }
@@ -42349,49 +42336,49 @@ function k4(t) {
 function b4(t) {
   return c(t === "na" ? "perio.class.extent.na" : t === "molar-incisor" ? "perio.class.extent.molarIncisor" : `perio.class.extent.${t}`);
 }
-function pl() {
-  const [t, e] = e1(bp), [a, i] = e1(xp), [r, o] = e1(Mp);
-  d1(() => (e(G2()), i(Wt()), o(Vi()), vt(() => {
-    e(G2()), i(Wt()), o(Vi());
+function dl() {
+  const [t, e] = e1(kp), [a, i] = e1(bp), [r, o] = e1(xp);
+  d1(() => (e(P2()), i(qt()), o(Vi()), vt(() => {
+    e(P2()), i(qt()), o(Vi());
   })), []);
-  const n = _2(), d = t.worstCal === null ? "–" : `${t.worstCal}${t.worstCalTooth !== null ? ` (${T2(t.worstCalTooth)})` : ""}`, l = a.smokingStatus !== "current", f = a.diabetesStatus !== "present", p = je() === "canonical", v = p ? `Avg ${o1("pd")}` : c("perio.summary.avgPd"), k = p ? `Avg ${o1("cal")}` : c("perio.summary.avgCal"), x = p ? `${o1("bop")}%` : c("perio.bopPercent"), u = p ? `Worst ${o1("cal")}` : c("perio.summary.worstCal"), y = p ? `Max ${o1("pd")}` : c("perio.summary.maxPd"), h = p ? `Max ${o1("furcation")}` : c("perio.summary.maxFurcation"), C = p ? `${o1("plaque")}%` : c("plaque.percent");
+  const n = _2(), d = t.worstCal === null ? "–" : `${t.worstCal}${t.worstCalTooth !== null ? ` (${G2(t.worstCalTooth)})` : ""}`, s = a.smokingStatus !== "current", f = a.diabetesStatus !== "present", p = je() === "canonical", v = p ? `Avg ${o1("pd")}` : c("perio.summary.avgPd"), k = p ? `Avg ${o1("cal")}` : c("perio.summary.avgCal"), x = p ? `${o1("bop")}%` : c("perio.bopPercent"), u = p ? `Worst ${o1("cal")}` : c("perio.summary.worstCal"), y = p ? `Max ${o1("pd")}` : c("perio.summary.maxPd"), h = p ? `Max ${o1("furcation")}` : c("perio.summary.maxFurcation"), T = p ? `${o1("plaque")}%` : c("plaque.percent");
   return /* @__PURE__ */ M("div", { className: "panel-body", children: [
     /* @__PURE__ */ M("div", { className: "perio-summary-card", children: [
-      /* @__PURE__ */ s("div", { className: "perio-summary-card-title", children: c("perio.summary.title") }),
+      /* @__PURE__ */ l("div", { className: "perio-summary-card-title", children: c("perio.summary.title") }),
       /* @__PURE__ */ M("div", { className: "perio-fullgrid-summary", role: "status", children: [
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: v }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-avgpd", children: t.avgPd === null ? "–" : t.avgPd })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: v }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-avgpd", children: t.avgPd === null ? "–" : t.avgPd })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: k }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-avgcal", children: t.avgCal === null ? "–" : t.avgCal })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: k }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-avgcal", children: t.avgCal === null ? "–" : t.avgCal })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: x }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: x }),
           /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-bop", children: [
             t.bopPercent,
             "%"
           ] })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: c("perio.summary.charted") }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-charted", children: t.chartedSites })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: c("perio.summary.charted") }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-charted", children: t.chartedSites })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: u }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-cal", children: d })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: u }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-cal", children: d })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: y }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-maxpd", children: t.maxPd === null ? "–" : t.maxPd })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: y }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-maxpd", children: t.maxPd === null ? "–" : t.maxPd })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: h }),
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-maxfurc", children: t.maxFurcation === null ? "–" : wp[t.maxFurcation] })
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: h }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-maxfurc", children: t.maxFurcation === null ? "–" : Mp[t.maxFurcation] })
         ] }),
         /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-item", children: [
-          /* @__PURE__ */ s("span", { className: "perio-fullgrid-summary-label", children: C }),
+          /* @__PURE__ */ l("span", { className: "perio-fullgrid-summary-label", children: T }),
           /* @__PURE__ */ M("span", { className: "perio-fullgrid-summary-value", id: "perio-fg-summary-plaque", children: [
             t.plaquePercent,
             "%"
@@ -42400,11 +42387,11 @@ function pl() {
       ] })
     ] }),
     /* @__PURE__ */ M("details", { id: "caseMetaPanel", className: "case-meta-panel", open: !0, children: [
-      /* @__PURE__ */ s("summary", { className: "case-meta-panel-title", children: c("case.panelTitle") }),
+      /* @__PURE__ */ l("summary", { className: "case-meta-panel-title", children: c("case.panelTitle") }),
       /* @__PURE__ */ M("div", { className: "case-meta-panel-body", children: [
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaPatientName", children: c("case.patientName") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaPatientName", children: c("case.patientName") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaPatientName",
@@ -42417,8 +42404,8 @@ function pl() {
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaExamDate", children: c("case.examDate") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaExamDate", children: c("case.examDate") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaExamDate",
@@ -42431,8 +42418,8 @@ function pl() {
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaAge", children: c("case.age") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaAge", children: c("case.age") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaAge",
@@ -42444,13 +42431,13 @@ function pl() {
               value: a.age ?? "",
               onChange: (w) => {
                 const g = w.target.value;
-                R7(g === "" ? null : Number(g));
+                N7(g === "" ? null : Number(g));
               }
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaSmoking", children: c("case.smoking.label") }),
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaSmoking", children: c("case.smoking.label") }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42458,19 +42445,19 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.smokingStatus,
-              onChange: (w) => q7(w.target.value),
+              onChange: (w) => K7(w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "unknown", children: c("case.smoking.unknown") }),
-                /* @__PURE__ */ s("option", { value: "never", children: c("case.smoking.never") }),
-                /* @__PURE__ */ s("option", { value: "former", children: c("case.smoking.former") }),
-                /* @__PURE__ */ s("option", { value: "current", children: c("case.smoking.current") })
+                /* @__PURE__ */ l("option", { value: "unknown", children: c("case.smoking.unknown") }),
+                /* @__PURE__ */ l("option", { value: "never", children: c("case.smoking.never") }),
+                /* @__PURE__ */ l("option", { value: "former", children: c("case.smoking.former") }),
+                /* @__PURE__ */ l("option", { value: "current", children: c("case.smoking.current") })
               ]
             }
           )
         ] }),
-        /* @__PURE__ */ M("div", { className: "case-meta-row" + (l ? " case-meta-row-disabled" : ""), children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaCigarettesPerDay", children: c("case.cigarettesPerDay") }),
-          /* @__PURE__ */ s(
+        /* @__PURE__ */ M("div", { className: "case-meta-row" + (s ? " case-meta-row-disabled" : ""), children: [
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaCigarettesPerDay", children: c("case.cigarettesPerDay") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaCigarettesPerDay",
@@ -42478,17 +42465,17 @@ function pl() {
               type: "number",
               min: 0,
               max: 99,
-              disabled: n || l,
+              disabled: n || s,
               value: a.cigarettesPerDay ?? "",
               onChange: (w) => {
                 const g = w.target.value;
-                V7(g === "" ? null : Number(g));
+                R7(g === "" ? null : Number(g));
               }
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaDiabetes", children: c("case.diabetes.label") }),
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaDiabetes", children: c("case.diabetes.label") }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42496,18 +42483,18 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.diabetesStatus,
-              onChange: (w) => Y7(w.target.value),
+              onChange: (w) => q7(w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "unknown", children: c("case.diabetes.unknown") }),
-                /* @__PURE__ */ s("option", { value: "none", children: c("case.diabetes.none") }),
-                /* @__PURE__ */ s("option", { value: "present", children: c("case.diabetes.present") })
+                /* @__PURE__ */ l("option", { value: "unknown", children: c("case.diabetes.unknown") }),
+                /* @__PURE__ */ l("option", { value: "none", children: c("case.diabetes.none") }),
+                /* @__PURE__ */ l("option", { value: "present", children: c("case.diabetes.present") })
               ]
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row" + (f ? " case-meta-row-disabled" : ""), children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaHba1c", children: c("case.hba1c") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaHba1c", children: c("case.hba1c") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaHba1c",
@@ -42520,14 +42507,14 @@ function pl() {
               value: a.hba1c ?? "",
               onChange: (w) => {
                 const g = w.target.value;
-                K7(g === "" ? null : Number(g));
+                B7(g === "" ? null : Number(g));
               }
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaRbl", children: c("case.rbl") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaRbl", children: c("case.rbl") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaRbl",
@@ -42539,14 +42526,14 @@ function pl() {
               value: a.maxRblPercent ?? "",
               onChange: (w) => {
                 const g = w.target.value;
-                B7(g === "" ? null : Number(g));
+                F7(g === "" ? null : Number(g));
               }
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-          /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "caseMetaToothLoss", children: c("case.toothLoss") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "caseMetaToothLoss", children: c("case.toothLoss") }),
+          /* @__PURE__ */ l(
             "input",
             {
               id: "caseMetaToothLoss",
@@ -42558,15 +42545,15 @@ function pl() {
               value: a.toothLossPerio ?? "",
               onChange: (w) => {
                 const g = w.target.value;
-                F7(g === "" ? null : Number(g));
+                V7(g === "" ? null : Number(g));
               }
             }
           )
         ] }),
-        /* @__PURE__ */ s("div", { className: "case-meta-panel-subheading", children: c("perio.class.title") }),
+        /* @__PURE__ */ l("div", { className: "case-meta-panel-subheading", children: c("perio.class.title") }),
         /* @__PURE__ */ M("div", { className: "perio-class-row", children: [
-          /* @__PURE__ */ s("label", { className: "perio-class-row-label", htmlFor: "perioClassDiagnosisOverride", children: c("perio.class.diagnosis") }),
-          /* @__PURE__ */ s("div", { className: "perio-class-derived", id: "perioClassDiagnosisDerived", children: y4(r.derived.diagnosis) }),
+          /* @__PURE__ */ l("label", { className: "perio-class-row-label", htmlFor: "perioClassDiagnosisOverride", children: c("perio.class.diagnosis") }),
+          /* @__PURE__ */ l("div", { className: "perio-class-derived", id: "perioClassDiagnosisDerived", children: y4(r.derived.diagnosis) }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42574,19 +42561,19 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.diagnosisOverride ?? "",
-              onChange: (w) => W7(w.target.value === "" ? null : w.target.value),
+              onChange: (w) => Y7(w.target.value === "" ? null : w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "", children: c("perio.class.useDerived", { value: y4(r.derived.diagnosis) }) }),
-                /* @__PURE__ */ s("option", { value: "health", children: c("perio.class.dx.health") }),
-                /* @__PURE__ */ s("option", { value: "gingivitis", children: c("perio.class.dx.gingivitis") }),
-                /* @__PURE__ */ s("option", { value: "periodontitis", children: c("perio.class.dx.periodontitis") })
+                /* @__PURE__ */ l("option", { value: "", children: c("perio.class.useDerived", { value: y4(r.derived.diagnosis) }) }),
+                /* @__PURE__ */ l("option", { value: "health", children: c("perio.class.dx.health") }),
+                /* @__PURE__ */ l("option", { value: "gingivitis", children: c("perio.class.dx.gingivitis") }),
+                /* @__PURE__ */ l("option", { value: "periodontitis", children: c("perio.class.dx.periodontitis") })
               ]
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "perio-class-row", children: [
-          /* @__PURE__ */ s("label", { className: "perio-class-row-label", htmlFor: "perioClassStageOverride", children: c("perio.class.stage") }),
-          /* @__PURE__ */ s("div", { className: "perio-class-derived", id: "perioClassStageDerived", children: u4(r.derived.stage) }),
+          /* @__PURE__ */ l("label", { className: "perio-class-row-label", htmlFor: "perioClassStageOverride", children: c("perio.class.stage") }),
+          /* @__PURE__ */ l("div", { className: "perio-class-derived", id: "perioClassStageDerived", children: u4(r.derived.stage) }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42594,20 +42581,20 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.stageOverride ?? "",
-              onChange: (w) => J7(w.target.value === "" ? null : w.target.value),
+              onChange: (w) => W7(w.target.value === "" ? null : w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "", children: c("perio.class.useDerived", { value: u4(r.derived.stage) }) }),
-                /* @__PURE__ */ s("option", { value: "I", children: c("perio.class.stage.I") }),
-                /* @__PURE__ */ s("option", { value: "II", children: c("perio.class.stage.II") }),
-                /* @__PURE__ */ s("option", { value: "III", children: c("perio.class.stage.III") }),
-                /* @__PURE__ */ s("option", { value: "IV", children: c("perio.class.stage.IV") })
+                /* @__PURE__ */ l("option", { value: "", children: c("perio.class.useDerived", { value: u4(r.derived.stage) }) }),
+                /* @__PURE__ */ l("option", { value: "I", children: c("perio.class.stage.I") }),
+                /* @__PURE__ */ l("option", { value: "II", children: c("perio.class.stage.II") }),
+                /* @__PURE__ */ l("option", { value: "III", children: c("perio.class.stage.III") }),
+                /* @__PURE__ */ l("option", { value: "IV", children: c("perio.class.stage.IV") })
               ]
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "perio-class-row", children: [
-          /* @__PURE__ */ s("label", { className: "perio-class-row-label", htmlFor: "perioClassGradeOverride", children: c("perio.class.grade") }),
-          /* @__PURE__ */ s("div", { className: "perio-class-derived", id: "perioClassGradeDerived", children: k4(r.derived.grade) }),
+          /* @__PURE__ */ l("label", { className: "perio-class-row-label", htmlFor: "perioClassGradeOverride", children: c("perio.class.grade") }),
+          /* @__PURE__ */ l("div", { className: "perio-class-derived", id: "perioClassGradeDerived", children: k4(r.derived.grade) }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42615,19 +42602,19 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.gradeOverride ?? "",
-              onChange: (w) => _7(w.target.value === "" ? null : w.target.value),
+              onChange: (w) => J7(w.target.value === "" ? null : w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "", children: c("perio.class.useDerived", { value: k4(r.derived.grade) }) }),
-                /* @__PURE__ */ s("option", { value: "A", children: c("perio.class.grade.A") }),
-                /* @__PURE__ */ s("option", { value: "B", children: c("perio.class.grade.B") }),
-                /* @__PURE__ */ s("option", { value: "C", children: c("perio.class.grade.C") })
+                /* @__PURE__ */ l("option", { value: "", children: c("perio.class.useDerived", { value: k4(r.derived.grade) }) }),
+                /* @__PURE__ */ l("option", { value: "A", children: c("perio.class.grade.A") }),
+                /* @__PURE__ */ l("option", { value: "B", children: c("perio.class.grade.B") }),
+                /* @__PURE__ */ l("option", { value: "C", children: c("perio.class.grade.C") })
               ]
             }
           )
         ] }),
         /* @__PURE__ */ M("div", { className: "perio-class-row", children: [
-          /* @__PURE__ */ s("label", { className: "perio-class-row-label", htmlFor: "perioClassExtentOverride", children: c("perio.class.extent") }),
-          /* @__PURE__ */ s("div", { className: "perio-class-derived", id: "perioClassExtentDerived", children: b4(r.derived.extent) }),
+          /* @__PURE__ */ l("label", { className: "perio-class-row-label", htmlFor: "perioClassExtentOverride", children: c("perio.class.extent") }),
+          /* @__PURE__ */ l("div", { className: "perio-class-derived", id: "perioClassExtentDerived", children: b4(r.derived.extent) }),
           /* @__PURE__ */ M(
             "select",
             {
@@ -42635,12 +42622,12 @@ function pl() {
               className: "odon-settings-select case-meta-select",
               disabled: n,
               value: a.extentOverride ?? "",
-              onChange: (w) => Q7(w.target.value === "" ? null : w.target.value),
+              onChange: (w) => _7(w.target.value === "" ? null : w.target.value),
               children: [
-                /* @__PURE__ */ s("option", { value: "", children: c("perio.class.useDerived", { value: b4(r.derived.extent) }) }),
-                /* @__PURE__ */ s("option", { value: "localized", children: c("perio.class.extent.localized") }),
-                /* @__PURE__ */ s("option", { value: "generalized", children: c("perio.class.extent.generalized") }),
-                /* @__PURE__ */ s("option", { value: "molar-incisor", children: c("perio.class.extent.molarIncisor") })
+                /* @__PURE__ */ l("option", { value: "", children: c("perio.class.useDerived", { value: b4(r.derived.extent) }) }),
+                /* @__PURE__ */ l("option", { value: "localized", children: c("perio.class.extent.localized") }),
+                /* @__PURE__ */ l("option", { value: "generalized", children: c("perio.class.extent.generalized") }),
+                /* @__PURE__ */ l("option", { value: "molar-incisor", children: c("perio.class.extent.molarIncisor") })
               ]
             }
           )
@@ -42649,18 +42636,18 @@ function pl() {
     ] })
   ] });
 }
-const dr = 220, Zp = 46, x4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', it = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], rt = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], q2 = ["MB", "B", "DB"], Y2 = ["ML", "L", "DL"], fl = ["mesial", "distal", "buccal", "lingual"], hl = { mesial: "M", distal: "D", buccal: "B", lingual: "L" };
-function Sp(t) {
+const dr = 220, wp = 46, x4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', at = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28], it = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38], q2 = ["MB", "B", "DB"], Y2 = ["ML", "L", "DL"], pl = ["mesial", "distal", "buccal", "lingual"], fl = { mesial: "M", distal: "D", buccal: "B", lingual: "L" };
+function Zp(t) {
   const e = Math.floor(t / 10);
   return e === 2 || e === 3;
 }
-function ml(t, e) {
+function hl(t, e) {
   if (t === "buccal") return "buc";
   if (t === "lingual") return "lin";
-  const a = Sp(e);
+  const a = Zp(e);
   return t === "mesial" ? a ? "mes" : "dis" : a ? "dis" : "mes";
 }
-const zp = ["–", "I", "II", "III", "IV"], E3 = ["none", "detectable", "not-detectable"], Ip = { none: "–", detectable: "D", "not-detectable": "ND" }, L3 = ["none", "mild", "deep"], Cp = { none: "–", mild: "Mi", deep: "Dp" }, H3 = ["unknown", "thin", "medium", "thick"], Pp = { unknown: "–", thin: "Tn", medium: "Md", thick: "Tk" }, j3 = ["none", "i", "ii", "iii", "iv"], Gp = { none: "–", i: "I", ii: "II", iii: "III", iv: "IV" }, Mi = ["–", "1", "2", "3"], Tp = { pd: {}, gm: {}, bop: [] }, Dp = {
+const Sp = ["–", "I", "II", "III", "IV"], E3 = ["none", "detectable", "not-detectable"], zp = { none: "–", detectable: "D", "not-detectable": "ND" }, L3 = ["none", "mild", "deep"], Ip = { none: "–", mild: "Mi", deep: "Dp" }, H3 = ["unknown", "thin", "medium", "thick"], Cp = { unknown: "–", thin: "Tn", medium: "Md", thick: "Tk" }, j3 = ["none", "i", "ii", "iii", "iv"], Pp = { none: "–", i: "I", ii: "II", iii: "III", iv: "IV" }, Mi = ["–", "1", "2", "3"], Gp = { pd: {}, gm: {}, bop: [] }, Tp = {
   chartedSites: 0,
   bleedingSites: 0,
   bopPercent: 0,
@@ -42685,9 +42672,9 @@ function M4(t, e) {
   const a = [], i = [];
   for (const r of t.teeth) {
     const o = Pt(r.toothNo), n = e.some((d) => Object.prototype.hasOwnProperty.call(o.pd, d));
-    e.forEach((d, l) => {
+    e.forEach((d, s) => {
       const p = Object.prototype.hasOwnProperty.call(o.pd, d) ? o.pd[d] : n ? 0 : void 0, v = p === void 0 ? void 0 : Object.prototype.hasOwnProperty.call(o.gm, d) ? o.gm[d] : 0;
-      a.push({ site: d, pd: p, gm: v }), i.push(r.siteXs[l]);
+      a.push({ site: d, pd: p, gm: v }), i.push(r.siteXs[s]);
     });
   }
   return { sites: a, xs: i };
@@ -42698,18 +42685,18 @@ function Bi(t, e) {
 function we(t, e, a) {
   if (!e) return;
   e.querySelectorAll(".perio-curve").forEach((d) => d.remove());
-  const i = Fa(t, a, C2, lt), r = { cejY: i.cejY, mmPx: Va }, o = Bi(e, "perio-tooth-arch-buccal");
+  const i = Fa(t, a, I2, nt), r = { cejY: i.cejY, mmPx: Va }, o = Bi(e, "perio-tooth-arch-buccal");
   if (o) {
-    const d = o.querySelector(".perio-tooth-row-buccal") ?? o, l = M4(i, q2), f = K3(l.sites, { ...r, siteX: (v) => l.xs[v] }), p = q3(f, { width: i.totalWidth, className: "perio-curve perio-curve-buccal" });
+    const d = o.querySelector(".perio-tooth-row-buccal") ?? o, s = M4(i, q2), f = K3(s.sites, { ...r, siteX: (v) => s.xs[v] }), p = q3(f, { width: i.totalWidth, className: "perio-curve perio-curve-buccal" });
     d.appendChild(p);
   }
   const n = Bi(e, "perio-tooth-arch-palatal");
   if (n) {
-    const d = n.querySelector(".perio-tooth-row-palatal-inner") ?? n, l = M4(i, Y2), f = K3(l.sites, { ...r, siteX: (v) => l.xs[v] }), p = q3(f, { width: i.totalWidth, className: "perio-curve perio-curve-palatal" });
+    const d = n.querySelector(".perio-tooth-row-palatal-inner") ?? n, s = M4(i, Y2), f = K3(s.sites, { ...r, siteX: (v) => s.xs[v] }), p = q3(f, { width: i.totalWidth, className: "perio-curve perio-curve-palatal" });
     d.appendChild(p);
   }
 }
-const Op = [
+const Dp = [
   "none",
   "pd",
   "cal",
@@ -42724,7 +42711,7 @@ const Op = [
   "mbi",
   "pd5",
   "pd6"
-], Ap = {
+], Op = {
   pd: "pd",
   cal: "cal",
   bop: "bop",
@@ -42735,8 +42722,8 @@ const Op = [
   mpi: "mpi",
   mbi: "mbi"
 };
-function Up(t) {
-  const e = Ap[t];
+function Ap(t) {
+  const e = Op[t];
   return e && je() === "canonical" ? yn[e] : c(`perio.overlay.${t}`);
 }
 function w4(t, e) {
@@ -42758,12 +42745,12 @@ function w4(t, e) {
 function Z4(t, e) {
   const a = [];
   for (const i of t.teeth) {
-    const r = Pt(i.toothNo), o = P2(i.toothNo);
+    const r = Pt(i.toothNo), o = C2(i.toothNo);
     e.forEach((n, d) => {
-      const l = Object.prototype.hasOwnProperty.call(r.pd, n);
+      const s = Object.prototype.hasOwnProperty.call(r.pd, n);
       a.push({
         x: i.siteXs[d],
-        pd: l ? r.pd[n] : void 0,
+        pd: s ? r.pd[n] : void 0,
         gm: Object.prototype.hasOwnProperty.call(r.gm, n) ? r.gm[n] : void 0,
         cal: o.has(n) ? o.get(n) : void 0
       });
@@ -42773,47 +42760,47 @@ function Z4(t, e) {
 }
 function Ze(t, e, a, i) {
   if (!e || (e.querySelectorAll(".perio-overlay-layer").forEach((u) => u.remove()), i === "none")) return;
-  const r = Bi(e, "perio-tooth-arch-buccal"), o = Bi(e, "perio-tooth-arch-palatal"), n = r?.querySelector(".perio-tooth-row-buccal") ?? r, d = o?.querySelector(".perio-tooth-row-palatal-inner") ?? o, l = Fa(t, a, C2, lt), f = { cejY: l.cejY, mmPx: Va }, p = `perio-overlay-${i}`;
+  const r = Bi(e, "perio-tooth-arch-buccal"), o = Bi(e, "perio-tooth-arch-palatal"), n = r?.querySelector(".perio-tooth-row-buccal") ?? r, d = o?.querySelector(".perio-tooth-row-palatal-inner") ?? o, s = Fa(t, a, I2, nt), f = { cejY: s.cejY, mmPx: Va }, p = `perio-overlay-${i}`;
   if (i === "plaque") {
-    const u = l.teeth.map((y) => ({
+    const u = s.teeth.map((y) => ({
       x: y.x,
       width: y.width,
       siteXs: y.siteXs,
       surfaces: o3(y.toothNo)
     }));
     n?.appendChild(
-      Bt(Io(u, "buccal", f), { width: l.totalWidth, className: p })
+      Ft(Io(u, "buccal", f), { width: s.totalWidth, className: p })
     ), d?.appendChild(
-      Bt(Io(u, "palatal", f), { width: l.totalWidth, className: p })
+      Ft(Io(u, "palatal", f), { width: s.totalWidth, className: p })
     );
     return;
   }
   if (i === "cairo") {
-    const u = l.teeth.map((y) => ({
+    const u = s.teeth.map((y) => ({
       x: y.x,
       width: y.width,
       siteXs: y.siteXs,
       rt: Dr(y.toothNo)
     }));
     n?.appendChild(
-      Bt(_s(u, f), { width: l.totalWidth, className: p })
+      Ft(Js(u, f), { width: s.totalWidth, className: p })
     );
     return;
   }
   if (i === "kg") {
-    const u = l.teeth.map((y) => ({
+    const u = s.teeth.map((y) => ({
       x: y.x,
       width: y.width,
       siteXs: y.siteXs,
       kg: qe(y.toothNo)
     }));
     n?.appendChild(
-      Bt($s(u, f), { width: l.totalWidth, className: p })
+      Ft(Xs(u, f), { width: s.totalWidth, className: p })
     );
     return;
   }
   if (i === "pi" || i === "gi" || i === "mpi" || i === "mbi") {
-    const u = i === "pi" ? Ya : i === "gi" ? Wa : i === "mpi" ? Ja : _a, y = l.teeth.map((h) => ({
+    const u = i === "pi" ? Ya : i === "gi" ? Wa : i === "mpi" ? Ja : _a, y = s.teeth.map((h) => ({
       x: h.x,
       width: h.width,
       siteXs: h.siteXs,
@@ -42825,25 +42812,25 @@ function Ze(t, e, a, i) {
       }
     }));
     n?.appendChild(
-      Bt(Co(y, "buccal", f), { width: l.totalWidth, className: p })
+      Ft(Co(y, "buccal", f), { width: s.totalWidth, className: p })
     ), d?.appendChild(
-      Bt(Co(y, "palatal", f), { width: l.totalWidth, className: p })
+      Ft(Co(y, "palatal", f), { width: s.totalWidth, className: p })
     );
     return;
   }
   if (i === "pd" || i === "cal" || i === "gr") {
-    const u = i, y = zo(u, Z4(l, q2), f);
-    n?.appendChild(Bt(y, { width: l.totalWidth, className: p }));
-    const h = zo(u, Z4(l, Y2), f);
-    d?.appendChild(Bt(h, { width: l.totalWidth, className: p }));
+    const u = i, y = zo(u, Z4(s, q2), f);
+    n?.appendChild(Ft(y, { width: s.totalWidth, className: p }));
+    const h = zo(u, Z4(s, Y2), f);
+    d?.appendChild(Ft(h, { width: s.totalWidth, className: p }));
     return;
   }
-  const v = i, k = So(v, w4(l, q2), f);
-  n?.appendChild(Bt(k, { width: l.totalWidth, className: p }));
-  const x = So(v, w4(l, Y2), f);
-  d?.appendChild(Bt(x, { width: l.totalWidth, className: p }));
+  const v = i, k = So(v, w4(s, q2), f);
+  n?.appendChild(Ft(k, { width: s.totalWidth, className: p }));
+  const x = So(v, w4(s, Y2), f);
+  d?.appendChild(Ft(x, { width: s.totalWidth, className: p }));
 }
-function m1(t, e) {
+function h1(t, e) {
   const a = document.createElement(t);
   return e && (a.className = e), a;
 }
@@ -42853,15 +42840,15 @@ function Gi() {
   const { popover: t, button: e, cleanup: a } = Pa;
   a(), t.remove(), e.setAttribute("aria-expanded", "false"), Pa = null;
 }
-function Ep(t, e) {
+function Up(t, e) {
   const a = Pa?.button === e;
   if (Gi(), a) return;
-  const i = m1("div", "perio-info-popover");
+  const i = h1("div", "perio-info-popover");
   i.id = "perioInfoPopover", i.setAttribute("role", "dialog"), i.setAttribute("aria-modal", "false");
-  const r = m1("p", "perio-info-popover-text");
+  const r = h1("p", "perio-info-popover-text");
   r.textContent = c(t), i.appendChild(r), i.setAttribute("aria-label", r.textContent), document.body.appendChild(i);
-  const o = e.getBoundingClientRect(), n = i.offsetWidth || 260, d = Math.min(o.left, window.innerWidth - n - 8), l = Math.min(o.bottom + 6, window.innerHeight - (i.offsetHeight || 0) - 8);
-  i.style.left = `${Math.max(8, d)}px`, i.style.top = `${Math.max(8, l)}px`, e.setAttribute("aria-expanded", "true");
+  const o = e.getBoundingClientRect(), n = i.offsetWidth || 260, d = Math.min(o.left, window.innerWidth - n - 8), s = Math.min(o.bottom + 6, window.innerHeight - (i.offsetHeight || 0) - 8);
+  i.style.left = `${Math.max(8, d)}px`, i.style.top = `${Math.max(8, s)}px`, e.setAttribute("aria-expanded", "true");
   const f = (v) => {
     const k = v.target;
     k && (i.contains(k) || e.contains(k)) || Gi();
@@ -42877,11 +42864,11 @@ function Ep(t, e) {
   };
 }
 function L1(t, e) {
-  const a = m1("div", "perio-fullgrid-row-label"), i = m1("span", "perio-fullgrid-row-label-text");
+  const a = h1("div", "perio-fullgrid-row-label"), i = h1("span", "perio-fullgrid-row-label-text");
   if (i.textContent = t, a.appendChild(i), e) {
-    const r = m1("button", "perio-info-btn");
+    const r = h1("button", "perio-info-btn");
     r.type = "button", r.textContent = "i", r.setAttribute("aria-label", c("perio.info.button", { label: t })), r.setAttribute("aria-haspopup", "dialog"), r.setAttribute("aria-expanded", "false"), r.addEventListener("click", (o) => {
-      o.stopPropagation(), Ep(e, r);
+      o.stopPropagation(), Up(e, r);
     }), a.appendChild(r);
   }
   return a;
@@ -42907,7 +42894,7 @@ function S4(t, e, a, i, r) {
     const p = t.furcation[f];
     if (!p) continue;
     const v = n[f] ?? 0;
-    p.textContent = zp[v], p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || o;
+    p.textContent = Sp[v], p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || o;
   }
   const d = o3(e);
   for (const f of Object.keys(t.plaque)) {
@@ -42918,11 +42905,11 @@ function S4(t, e, a, i, r) {
   }
   if (t.cejVisibility) {
     const f = Qa(e), p = t.cejVisibility;
-    p.textContent = Ip[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
+    p.textContent = zp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
   }
   if (t.rootConcavity) {
     const f = Xa(e), p = t.rootConcavity;
-    p.textContent = Cp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
+    p.textContent = Ip[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
   }
   for (const f of Object.keys(t.pi)) {
     const p = t.pi[f];
@@ -42936,18 +42923,18 @@ function S4(t, e, a, i, r) {
     const v = Wa(e, f);
     p.textContent = Mi[v] ?? "–", p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || o;
   }
-  const l = ot(e);
+  const s = rt(e);
   for (const f of Object.keys(t.mpi)) {
     const p = t.mpi[f];
     if (!p) continue;
     const v = Ja(e, f);
-    p.textContent = Mi[v] ?? "–", p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || !l;
+    p.textContent = Mi[v] ?? "–", p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || !s;
   }
   for (const f of Object.keys(t.mbi)) {
     const p = t.mbi[f];
     if (!p) continue;
     const v = _a(e, f);
-    p.textContent = Mi[v] ?? "–", p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || !l;
+    p.textContent = Mi[v] ?? "–", p.dataset.grade = String(v), p.setAttribute("aria-pressed", v > 0 ? "true" : "false"), p.disabled = r || !s;
   }
   if (t.kg) {
     const f = qe(e);
@@ -42955,99 +42942,99 @@ function S4(t, e, a, i, r) {
   }
   if (t.gingivalThickness) {
     const f = s3(e), p = t.gingivalThickness;
-    p.textContent = Pp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "unknown" ? "true" : "false"), p.disabled = r || o;
+    p.textContent = Cp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "unknown" ? "true" : "false"), p.disabled = r || o;
   }
   if (t.millerClass) {
     const f = c3(e), p = t.millerClass;
-    p.textContent = Gp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
+    p.textContent = Pp[f] ?? "–", p.dataset.value = f, p.setAttribute("aria-pressed", f !== "none" ? "true" : "false"), p.disabled = r || o;
   }
 }
-function Lp(t, e, a, i, r, o) {
-  const n = m1("div", "perio-fullgrid-cell");
+function Ep(t, e, a, i, r, o) {
+  const n = h1("div", "perio-fullgrid-cell");
   n.dataset.perioAspect = i, n.dataset.perioField = e;
-  const d = m1("div", "perio-fullgrid-sitegroup");
-  for (const l of a)
+  const d = h1("div", "perio-fullgrid-sitegroup");
+  for (const s of a)
     if (e === "cal") {
-      const f = m1("span", "perio-fullgrid-cal");
-      f.id = `perio-fg-cal-${t}-${l}`, d.appendChild(f), r.cal[l] = f;
+      const f = h1("span", "perio-fullgrid-cal");
+      f.id = `perio-fg-cal-${t}-${s}`, d.appendChild(f), r.cal[s] = f;
     } else if (e === "bop") {
-      const f = m1("input", "perio-fullgrid-bop");
-      f.type = "checkbox", f.id = `perio-fg-bop-${t}-${l}`, f.title = c(`perio.site.${l}`), f.dataset.perio = `${t}:${l}:bop`, f.addEventListener("change", () => o.onBop(t, l, f.checked)), d.appendChild(f), r.bop[l] = f;
+      const f = h1("input", "perio-fullgrid-bop");
+      f.type = "checkbox", f.id = `perio-fg-bop-${t}-${s}`, f.title = c(`perio.site.${s}`), f.dataset.perio = `${t}:${s}:bop`, f.addEventListener("change", () => o.onBop(t, s, f.checked)), d.appendChild(f), r.bop[s] = f;
     } else if (e === "pd") {
-      const f = m1("input", "perio-fullgrid-input");
-      f.type = "number", f.min = "1", f.max = "15", f.step = "1", f.id = `perio-fg-pd-${t}-${l}`, f.title = c(`perio.site.${l}`), f.dataset.perio = `${t}:${l}:pd`, f.addEventListener("change", () => o.onPd(t, l, f.value)), d.appendChild(f), r.pd[l] = f;
+      const f = h1("input", "perio-fullgrid-input");
+      f.type = "number", f.min = "1", f.max = "15", f.step = "1", f.id = `perio-fg-pd-${t}-${s}`, f.title = c(`perio.site.${s}`), f.dataset.perio = `${t}:${s}:pd`, f.addEventListener("change", () => o.onPd(t, s, f.value)), d.appendChild(f), r.pd[s] = f;
     } else {
-      const f = m1("input", "perio-fullgrid-input");
-      f.type = "number", f.min = "-10", f.max = "20", f.step = "1", f.id = `perio-fg-gm-${t}-${l}`, f.title = c(`perio.site.${l}`), f.dataset.perio = `${t}:${l}:gm`, f.addEventListener("change", () => o.onGm(t, l, f.value)), d.appendChild(f), r.gm[l] = f;
+      const f = h1("input", "perio-fullgrid-input");
+      f.type = "number", f.min = "-10", f.max = "20", f.step = "1", f.id = `perio-fg-gm-${t}-${s}`, f.title = c(`perio.site.${s}`), f.dataset.perio = `${t}:${s}:gm`, f.addEventListener("change", () => o.onGm(t, s, f.value)), d.appendChild(f), r.gm[s] = f;
     }
   return n.appendChild(d), n;
 }
-function Hp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-furcation");
+function Lp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-furcation");
   i.dataset.perioField = "furcation";
   const r = yr(t);
   if (r.length === 0 || Ur(t)) return i;
-  const o = m1("div", "perio-fullgrid-sitegroup");
+  const o = h1("div", "perio-fullgrid-sitegroup");
   for (const n of r) {
-    const d = m1("button", "perio-fullgrid-furc");
+    const d = h1("button", "perio-fullgrid-furc");
     d.type = "button", d.id = `perio-fg-furc-${t}-${n}`, d.dataset.furcEntrance = n, d.title = c(`furcation.entrance.${n}`), d.setAttribute("aria-label", c(`furcation.entrance.${n}`)), d.addEventListener("click", () => a.onFurcation(t, n)), o.appendChild(d), e.furcation[n] = d;
   }
   return i.appendChild(o), i;
 }
-function jp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-plaque");
+function Hp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-plaque");
   i.dataset.perioField = "plaque";
-  const r = m1("div", "perio-fullgrid-plaque-quad");
-  for (const o of fl) {
-    const n = m1("button", `perio-fullgrid-plaque perio-fullgrid-plaque-${o}`);
-    n.type = "button", n.id = `perio-fg-plaque-${t}-${o}`, n.dataset.plaqueSurface = o, n.dataset.surfaceLetter = hl[o] ?? "", n.style.gridArea = ml(o, t), n.title = c(`surface.${o}`), n.setAttribute("aria-label", c(`surface.${o}`)), n.addEventListener("click", () => a.onPlaque(t, o)), r.appendChild(n), e.plaque[o] = n;
+  const r = h1("div", "perio-fullgrid-plaque-quad");
+  for (const o of pl) {
+    const n = h1("button", `perio-fullgrid-plaque perio-fullgrid-plaque-${o}`);
+    n.type = "button", n.id = `perio-fg-plaque-${t}-${o}`, n.dataset.plaqueSurface = o, n.dataset.surfaceLetter = fl[o] ?? "", n.style.gridArea = hl(o, t), n.title = c(`surface.${o}`), n.setAttribute("aria-label", c(`surface.${o}`)), n.addEventListener("click", () => a.onPlaque(t, o)), r.appendChild(n), e.plaque[o] = n;
   }
   return i.appendChild(r), i;
 }
-function Np(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-cej");
+function jp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-cej");
   i.dataset.perioField = "cejVisibility";
-  const r = m1("button", "perio-fullgrid-cej");
+  const r = h1("button", "perio-fullgrid-cej");
   return r.type = "button", r.id = `perio-fg-cej-${t}`, r.title = c("perio.cej.label"), r.setAttribute("aria-label", c("perio.cej.label")), r.addEventListener("click", () => a.onCejVisibility(t)), i.appendChild(r), e.cejVisibility = r, i;
 }
-function Rp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-rootconcavity");
+function Np(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-rootconcavity");
   i.dataset.perioField = "rootConcavity";
-  const r = m1("button", "perio-fullgrid-rootconcavity");
+  const r = h1("button", "perio-fullgrid-rootconcavity");
   return r.type = "button", r.id = `perio-fg-rootconcavity-${t}`, r.title = c("perio.rootConcavity.label"), r.setAttribute("aria-label", c("perio.rootConcavity.label")), r.addEventListener("click", () => a.onRootConcavity(t)), i.appendChild(r), e.rootConcavity = r, i;
 }
 function wi(t, e, a, i) {
-  const r = m1("div", `perio-fullgrid-cell perio-fullgrid-cell-${e}`);
+  const r = h1("div", `perio-fullgrid-cell perio-fullgrid-cell-${e}`);
   r.dataset.perioField = e;
-  const o = m1("div", "perio-fullgrid-plaque-quad"), n = e === "pi" ? i.onPiSurface : e === "gi" ? i.onGiSurface : e === "mpi" ? i.onMpiSurface : i.onMbiSurface, d = e === "pi" ? a.pi : e === "gi" ? a.gi : e === "mpi" ? a.mpi : a.mbi;
-  for (const l of fl) {
-    const f = m1("button", `perio-fullgrid-${e} perio-fullgrid-${e}-${l}`);
-    f.type = "button", f.id = `perio-fg-${e}-${t}-${l}`, f.dataset.gradeSurface = l, f.dataset.surfaceLetter = hl[l] ?? "", f.style.gridArea = ml(l, t), f.title = c(`surface.${l}`), f.setAttribute("aria-label", c(`surface.${l}`)), f.addEventListener("click", () => n(t, l)), o.appendChild(f), d[l] = f;
+  const o = h1("div", "perio-fullgrid-plaque-quad"), n = e === "pi" ? i.onPiSurface : e === "gi" ? i.onGiSurface : e === "mpi" ? i.onMpiSurface : i.onMbiSurface, d = e === "pi" ? a.pi : e === "gi" ? a.gi : e === "mpi" ? a.mpi : a.mbi;
+  for (const s of pl) {
+    const f = h1("button", `perio-fullgrid-${e} perio-fullgrid-${e}-${s}`);
+    f.type = "button", f.id = `perio-fg-${e}-${t}-${s}`, f.dataset.gradeSurface = s, f.dataset.surfaceLetter = fl[s] ?? "", f.style.gridArea = hl(s, t), f.title = c(`surface.${s}`), f.setAttribute("aria-label", c(`surface.${s}`)), f.addEventListener("click", () => n(t, s)), o.appendChild(f), d[s] = f;
   }
   return r.appendChild(o), r;
 }
-function Vp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-kg");
+function Rp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-kg");
   i.dataset.perioField = "kg";
-  const r = m1("input", "perio-fullgrid-input perio-fullgrid-kg");
+  const r = h1("input", "perio-fullgrid-input perio-fullgrid-kg");
   return r.type = "number", r.min = "0", r.max = "15", r.step = "1", r.id = `perio-fg-kg-${t}`, r.title = c("perio.kg.row"), r.addEventListener("change", () => a.onKg(t, r.value)), i.appendChild(r), e.kg = r, i;
 }
-function Fp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-gt");
+function Vp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-gt");
   i.dataset.perioField = "gingivalThickness";
-  const r = m1("button", "perio-fullgrid-gt");
+  const r = h1("button", "perio-fullgrid-gt");
   return r.type = "button", r.id = `perio-fg-gt-${t}`, r.title = c("perio.gt.row"), r.setAttribute("aria-label", c("perio.gt.row")), r.addEventListener("click", () => a.onGingivalThickness(t)), i.appendChild(r), e.gingivalThickness = r, i;
 }
-function Bp(t, e, a) {
-  const i = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-miller");
+function Fp(t, e, a) {
+  const i = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-miller");
   i.dataset.perioField = "millerClass";
-  const r = m1("button", "perio-fullgrid-miller");
+  const r = h1("button", "perio-fullgrid-miller");
   return r.type = "button", r.id = `perio-fg-miller-${t}`, r.title = c("perio.miller.row"), r.setAttribute("aria-label", c("perio.miller.row")), r.addEventListener("click", () => a.onMillerClass(t)), i.appendChild(r), e.millerClass = r, i;
 }
 function z4(t, e, a) {
-  const i = m1("div", "perio-fullgrid-arch");
-  i.style.gridTemplateColumns = `${dr}px repeat(${t.length}, ${Zp}px)`;
-  const r = t.length > 0 && Yi(t[0]), o = ja(), n = t.some((h) => ot(h));
+  const i = h1("div", "perio-fullgrid-arch");
+  i.style.gridTemplateColumns = `${dr}px repeat(${t.length}, ${wp}px)`;
+  const r = t.length > 0 && Yi(t[0]), o = ja(), n = t.some((h) => rt(h));
   for (const h of t)
     e.set(h, {
       pd: {},
@@ -43067,36 +43054,36 @@ function z4(t, e, a) {
       mpi: {},
       mbi: {}
     });
-  const d = c("perio.buccal"), l = c(r ? "perio.palatal" : "perio.lingual"), f = (h, C, w, g) => {
+  const d = c("perio.buccal"), s = c(r ? "perio.palatal" : "perio.lingual"), f = (h, T, w, g) => {
     i.appendChild(L1(g, `perio.info.${h}`));
     for (const Z of t)
-      i.appendChild(Lp(Z, h, C, w, e.get(Z), a));
+      i.appendChild(Ep(Z, h, T, w, e.get(Z), a));
   };
   i.appendChild(L1(""));
   for (const h of t) {
-    const C = m1("div", "perio-fullgrid-header-cell");
-    C.setAttribute("data-perio-tooth-header", String(h)), C.textContent = T2(h), i.appendChild(C);
+    const T = h1("div", "perio-fullgrid-header-cell");
+    T.setAttribute("data-perio-tooth-header", String(h)), T.textContent = G2(h), i.appendChild(T);
   }
   if (o.miller) {
     i.appendChild(L1(o1("miller"), "perio.info.miller"));
     for (const h of t)
-      i.appendChild(Bp(h, e.get(h), a));
+      i.appendChild(Fp(h, e.get(h), a));
   }
   if (o.bop && f("bop", q2, "buccal", `${d} ${o1("bop")}`), o.cal && f("cal", q2, "buccal", `${d} ${o1("cal")}`), o.gm && f("gm", q2, "buccal", `${d} ${o1("gm")}`), o.pd && f("pd", q2, "buccal", `${d} ${o1("pd")}`), o.furcation) {
     i.appendChild(L1(o1("furcation"), "perio.info.furcation"));
     for (const h of t)
-      i.appendChild(Hp(h, e.get(h), a));
+      i.appendChild(Lp(h, e.get(h), a));
   }
   i.appendChild(L1(""));
-  const p = m1("div", "perio-fullgrid-graphic-cell");
+  const p = h1("div", "perio-fullgrid-graphic-cell");
   p.dataset.perioArch = r ? "upper" : "lower", p.dataset.perioAspect = "buccal", p.style.gridColumn = "2 / -1", i.appendChild(p), i.appendChild(L1(""));
-  const v = m1("div", "perio-fullgrid-band-label");
+  const v = h1("div", "perio-fullgrid-band-label");
   v.style.gridColumn = "2 / -1", v.setAttribute("role", "note"), v.setAttribute("aria-label", c("perio.band.title"));
-  const k = m1("span", "perio-fullgrid-band-label-buccal");
+  const k = h1("span", "perio-fullgrid-band-label-buccal");
   if (k.textContent = `▲ ${c("perio.band.buccal")} ▲`, v.appendChild(k), i.appendChild(v), o.plaque) {
     i.appendChild(L1(o1("plaque"), "perio.info.plaque"));
     for (const h of t)
-      i.appendChild(jp(h, e.get(h), a));
+      i.appendChild(Hp(h, e.get(h), a));
   }
   if (o.pi) {
     i.appendChild(L1(o1("pi"), "perio.info.pi"));
@@ -43119,73 +43106,73 @@ function z4(t, e, a) {
       i.appendChild(wi(h, "mbi", e.get(h), a));
   }
   i.appendChild(L1(""));
-  const x = m1("div", "perio-fullgrid-band-label");
+  const x = h1("div", "perio-fullgrid-band-label");
   x.style.gridColumn = "2 / -1", x.setAttribute("role", "note"), x.setAttribute("aria-label", c("perio.band.title"));
-  const u = m1("span", "perio-fullgrid-band-label-lingual");
+  const u = h1("span", "perio-fullgrid-band-label-lingual");
   u.textContent = `▼ ${c("perio.band.lingual")} ▼`, x.appendChild(u), i.appendChild(x), i.appendChild(L1(""));
-  const y = m1("div", "perio-fullgrid-graphic-cell");
-  if (y.dataset.perioArch = r ? "upper" : "lower", y.dataset.perioAspect = "palatal", y.style.gridColumn = "2 / -1", i.appendChild(y), o.pd && f("pd", Y2, "palatal", `${l} ${o1("pd")}`), o.gm && f("gm", Y2, "palatal", `${l} ${o1("gm")}`), o.cal && f("cal", Y2, "palatal", `${l} ${o1("cal")}`), o.bop && f("bop", Y2, "palatal", `${l} ${o1("bop")}`), o.mobility) {
+  const y = h1("div", "perio-fullgrid-graphic-cell");
+  if (y.dataset.perioArch = r ? "upper" : "lower", y.dataset.perioAspect = "palatal", y.style.gridColumn = "2 / -1", i.appendChild(y), o.pd && f("pd", Y2, "palatal", `${s} ${o1("pd")}`), o.gm && f("gm", Y2, "palatal", `${s} ${o1("gm")}`), o.cal && f("cal", Y2, "palatal", `${s} ${o1("cal")}`), o.bop && f("bop", Y2, "palatal", `${s} ${o1("bop")}`), o.mobility) {
     i.appendChild(L1(o1("mobility"), "perio.info.mobility"));
-    const h = re("mobility").map((C) => ({ value: C.value, label: c(C.labelKey) }));
-    for (const C of t) {
-      const w = m1("div", "perio-fullgrid-cell perio-fullgrid-cell-mobility"), g = m1("select", "perio-fullgrid-mobility-select");
-      g.id = `perio-fg-mobility-${C}`;
+    const h = re("mobility").map((T) => ({ value: T.value, label: c(T.labelKey) }));
+    for (const T of t) {
+      const w = h1("div", "perio-fullgrid-cell perio-fullgrid-cell-mobility"), g = h1("select", "perio-fullgrid-mobility-select");
+      g.id = `perio-fg-mobility-${T}`;
       for (const Z of h) {
-        const G = m1("option");
-        G.value = Z.value, G.textContent = Z.label, g.appendChild(G);
+        const P = h1("option");
+        P.value = Z.value, P.textContent = Z.label, g.appendChild(P);
       }
-      g.addEventListener("change", () => a.onMobility(C, g.value)), w.appendChild(g), i.appendChild(w), e.get(C).mobility = g;
+      g.addEventListener("change", () => a.onMobility(T, g.value)), w.appendChild(g), i.appendChild(w), e.get(T).mobility = g;
     }
   }
   if (o.cej) {
     i.appendChild(L1(o1("cej"), "perio.info.cej"));
     for (const h of t)
-      i.appendChild(Np(h, e.get(h), a));
+      i.appendChild(jp(h, e.get(h), a));
   }
   if (o.rootConcavity) {
     i.appendChild(L1(o1("rootConcavity"), "perio.info.rootConcavity"));
     for (const h of t)
-      i.appendChild(Rp(h, e.get(h), a));
+      i.appendChild(Np(h, e.get(h), a));
   }
   if (o.kg) {
     i.appendChild(L1(o1("kg"), "perio.info.kg"));
     for (const h of t)
-      i.appendChild(Vp(h, e.get(h), a));
+      i.appendChild(Rp(h, e.get(h), a));
   }
   if (o.gt) {
     i.appendChild(L1(o1("gt"), "perio.info.gt"));
     for (const h of t)
-      i.appendChild(Fp(h, e.get(h), a));
+      i.appendChild(Vp(h, e.get(h), a));
   }
   return { grid: i, buccalCell: p, palatalCell: y };
 }
-const Kp = 2;
+const Bp = 2;
 function Zi(t, e, a, i) {
   if (!t) return;
-  const r = Fa(a, e, C2, lt);
+  const r = Fa(a, e, I2, nt);
   if (r.teeth.length === 0) return;
-  const n = (i?.clientWidth ?? 0) - dr - Kp, d = qs(n, r.totalWidth), l = r.teeth.map((f) => `${((f.width + C2) * d).toFixed(3)}px`).join(" ");
-  t.style.gridTemplateColumns = `${dr}px ${l}`;
+  const n = (i?.clientWidth ?? 0) - dr - Bp, d = Ks(n, r.totalWidth), s = r.teeth.map((f) => `${((f.width + I2) * d).toFixed(3)}px`).join(" ");
+  t.style.gridTemplateColumns = `${dr}px ${s}`;
 }
 function I4({
   open: t = !1,
   onClose: e,
   inline: a = !1
 }) {
-  const i = a || t, r = x1(null), o = x1(null), n = Re(), d = x1(null), l = x1(null), f = x1(null), p = x1(null), v = x1(null), k = x1(null), x = x1(null), u = x1(null), y = x1(null), h = x1(!1), [C, w] = e1(Dp), [g, Z] = e1("none"), G = zt(() => {
+  const i = a || t, r = x1(null), o = x1(null), n = Re(), d = x1(null), s = x1(null), f = x1(null), p = x1(null), v = x1(null), k = x1(null), x = x1(null), u = x1(null), y = x1(null), h = x1(!1), [T, w] = e1(Tp), [g, Z] = e1("none"), P = zt(() => {
     const b = y.current;
     if (!b) return;
-    const _ = p9(), t1 = _2();
+    const _ = d9(), t1 = _2();
     for (const [V, W] of b) {
-      const l1 = _[String(V)] ?? Tp;
-      S4(W, V, l1, P2(V), t1);
+      const l1 = _[String(V)] ?? Gp;
+      S4(W, V, l1, C2(V), t1);
     }
-    w(G2());
+    w(P2());
   }, []), I = zt((b) => {
     const _ = y.current;
     if (!_) return;
     const t1 = _.get(b);
-    t1 && (S4(t1, b, Pt(b), P2(b), _2()), w(G2()));
+    t1 && (S4(t1, b, Pt(b), C2(b), _2()), w(P2()));
   }, []), D = zt((b) => {
     if (!b) return;
     const _ = y.current;
@@ -43221,7 +43208,7 @@ function I4({
         return;
       }
       if (b.key === "ArrowLeft") {
-        b.preventDefault(), D(y9(q));
+        b.preventDefault(), D(g9(q));
         return;
       }
       if (b.key === "ArrowUp") {
@@ -43279,7 +43266,7 @@ function I4({
         h.current = !0, Zt(z, K, { bop: L }), h.current = !1, I(z);
       },
       onMobility: (z, K) => {
-        h.current = !0, u9(z, K), h.current = !1, I(z);
+        h.current = !0, y9(z, K), h.current = !1, I(z);
       },
       // Cycle the Glickman grade none->I->II->III->IV->none for one entrance.
       // The current grade is read from the ACTIVE chart (getToothFurcation) so
@@ -43288,12 +43275,12 @@ function I4({
       // path). grade 4 wraps to `null` (clears the entrance).
       onFurcation: (z, K) => {
         const L = Tr(z)[K], q = L === void 0 ? 1 : L >= 4 ? null : L + 1;
-        h.current = !0, $d(z, K, q), h.current = !1, I(z);
+        h.current = !0, Xd(z, K, q), h.current = !1, I(z);
       },
       // Toggle one O'Leary plaque surface via setPlaque.
       onPlaque: (z, K) => {
         const L = o3(z).includes(K);
-        h.current = !0, t9(z, K, !L), h.current = !1, I(z);
+        h.current = !0, $d(z, K, !L), h.current = !1, I(z);
       },
       // Cycle none->detectable->not-detectable->none for one tooth's CEJ
       // visibility. The current value is read from the ACTIVE
@@ -43302,13 +43289,13 @@ function I4({
       // mutation path).
       onCejVisibility: (z) => {
         const K = Qa(z), L = E3.indexOf(K), q = E3[(L + 1) % E3.length];
-        h.current = !0, n9(z, q), h.current = !1, I(z);
+        h.current = !0, o9(z, q), h.current = !1, I(z);
       },
       // Cycle none->mild->deep->none for one tooth's root concavity. Mirrors
       // onCejVisibility above.
       onRootConcavity: (z) => {
         const K = Xa(z), L = L3.indexOf(K), q = L3[(L + 1) % L3.length];
-        h.current = !0, l9(z, q), h.current = !1, I(z);
+        h.current = !0, n9(z, q), h.current = !1, I(z);
       },
       // Cycle one surface's PI/GI grade 0->1->2->3->0 (0 clears —
       // setPlaqueIndex/setGingivalIndex's own no-op-free "grade 0 clears"
@@ -43317,11 +43304,11 @@ function I4({
       // right chart.
       onPiSurface: (z, K) => {
         const L = (Ya(z, K) + 1) % 4;
-        h.current = !0, e9(z, K, L), h.current = !1, I(z);
+        h.current = !0, t9(z, K, L), h.current = !1, I(z);
       },
       onGiSurface: (z, K) => {
         const L = (Wa(z, K) + 1) % 4;
-        h.current = !0, a9(z, K, L), h.current = !1, I(z);
+        h.current = !0, e9(z, K, L), h.current = !1, I(z);
       },
       // Cycle one surface's mPI/mBI grade 0->1->2->3->0, mirroring
       // onPiSurface/onGiSurface exactly. On a non-implant tooth the
@@ -43331,30 +43318,30 @@ function I4({
       // even if invoked directly.
       onMpiSurface: (z, K) => {
         const L = (Ja(z, K) + 1) % 4;
-        h.current = !0, i9(z, K, L), h.current = !1, I(z);
+        h.current = !0, a9(z, K, L), h.current = !1, I(z);
       },
       onMbiSurface: (z, K) => {
         const L = (_a(z, K) + 1) % 4;
-        h.current = !0, r9(z, K, L), h.current = !1, I(z);
+        h.current = !0, i9(z, K, L), h.current = !1, I(z);
       },
       // KG mm — trimmed-empty clears (mirrors onPd's empty-un-charts
       // semantics), otherwise the raw string is parsed and
       // clamped by setKeratinizedWidth itself.
       onKg: (z, K) => {
         const L = K.trim();
-        h.current = !0, o9(z, L === "" ? null : Number(L)), h.current = !1, I(z);
+        h.current = !0, r9(z, L === "" ? null : Number(L)), h.current = !1, I(z);
       },
       // Cycle unknown->thin->medium->thick->unknown for one tooth's gingival
       // thickness. Mirrors onCejVisibility above.
       onGingivalThickness: (z) => {
         const K = s3(z), L = H3.indexOf(K), q = H3[(L + 1) % H3.length];
-        h.current = !0, s9(z, q), h.current = !1, I(z);
+        h.current = !0, l9(z, q), h.current = !1, I(z);
       },
       // Cycle none->i->ii->iii->iv->none for one tooth's Miller class. Mirrors
       // onRootConcavity above.
       onMillerClass: (z) => {
         const K = c3(z), L = j3.indexOf(K), q = j3[(L + 1) % j3.length];
-        h.current = !0, c9(z, q), h.current = !1, I(z);
+        h.current = !0, s9(z, q), h.current = !1, I(z);
       }
     }, t1 = () => JSON.stringify([
       ja(),
@@ -43364,56 +43351,56 @@ function I4({
       // implant SET affects row presence, so a rebuild must also fire when it
       // changes (adding/removing an implant), not just on a visibility/name
       // flag flip.
-      [...it, ...rt].filter((z) => ot(z)).join(",")
+      [...at, ...it].filter((z) => rt(z)).join(",")
     ]);
     let V = null;
     const W = () => {
       const z = /* @__PURE__ */ new Map();
       b.innerHTML = "";
-      const K = z4(it, z, _), L = z4(rt, z, _);
-      b.appendChild(K.grid), b.appendChild(L.grid), y.current = z, k.current = K.grid, x.current = L.grid, l.current = K.buccalCell, f.current = K.palatalCell, p.current = L.buccalCell, v.current = L.palatalCell, V = t1();
+      const K = z4(at, z, _), L = z4(it, z, _);
+      b.appendChild(K.grid), b.appendChild(L.grid), y.current = z, k.current = K.grid, x.current = L.grid, s.current = K.buccalCell, f.current = K.palatalCell, p.current = L.buccalCell, v.current = L.palatalCell, V = t1();
       const q = u.current;
       if (q) {
-        Zi(k.current, it, q, d.current), Zi(x.current, rt, q, d.current), l.current.appendChild(ba(q, it, ot, void 0, lt)), f.current.appendChild(xa(q, it, ot, void 0, lt)), p.current.appendChild(ba(q, rt, ot, void 0, lt)), v.current.appendChild(xa(q, rt, ot, void 0, lt)), we(q, k.current, it), we(q, x.current, rt);
+        Zi(k.current, at, q, d.current), Zi(x.current, it, q, d.current), s.current.appendChild(ba(q, at, rt, void 0, nt)), f.current.appendChild(xa(q, at, rt, void 0, nt)), p.current.appendChild(ba(q, it, rt, void 0, nt)), v.current.appendChild(xa(q, it, rt, void 0, nt)), we(q, k.current, at), we(q, x.current, it);
         const v1 = ga();
-        Ze(q, k.current, it, v1), Ze(q, x.current, rt, v1);
+        Ze(q, k.current, at, v1), Ze(q, x.current, it, v1);
       }
     };
-    W(), G(), b.addEventListener("keydown", A), b.addEventListener("focusout", H);
+    W(), P(), b.addEventListener("keydown", A), b.addEventListener("focusout", H);
     const l1 = vt(() => {
-      h.current || (t1() !== V && W(), G());
+      h.current || (t1() !== V && W(), P());
     });
     return () => {
-      b.removeEventListener("keydown", A), b.removeEventListener("focusout", H), l1(), Gi(), y.current = null, k.current = null, x.current = null, l.current = null, f.current = null, p.current = null, v.current = null;
+      b.removeEventListener("keydown", A), b.removeEventListener("focusout", H), l1(), Gi(), y.current = null, k.current = null, x.current = null, s.current = null, f.current = null, p.current = null, v.current = null;
     };
-  }, [i, G, I, A, H]), d1(() => {
+  }, [i, P, I, A, H]), d1(() => {
     if (!i) return;
     let b = !1;
-    const _ = () => [...it, ...rt].filter((q) => ot(q)).join(",");
+    const _ = () => [...at, ...it].filter((q) => rt(q)).join(",");
     let t1 = null;
     const V = (q) => {
-      const v1 = l.current, R1 = f.current, I1 = p.current, E1 = v.current;
-      v1 && (v1.innerHTML = "", v1.appendChild(ba(q, it, ot, void 0, lt))), R1 && (R1.innerHTML = "", R1.appendChild(xa(q, it, ot, void 0, lt))), I1 && (I1.innerHTML = "", I1.appendChild(ba(q, rt, ot, void 0, lt))), E1 && (E1.innerHTML = "", E1.appendChild(xa(q, rt, ot, void 0, lt))), t1 = _();
+      const v1 = s.current, R1 = f.current, I1 = p.current, E1 = v.current;
+      v1 && (v1.innerHTML = "", v1.appendChild(ba(q, at, rt, void 0, nt))), R1 && (R1.innerHTML = "", R1.appendChild(xa(q, at, rt, void 0, nt))), I1 && (I1.innerHTML = "", I1.appendChild(ba(q, it, rt, void 0, nt))), E1 && (E1.innerHTML = "", E1.appendChild(xa(q, it, rt, void 0, nt))), t1 = _();
     }, W = () => {
       const q = u.current;
       if (!q) return;
-      _() !== t1 && V(q), we(q, k.current, it), we(q, x.current, rt);
+      _() !== t1 && V(q), we(q, k.current, at), we(q, x.current, it);
       const v1 = ga();
-      Ze(q, k.current, it, v1), Ze(q, x.current, rt, v1);
+      Ze(q, k.current, at, v1), Ze(q, x.current, it, v1);
     }, l1 = () => {
       const q = u.current;
       if (q)
         try {
-          Zi(k.current, it, q, d.current), Zi(x.current, rt, q, d.current);
+          Zi(k.current, at, q, d.current), Zi(x.current, it, q, d.current);
         } catch (v1) {
           console.error("perio fitColumns failed", v1);
         }
     };
     hn().then((q) => {
       if (b) return;
-      u.current = q, l1(), V(q), we(q, k.current, it), we(q, x.current, rt);
+      u.current = q, l1(), V(q), we(q, k.current, at), we(q, x.current, it);
       const v1 = ga();
-      Ze(q, k.current, it, v1), Ze(q, x.current, rt, v1);
+      Ze(q, k.current, at, v1), Ze(q, x.current, it, v1);
     }).catch((q) => {
       console.error("perio tooth-row graphic: failed to load tooth templates", q);
     });
@@ -43448,8 +43435,8 @@ function I4({
     [e]
   );
   if (!i) return null;
-  const N = g === "bop" ? `${c("perio.bopPercent")} ${C.bopPercent}%` : g === "plaque" ? `${c("plaque.percent")} ${C.plaquePercent}%` : g === "pi" ? `${c("perio.overlay.pi")} ${C.piScore ?? "—"}` : g === "gi" ? `${c("perio.overlay.gi")} ${C.giScore ?? "—"}` : g === "kg" ? `${c("perio.overlay.kg")} ${C.kgDeficientTeeth}` : g === "mpi" ? `${c("perio.overlay.mpi")} ${C.mpiScore ?? "—"}` : g === "mbi" ? `${c("perio.overlay.mbi")} ${C.mbiScore ?? "—"}` : null, S = /* @__PURE__ */ M("div", { id: "perioOverlaySwitch", className: "perio-overlay-switch", role: "radiogroup", "aria-label": c("perio.overlay.label"), children: [
-    Op.map((b) => /* @__PURE__ */ s(
+  const N = g === "bop" ? `${c("perio.bopPercent")} ${T.bopPercent}%` : g === "plaque" ? `${c("plaque.percent")} ${T.plaquePercent}%` : g === "pi" ? `${c("perio.overlay.pi")} ${T.piScore ?? "—"}` : g === "gi" ? `${c("perio.overlay.gi")} ${T.giScore ?? "—"}` : g === "kg" ? `${c("perio.overlay.kg")} ${T.kgDeficientTeeth}` : g === "mpi" ? `${c("perio.overlay.mpi")} ${T.mpiScore ?? "—"}` : g === "mbi" ? `${c("perio.overlay.mbi")} ${T.mbiScore ?? "—"}` : null, S = /* @__PURE__ */ M("div", { id: "perioOverlaySwitch", className: "perio-overlay-switch", role: "radiogroup", "aria-label": c("perio.overlay.label"), children: [
+    Dp.map((b) => /* @__PURE__ */ l(
       "button",
       {
         type: "button",
@@ -43457,20 +43444,20 @@ function I4({
         "aria-checked": g === b,
         className: "perio-overlay-switch-btn" + (g === b ? " is-active" : ""),
         "data-overlay-layer": b,
-        onClick: () => z9(b),
-        children: Up(b)
+        onClick: () => S9(b),
+        children: Ap(b)
       },
       b
     )),
-    N && /* @__PURE__ */ s("span", { className: "perio-overlay-readout", id: "perioOverlayReadout", children: N })
-  ] }), P = /* @__PURE__ */ s("div", { id: a ? "perioInlineGrid" : "perioOverlayGrid", className: "perio-overlay-body", "aria-label": c("perio.chart.title"), children: /* @__PURE__ */ s("div", { className: "perio-fullgrid-scroll", ref: d }) });
+    N && /* @__PURE__ */ l("span", { className: "perio-overlay-readout", id: "perioOverlayReadout", children: N })
+  ] }), C = /* @__PURE__ */ l("div", { id: a ? "perioInlineGrid" : "perioOverlayGrid", className: "perio-overlay-body", "aria-label": c("perio.chart.title"), children: /* @__PURE__ */ l("div", { className: "perio-fullgrid-scroll", ref: d }) });
   return a ? /* @__PURE__ */ M("section", { id: "perioInlinePanel", className: "chart perio-inline-panel", "aria-label": c("perio.chart.title"), children: [
     /* @__PURE__ */ M("div", { className: "chart-header perio-chart-header", children: [
-      /* @__PURE__ */ s("div", { className: "chart-title", children: c("perio.chart.title") }),
+      /* @__PURE__ */ l("div", { className: "chart-title", children: c("perio.chart.title") }),
       S
     ] }),
-    P
-  ] }) : /* @__PURE__ */ s(
+    C
+  ] }) : /* @__PURE__ */ l(
     "div",
     {
       ref: r,
@@ -43486,9 +43473,9 @@ function I4({
       },
       children: /* @__PURE__ */ M("div", { className: "perio-overlay-panel", children: [
         /* @__PURE__ */ M("div", { className: "perio-overlay-header", children: [
-          /* @__PURE__ */ s("h2", { className: "perio-overlay-title", id: n, children: c("perio.chart.title") }),
+          /* @__PURE__ */ l("h2", { className: "perio-overlay-title", id: n, children: c("perio.chart.title") }),
           S,
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l(
             "button",
             {
               type: "button",
@@ -43496,7 +43483,7 @@ function I4({
               onClick: e,
               "aria-label": c("perio.close"),
               title: c("perio.close"),
-              children: /* @__PURE__ */ s(
+              children: /* @__PURE__ */ l(
                 "svg",
                 {
                   width: "18",
@@ -43508,14 +43495,14 @@ function I4({
                   strokeLinecap: "round",
                   strokeLinejoin: "round",
                   "aria-hidden": "true",
-                  children: /* @__PURE__ */ s("path", { d: "M18 6 6 18M6 6l12 12" })
+                  children: /* @__PURE__ */ l("path", { d: "M18 6 6 18M6 6l12 12" })
                 }
               )
             }
           )
         ] }),
-        /* @__PURE__ */ s(pl, {}),
-        P
+        /* @__PURE__ */ l(dl, {}),
+        C
       ] })
     }
   );
@@ -43540,16 +43527,16 @@ const Na = [
   { selector: "#btnExportMenu", titleKey: "intro.export.title", textKey: "intro.export.text", view: "odontogram" },
   { selector: "#btnImportMenu", titleKey: "intro.import.title", textKey: "intro.import.text", view: "odontogram" },
   { selector: "", titleKey: "intro.done.title", textKey: "intro.done.text", view: "odontogram" }
-], qp = typeof requestAnimationFrame == "function" ? (t) => requestAnimationFrame(t) : (t) => {
+], Kp = typeof requestAnimationFrame == "function" ? (t) => requestAnimationFrame(t) : (t) => {
   setTimeout(t, 16);
 };
-let Ra = [], kt = 0, W2 = null, Vr = 0;
-function vl() {
+let Ra = [], ut = 0, W2 = null, Vr = 0;
+function ml() {
   for (const t of Ra) t.remove();
   Ra = [];
 }
 function pr() {
-  Vr++, vl(), W2 && (document.removeEventListener("keydown", W2), W2 = null);
+  Vr++, ml(), W2 && (document.removeEventListener("keydown", W2), W2 = null);
 }
 function Fr(t) {
   const e = Na[t];
@@ -43560,51 +43547,51 @@ function Ga(t, e) {
   for (; a >= 0 && a < Na.length && !Fr(a); ) a += e;
   return a < 0 || a >= Na.length ? t : a;
 }
-function Yp() {
+function qp() {
   const t = [];
   for (let e = 0; e < Na.length; e++) Fr(e) && t.push(e);
   return t;
 }
-function Kt(t, e, a) {
+function Bt(t, e, a) {
   const i = document.createElement(t);
   return i.className = e, a !== void 0 && (i.textContent = a), i;
 }
-function Wp(t) {
+function Yp(t) {
   if (!t || !document.getElementById("appViewToggle")) return;
   const a = t === "perio" ? "appViewDentalChart" : "appViewOdontogram", i = document.getElementById(a);
   i && !i.classList.contains("is-active") && i.click();
 }
-function gl(t, e, a, i) {
+function vl(t, e, a, i) {
   if (a !== Vr) return;
   const r = t.selector ? document.querySelector(t.selector) : null;
   if (r) {
     r.scrollIntoView({ block: "center", inline: "center" });
-    const o = r.getBoundingClientRect(), n = Kt("div", "odon-tour-highlight");
+    const o = r.getBoundingClientRect(), n = Bt("div", "odon-tour-highlight");
     n.style.left = `${o.left - 6}px`, n.style.top = `${o.top - 6}px`, n.style.width = `${o.width + 12}px`, n.style.height = `${o.height + 12}px`, document.body.appendChild(n), Ra.push(n);
-    const d = Math.min(o.bottom + 12, window.innerHeight - 220), l = Math.min(Math.max(8, o.left), window.innerWidth - 320);
-    e.style.top = `${Math.max(8, d)}px`, e.style.left = `${l}px`, e.classList.remove("odon-tour-card-center");
-  } else t.selector && i < 5 ? qp(() => gl(t, e, a, i + 1)) : e.classList.add("odon-tour-card-center");
+    const d = Math.min(o.bottom + 12, window.innerHeight - 220), s = Math.min(Math.max(8, o.left), window.innerWidth - 320);
+    e.style.top = `${Math.max(8, d)}px`, e.style.left = `${s}px`, e.classList.remove("odon-tour-card-center");
+  } else t.selector && i < 5 ? Kp(() => vl(t, e, a, i + 1)) : e.classList.add("odon-tour-card-center");
 }
 function Ta() {
-  vl();
-  const t = ++Vr, e = Na[kt];
-  Wp(e.view);
-  const a = Kt("div", "odon-tour-backdrop");
+  ml();
+  const t = ++Vr, e = Na[ut];
+  Yp(e.view);
+  const a = Bt("div", "odon-tour-backdrop");
   document.body.appendChild(a), Ra.push(a);
-  const i = Yp(), r = Math.max(0, i.indexOf(kt)) + 1, o = i.length > 0 && kt === i[i.length - 1], n = i.length > 0 && kt === i[0], d = Kt("div", "odon-tour-card"), l = Kt("div", "odon-tour-counter", `${r} / ${i.length}`), f = Kt("div", "odon-tour-title", c(e.titleKey)), p = Kt("div", "odon-tour-text", c(e.textKey)), v = Kt("div", "odon-tour-actions"), k = Kt("button", "odon-tour-btn odon-tour-skip", c("intro.skip")), x = Kt("button", "odon-tour-btn", c("intro.back")), u = Kt("button", "odon-tour-btn odon-tour-next", c(o ? "intro.finish" : "intro.next"));
+  const i = qp(), r = Math.max(0, i.indexOf(ut)) + 1, o = i.length > 0 && ut === i[i.length - 1], n = i.length > 0 && ut === i[0], d = Bt("div", "odon-tour-card"), s = Bt("div", "odon-tour-counter", `${r} / ${i.length}`), f = Bt("div", "odon-tour-title", c(e.titleKey)), p = Bt("div", "odon-tour-text", c(e.textKey)), v = Bt("div", "odon-tour-actions"), k = Bt("button", "odon-tour-btn odon-tour-skip", c("intro.skip")), x = Bt("button", "odon-tour-btn", c("intro.back")), u = Bt("button", "odon-tour-btn odon-tour-next", c(o ? "intro.finish" : "intro.next"));
   k.onclick = pr, x.onclick = () => {
-    kt = Ga(kt, -1), Ta();
+    ut = Ga(ut, -1), Ta();
   }, u.onclick = () => {
-    o ? pr() : (kt = Ga(kt, 1), Ta());
-  }, x.disabled = n, v.append(k, x, u), d.append(l, f, p, v), document.body.appendChild(d), Ra.push(d), d.classList.add("odon-tour-card-center"), gl(e, d, t, 0);
+    o ? pr() : (ut = Ga(ut, 1), Ta());
+  }, x.disabled = n, v.append(k, x, u), d.append(s, f, p, v), document.body.appendChild(d), Ra.push(d), d.classList.add("odon-tour-card-center"), vl(e, d, t, 0);
 }
-function Jp() {
-  kt = Fr(0) ? 0 : Ga(0, 1), W2 && document.removeEventListener("keydown", W2), W2 = (t) => {
-    t.key === "Escape" ? pr() : t.key === "ArrowRight" ? (t.preventDefault(), kt = Ga(kt, 1), Ta()) : t.key === "ArrowLeft" && (t.preventDefault(), kt = Ga(kt, -1), Ta());
+function Wp() {
+  ut = Fr(0) ? 0 : Ga(0, 1), W2 && document.removeEventListener("keydown", W2), W2 = (t) => {
+    t.key === "Escape" ? pr() : t.key === "ArrowRight" ? (t.preventDefault(), ut = Ga(ut, 1), Ta()) : t.key === "ArrowLeft" && (t.preventDefault(), ut = Ga(ut, -1), Ta());
   }, document.addEventListener("keydown", W2), Ta();
 }
-const yl = "react-advanced-odontogram", P4 = 4 * 1024 * 1024, ul = 1, _p = 400;
-let Da = null, d3 = yl, Br = {}, J2 = null;
+const gl = "react-advanced-odontogram", P4 = 4 * 1024 * 1024, yl = 1, Jp = 400;
+let Da = null, d3 = gl, Br = {}, J2 = null;
 function Q2(t) {
   const e = t instanceof Error ? t : new Error(String(t)), a = Br.onError;
   if (a)
@@ -43622,24 +43609,24 @@ function Kr() {
     return null;
   }
 }
-function Qp() {
+function _p() {
   J2 !== null && clearTimeout(J2), J2 = setTimeout(() => {
-    J2 = null, kl();
-  }, _p);
+    J2 = null, ul();
+  }, Jp);
 }
-function Xp(t) {
-  J2 !== null && (clearTimeout(J2), J2 = null, kl());
+function Qp(t) {
+  J2 !== null && (clearTimeout(J2), J2 = null, ul());
 }
-function kl() {
+function ul() {
   const t = Kr();
   if (!t) {
     Q2(new Error("localStorage is not available"));
     return;
   }
   try {
-    const e = qd();
+    const e = Kd();
     !Br.includePlan && e && typeof e == "object" && delete e.plan;
-    const a = JSON.stringify({ version: ul, savedAt: (/* @__PURE__ */ new Date()).toISOString(), payload: e });
+    const a = JSON.stringify({ version: yl, savedAt: (/* @__PURE__ */ new Date()).toISOString(), payload: e });
     if (a.length > P4) {
       Q2(new Error(`persisted payload exceeds ${P4} bytes — save skipped`));
       return;
@@ -43649,7 +43636,7 @@ function kl() {
     Q2(e);
   }
 }
-function $p() {
+function Xp() {
   const t = Kr();
   if (!t) return;
   let e = null;
@@ -43662,7 +43649,7 @@ function $p() {
   if (e !== null)
     try {
       const a = JSON.parse(e);
-      if (!a || typeof a != "object" || a.version !== ul || !a.payload) {
+      if (!a || typeof a != "object" || a.version !== yl || !a.payload) {
         Q2(new Error("persisted state has an unrecognized wrapper format — ignored"));
         return;
       }
@@ -43671,13 +43658,13 @@ function $p() {
       Q2(a);
     }
 }
-function kh(t = {}) {
-  tf(), Br = t, d3 = t.key ?? yl, $p(), Da = vt(Qp);
+function uh(t = {}) {
+  $p(), Br = t, d3 = t.key ?? gl, Xp(), Da = vt(_p);
 }
-function tf() {
-  Da && (Da(), Da = null), Xp();
+function $p() {
+  Da && (Da(), Da = null), Qp();
 }
-function bh() {
+function kh() {
   const t = Kr();
   if (t)
     try {
@@ -43686,14 +43673,14 @@ function bh() {
       Q2(e);
     }
 }
-function xh() {
+function bh() {
   return Da !== null;
 }
-const ef = ["amalgam", "composite", "gic", "temporary"], af = [
+const tf = ["amalgam", "composite", "gic", "temporary"], ef = [
   { value: "FDI", labelKey: "numbering.fdi" },
   { value: "UNIVERSAL", labelKey: "numbering.universal" },
   { value: "PALMER", labelKey: "numbering.palmer" }
-], rf = [
+], af = [
   { value: "hu", labelKey: "language.hu" },
   { value: "en", labelKey: "language.en" },
   { value: "de", labelKey: "language.de" },
@@ -43706,57 +43693,57 @@ const ef = ["amalgam", "composite", "gic", "temporary"], af = [
   { value: "zh", labelKey: "language.zh" },
   { value: "ar", labelKey: "language.ar" },
   { value: "fr", labelKey: "language.fr" }
-], of = [
+], rf = [
   { value: "simple", labelKey: "settings.secondaryCaries.simple" },
   { value: "standard", labelKey: "settings.secondaryCaries.standard" },
   { value: "full", labelKey: "settings.secondaryCaries.full" }
-], nf = [
+], of = [
   { value: "simple", labelKey: "settings.rootCaries.simple" },
   { value: "severity", labelKey: "settings.rootCaries.severity" }
-], lf = [
+], nf = [
   { value: "off", labelKey: "settings.radiographic.off" },
   { value: "threeLevel", labelKey: "settings.radiographic.threeLevel" },
   { value: "detailed", labelKey: "settings.radiographic.detailed" }
-], sf = [
+], lf = [
   { value: "simple", labelKey: "pulp.level.simple" },
   { value: "aae", labelKey: "pulp.level.aae" },
   { value: "latin", labelKey: "pulp.level.latin" }
 ], G4 = [
   { value: "complex", labelKey: "settings.toothDetail.complex" },
   { value: "simple", labelKey: "settings.toothDetail.simple" }
-], cf = [
+], sf = [
   { value: "full", labelKey: "settings.surfaceNotation.full" },
   { value: "simple", labelKey: "settings.surfaceNotation.simple" }
-], df = [
+], cf = [
   { value: "toggle", labelKey: "settings.perioViewMode.toggle" },
   { value: "popup", labelKey: "settings.perioViewMode.popup" }
-], pf = [
+], df = [
   { value: "wide", labelKey: "settings.screen.spacing.wide" },
   { value: "normal", labelKey: "settings.screen.spacing.normal" },
   { value: "close", labelKey: "settings.screen.spacing.close" }
-], ff = [
+], pf = [
   { value: "small", labelKey: "settings.screen.numberSize.small" },
   { value: "normal", labelKey: "settings.screen.numberSize.normal" },
   { value: "xlarge", labelKey: "settings.screen.numberSize.xlarge" }
-], hf = [
+], ff = [
   { value: "classic", labelKey: "settings.toothAnatomy.classic" },
   { value: "measured", labelKey: "settings.toothAnatomy.measured" }
-], mf = [
+], hf = [
   { value: "solid", labelKey: "settings.selection.border.solid" },
   { value: "dashed", labelKey: "settings.selection.border.dashed" },
   { value: "dotted", labelKey: "settings.selection.border.dotted" }
-], vf = [
+], mf = [
   { value: "complex", labelKey: "settings.filling.complexity.complex" },
   { value: "simple", labelKey: "settings.filling.complexity.simple" }
-], gf = {
+], vf = {
   amalgam: "filling.option.amalgam",
   composite: "filling.option.composite",
   gic: "filling.option.gic",
   temporary: "filling.option.temporary"
-}, yf = [
+}, gf = [
   { value: "translated", labelKey: "settings.perioIndexNameMode.translated" },
   { value: "canonical", labelKey: "settings.perioIndexNameMode.canonical" }
-], uf = [
+], yf = [
   { titleKey: "settings.perio.group.pocket", ids: ["pd", "gm", "cal", "bop"] },
   { titleKey: "settings.perio.group.hygiene", ids: ["plaque", "pi", "gi"] },
   { titleKey: "settings.perio.group.mucogingival", ids: ["cej", "rootConcavity", "kg", "gt"] },
@@ -43772,10 +43759,10 @@ function p3({
   const r = Re();
   return /* @__PURE__ */ M("div", { className: "odon-settings-row", children: [
     /* @__PURE__ */ M("div", { className: "odon-settings-row-text", children: [
-      /* @__PURE__ */ s("div", { className: "odon-settings-row-label", children: e }),
-      /* @__PURE__ */ s("div", { className: "odon-settings-row-desc", id: r, children: t(a) })
+      /* @__PURE__ */ l("div", { className: "odon-settings-row-label", children: e }),
+      /* @__PURE__ */ l("div", { className: "odon-settings-row-desc", id: r, children: t(a) })
     ] }),
-    /* @__PURE__ */ s("div", { className: "odon-settings-row-control", "data-desc": r, children: i })
+    /* @__PURE__ */ l("div", { className: "odon-settings-row-control", "data-desc": r, children: i })
   ] });
 }
 function G1({
@@ -43787,7 +43774,7 @@ function G1({
   onChange: o,
   disabled: n = !1
 }) {
-  return /* @__PURE__ */ s(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ l(
     "select",
     {
       className: "odon-settings-select",
@@ -43795,11 +43782,11 @@ function G1({
       value: i,
       disabled: n,
       onChange: (d) => o(d.target.value),
-      children: r.map((d) => /* @__PURE__ */ s("option", { value: d.value, children: t(d.labelKey) }, d.value))
+      children: r.map((d) => /* @__PURE__ */ l("option", { value: d.value, children: t(d.labelKey) }, d.value))
     }
   ) });
 }
-function k1({
+function u1({
   t,
   label: e,
   descKey: a,
@@ -43807,8 +43794,8 @@ function k1({
   onChange: r,
   disabled: o = !1
 }) {
-  return /* @__PURE__ */ s(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ M("label", { className: "odon-settings-switch", children: [
-    /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ M("label", { className: "odon-settings-switch", children: [
+    /* @__PURE__ */ l(
       "input",
       {
         type: "checkbox",
@@ -43818,7 +43805,7 @@ function k1({
         onChange: (n) => r(n.target.checked)
       }
     ),
-    /* @__PURE__ */ s("span", { className: "odon-settings-switch-track", "aria-hidden": "true" })
+    /* @__PURE__ */ l("span", { className: "odon-settings-switch-track", "aria-hidden": "true" })
   ] }) });
 }
 function N3({
@@ -43830,7 +43817,7 @@ function N3({
   disabled: o,
   onChange: n
 }) {
-  return /* @__PURE__ */ s(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ l(
     "input",
     {
       className: "odon-settings-input",
@@ -43842,7 +43829,7 @@ function N3({
     }
   ) });
 }
-function kf({
+function uf({
   t,
   label: e,
   descKey: a,
@@ -43851,7 +43838,7 @@ function kf({
   disabled: o,
   onChange: n
 }) {
-  return /* @__PURE__ */ s(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(p3, { t, label: e, descKey: a, children: /* @__PURE__ */ l(
     "textarea",
     {
       className: "odon-settings-textarea",
@@ -43864,11 +43851,11 @@ function kf({
     }
   ) });
 }
-const bf = [
+const kf = [
   { value: "iso", labelKey: "settings.pdf.dateFormat.iso" },
   { value: "dmy", labelKey: "settings.pdf.dateFormat.dmy" },
   { value: "mdy", labelKey: "settings.pdf.dateFormat.mdy" }
-], xf = [
+], bf = [
   { value: "blue", labelKey: "settings.pdf.theme.blue" },
   { value: "teal", labelKey: "settings.pdf.theme.teal" },
   { value: "amber", labelKey: "settings.pdf.theme.amber" },
@@ -43877,23 +43864,23 @@ const bf = [
   { value: "wide", labelKey: "settings.pdf.spacing.wide" },
   { value: "medium", labelKey: "settings.pdf.spacing.medium" },
   { value: "close", labelKey: "settings.pdf.spacing.close" }
-], Mf = [
+], xf = [
   { value: "thin", labelKey: "settings.pdf.thickness.thin" },
   { value: "medium", labelKey: "settings.pdf.thickness.medium" },
   { value: "thick", labelKey: "settings.pdf.thickness.thick" }
-], wf = [
+], Mf = [
   { value: "small", labelKey: "settings.pdf.numberSize.small" },
   { value: "normal", labelKey: "settings.pdf.numberSize.normal" },
   { value: "xlarge", labelKey: "settings.pdf.numberSize.xlarge" }
-], Zf = [
+], wf = [
   { value: "whole", labelKey: "settings.pdf.summaryGrouping.whole" },
   { value: "jaw", labelKey: "settings.pdf.summaryGrouping.jaw" },
   { value: "quadrant", labelKey: "settings.pdf.summaryGrouping.quadrant" },
   { value: "sextant", labelKey: "settings.pdf.summaryGrouping.sextant" }
-], Sf = [
+], Zf = [
   { value: "center", labelKey: "settings.pdf.perioPlacement.center" },
   { value: "edge", labelKey: "settings.pdf.perioPlacement.edge" }
-], zf = [
+], Sf = [
   { value: "small", labelKey: "settings.pdf.perioFont.small" },
   { value: "normal", labelKey: "settings.pdf.perioFont.normal" },
   { value: "xlarge", labelKey: "settings.pdf.perioFont.xlarge" }
@@ -43901,31 +43888,31 @@ const bf = [
   {
     id: "general",
     titleKey: "settings.tab.general",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s(
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("numbering.label"),
           descKey: "settings.numbering.desc",
           value: e.numbering,
-          options: af,
+          options: ef,
           onChange: e.onNumbering
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("language.label"),
           descKey: "settings.language.desc",
           value: e.language,
-          options: rf,
+          options: af,
           onChange: e.onLanguage
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.theme.label"),
@@ -43934,9 +43921,9 @@ const bf = [
           onChange: () => e.onToggleDark()
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.export.section") }),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.export.section") }),
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.export.png"),
@@ -43945,8 +43932,8 @@ const bf = [
           onChange: e.onExportPng
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.export.jpg"),
@@ -43955,8 +43942,8 @@ const bf = [
           onChange: e.onExportJpg
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.export.svg"),
@@ -43965,8 +43952,8 @@ const bf = [
           onChange: e.onExportSvg
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.export.pdf"),
@@ -43975,9 +43962,9 @@ const bf = [
           onChange: e.onExportPdf
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.import.section") }),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.import.section") }),
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.import.status"),
@@ -43986,8 +43973,8 @@ const bf = [
           onChange: e.onImportStatus
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.import.fhir"),
@@ -44001,9 +43988,9 @@ const bf = [
   {
     id: "odontogram",
     titleKey: "settings.tab.odontogram",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s(
-        k1,
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.planMode"),
@@ -44012,41 +43999,41 @@ const bf = [
           onChange: e.onPlanModeAvailable
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.screen.spacing"),
           descKey: "settings.screen.spacing.desc",
           value: e.screenToothSpacing,
-          options: pf,
+          options: df,
           onChange: e.onScreenToothSpacing
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.screen.numberSize"),
           descKey: "settings.screen.numberSize.desc",
           value: e.screenToothNumberSize,
-          options: ff,
+          options: pf,
           onChange: e.onScreenToothNumberSize
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.toothAnatomy"),
           descKey: "settings.toothAnatomy.desc",
           value: e.toothAnatomy,
-          options: hf,
+          options: ff,
           onChange: e.onToothAnatomy
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.toothInfo"),
@@ -44055,8 +44042,8 @@ const bf = [
           onChange: e.onToothInfo
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.panels.statuses"),
@@ -44065,8 +44052,8 @@ const bf = [
           onChange: e.onShowStatusCard
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.panels.orthodontics"),
@@ -44080,10 +44067,10 @@ const bf = [
   {
     id: "periodontalChart",
     titleKey: "settings.tab.periodontalChart",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.perio.group.general") }),
-      /* @__PURE__ */ s(
-        k1,
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.perio.group.general") }),
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.perioChart.available"),
@@ -44092,22 +44079,22 @@ const bf = [
           onChange: e.onPerioChartAvailable
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.perioViewMode"),
           descKey: "settings.perioViewMode.desc",
           value: e.perioViewMode,
-          options: df,
+          options: cf,
           onChange: e.onPerioViewMode,
           disabled: !e.perioChartAvailable
         }
       ),
-      uf.map((a) => /* @__PURE__ */ M("div", { children: [
-        /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t(a.titleKey) }),
-        a.ids.map((i) => /* @__PURE__ */ s(
-          k1,
+      yf.map((a) => /* @__PURE__ */ M("div", { children: [
+        /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t(a.titleKey) }),
+        a.ids.map((i) => /* @__PURE__ */ l(
+          u1,
           {
             t,
             label: t(`settings.perio.row.${i}`),
@@ -44119,14 +44106,14 @@ const bf = [
           i
         ))
       ] }, a.titleKey)),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.perioIndexNameMode"),
           descKey: "settings.perioIndexNameMode.desc",
           value: e.perioIndexNameMode,
-          options: yf,
+          options: gf,
           onChange: e.onPerioIndexNameMode,
           disabled: !e.perioChartAvailable
         }
@@ -44136,8 +44123,8 @@ const bf = [
   {
     id: "toothDetails",
     titleKey: "settings.tab.toothDetails",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s(
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l(
         N3,
         {
           t,
@@ -44148,29 +44135,29 @@ const bf = [
           onChange: e.onSelectionColor
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.selection.border"),
           descKey: "settings.selection.border.desc",
           value: e.selectionBorderStyle,
-          options: mf,
+          options: hf,
           onChange: e.onSelectionBorderStyle
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("pulp.level.label"),
           descKey: "settings.pulpLevel.desc",
           value: e.pulpLevel,
-          options: sf,
+          options: lf,
           onChange: e.onPulpLevel
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
@@ -44181,7 +44168,7 @@ const bf = [
           onChange: e.onWearDetailLevel
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
@@ -44192,19 +44179,19 @@ const bf = [
           onChange: e.onDiscolorationDetailLevel
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.surfaceNotation.label"),
           descKey: "settings.surfaceNotation.desc",
           value: e.surfaceNotation,
-          options: cf,
+          options: sf,
           onChange: e.onSurfaceNotation
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.notes"),
@@ -44218,9 +44205,9 @@ const bf = [
   {
     id: "caries",
     titleKey: "settings.tab.caries",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s(
-        k1,
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("icdas.enable"),
@@ -44229,8 +44216,8 @@ const bf = [
           onChange: e.onIcdas
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.cariesDepth.label"),
@@ -44239,36 +44226,36 @@ const bf = [
           onChange: e.onCariesDepth
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("caries.rootLabel"),
           descKey: "settings.rootCaries.desc",
           value: e.rootCariesMode,
-          options: nf,
+          options: of,
           onChange: e.onRootCariesMode
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("caries.secondaryLabel"),
           descKey: "settings.secondaryCaries.desc",
           value: e.secondaryCariesMode,
-          options: of,
+          options: rf,
           onChange: e.onSecondaryCariesMode
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("caries.radiographicLabel"),
           descKey: "settings.radiographic.desc",
           value: e.radiographicDepthMode,
-          options: lf,
+          options: nf,
           onChange: e.onRadiographicDepthMode
         }
       )
@@ -44277,9 +44264,9 @@ const bf = [
   {
     id: "fillings",
     titleKey: "settings.tab.fillings",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s(
-        k1,
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.filling.defect"),
@@ -44288,31 +44275,31 @@ const bf = [
           onChange: e.onFillingDefectEnabled
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.filling.complexity"),
           descKey: "settings.filling.complexity.desc",
           value: e.fillingComplexity,
-          options: vf,
+          options: mf,
           onChange: e.onFillingComplexity
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.filling.materials") }),
-      ef.map((a) => /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.filling.materials") }),
+      tf.map((a) => /* @__PURE__ */ l(
+        u1,
         {
           t,
-          label: t(gf[a]),
+          label: t(vf[a]),
           descKey: "settings.filling.material.desc",
           checked: e.fillingMaterials[a] ?? !0,
           onChange: (i) => e.onFillingMaterial(a, i)
         },
         a
       )),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.filling.fissure"),
@@ -44326,9 +44313,9 @@ const bf = [
   {
     id: "export",
     titleKey: "settings.tab.export",
-    render: ({ t, s: e }) => /* @__PURE__ */ M(st, { children: [
-      /* @__PURE__ */ s("div", { className: "odon-settings-note", children: t("settings.export.appliesNote") }),
-      /* @__PURE__ */ s(
+    render: ({ t, s: e }) => /* @__PURE__ */ M(lt, { children: [
+      /* @__PURE__ */ l("div", { className: "odon-settings-note", children: t("settings.export.appliesNote") }),
+      /* @__PURE__ */ l(
         N3,
         {
           t,
@@ -44338,7 +44325,7 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ defaultName: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         N3,
         {
           t,
@@ -44349,8 +44336,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ defaultDob: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.showAge"),
@@ -44359,31 +44346,31 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ showAge: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.dateFormat"),
           descKey: "settings.pdf.dateFormat.desc",
           value: e.pdfSettings.dateFormat,
-          options: bf,
+          options: kf,
           onChange: (a) => e.onPdfSettings({ dateFormat: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.theme"),
           descKey: "settings.pdf.theme.desc",
           value: e.pdfSettings.colorTheme,
-          options: xf,
+          options: bf,
           onChange: (a) => e.onPdfSettings({ colorTheme: a })
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.odontogram") }),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.odontogram") }),
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.showBone"),
@@ -44392,8 +44379,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ showBone: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.showHealthyPulp"),
@@ -44402,7 +44389,7 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ showHealthyPulp: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
@@ -44413,8 +44400,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ toothSpacing: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.border"),
@@ -44423,31 +44410,31 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ border: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.borderThickness"),
           descKey: "settings.pdf.borderThickness.desc",
           value: e.pdfSettings.borderThickness,
-          options: Mf,
+          options: xf,
           onChange: (a) => e.onPdfSettings({ borderThickness: a }),
           disabled: !e.pdfSettings.border
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.numberSize"),
           descKey: "settings.pdf.numberSize.desc",
           value: e.pdfSettings.toothNumberSize,
-          options: wf,
+          options: Mf,
           onChange: (a) => e.onPdfSettings({ toothNumberSize: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.includeText"),
@@ -44456,8 +44443,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ includeOdontogramText: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.includeTable"),
@@ -44466,19 +44453,19 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ includeOdontogramTable: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.summaryGrouping"),
           descKey: "settings.pdf.summaryGrouping.desc",
           value: e.pdfSettings.summaryGrouping,
-          options: Zf,
+          options: wf,
           onChange: (a) => e.onPdfSettings({ summaryGrouping: a })
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.perio") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.perio") }),
+      /* @__PURE__ */ l(
         G1,
         {
           t,
@@ -44489,8 +44476,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ perioToothSpacing: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.perioEmptyRows"),
@@ -44499,30 +44486,30 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ perioShowEmptyRows: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.perioPlacement"),
           descKey: "settings.pdf.perioPlacement.desc",
           value: e.pdfSettings.perioLabelPlacement,
-          options: Sf,
+          options: Zf,
           onChange: (a) => e.onPdfSettings({ perioLabelPlacement: a })
         }
       ),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         G1,
         {
           t,
           label: t("settings.pdf.perioFont"),
           descKey: "settings.pdf.perioFont.desc",
           value: e.pdfSettings.perioFontSize,
-          options: zf,
+          options: Sf,
           onChange: (a) => e.onPdfSettings({ perioFontSize: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.includePerioTable"),
@@ -44531,8 +44518,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ includePerioTable: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.includePerioAbbrev"),
@@ -44541,9 +44528,9 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ includePerioAbbrev: a })
         }
       ),
-      /* @__PURE__ */ s("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.footer") }),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l("div", { className: "odon-settings-group-title", children: t("settings.pdf.section.footer") }),
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.showDisclaimer"),
@@ -44552,8 +44539,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ showDisclaimer: a })
         }
       ),
-      /* @__PURE__ */ s(
-        kf,
+      /* @__PURE__ */ l(
+        uf,
         {
           t,
           label: t("settings.pdf.disclaimerText"),
@@ -44564,8 +44551,8 @@ const bf = [
           onChange: (a) => e.onPdfSettings({ disclaimerText: a })
         }
       ),
-      /* @__PURE__ */ s(
-        k1,
+      /* @__PURE__ */ l(
+        u1,
         {
           t,
           label: t("settings.pdf.showGenerator"),
@@ -44577,19 +44564,19 @@ const bf = [
     ] })
   }
 ], D4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-function If({
+function zf({
   open: t,
   onClose: e,
   t: a,
   settings: i
 }) {
-  const [r, o] = e1(k2[0].id), n = x1(null), d = x1(null), l = x1(null), f = Re();
+  const [r, o] = e1(k2[0].id), n = x1(null), d = x1(null), s = x1(null), f = Re();
   d1(() => {
     if (!t) return;
-    l.current = document.activeElement ?? null;
+    s.current = document.activeElement ?? null;
     const u = n.current;
     return (u?.querySelector(D4) ?? u)?.focus(), () => {
-      l.current?.focus?.();
+      s.current?.focus?.();
     };
   }, [t]);
   const p = zt(
@@ -44605,8 +44592,8 @@ function If({
         (Z) => Z.offsetParent !== null || Z === document.activeElement
       );
       if (h.length === 0) return;
-      const C = h[0], w = h[h.length - 1], g = document.activeElement;
-      u.shiftKey && g === C ? (u.preventDefault(), w.focus()) : !u.shiftKey && g === w && (u.preventDefault(), C.focus());
+      const T = h[0], w = h[h.length - 1], g = document.activeElement;
+      u.shiftKey && g === T ? (u.preventDefault(), w.focus()) : !u.shiftKey && g === w && (u.preventDefault(), T.focus());
     },
     [e]
   ), v = zt(
@@ -44615,7 +44602,7 @@ function If({
       u.preventDefault();
       const h = k2.length;
       if (h === 0) return;
-      const C = k2.findIndex((G) => G.id === r), w = C < 0 ? 0 : C;
+      const T = k2.findIndex((P) => P.id === r), w = T < 0 ? 0 : T;
       let g = w;
       u.key === "Home" ? g = 0 : u.key === "End" ? g = h - 1 : u.key === "ArrowRight" || u.key === "ArrowDown" ? g = (w + 1) % h : (u.key === "ArrowLeft" || u.key === "ArrowUp") && (g = (w - 1 + h) % h);
       const Z = k2[g];
@@ -44625,7 +44612,7 @@ function If({
   );
   if (!t) return null;
   const k = k2.find((u) => u.id === r) ?? k2[0], x = k.id === "export" && i.exportPdf === !1 ? k2[0] : k;
-  return /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(
     "div",
     {
       className: "odon-settings-backdrop",
@@ -44644,8 +44631,8 @@ function If({
           onKeyDown: p,
           children: [
             /* @__PURE__ */ M("div", { className: "odon-settings-header", children: [
-              /* @__PURE__ */ s("h2", { className: "odon-settings-title", id: f, children: a("settings.title") }),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l("h2", { className: "odon-settings-title", id: f, children: a("settings.title") }),
+              /* @__PURE__ */ l(
                 "button",
                 {
                   type: "button",
@@ -44653,7 +44640,7 @@ function If({
                   onClick: e,
                   "aria-label": a("settings.close"),
                   title: a("settings.close"),
-                  children: /* @__PURE__ */ s(
+                  children: /* @__PURE__ */ l(
                     "svg",
                     {
                       width: "18",
@@ -44665,14 +44652,14 @@ function If({
                       strokeLinecap: "round",
                       strokeLinejoin: "round",
                       "aria-hidden": "true",
-                      children: /* @__PURE__ */ s("path", { d: "M18 6 6 18M6 6l12 12" })
+                      children: /* @__PURE__ */ l("path", { d: "M18 6 6 18M6 6l12 12" })
                     }
                   )
                 }
               )
             ] }),
             /* @__PURE__ */ M("div", { className: "odon-settings-body", children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "div",
                 {
                   ref: d,
@@ -44682,7 +44669,7 @@ function If({
                   onKeyDown: v,
                   children: k2.map((u) => {
                     const y = u.id === "export" && i.exportPdf === !1;
-                    return /* @__PURE__ */ s(
+                    return /* @__PURE__ */ l(
                       "button",
                       {
                         type: "button",
@@ -44703,7 +44690,7 @@ function If({
                   })
                 }
               ),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "div",
                 {
                   className: "odon-settings-panel",
@@ -44721,7 +44708,7 @@ function If({
   );
 }
 const O4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-function Cf({
+function If({
   open: t,
   t: e,
   onAccept: a,
@@ -44731,18 +44718,18 @@ function Cf({
   d1(() => {
     if (!t) return;
     o.current = document.activeElement ?? null;
-    const l = r.current;
-    return (l?.querySelector(O4) ?? l)?.focus(), () => {
+    const s = r.current;
+    return (s?.querySelector(O4) ?? s)?.focus(), () => {
       o.current?.focus?.();
     };
   }, [t]);
   const d = zt(
-    (l) => {
-      if (l.key === "Escape") {
-        l.stopPropagation(), i();
+    (s) => {
+      if (s.key === "Escape") {
+        s.stopPropagation(), i();
         return;
       }
-      if (l.key !== "Tab") return;
+      if (s.key !== "Tab") return;
       const f = r.current;
       if (!f) return;
       const p = Array.from(f.querySelectorAll(O4)).filter(
@@ -44750,16 +44737,16 @@ function Cf({
       );
       if (p.length === 0) return;
       const v = p[0], k = p[p.length - 1], x = document.activeElement;
-      l.shiftKey && x === v ? (l.preventDefault(), k.focus()) : !l.shiftKey && x === k && (l.preventDefault(), v.focus());
+      s.shiftKey && x === v ? (s.preventDefault(), k.focus()) : !s.shiftKey && x === k && (s.preventDefault(), v.focus());
     },
     [i]
   );
-  return t ? /* @__PURE__ */ s(
+  return t ? /* @__PURE__ */ l(
     "div",
     {
       className: "odon-confirm-backdrop",
-      onMouseDown: (l) => {
-        l.target === l.currentTarget && i();
+      onMouseDown: (s) => {
+        s.target === s.currentTarget && i();
       },
       children: /* @__PURE__ */ M(
         "div",
@@ -44773,9 +44760,9 @@ function Cf({
           tabIndex: -1,
           onKeyDown: d,
           children: [
-            /* @__PURE__ */ s("p", { className: "odon-confirm-message", id: n, children: e("dualState.confirmPlannedStatusEdit") }),
+            /* @__PURE__ */ l("p", { className: "odon-confirm-message", id: n, children: e("dualState.confirmPlannedStatusEdit") }),
             /* @__PURE__ */ M("div", { className: "odon-confirm-actions", children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "button",
                 {
                   type: "button",
@@ -44784,7 +44771,7 @@ function Cf({
                   children: e("dualState.cancel")
                 }
               ),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "button",
                 {
                   type: "button",
@@ -44801,15 +44788,15 @@ function Cf({
   ) : null;
 }
 const A4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-function Pf({
+function Cf({
   open: t,
   t: e,
   onClose: a
 }) {
-  const i = x1(null), r = x1(null), o = Re(), [n, d] = e1(!0), [l, f] = e1(!0), [p, v] = e1(!0), [k, x] = e1(!0), [u, y] = e1(!0), [h, C] = e1(!0), [w, g] = e1(!1), [Z, G] = e1(!1), [I, D] = e1(Wt()), [A, H] = e1(Wt().patientName ?? "");
+  const i = x1(null), r = x1(null), o = Re(), [n, d] = e1(!0), [s, f] = e1(!0), [p, v] = e1(!0), [k, x] = e1(!0), [u, y] = e1(!0), [h, T] = e1(!0), [w, g] = e1(!1), [Z, P] = e1(!1), [I, D] = e1(qt()), [A, H] = e1(qt().patientName ?? "");
   d1(() => {
     if (!t) return;
-    r.current = document.activeElement ?? null, g(Ri()), G(s4()), Wt().examDate === null && _3((/* @__PURE__ */ new Date()).toISOString().slice(0, 10)), D(Wt()), H(Wt().patientName ?? "");
+    r.current = document.activeElement ?? null, g(Ri()), P(s4()), qt().examDate === null && _3((/* @__PURE__ */ new Date()).toISOString().slice(0, 10)), D(qt()), H(qt().patientName ?? "");
     const S = i.current;
     return (S?.querySelector(A4) ?? S)?.focus(), () => {
       r.current?.focus?.();
@@ -44817,7 +44804,7 @@ function Pf({
   }, [t]), d1(() => {
     if (t)
       return vt(() => {
-        D(Wt()), g(Ri()), G(s4());
+        D(qt()), g(Ri()), P(s4());
       });
   }, [t]);
   const R = zt(
@@ -44827,9 +44814,9 @@ function Pf({
         return;
       }
       if (S.key !== "Tab") return;
-      const P = i.current;
-      if (!P) return;
-      const b = Array.from(P.querySelectorAll(A4)).filter(
+      const C = i.current;
+      if (!C) return;
+      const b = Array.from(C.querySelectorAll(A4)).filter(
         (W) => W.offsetParent !== null || W === document.activeElement
       );
       if (b.length === 0) return;
@@ -44840,16 +44827,16 @@ function Pf({
   );
   if (!t) return null;
   const N = () => {
-    J3(A.trim() === "" ? null : A), W9({
+    J3(A.trim() === "" ? null : A), Y9({
       patientData: n,
-      odontogramChart: l,
+      odontogramChart: s,
       odontogramDescription: p,
       individualNotes: k && Z,
       perioStatus: u && w,
       perioDescription: h && w
-    }).catch((P) => console.error("exportPdf failed", P)), a();
+    }).catch((C) => console.error("exportPdf failed", C)), a();
   };
-  return /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(
     "div",
     {
       className: "odon-confirm-backdrop",
@@ -44868,10 +44855,10 @@ function Pf({
           tabIndex: -1,
           onKeyDown: R,
           children: [
-            /* @__PURE__ */ s("p", { className: "odon-confirm-message", id: o, children: e("export.options.title") }),
+            /* @__PURE__ */ l("p", { className: "odon-confirm-message", id: o, children: e("export.options.title") }),
             /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-              /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "exportOptionsPatientName", children: e("case.patientName") }),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "exportOptionsPatientName", children: e("case.patientName") }),
+              /* @__PURE__ */ l(
                 "input",
                 {
                   id: "exportOptionsPatientName",
@@ -44884,21 +44871,21 @@ function Pf({
               )
             ] }),
             /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-              /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "exportOptionsPatientDob", children: e("case.patientDob") }),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "exportOptionsPatientDob", children: e("case.patientDob") }),
+              /* @__PURE__ */ l(
                 "input",
                 {
                   id: "exportOptionsPatientDob",
                   className: "case-meta-input",
                   type: "date",
                   value: I.patientDob ?? "",
-                  onChange: (S) => X7(S.target.value === "" ? null : S.target.value)
+                  onChange: (S) => Q7(S.target.value === "" ? null : S.target.value)
                 }
               )
             ] }),
             /* @__PURE__ */ M("div", { className: "case-meta-row", children: [
-              /* @__PURE__ */ s("label", { className: "case-meta-row-label", htmlFor: "exportOptionsExamDate", children: e("case.examDate") }),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l("label", { className: "case-meta-row-label", htmlFor: "exportOptionsExamDate", children: e("case.examDate") }),
+              /* @__PURE__ */ l(
                 "input",
                 {
                   id: "exportOptionsExamDate",
@@ -44910,7 +44897,7 @@ function Pf({
               )
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
@@ -44918,21 +44905,21 @@ function Pf({
                   onChange: (S) => d(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("export.options.patientData") })
+              /* @__PURE__ */ l("span", { children: e("export.options.patientData") })
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
-                  checked: l,
+                  checked: s,
                   onChange: (S) => f(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("export.options.odontogramChart") })
+              /* @__PURE__ */ l("span", { children: e("export.options.odontogramChart") })
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
@@ -44940,10 +44927,10 @@ function Pf({
                   onChange: (S) => v(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("export.options.odontogramDescription") })
+              /* @__PURE__ */ l("span", { children: e("export.options.odontogramDescription") })
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
@@ -44952,10 +44939,10 @@ function Pf({
                   onChange: (S) => x(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("toothInfo.notes") })
+              /* @__PURE__ */ l("span", { children: e("toothInfo.notes") })
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
@@ -44964,23 +44951,23 @@ function Pf({
                   onChange: (S) => y(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("export.options.perioStatus") })
+              /* @__PURE__ */ l("span", { children: e("export.options.perioStatus") })
             ] }),
             /* @__PURE__ */ M("label", { children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "input",
                 {
                   type: "checkbox",
                   checked: h,
                   disabled: !w,
-                  onChange: (S) => C(S.target.checked)
+                  onChange: (S) => T(S.target.checked)
                 }
               ),
-              /* @__PURE__ */ s("span", { children: e("export.options.perioDescription") })
+              /* @__PURE__ */ l("span", { children: e("export.options.perioDescription") })
             ] }),
-            !w && /* @__PURE__ */ s("p", { className: "hint", children: e("export.options.noPerio") }),
+            !w && /* @__PURE__ */ l("p", { className: "hint", children: e("export.options.noPerio") }),
             /* @__PURE__ */ M("div", { className: "odon-confirm-actions", children: [
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "button",
                 {
                   type: "button",
@@ -44989,7 +44976,7 @@ function Pf({
                   children: e("export.options.cancel")
                 }
               ),
-              /* @__PURE__ */ s(
+              /* @__PURE__ */ l(
                 "button",
                 {
                   type: "button",
@@ -45005,12 +44992,12 @@ function Pf({
     }
   );
 }
-const U4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', Gf = "https://github.com/ZoliQua/React-Odontogram-Modul", R3 = { handle: "ZoliQua", descKey: "credits.contrib.zoliqua" }, Tf = [
+const U4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', Pf = "https://github.com/ZoliQua/React-Odontogram-Modul", R3 = { handle: "ZoliQua", descKey: "credits.contrib.zoliqua" }, Gf = [
   { handle: "odontodev", descKey: "credits.contrib.odontodev" },
   { handle: "JulianoBazzi", descKey: "credits.contrib.julianobazzi" },
   { handle: "yassine-bhn", descKey: "credits.contrib.yassine" },
   { handle: "saegerdirk-star", descKey: "credits.contrib.saegerdirk" }
-], Df = [
+], Tf = [
   { name: "jsPDF", url: "https://github.com/parallax/jsPDF" },
   { name: "DOMPurify", url: "https://github.com/cure53/DOMPurify" },
   { name: "React", url: "https://react.dev" },
@@ -45018,7 +45005,7 @@ const U4 = 'button:not([disabled]), [href], input:not([disabled]), select:not([d
   { name: "TypeScript", url: "https://www.typescriptlang.org" },
   { name: "Tailwind CSS", url: "https://tailwindcss.com" }
 ];
-function Of({
+function Df({
   open: t,
   t: e,
   onClose: a
@@ -45039,9 +45026,9 @@ function Of({
         return;
       }
       if (d.key !== "Tab") return;
-      const l = i.current;
-      if (!l) return;
-      const f = Array.from(l.querySelectorAll(U4)).filter(
+      const s = i.current;
+      if (!s) return;
+      const f = Array.from(s.querySelectorAll(U4)).filter(
         (x) => x.offsetParent !== null || x === document.activeElement
       );
       if (f.length === 0) return;
@@ -45050,7 +45037,7 @@ function Of({
     },
     [a]
   );
-  return t ? /* @__PURE__ */ s(
+  return t ? /* @__PURE__ */ l(
     "div",
     {
       className: "odon-confirm-backdrop",
@@ -45069,13 +45056,13 @@ function Of({
           tabIndex: -1,
           onKeyDown: n,
           children: [
-            /* @__PURE__ */ s("button", { type: "button", className: "odon-settings-close", onClick: a, "aria-label": e("credits.close"), children: /* @__PURE__ */ s("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ s("path", { d: "M18 6L6 18M6 6l12 12" }) }) }),
-            /* @__PURE__ */ s("h2", { className: "odon-credits-title", id: o, children: e("credits.title") }),
+            /* @__PURE__ */ l("button", { type: "button", className: "odon-settings-close", onClick: a, "aria-label": e("credits.close"), children: /* @__PURE__ */ l("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ l("path", { d: "M18 6L6 18M6 6l12 12" }) }) }),
+            /* @__PURE__ */ l("h2", { className: "odon-credits-title", id: o, children: e("credits.title") }),
             /* @__PURE__ */ M("div", { className: "odon-credits-body", children: [
-              /* @__PURE__ */ s("p", { className: "odon-credits-intro", children: e("credits.intro") }),
+              /* @__PURE__ */ l("p", { className: "odon-credits-intro", children: e("credits.intro") }),
               /* @__PURE__ */ M("section", { className: "odon-credits-section", children: [
-                /* @__PURE__ */ s("h3", { className: "odon-credits-heading", children: e("credits.creatorTitle") }),
-                /* @__PURE__ */ s("ul", { className: "odon-credits-list", children: /* @__PURE__ */ M("li", { children: [
+                /* @__PURE__ */ l("h3", { className: "odon-credits-heading", children: e("credits.creatorTitle") }),
+                /* @__PURE__ */ l("ul", { className: "odon-credits-list", children: /* @__PURE__ */ M("li", { children: [
                   /* @__PURE__ */ M(
                     "a",
                     {
@@ -45089,12 +45076,12 @@ function Of({
                       ]
                     }
                   ),
-                  /* @__PURE__ */ s("span", { className: "odon-credits-desc", children: e(R3.descKey) })
+                  /* @__PURE__ */ l("span", { className: "odon-credits-desc", children: e(R3.descKey) })
                 ] }) })
               ] }),
               /* @__PURE__ */ M("section", { className: "odon-credits-section", children: [
-                /* @__PURE__ */ s("h3", { className: "odon-credits-heading", children: e("credits.contributorsTitle") }),
-                /* @__PURE__ */ s("ul", { className: "odon-credits-list", children: Tf.map((d) => /* @__PURE__ */ M("li", { children: [
+                /* @__PURE__ */ l("h3", { className: "odon-credits-heading", children: e("credits.contributorsTitle") }),
+                /* @__PURE__ */ l("ul", { className: "odon-credits-list", children: Gf.map((d) => /* @__PURE__ */ M("li", { children: [
                   /* @__PURE__ */ M(
                     "a",
                     {
@@ -45108,18 +45095,18 @@ function Of({
                       ]
                     }
                   ),
-                  /* @__PURE__ */ s("span", { className: "odon-credits-desc", children: e(d.descKey) })
+                  /* @__PURE__ */ l("span", { className: "odon-credits-desc", children: e(d.descKey) })
                 ] }, d.handle)) })
               ] }),
               /* @__PURE__ */ M("section", { className: "odon-credits-section", children: [
-                /* @__PURE__ */ s("h3", { className: "odon-credits-heading", children: e("credits.librariesTitle") }),
-                /* @__PURE__ */ s("ul", { className: "odon-credits-libs", children: Df.map((d) => /* @__PURE__ */ s("li", { children: /* @__PURE__ */ s("a", { className: "odon-credits-link", href: d.url, target: "_blank", rel: "noopener noreferrer", children: d.name }) }, d.name)) })
+                /* @__PURE__ */ l("h3", { className: "odon-credits-heading", children: e("credits.librariesTitle") }),
+                /* @__PURE__ */ l("ul", { className: "odon-credits-libs", children: Tf.map((d) => /* @__PURE__ */ l("li", { children: /* @__PURE__ */ l("a", { className: "odon-credits-link", href: d.url, target: "_blank", rel: "noopener noreferrer", children: d.name }) }, d.name)) })
               ] }),
-              /* @__PURE__ */ s("p", { className: "odon-credits-welcome", children: e("credits.welcome") })
+              /* @__PURE__ */ l("p", { className: "odon-credits-welcome", children: e("credits.welcome") })
             ] }),
-            /* @__PURE__ */ M("a", { className: "odon-credits-star", href: Gf, target: "_blank", rel: "noopener noreferrer", children: [
-              /* @__PURE__ */ s("svg", { "aria-hidden": "true", width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ s("path", { d: "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" }) }),
-              /* @__PURE__ */ s("span", { children: e("credits.star") })
+            /* @__PURE__ */ M("a", { className: "odon-credits-star", href: Pf, target: "_blank", rel: "noopener noreferrer", children: [
+              /* @__PURE__ */ l("svg", { "aria-hidden": "true", width: "16", height: "16", viewBox: "0 0 24 24", fill: "currentColor", children: /* @__PURE__ */ l("path", { d: "M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" }) }),
+              /* @__PURE__ */ l("span", { children: e("credits.star") })
             ] })
           ]
         }
@@ -45137,7 +45124,7 @@ const E4 = {
   accent: "--odon-accent",
   accent2: "--odon-accent2"
 };
-function Af(t, e) {
+function Of(t, e) {
   if (t) {
     for (const a of Object.values(E4))
       t.style.removeProperty(a);
@@ -45148,18 +45135,18 @@ function Af(t, e) {
       }
   }
 }
-const Uf = /* @__PURE__ */ new Set(["ar"]);
-function Ef(t) {
-  return Uf.has(t);
+const Af = /* @__PURE__ */ new Set(["ar"]);
+function Uf(t) {
+  return Af.has(t);
 }
-const bl = wl(null);
+const kl = Ml(null);
 function ei() {
-  const t = Ml(bl);
+  const t = xl(kl);
   if (t === null)
     throw new Error("useOdontogramUi must be used within an <OdontogramProvider>.");
   return t;
 }
-function Lf({
+function Ef({
   children: t,
   language: e,
   onLanguageChange: a,
@@ -45168,7 +45155,7 @@ function Lf({
   darkMode: o,
   onDarkModeChange: n,
   themeConfig: d,
-  plugins: l,
+  plugins: s,
   readOnly: f,
   enableNotes: p,
   enableIcdas: v,
@@ -45177,11 +45164,11 @@ function Lf({
   rootCariesMode: u,
   radiographicDepthMode: y,
   cariesDepthEnabled: h,
-  wearDetailLevel: C,
+  wearDetailLevel: T,
   discolorationDetailLevel: w,
   surfaceNotation: g,
   showStatusCard: Z,
-  showOrthoCard: G,
+  showOrthoCard: P,
   fillingComplexity: I,
   onFillingComplexityChange: D,
   fillingDefectEnabled: A,
@@ -45189,13 +45176,13 @@ function Lf({
   fillingMaterialAvailability: R,
   onFillingMaterialAvailabilityChange: N,
   fissureSealingEnabled: S,
-  onFissureSealingEnabledChange: P
+  onFissureSealingEnabledChange: C
 }) {
-  const { lang: b, setLang: _, t: t1 } = zl({ language: e, onLanguageChange: a }), [V, W] = e1(i ?? "FDI"), l1 = x1(null), z = i ?? V, [K, L] = e1(!1), [q, v1] = e1(p ?? !1), [R1, I1] = e1(v ?? !1), [E1, V1] = e1(k ?? "aae"), [Ot, dt] = e1(x ?? "standard"), [O1, c1] = e1(u ?? "simple"), [pt, y1] = e1(y ?? "off"), [t2, Z1] = e1(h ?? !0), [Nt, D2] = e1(C ?? "complex"), [et, We] = e1(w ?? "complex"), [Je, _e] = e1(g ?? "full"), [O2, Rt] = e1(!0), [At, e2] = e1(!0), [oe, ne] = e1(!0), [A2, Qe] = e1(!0), [a2, le] = e1(!0), [U2, ai] = e1(!0), [Xe, ii] = e1(!0), [se, ce] = e1(!0), [i2, xt] = e1(!0), [de, ri] = e1("normal"), [$e, ta] = e1("normal"), [ea, pe] = e1("#3b7bff"), [E2, Mt] = e1("dashed"), [p2, fe] = e1(() => A ?? Kn()), [aa, oi] = e1(() => I ?? u8()), [ni, he] = e1(() => S ?? k8()), [li, me] = e1(() => R ?? b8()), [si, f2] = e1(Z ?? !0), [ci, di] = e1(G ?? !0), [C1, h2] = e1(null), [f3, pi] = e1(!1), [ia, fi] = e1(!1), [hi, h3] = e1(!1), [m3, v3] = e1(!1), [ra, Vt] = e1(() => c4()), [L2, Ft] = e1("odontogram"), [mi, m2] = e1(() => To()), [g3, vi] = e1(
+  const { lang: b, setLang: _, t: t1 } = Sl({ language: e, onLanguageChange: a }), [V, W] = e1(i ?? "FDI"), l1 = x1(null), z = i ?? V, [K, L] = e1(!1), [q, v1] = e1(p ?? !1), [R1, I1] = e1(v ?? !1), [E1, V1] = e1(k ?? "aae"), [Ot, dt] = e1(x ?? "standard"), [O1, c1] = e1(u ?? "simple"), [pt, y1] = e1(y ?? "off"), [$t, Z1] = e1(h ?? !0), [jt, T2] = e1(T ?? "complex"), [tt, We] = e1(w ?? "complex"), [Je, _e] = e1(g ?? "full"), [D2, Nt] = e1(!0), [At, t2] = e1(!0), [oe, ne] = e1(!0), [O2, Qe] = e1(!0), [e2, le] = e1(!0), [A2, ai] = e1(!0), [Xe, ii] = e1(!0), [se, ce] = e1(!0), [a2, xt] = e1(!0), [de, ri] = e1("normal"), [$e, ta] = e1("normal"), [ea, pe] = e1("#3b7bff"), [U2, Mt] = e1("dashed"), [p2, fe] = e1(() => A ?? Kn()), [aa, oi] = e1(() => I ?? y8()), [ni, he] = e1(() => S ?? u8()), [li, me] = e1(() => R ?? k8()), [si, f2] = e1(Z ?? !0), [ci, di] = e1(P ?? !0), [C1, h2] = e1(null), [f3, pi] = e1(!1), [ia, fi] = e1(!1), [hi, h3] = e1(!1), [m3, v3] = e1(!1), [ra, Rt] = e1(() => c4()), [E2, Vt] = e1("odontogram"), [mi, m2] = e1(() => To()), [g3, vi] = e1(
     () => ja()
   ), [gi, ve] = e1(
     () => je()
-  ), [oa, ge] = e1(() => Ne()), v2 = ra === "toggle" && L2 === "dentalChart", [H2, wt] = e1(!1), [y3, u3] = e1(() => o !== void 0 ? o : typeof document < "u" ? document.documentElement.classList.contains("dark") : !1), g2 = o !== void 0 ? o : y3;
+  ), [oa, ge] = e1(() => Ne()), v2 = ra === "toggle" && E2 === "dentalChart", [L2, wt] = e1(!1), [y3, u3] = e1(() => o !== void 0 ? o : typeof document < "u" ? document.documentElement.classList.contains("dark") : !1), g2 = o !== void 0 ? o : y3;
   d1(() => {
     o === void 0 && document.documentElement.classList.toggle("dark", g2);
   }, [g2, o]);
@@ -45209,16 +45196,16 @@ function Lf({
     }
     W(O), r?.(O);
   };
-  d1(() => (lp(), () => {
-    sp();
+  d1(() => (np(), () => {
+    lp();
   }), []), d1(() => {
-    np(z);
+    op(z);
   }, [z]), d1(() => {
-    Af(l1.current, d);
+    Of(l1.current, d);
   }, [d]), d1(() => {
-    dp(l ?? []);
-  }, [l]), d1(() => {
-    kp(f ?? !1);
+    cp(s ?? []);
+  }, [s]), d1(() => {
+    up(f ?? !1);
   }, [f]), d1(() => {
     g4(p ?? !1), v1(p ?? !1);
   }, [p]), d1(() => {
@@ -45238,9 +45225,9 @@ function Lf({
     const O = h ?? !0;
     Ro(O), Z1(O);
   }, [h]), d1(() => {
-    const O = C ?? "complex";
-    Uo(O), D2(O);
-  }, [C]), d1(() => {
+    const O = T ?? "complex";
+    Uo(O), T2(O);
+  }, [T]), d1(() => {
     const O = w ?? "complex";
     Eo(O), We(O);
   }, [w]), d1(() => {
@@ -45249,8 +45236,8 @@ function Lf({
   }, [g]), d1(() => {
     f2(Z ?? !0);
   }, [Z]), d1(() => {
-    di(G ?? !0);
-  }, [G]), d1(() => {
+    di(P ?? !0);
+  }, [P]), d1(() => {
     I !== void 0 && (Qo(I), oi(I));
   }, [I]), d1(() => {
     A !== void 0 && (_o(A), fe(A));
@@ -45267,24 +45254,24 @@ function Lf({
       ye.current = null;
       return;
     }
-    const O = JSON.parse(sa), _1 = Object.fromEntries(O), j2 = ye.current ?? {};
+    const O = JSON.parse(sa), _1 = Object.fromEntries(O), H2 = ye.current ?? {};
     for (const [B, m] of O)
-      j2[B] !== m && $o(B, m);
+      H2[B] !== m && $o(B, m);
     ye.current = _1, me({ ..._1 });
   }, [sa]), d1(() => {
-    if (!O2) return;
+    if (!D2) return;
     const O = () => {
-      h2(dl());
+      h2(cl());
     };
     return O(), vt(O);
-  }, [O2, b, z]), d1(() => {
+  }, [D2, b, z]), d1(() => {
     const O = () => pi(Ri());
     return O(), vt(O);
   }, []), d1(() => {
-    const O = () => v3(b9());
+    const O = () => v3(k9());
     return O(), vt(O);
   }, []), d1(() => {
-    const O = () => Vt(c4());
+    const O = () => Rt(c4());
     return O(), vt(O);
   }, []), d1(() => {
     const O = () => m2(To());
@@ -45294,7 +45281,7 @@ function Lf({
       vi(ja()), ve(je());
     };
     return O(), vt(O);
-  }, []), d1(() => vt(() => wt(a8())), []);
+  }, []), d1(() => vt(() => wt(e8())), []);
   const k3 = {
     t: t1,
     lang: b,
@@ -45304,25 +45291,25 @@ function Lf({
     currentNumbering: z,
     setNumbering: la,
     viewMode: ra,
-    activeView: L2,
-    setActiveView: Ft,
+    activeView: E2,
+    setActiveView: Vt,
     isPerioView: v2,
-    perioChartAvailable: i2,
+    perioChartAvailable: a2,
     perioOpen: m3,
-    confirmOpen: H2,
+    confirmOpen: L2,
     hasPerio: f3,
     exportPngOn: At,
     exportJpgOn: oe,
-    exportSvgOn: A2,
-    exportPdfOn: a2,
-    importStatusOn: U2,
+    exportSvgOn: O2,
+    exportPdfOn: e2,
+    importStatusOn: A2,
     importFhirOn: Xe,
     summary: C1,
-    toothInfoOn: O2,
+    toothInfoOn: D2,
     screenSpacing: de,
     screenNumberSize: $e,
     selectionColor: ea,
-    selectionBorderStyle: E2,
+    selectionBorderStyle: U2,
     toothAnatomy: mi,
     planModeAvailable: se,
     showStatusCard: si,
@@ -45334,17 +45321,17 @@ function Lf({
       onLanguage: _,
       isDark: g2,
       onToggleDark: na,
-      toothInfo: O2,
-      onToothInfo: (O) => Rt(O),
+      toothInfo: D2,
+      onToothInfo: (O) => Nt(O),
       exportPng: At,
-      onExportPng: (O) => e2(O),
+      onExportPng: (O) => t2(O),
       exportJpg: oe,
       onExportJpg: (O) => ne(O),
-      exportSvg: A2,
+      exportSvg: O2,
       onExportSvg: (O) => Qe(O),
-      exportPdf: a2,
+      exportPdf: e2,
       onExportPdf: (O) => le(O),
-      importStatus: U2,
+      importStatus: A2,
       onImportStatus: (O) => ai(O),
       importFhir: Xe,
       onImportFhir: (O) => ii(O),
@@ -45356,7 +45343,7 @@ function Lf({
       onIcdas: (O) => {
         I1(O), Oo(O);
       },
-      cariesDepth: t2,
+      cariesDepth: $t,
       onCariesDepth: (O) => {
         Z1(O), Ro(O);
       },
@@ -45372,11 +45359,11 @@ function Lf({
       onPulpLevel: (O) => {
         V1(O), Ao(O);
       },
-      wearDetailLevel: Nt,
+      wearDetailLevel: jt,
       onWearDetailLevel: (O) => {
-        D2(O), Uo(O);
+        T2(O), Uo(O);
       },
-      discolorationDetailLevel: et,
+      discolorationDetailLevel: tt,
       onDiscolorationDetailLevel: (O) => {
         We(O), Eo(O);
       },
@@ -45398,26 +45385,26 @@ function Lf({
       onScreenToothNumberSize: (O) => ta(O),
       toothAnatomy: mi,
       onToothAnatomy: (O) => {
-        m2(O), T7(O), sl();
+        m2(O), G7(O), ll();
       },
       selectionColor: ea,
       onSelectionColor: (O) => pe(O),
-      selectionBorderStyle: E2,
+      selectionBorderStyle: U2,
       onSelectionBorderStyle: (O) => Mt(O),
-      perioChartAvailable: i2,
+      perioChartAvailable: a2,
       onPerioChartAvailable: (O) => {
-        xt(O), O || (Ft("odontogram"), X5());
+        xt(O), O || (Vt("odontogram"), Q5());
       },
       showStatusCard: si,
       onShowStatusCard: (O) => f2(O),
       showOrthoCard: ci,
       onShowOrthoCard: (O) => di(O),
       perioViewMode: ra,
-      onPerioViewMode: (O) => x9(O),
+      onPerioViewMode: (O) => b9(O),
       perioRowVisibility: g3,
-      onPerioRowVisibility: (O, _1) => Z9(O, _1),
+      onPerioRowVisibility: (O, _1) => w9(O, _1),
       perioIndexNameMode: gi,
-      onPerioIndexNameMode: (O) => S9(O),
+      onPerioIndexNameMode: (O) => Z9(O),
       fillingDefectEnabled: p2,
       onFillingDefectEnabled: (O) => {
         fe(O), _o(O), H?.(O);
@@ -45428,15 +45415,15 @@ function Lf({
       },
       fillingMaterials: li,
       onFillingMaterial: (O, _1) => {
-        me((j2) => ({ ...j2, [O]: _1 })), $o(O, _1), N?.(O, _1);
+        me((H2) => ({ ...H2, [O]: _1 })), $o(O, _1), N?.(O, _1);
       },
       fissureSealingEnabled: ni,
       onFissureSealingEnabled: (O) => {
-        he(O), Xo(O), P?.(O);
+        he(O), Xo(O), C?.(O);
       },
       pdfSettings: oa,
       onPdfSettings: (O) => {
-        N9(O), ge(Ne());
+        j9(O), ge(Ne());
       }
     },
     settingsOpen: K,
@@ -45446,9 +45433,9 @@ function Lf({
     creditsOpen: hi,
     setCreditsOpen: h3
   };
-  return /* @__PURE__ */ s(bl.Provider, { value: k3, children: /* @__PURE__ */ s("div", { ref: l1, className: "odontogram-root", dir: Ef(b) ? "rtl" : "ltr", lang: b, children: t }) });
+  return /* @__PURE__ */ l(kl.Provider, { value: k3, children: /* @__PURE__ */ l("div", { ref: l1, className: "odontogram-root", dir: Uf(b) ? "rtl" : "ltr", lang: b, children: t }) });
 }
-const Hf = "data:image/png;base64,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", jf = [
+const Lf = "data:image/png;base64,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", Hf = [
   { value: "hu", labelKey: "language.hu" },
   { value: "en", labelKey: "language.en" },
   { value: "de", labelKey: "language.de" },
@@ -45462,7 +45449,7 @@ const Hf = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEUCAYAAACRVAu1AA
   { value: "ar", labelKey: "language.ar" },
   { value: "fr", labelKey: "language.fr" }
 ];
-function Nf() {
+function jf() {
   const {
     t,
     lang: e,
@@ -45472,7 +45459,7 @@ function Nf() {
     currentNumbering: o,
     settingsOpen: n,
     setSettingsOpen: d,
-    exportPngOn: l,
+    exportPngOn: s,
     exportJpgOn: f,
     exportSvgOn: p,
     exportPdfOn: v,
@@ -45481,32 +45468,32 @@ function Nf() {
     importFhirOn: u,
     setPdfOpen: y,
     setCreditsOpen: h
-  } = ei(), [C, w] = e1(!1), g = x1(null), [Z, G] = e1(!1), I = x1(null), [D, A] = e1(!1), H = x1(null);
+  } = ei(), [T, w] = e1(!1), g = x1(null), [Z, P] = e1(!1), I = x1(null), [D, A] = e1(!1), H = x1(null);
   return d1(() => {
     const R = (N) => {
       const S = N.target;
-      g.current?.contains(S) || w(!1), I.current?.contains(S) || G(!1), H.current?.contains(S) || A(!1);
+      g.current?.contains(S) || w(!1), I.current?.contains(S) || P(!1), H.current?.contains(S) || A(!1);
     };
     return document.addEventListener("click", R), () => document.removeEventListener("click", R);
   }, []), /* @__PURE__ */ M("header", { className: "topbar", children: [
     /* @__PURE__ */ M("div", { className: "brand", children: [
-      /* @__PURE__ */ s("img", { className: "brand-logo", src: Hf, alt: "", "aria-hidden": "true" }),
+      /* @__PURE__ */ l("img", { className: "brand-logo", src: Lf, alt: "", "aria-hidden": "true" }),
       /* @__PURE__ */ M("div", { children: [
-        /* @__PURE__ */ s("div", { className: "title", children: t("app.title") }),
-        /* @__PURE__ */ s("div", { className: "subtitle", children: `${t("app.subtitleLang")} ${t("app.subtitleNumbering." + o)} ${t(i ? "app.subtitleMode.dark" : "app.subtitleMode.light")}` })
+        /* @__PURE__ */ l("div", { className: "title", children: t("app.title") }),
+        /* @__PURE__ */ l("div", { className: "subtitle", children: `${t("app.subtitleLang")} ${t("app.subtitleNumbering." + o)} ${t(i ? "app.subtitleMode.dark" : "app.subtitleMode.light")}` })
       ] })
     ] }),
     /* @__PURE__ */ M("div", { className: "topbar-actions", children: [
-      /* @__PURE__ */ s("button", { className: "btn-theme", onClick: () => Jp(), title: t("intro.start"), "aria-label": t("intro.start"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-        /* @__PURE__ */ s("circle", { cx: "12", cy: "12", r: "10" }),
-        /* @__PURE__ */ s("path", { d: "M10 8.5v7l6-3.5-6-3.5z" })
+      /* @__PURE__ */ l("button", { className: "btn-theme", onClick: () => Wp(), title: t("intro.start"), "aria-label": t("intro.start"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+        /* @__PURE__ */ l("circle", { cx: "12", cy: "12", r: "10" }),
+        /* @__PURE__ */ l("path", { d: "M10 8.5v7l6-3.5-6-3.5z" })
       ] }) }),
       /* @__PURE__ */ M("div", { id: "languageMenu", className: "topbar-group dropdown", ref: g, children: [
-        /* @__PURE__ */ s("button", { className: "btn-theme", onClick: () => w((R) => !R), "aria-haspopup": "menu", "aria-expanded": C, title: t("language.label"), "aria-label": t("language.label"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-          /* @__PURE__ */ s("circle", { cx: "12", cy: "12", r: "10" }),
-          /* @__PURE__ */ s("path", { d: "M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" })
+        /* @__PURE__ */ l("button", { className: "btn-theme", onClick: () => w((R) => !R), "aria-haspopup": "menu", "aria-expanded": T, title: t("language.label"), "aria-label": t("language.label"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+          /* @__PURE__ */ l("circle", { cx: "12", cy: "12", r: "10" }),
+          /* @__PURE__ */ l("path", { d: "M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" })
         ] }) }),
-        C && /* @__PURE__ */ s("div", { className: "dropdown-menu", role: "menu", "aria-label": t("language.label"), children: jf.map((R) => /* @__PURE__ */ s(
+        T && /* @__PURE__ */ l("div", { className: "dropdown-menu", role: "menu", "aria-label": t("language.label"), children: Hf.map((R) => /* @__PURE__ */ l(
           "button",
           {
             className: "dropdown-item",
@@ -45520,7 +45507,7 @@ function Nf() {
           R.value
         )) })
       ] }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "button",
         {
           className: "btn-theme",
@@ -45528,112 +45515,112 @@ function Nf() {
           title: t(i ? "theme.light" : "theme.dark"),
           "aria-label": t(i ? "theme.light" : "theme.dark"),
           children: i ? /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-            /* @__PURE__ */ s("circle", { cx: "12", cy: "12", r: "4" }),
-            /* @__PURE__ */ s("path", { d: "M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" })
-          ] }) : /* @__PURE__ */ s("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ s("path", { d: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" }) })
+            /* @__PURE__ */ l("circle", { cx: "12", cy: "12", r: "4" }),
+            /* @__PURE__ */ l("path", { d: "M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" })
+          ] }) : /* @__PURE__ */ l("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ l("path", { d: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" }) })
         }
       ),
-      /* @__PURE__ */ s("div", { className: "topbar-group", children: /* @__PURE__ */ s("button", { id: "btnSettingsMenu", className: "btn-theme", onClick: () => d(!0), "aria-haspopup": "dialog", "aria-expanded": n, title: t("settings.title"), "aria-label": t("settings.title"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-        /* @__PURE__ */ s("circle", { cx: "12", cy: "12", r: "3" }),
-        /* @__PURE__ */ s("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" })
+      /* @__PURE__ */ l("div", { className: "topbar-group", children: /* @__PURE__ */ l("button", { id: "btnSettingsMenu", className: "btn-theme", onClick: () => d(!0), "aria-haspopup": "dialog", "aria-expanded": n, title: t("settings.title"), "aria-label": t("settings.title"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+        /* @__PURE__ */ l("circle", { cx: "12", cy: "12", r: "3" }),
+        /* @__PURE__ */ l("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" })
       ] }) }) }),
-      /* @__PURE__ */ s("button", { id: "btnStatusExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportStatus") }),
-      /* @__PURE__ */ s("button", { id: "btnStatusFhirExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportFhir") }),
-      /* @__PURE__ */ s("button", { id: "btnStatusPngExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportPng") }),
-      /* @__PURE__ */ s("button", { id: "btnStatusJpgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportJpg") }),
-      /* @__PURE__ */ s("button", { id: "btnStatusSvgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.svg") }),
-      /* @__PURE__ */ s("button", { id: "btnPerioSvgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioSvg") }),
-      /* @__PURE__ */ s("button", { id: "btnPerioPngExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioPng") }),
-      /* @__PURE__ */ s("button", { id: "btnPerioJpgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioJpg") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportStatus") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusFhirExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportFhir") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusPngExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportPng") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusJpgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.exportJpg") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusSvgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.svg") }),
+      /* @__PURE__ */ l("button", { id: "btnPerioSvgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioSvg") }),
+      /* @__PURE__ */ l("button", { id: "btnPerioPngExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioPng") }),
+      /* @__PURE__ */ l("button", { id: "btnPerioJpgExport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("export.menu.perioJpg") }),
       /* @__PURE__ */ M("div", { className: "topbar-group dropdown", ref: I, children: [
-        /* @__PURE__ */ s("button", { id: "btnExportMenu", className: "btn-theme", onClick: () => G((R) => !R), "aria-haspopup": "menu", "aria-expanded": Z, title: t("topbar.export"), "aria-label": t("topbar.export"), children: /* @__PURE__ */ s("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ s("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" }) }) }),
+        /* @__PURE__ */ l("button", { id: "btnExportMenu", className: "btn-theme", onClick: () => P((R) => !R), "aria-haspopup": "menu", "aria-expanded": Z, title: t("topbar.export"), "aria-label": t("topbar.export"), children: /* @__PURE__ */ l("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ l("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" }) }) }),
         Z && /* @__PURE__ */ M("div", { className: "dropdown-menu", role: "menu", "aria-label": t("topbar.export"), children: [
-          /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
-            document.getElementById("btnStatusExport")?.click(), G(!1);
+          /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+            document.getElementById("btnStatusExport")?.click(), P(!1);
           }, children: t("export.menu.statusJson") }),
-          /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
-            document.getElementById("btnStatusFhirExport")?.click(), G(!1);
+          /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+            document.getElementById("btnStatusFhirExport")?.click(), P(!1);
           }, children: t("export.menu.fhir") }),
-          l && /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
-            document.getElementById("btnStatusPngExport")?.click(), G(!1);
+          s && /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+            document.getElementById("btnStatusPngExport")?.click(), P(!1);
           }, children: t("export.menu.png") }),
-          f && /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
-            document.getElementById("btnStatusJpgExport")?.click(), G(!1);
+          f && /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+            document.getElementById("btnStatusJpgExport")?.click(), P(!1);
           }, children: t("export.menu.jpg") }),
-          p && /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
-            document.getElementById("btnStatusSvgExport")?.click(), G(!1);
+          p && /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+            document.getElementById("btnStatusSvgExport")?.click(), P(!1);
           }, children: t("export.menu.svg") }),
-          p && /* @__PURE__ */ s(
+          p && /* @__PURE__ */ l(
             "button",
             {
               className: "dropdown-item",
               role: "menuitem",
               disabled: !k,
               onClick: () => {
-                document.getElementById("btnPerioSvgExport")?.click(), G(!1);
+                document.getElementById("btnPerioSvgExport")?.click(), P(!1);
               },
               children: t("export.menu.perioSvg")
             }
           ),
-          l && /* @__PURE__ */ s(
+          s && /* @__PURE__ */ l(
             "button",
             {
               className: "dropdown-item",
               role: "menuitem",
               disabled: !k,
               onClick: () => {
-                document.getElementById("btnPerioPngExport")?.click(), G(!1);
+                document.getElementById("btnPerioPngExport")?.click(), P(!1);
               },
               children: t("export.menu.perioPng")
             }
           ),
-          f && /* @__PURE__ */ s(
+          f && /* @__PURE__ */ l(
             "button",
             {
               className: "dropdown-item",
               role: "menuitem",
               disabled: !k,
               onClick: () => {
-                document.getElementById("btnPerioJpgExport")?.click(), G(!1);
+                document.getElementById("btnPerioJpgExport")?.click(), P(!1);
               },
               children: t("export.menu.perioJpg")
             }
           ),
-          v && /* @__PURE__ */ s(
+          v && /* @__PURE__ */ l(
             "button",
             {
               className: "dropdown-item",
               role: "menuitem",
               onClick: () => {
-                G(!1), y(!0);
+                P(!1), y(!0);
               },
               children: t("export.menu.pdf")
             }
           )
         ] })
       ] }),
-      /* @__PURE__ */ s("button", { id: "btnStatusImport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.importStatus") }),
+      /* @__PURE__ */ l("button", { id: "btnStatusImport", hidden: !0, "aria-hidden": "true", tabIndex: -1, children: t("topbar.importStatus") }),
       /* @__PURE__ */ M("div", { className: "topbar-group dropdown", ref: H, children: [
-        /* @__PURE__ */ s("button", { id: "btnImportMenu", className: "btn-theme", onClick: () => A((R) => !R), "aria-haspopup": "menu", "aria-expanded": D, title: t("topbar.import"), "aria-label": t("topbar.import"), children: /* @__PURE__ */ s("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ s("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12" }) }) }),
+        /* @__PURE__ */ l("button", { id: "btnImportMenu", className: "btn-theme", onClick: () => A((R) => !R), "aria-haspopup": "menu", "aria-expanded": D, title: t("topbar.import"), "aria-label": t("topbar.import"), children: /* @__PURE__ */ l("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ l("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 8l5-5 5 5M12 3v12" }) }) }),
         D && /* @__PURE__ */ M("div", { className: "dropdown-menu", role: "menu", "aria-label": t("topbar.import"), children: [
-          x && /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+          x && /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
             v4("status"), document.getElementById("btnStatusImport")?.click(), A(!1);
           }, children: t("import.menu.statusJson") }),
-          u && /* @__PURE__ */ s("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
+          u && /* @__PURE__ */ l("button", { className: "dropdown-item", role: "menuitem", onClick: () => {
             v4("fhir"), document.getElementById("btnStatusImport")?.click(), A(!1);
           }, children: t("import.menu.fhir") })
         ] })
       ] }),
-      /* @__PURE__ */ s("input", { id: "statusImportInput", type: "file", accept: "application/json", hidden: !0 }),
-      /* @__PURE__ */ s("div", { className: "topbar-group", children: /* @__PURE__ */ s("button", { id: "btnCreditsMenu", className: "btn-theme", onClick: () => h(!0), "aria-haspopup": "dialog", title: t("credits.title"), "aria-label": t("credits.title"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
-        /* @__PURE__ */ s("circle", { cx: "12", cy: "12", r: "10" }),
-        /* @__PURE__ */ s("path", { d: "M12 16v-4M12 8h.01" })
+      /* @__PURE__ */ l("input", { id: "statusImportInput", type: "file", accept: "application/json", hidden: !0 }),
+      /* @__PURE__ */ l("div", { className: "topbar-group", children: /* @__PURE__ */ l("button", { id: "btnCreditsMenu", className: "btn-theme", onClick: () => h(!0), "aria-haspopup": "dialog", title: t("credits.title"), "aria-label": t("credits.title"), children: /* @__PURE__ */ M("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+        /* @__PURE__ */ l("circle", { cx: "12", cy: "12", r: "10" }),
+        /* @__PURE__ */ l("path", { d: "M12 16v-4M12 8h.01" })
       ] }) }) }),
-      /* @__PURE__ */ s("a", { id: "btnGithubLink", className: "btn-theme", href: "https://github.com/ZoliQua/React-Odontogram-Modul", target: "_blank", rel: "noopener noreferrer", title: t("credits.github"), "aria-label": t("credits.github"), children: /* @__PURE__ */ s("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ s("path", { d: "M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.575.106.785-.25.785-.556 0-.274-.01-1-.016-1.965-3.198.695-3.874-1.541-3.874-1.541-.523-1.33-1.278-1.684-1.278-1.684-1.045-.714.08-.7.08-.7 1.155.082 1.763 1.186 1.763 1.186 1.027 1.76 2.695 1.252 3.352.957.104-.744.402-1.252.732-1.54-2.553-.29-5.238-1.277-5.238-5.686 0-1.256.448-2.283 1.184-3.088-.12-.29-.513-1.46.112-3.045 0 0 .966-.31 3.166 1.18a11.02 11.02 0 0 1 2.88-.388c.977.004 1.96.132 2.88.388 2.198-1.49 3.163-1.18 3.163-1.18.626 1.585.233 2.755.114 3.045.737.805 1.183 1.832 1.183 3.088 0 4.42-2.69 5.393-5.25 5.677.413.357.78 1.06.78 2.137 0 1.543-.014 2.787-.014 3.166 0 .309.206.669.79.555A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z" }) }) })
+      /* @__PURE__ */ l("a", { id: "btnGithubLink", className: "btn-theme", href: "https://github.com/ZoliQua/React-Odontogram-Modul", target: "_blank", rel: "noopener noreferrer", title: t("credits.github"), "aria-label": t("credits.github"), children: /* @__PURE__ */ l("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "currentColor", "aria-hidden": "true", children: /* @__PURE__ */ l("path", { d: "M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.575.106.785-.25.785-.556 0-.274-.01-1-.016-1.965-3.198.695-3.874-1.541-3.874-1.541-.523-1.33-1.278-1.684-1.278-1.684-1.045-.714.08-.7.08-.7 1.155.082 1.763 1.186 1.763 1.186 1.027 1.76 2.695 1.252 3.352.957.104-.744.402-1.252.732-1.54-2.553-.29-5.238-1.277-5.238-5.686 0-1.256.448-2.283 1.184-3.088-.12-.29-.513-1.46.112-3.045 0 0 .966-.31 3.166 1.18a11.02 11.02 0 0 1 2.88-.388c.977.004 1.96.132 2.88.388 2.198-1.49 3.163-1.18 3.163-1.18.626 1.585.233 2.755.114 3.045.737.805 1.183 1.832 1.183 3.088 0 4.42-2.69 5.393-5.25 5.677.413.357.78 1.06.78 2.137 0 1.543-.014 2.787-.014 3.166 0 .309.206.669.79.555A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z" }) }) })
     ] })
   ] });
 }
-const Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
+const Nf = `<?xml version="1.0" encoding="UTF-8"?>\r
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">\r
   <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. SVG Version: 2.1.1 -->\r
   <path id="tooth-base" d="M125.8,149c-7.3-2-11.8,14.6-14.2,20.4-1.6,4.4-3.1,8.3-4.3,12.7-4.4,16.1-1.6,34.3-6.8,50.3-3.5,12.7-15.3,14.4-21.2,2.2-2.9-6.1-3.9-12.9-4.8-19.6-1-7.7-.8-15.6.7-23.1,1.8-11.4,7.5-22,7.5-33.8,0-17.2-3-32.7-6.7-49.2-8.4-29.3-27.4-79.6,13.2-93.9,12.3-4.9,25,3.3,37.5,3,1.7,0,3.4-.2,5.1-.4,12.9-2.1,27.7-9.6,41-5.3,22.5,7.4,20.6,39.1,16.6,58.5-1,4.8-2.3,9.4-3.6,13.2-2.2,6.2-5.3,12.2-6.7,19.1-1.9,8.4-2.9,16.8-3.7,25-1.5,15.5.3,30.4.5,45.1,0,8.7-.4,17.8-1.2,26.3-.8,8.3-2.5,16.7-4.5,24.9-1.7,7.8-5.6,18.9-14.1,20.5-14.8.7-11.9-38.8-14.3-48.9-1.8-10.1-6.8-42.3-15.9-47.4h0v.4Z" style="fill: #fff; stroke: #000; stroke-miterlimit: 10; stroke-width: 8px;"/>\r
@@ -45644,7 +45631,7 @@ const Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
     <line id="line-2" x1="21.2" y1="18.3" x2="229.8" y2="226.9" style="fill: none; stroke: #ef4444; stroke-linecap: round; stroke-width: 14px;"/>\r
     <line id="line-1" x1="21.2" y1="18.3" x2="229.8" y2="226.9" style="fill: none; isolation: isolate; opacity: .2; stroke: #111827; stroke-linecap: round; stroke-width: 3px;"/>\r
   </g>\r
-</svg>`, Vf = `<?xml version="1.0" encoding="UTF-8"?>\r
+</svg>`, Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 256 256">\r
   <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. SVG Version: 2.1.1 -->\r
   <defs>\r
@@ -45666,7 +45653,7 @@ const Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
     <line id="line-2" x1="18.3" y1="22.1" x2="226.9" y2="230.7" style="fill: none; stroke: #ef4444; stroke-linecap: round; stroke-width: 14px;"/>\r
     <line id="line-1" x1="18.3" y1="22.1" x2="226.9" y2="230.7" style="fill: none; isolation: isolate; opacity: .2; stroke: #111827; stroke-linecap: round; stroke-width: 3px;"/>\r
   </g>\r
-</svg>`, Ff = "data:image/svg+xml,%3c?xml%20version='1.0'%20encoding='UTF-8'?%3e%3csvg%20id='Layer_1'%20xmlns='http://www.w3.org/2000/svg'%20version='1.1'%20viewBox='0%200%20256%20256'%3e%3c!--%20Created%20by%20Zoltan%20Dul%20in%202026%20-%20free%20to%20use%20with%20MIT%20license.%20SVG%20Version:%202.1.1%20--%3e%3cpath%20d='M127,8.5c-12.6-.4-31.7-4.7-41.2-2.2-24.6,6.5-31.8,17.8-32.9,48.9-.9,27.2,7,58,16,74.1,6.8,11.6-8.5,58.2-6.9,80.9,1.5,22.6,20.5,50.7,31.8,40,2.4-2.2,11.4-10.8,16.6-24.3,2.6-6.8-.1-14.6,1.8-22.1,5.2-20.8,4.9-34.6,8.9-34.5,8.1.3,5.2,12.6,8.2,28.8s4.3,43.8,8,49c11,15.5,44.6-10.8,46.8-27.7,3.2-22.6-7.1-73.5.4-84.6,1.8-20.8,7.7-22.8,8.6-50s7.9-40.1,4.6-48.9c-7.9-21.3-2.6-23.8-25.1-34.4s-38.6,7.2-45.7,7Z'%20style='fill:%20none;%20stroke:%20%233b82f6;%20stroke-dasharray:%2010%2010;%20stroke-linejoin:%20round;%20stroke-width:%206px;'/%3e%3cpath%20id='tooth-base'%20d='M123.6,148.7c-7.3-2-11.8,14.6-14.2,20.4-1.6,4.4-3.1,8.3-4.3,12.7-4.4,16.1-1.6,34.3-6.8,50.3-3.5,12.7-15.3,14.4-21.2,2.2-2.9-6.1-3.9-12.9-4.8-19.6-1-7.7-.8-15.6.7-23.1,1.8-11.4,7.5-22,7.5-33.8-.1-17.2-3-32.7-6.7-49.2-8.4-29.3-27.4-79.6,13.2-93.9,12.3-4.9,25,3.3,37.5,3,1.7,0,3.4-.2,5.1-.4,12.9-2.1,27.7-9.6,41-5.3,22.5,7.4,20.6,39.1,16.6,58.5-1,4.8-2.3,9.4-3.6,13.2-2.2,6.2-5.3,12.2-6.7,19.1-1.9,8.4-2.9,16.8-3.7,25-1.5,15.5.3,30.4.5,45.1,0,8.7-.4,17.8-1.2,26.3-.8,8.3-2.5,16.7-4.5,24.9-1.7,7.8-5.6,18.9-14.1,20.5-14.8.7-11.9-38.8-14.3-48.9-1.8-10.1-6.8-42.3-15.9-47.4h-.1Z'%20style='fill:%20%23fff;%20stroke:%20%23000;%20stroke-miterlimit:%2010;%20stroke-width:%208px;'/%3e%3cg%20id='x-line'%3e%3cline%20id='line-2'%20x1='16.7'%20y1='15.6'%20x2='225.3'%20y2='224.2'%20style='fill:%20none;%20stroke:%20%23ef4444;%20stroke-linecap:%20round;%20stroke-width:%2014px;'/%3e%3cline%20id='line-1'%20x1='16.7'%20y1='15.6'%20x2='225.3'%20y2='224.2'%20style='fill:%20none;%20isolation:%20isolate;%20opacity:%20.2;%20stroke:%20%23111827;%20stroke-linecap:%20round;%20stroke-width:%203px;'/%3e%3c/g%3e%3c/svg%3e", Bf = `<?xml version="1.0" encoding="UTF-8"?>\r
+</svg>`, Vf = "data:image/svg+xml,%3c?xml%20version='1.0'%20encoding='UTF-8'?%3e%3csvg%20id='Layer_1'%20xmlns='http://www.w3.org/2000/svg'%20version='1.1'%20viewBox='0%200%20256%20256'%3e%3c!--%20Created%20by%20Zoltan%20Dul%20in%202026%20-%20free%20to%20use%20with%20MIT%20license.%20SVG%20Version:%202.1.1%20--%3e%3cpath%20d='M127,8.5c-12.6-.4-31.7-4.7-41.2-2.2-24.6,6.5-31.8,17.8-32.9,48.9-.9,27.2,7,58,16,74.1,6.8,11.6-8.5,58.2-6.9,80.9,1.5,22.6,20.5,50.7,31.8,40,2.4-2.2,11.4-10.8,16.6-24.3,2.6-6.8-.1-14.6,1.8-22.1,5.2-20.8,4.9-34.6,8.9-34.5,8.1.3,5.2,12.6,8.2,28.8s4.3,43.8,8,49c11,15.5,44.6-10.8,46.8-27.7,3.2-22.6-7.1-73.5.4-84.6,1.8-20.8,7.7-22.8,8.6-50s7.9-40.1,4.6-48.9c-7.9-21.3-2.6-23.8-25.1-34.4s-38.6,7.2-45.7,7Z'%20style='fill:%20none;%20stroke:%20%233b82f6;%20stroke-dasharray:%2010%2010;%20stroke-linejoin:%20round;%20stroke-width:%206px;'/%3e%3cpath%20id='tooth-base'%20d='M123.6,148.7c-7.3-2-11.8,14.6-14.2,20.4-1.6,4.4-3.1,8.3-4.3,12.7-4.4,16.1-1.6,34.3-6.8,50.3-3.5,12.7-15.3,14.4-21.2,2.2-2.9-6.1-3.9-12.9-4.8-19.6-1-7.7-.8-15.6.7-23.1,1.8-11.4,7.5-22,7.5-33.8-.1-17.2-3-32.7-6.7-49.2-8.4-29.3-27.4-79.6,13.2-93.9,12.3-4.9,25,3.3,37.5,3,1.7,0,3.4-.2,5.1-.4,12.9-2.1,27.7-9.6,41-5.3,22.5,7.4,20.6,39.1,16.6,58.5-1,4.8-2.3,9.4-3.6,13.2-2.2,6.2-5.3,12.2-6.7,19.1-1.9,8.4-2.9,16.8-3.7,25-1.5,15.5.3,30.4.5,45.1,0,8.7-.4,17.8-1.2,26.3-.8,8.3-2.5,16.7-4.5,24.9-1.7,7.8-5.6,18.9-14.1,20.5-14.8.7-11.9-38.8-14.3-48.9-1.8-10.1-6.8-42.3-15.9-47.4h-.1Z'%20style='fill:%20%23fff;%20stroke:%20%23000;%20stroke-miterlimit:%2010;%20stroke-width:%208px;'/%3e%3cg%20id='x-line'%3e%3cline%20id='line-2'%20x1='16.7'%20y1='15.6'%20x2='225.3'%20y2='224.2'%20style='fill:%20none;%20stroke:%20%23ef4444;%20stroke-linecap:%20round;%20stroke-width:%2014px;'/%3e%3cline%20id='line-1'%20x1='16.7'%20y1='15.6'%20x2='225.3'%20y2='224.2'%20style='fill:%20none;%20isolation:%20isolate;%20opacity:%20.2;%20stroke:%20%23111827;%20stroke-linecap:%20round;%20stroke-width:%203px;'/%3e%3c/g%3e%3c/svg%3e", Ff = `<?xml version="1.0" encoding="UTF-8"?>\r
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">\r
   <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. SVG Version: 2.1.1 -->\r
   <path id="tooth-occlusal" d="M107.9,27.1c11.6,0,24.9,1.7,37,2.8,8.3,0,17.1,1.1,24.9,3.9,5,1.7,9.4,3.3,14.4,5.5,7.7,3.3,15.5,7.7,21.6,14.4,6.1,6.1,11.1,13.3,13.3,21.6,1.1,3.3,1.7,7.2,2.8,11.1,1.7,9.4,2.8,17.7,2.8,26.5s0,13.3-1.1,19.9c0,8.8-1.1,17.1-2.8,25.4-2.8,11.1-5.5,23.2-11.1,33.2-7.7,13.3-22.7,21-37,24.3-5.5,1.1-11.6,2.2-17.1,3.3-8.3,1.7-16.6,4.4-24.9,6.6-7.2,1.7-14.4,1.1-21,0-6.1,0-12.2-1.7-18.2-1.7-10.5-1.1-21.6-1.7-30.4-7.7-7.2-5-12.7-12.2-17.1-19.9-5.5-8.3-9.4-17.7-11.1-27.6-1.7-7.2-1.1-14.9-1.1-22.1s2.8-19.4,3.9-29.3c2.2-11.6,2.8-23.8,5.5-35.4,2.8-11.6,8.3-22.1,15.5-31,7.7-8.8,18.2-16.6,29.3-19.9,7.2-1.7,14.9-2.8,22.1-2.8h0v-1.1h-.2Z" style="fill: #fff; stroke: #000; stroke-miterlimit: 10; stroke-width: 8px;"/>\r
@@ -45674,7 +45661,7 @@ const Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
     <line id="line-2" x1="16.7" y1="15.6" x2="225.3" y2="224.2" style="fill: none; stroke: #ef4444; stroke-linecap: round; stroke-width: 14px;"/>\r
     <line id="line-1" x1="16.7" y1="15.6" x2="225.3" y2="224.2" style="fill: none; isolation: isolate; opacity: .2; stroke: #111827; stroke-linecap: round; stroke-width: 3px;"/>\r
   </g>\r
-</svg>`, Kf = `<?xml version="1.0" encoding="UTF-8"?>\r
+</svg>`, Bf = `<?xml version="1.0" encoding="UTF-8"?>\r
 <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">\r
   <!-- Created by Zoltan Dul in 2026 - free to use with MIT license. SVG Version: 2.1.1 -->\r
   <path id="tooth-base" d="M122.9,152.7c-7.3-2-11.8,14.6-14.2,20.4-1.6,4.4-3.1,8.3-4.3,12.7-4.4,16.1-1.6,34.3-6.8,50.3-3.5,12.7-15.3,14.4-21.2,2.2-2.9-6.1-3.9-12.9-4.8-19.6-1-7.7-.8-15.6.7-23.1,1.8-11.4,7.5-22,7.5-33.8,0-17.2-3-32.7-6.7-49.2-8.4-29.3-27.4-79.6,13.2-93.9,12.3-4.9,25,3.3,37.5,3,1.7,0,3.4-.2,5.1-.4,12.9-2.1,27.7-9.6,41-5.3,22.5,7.4,20.6,39.1,16.6,58.5-1,4.8-2.3,9.4-3.6,13.2-2.2,6.2-5.3,12.2-6.7,19.1-1.9,8.4-2.9,16.8-3.7,25-1.5,15.5.3,30.4.5,45.1,0,8.7-.4,17.8-1.2,26.3-.8,8.3-2.5,16.7-4.5,24.9-1.7,7.8-5.6,18.9-14.1,20.5-14.8.7-11.9-38.8-14.3-48.9-1.8-10.1-6.8-42.3-15.9-47.4h0v.4Z" style="fill: #fff; stroke: #000; stroke-miterlimit: 10; stroke-width: 8px;"/>\r
@@ -45684,13 +45671,13 @@ const Rf = `<?xml version="1.0" encoding="UTF-8"?>\r
     <line id="line-1" x1="18.3" y1="22.1" x2="226.9" y2="230.7" style="fill: none; isolation: isolate; opacity: .2; stroke: #111827; stroke-linecap: round; stroke-width: 3px;"/>\r
   </g>\r
 </svg>`;
-function qf(t) {
+function Kf(t) {
   let e = (t || "").replace("#", "").trim();
   e.length === 3 && (e = e.split("").map((i) => i + i).join(""));
   const a = parseInt(e, 16);
   return e.length !== 6 || !Number.isFinite(a) ? "59,123,255" : `${a >> 16 & 255},${a >> 8 & 255},${a & 255}`;
 }
-function Yf() {
+function qf() {
   const {
     t,
     planModeAvailable: e,
@@ -45701,33 +45688,33 @@ function Yf() {
     toothAnatomy: n
   } = ei();
   return d1(() => {
-    ll();
+    nl();
   }, [e]), d1(() => {
-    sl();
+    ll();
   }, []), /* @__PURE__ */ M("section", { className: "chart", children: [
     /* @__PURE__ */ M("div", { className: "chart-header", children: [
       /* @__PURE__ */ M("div", { children: [
-        /* @__PURE__ */ s("div", { className: "chart-title", children: t("chart.title") }),
-        /* @__PURE__ */ s("div", { className: "chart-hint", children: t("chart.hint") })
+        /* @__PURE__ */ l("div", { className: "chart-title", children: t("chart.title") }),
+        /* @__PURE__ */ l("div", { className: "chart-hint", children: t("chart.hint") })
       ] }),
       e && /* @__PURE__ */ M("div", { id: "chartModeToggle", className: "chart-mode-toggle", role: "tablist", children: [
-        /* @__PURE__ */ s("button", { id: "chartModeStatus", type: "button", className: "chart-mode-btn is-active", role: "tab", "aria-selected": "true", children: t("chartMode.status") }),
-        /* @__PURE__ */ s("button", { id: "chartModePlan", type: "button", className: "chart-mode-btn", role: "tab", "aria-selected": "false", children: t("chartMode.plan") }),
-        /* @__PURE__ */ s("span", { id: "chartModePlanBadge", className: "plan-badge hidden", children: t("chartMode.planBadge") })
+        /* @__PURE__ */ l("button", { id: "chartModeStatus", type: "button", className: "chart-mode-btn is-active", role: "tab", "aria-selected": "true", children: t("chartMode.status") }),
+        /* @__PURE__ */ l("button", { id: "chartModePlan", type: "button", className: "chart-mode-btn", role: "tab", "aria-selected": "false", children: t("chartMode.plan") }),
+        /* @__PURE__ */ l("span", { id: "chartModePlanBadge", className: "plan-badge hidden", children: t("chartMode.planBadge") })
       ] }),
       /* @__PURE__ */ M("div", { id: "proposedLegend", className: "proposed-legend", children: [
-        /* @__PURE__ */ s("span", { className: "proposed-legend-swatch", "aria-hidden": "true" }),
+        /* @__PURE__ */ l("span", { className: "proposed-legend-swatch", "aria-hidden": "true" }),
         t("chart.proposedLegend")
       ] }),
       /* @__PURE__ */ M("div", { className: "chart-actions", children: [
-        /* @__PURE__ */ s("button", { id: "btnOcclView", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.occlusal"), "aria-label": t("chart.actions.occlusal"), "data-icon-src": Bf, "data-xline": "1" }),
-        /* @__PURE__ */ s("button", { id: "btnWisdomVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.wisdom"), "aria-label": t("chart.actions.wisdom"), "data-icon-src": Rf, "data-xline": "1" }),
-        /* @__PURE__ */ s("button", { id: "btnBoneVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.bone"), "aria-label": t("chart.actions.bone"), "data-icon-src": Vf, "data-xline": "1" }),
-        /* @__PURE__ */ s("button", { id: "btnPulpVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.pulp"), "aria-label": t("chart.actions.pulp"), "data-icon-src": Kf, "data-xline": "1" }),
-        /* @__PURE__ */ s("button", { id: "btnSelectNoneChart", className: "btn btn-ghost btn-icon", title: t("chart.actions.clearSelection"), "aria-label": t("chart.actions.clearSelection"), children: /* @__PURE__ */ s("img", { className: "icon-img", src: Ff, alt: "", "aria-hidden": "true" }) })
+        /* @__PURE__ */ l("button", { id: "btnOcclView", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.occlusal"), "aria-label": t("chart.actions.occlusal"), "data-icon-src": Ff, "data-xline": "1" }),
+        /* @__PURE__ */ l("button", { id: "btnWisdomVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.wisdom"), "aria-label": t("chart.actions.wisdom"), "data-icon-src": Nf, "data-xline": "1" }),
+        /* @__PURE__ */ l("button", { id: "btnBoneVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.bone"), "aria-label": t("chart.actions.bone"), "data-icon-src": Rf, "data-xline": "1" }),
+        /* @__PURE__ */ l("button", { id: "btnPulpVisible", className: "btn btn-toggle btn-icon", "aria-pressed": "true", title: t("chart.actions.pulp"), "aria-label": t("chart.actions.pulp"), "data-icon-src": Bf, "data-xline": "1" }),
+        /* @__PURE__ */ l("button", { id: "btnSelectNoneChart", className: "btn btn-ghost btn-icon", title: t("chart.actions.clearSelection"), "aria-label": t("chart.actions.clearSelection"), children: /* @__PURE__ */ l("img", { className: "icon-img", src: Vf, alt: "", "aria-hidden": "true" }) })
       ] })
     ] }),
-    /* @__PURE__ */ s(
+    /* @__PURE__ */ l(
       "div",
       {
         id: "toothGrid",
@@ -45737,7 +45724,7 @@ function Yf() {
         "data-tooth-num": i,
         "data-anatomy": n === "measured" ? "measured" : void 0,
         style: {
-          "--odon-select-rgb": qf(r),
+          "--odon-select-rgb": Kf(r),
           "--odon-select-border-style": o
         },
         "aria-label": t("chart.aria.toothGrid")
@@ -45745,36 +45732,36 @@ function Yf() {
     )
   ] });
 }
-function Wf() {
+function Yf() {
   const { t, toothInfoOn: e, summary: a } = ei();
   return e && a ? /* @__PURE__ */ M("section", { className: "tooth-info card", "aria-label": t("toothInfo.title"), children: [
-    /* @__PURE__ */ s("div", { className: "card-title", children: t("toothInfo.title") }),
-    /* @__PURE__ */ s("p", { className: "tooth-info-overview", children: a.overview }),
+    /* @__PURE__ */ l("div", { className: "card-title", children: t("toothInfo.title") }),
+    /* @__PURE__ */ l("p", { className: "tooth-info-overview", children: a.overview }),
     a.toothTable.rows.length > 0 && /* @__PURE__ */ M("div", { className: "tooth-info-table-wrap", children: [
       /* @__PURE__ */ M("table", { className: "tooth-info-table", children: [
-        /* @__PURE__ */ s("thead", { children: /* @__PURE__ */ M("tr", { children: [
-          /* @__PURE__ */ s("th", { "aria-hidden": "true" }),
-          a.toothTable.columns.map((i) => /* @__PURE__ */ s("th", { scope: "col", children: i.label }, i.key))
+        /* @__PURE__ */ l("thead", { children: /* @__PURE__ */ M("tr", { children: [
+          /* @__PURE__ */ l("th", { "aria-hidden": "true" }),
+          a.toothTable.columns.map((i) => /* @__PURE__ */ l("th", { scope: "col", children: i.label }, i.key))
         ] }) }),
-        /* @__PURE__ */ s("tbody", { children: a.toothTable.rows.map((i) => /* @__PURE__ */ M("tr", { children: [
-          /* @__PURE__ */ s("th", { scope: "row", children: i.label }),
+        /* @__PURE__ */ l("tbody", { children: a.toothTable.rows.map((i) => /* @__PURE__ */ M("tr", { children: [
+          /* @__PURE__ */ l("th", { scope: "row", children: i.label }),
           a.toothTable.columns.map((r) => {
             const o = i.cells[r.key] ?? [];
-            return /* @__PURE__ */ s("td", { children: o.map((n, d) => /* @__PURE__ */ M("span", { className: `tooth-cell tooth-cell-${n.status}`, children: [
+            return /* @__PURE__ */ l("td", { children: o.map((n, d) => /* @__PURE__ */ M("span", { className: `tooth-cell tooth-cell-${n.status}`, children: [
               n.label,
               d < o.length - 1 ? ", " : ""
             ] }, n.toothNo)) }, r.key);
           })
         ] }, i.key)) })
       ] }),
-      /* @__PURE__ */ s("p", { className: "tooth-info-table-legend", children: a.toothTable.legend })
+      /* @__PURE__ */ l("p", { className: "tooth-info-table-legend", children: a.toothTable.legend })
     ] }),
     a.individualNotes && /* @__PURE__ */ M("div", { id: "toothInfoNotes", className: "tooth-info-notes", children: [
       /* @__PURE__ */ M("span", { className: "tooth-info-heading", children: [
         a.individualNotes.heading,
         ":"
       ] }),
-      a.individualNotes.items.map((i, r) => /* @__PURE__ */ s("p", { className: "tooth-info-note-item", children: i }, r))
+      a.individualNotes.items.map((i, r) => /* @__PURE__ */ l("p", { className: "tooth-info-note-item", children: i }, r))
     ] }),
     a.sections.map((i) => /* @__PURE__ */ M("p", { className: "tooth-info-line", children: [
       /* @__PURE__ */ M("span", { className: "tooth-info-heading", children: [
@@ -45782,12 +45769,12 @@ function Wf() {
         ":"
       ] }),
       " ",
-      i.items.length ? i.items.join(", ") : /* @__PURE__ */ s("span", { className: "tooth-info-empty", children: i.emptyText })
+      i.items.length ? i.items.join(", ") : /* @__PURE__ */ l("span", { className: "tooth-info-empty", children: i.emptyText })
     ] }, i.key)),
     a.plannedChanges && a.plannedChanges.length > 0 && /* @__PURE__ */ M("div", { id: "plannedChangesBox", className: "planned-changes", children: [
-      /* @__PURE__ */ s("div", { className: "tooth-info-heading", children: t("toothInfo.plannedChanges") }),
+      /* @__PURE__ */ l("div", { className: "tooth-info-heading", children: t("toothInfo.plannedChanges") }),
       a.plannedChanges.map((i, r) => /* @__PURE__ */ M("p", { className: "planned-changes-item", children: [
-        T2(i.toothNo),
+        G2(i.toothNo),
         ": ",
         t(`planChange.axis.${i.axis}`),
         " ",
@@ -45818,70 +45805,70 @@ function Ye(t) {
   const [e, a] = e1(t);
   return d1(() => (a(t()), vt(() => a(t()))), []), e;
 }
-function Jf() {
-  const t = Ye(ic), e = t ? !t.visible : !1, a = t?.appliance ?? "none", i = t?.drift ?? "none", r = t?.vertical ?? "none", o = t?.rotation ?? !1;
+function Wf() {
+  const t = Ye(ac), e = t ? !t.visible : !1, a = t?.appliance ?? "none", i = t?.drift ?? "none", r = t?.vertical ?? "none", o = t?.rotation ?? !1;
   return /* @__PURE__ */ M("section", { id: "orthoCard", className: e ? "card hidden" : "card", children: [
-    /* @__PURE__ */ s("div", { className: "card-title card-title-row", children: /* @__PURE__ */ s("span", { children: c("toothInfo.orthodontics") }) }),
+    /* @__PURE__ */ l("div", { className: "card-title card-title-row", children: /* @__PURE__ */ l("span", { children: c("toothInfo.orthodontics") }) }),
     /* @__PURE__ */ M("div", { id: "orthoApplianceRow", className: "row", children: [
-      /* @__PURE__ */ s("span", { children: c("ortho.appliance.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("ortho.appliance.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "orthoApplianceSelect",
           value: a,
-          onChange: (n) => rc(n.target.value),
-          children: h5().map((n) => /* @__PURE__ */ s("option", { value: n.value, children: n.label }, n.value))
+          onChange: (n) => ic(n.target.value),
+          children: h5().map((n) => /* @__PURE__ */ l("option", { value: n.value, children: n.label }, n.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("div", { id: "orthoDriftRow", className: "row", children: [
-      /* @__PURE__ */ s("span", { children: c("ortho.drift.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("ortho.drift.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "orthoDriftSelect",
           value: i,
-          onChange: (n) => oc(n.target.value),
-          children: m5().map((n) => /* @__PURE__ */ s("option", { value: n.value, children: n.label }, n.value))
+          onChange: (n) => rc(n.target.value),
+          children: m5().map((n) => /* @__PURE__ */ l("option", { value: n.value, children: n.label }, n.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("div", { id: "orthoVerticalRow", className: "row", children: [
-      /* @__PURE__ */ s("span", { children: c("ortho.vertical.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("ortho.vertical.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "orthoVerticalSelect",
           value: r,
-          onChange: (n) => nc(n.target.value),
-          children: v5().map((n) => /* @__PURE__ */ s("option", { value: n.value, children: n.label }, n.value))
+          onChange: (n) => oc(n.target.value),
+          children: v5().map((n) => /* @__PURE__ */ l("option", { value: n.value, children: n.label }, n.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("label", { id: "orthoRotationRow", className: "row inline-check", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "orthoRotationToggle",
           checked: o,
-          onChange: (n) => lc(n.target.checked)
+          onChange: (n) => nc(n.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("ortho.rotation.label") })
+      /* @__PURE__ */ l("span", { children: c("ortho.rotation.label") })
     ] })
   ] });
 }
-function _f() {
-  const t = Ye(Td), e = n5(), a = e.map((n) => ({ value: n.id, label: n.label })), [i, r] = e1(a[0]?.value ?? ""), o = () => {
+function Jf() {
+  const t = Ye(Gd), e = n5(), a = e.map((n) => ({ value: n.id, label: n.label })), [i, r] = e1(a[0]?.value ?? ""), o = () => {
     const n = e.find((d) => d.id === i);
-    tp(n);
+    $9(n);
   };
-  return /* @__PURE__ */ M(st, { children: [
+  return /* @__PURE__ */ M(lt, { children: [
     /* @__PURE__ */ M("div", { className: "row status-actions", id: "statusCardBody", children: [
-      /* @__PURE__ */ s("button", { id: "btnPrimaryDentition", className: "btn btn-ghost btn-sm", onClick: () => gd(), children: c("status.primaryDentition") }),
-      /* @__PURE__ */ s("button", { id: "btnMixedDentition", className: "btn btn-ghost btn-sm", onClick: () => yd(), children: c("status.mixedDentition") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("button", { id: "btnPrimaryDentition", className: "btn btn-ghost btn-sm", onClick: () => vd(), children: c("status.primaryDentition") }),
+      /* @__PURE__ */ l("button", { id: "btnMixedDentition", className: "btn btn-ghost btn-sm", onClick: () => gd(), children: c("status.mixedDentition") }),
+      /* @__PURE__ */ l(
         "button",
         {
           id: "btnEdentulous",
@@ -45893,287 +45880,287 @@ function _f() {
       )
     ] }),
     /* @__PURE__ */ M("div", { className: "row status-extra-row", children: [
-      /* @__PURE__ */ s("span", { children: c("status.extraLabel") }),
-      /* @__PURE__ */ s("select", { id: "statusExtraSelect", value: i, onChange: (n) => r(n.target.value), children: a.map((n) => /* @__PURE__ */ s("option", { value: n.value, children: n.label }, n.value)) }),
-      /* @__PURE__ */ s("button", { id: "statusExtraApply", className: "btn btn-ghost btn-sm", onClick: () => o(), children: c("status.extraApply") })
+      /* @__PURE__ */ l("span", { children: c("status.extraLabel") }),
+      /* @__PURE__ */ l("select", { id: "statusExtraSelect", value: i, onChange: (n) => r(n.target.value), children: a.map((n) => /* @__PURE__ */ l("option", { value: n.value, children: n.label }, n.value)) }),
+      /* @__PURE__ */ l("button", { id: "statusExtraApply", className: "btn btn-ghost btn-sm", onClick: () => o(), children: c("status.extraApply") })
     ] })
   ] });
 }
-function Qf() {
-  const t = Ye(Ac), e = /* @__PURE__ */ M("label", { id: "extractionPlanRow", className: t.extractionPlanRowVisible ? "inline-check" : "inline-check hidden", children: [
-    /* @__PURE__ */ s(
+function _f() {
+  const t = Ye(Oc), e = /* @__PURE__ */ M("label", { id: "extractionPlanRow", className: t.extractionPlanRowVisible ? "inline-check" : "inline-check hidden", children: [
+    /* @__PURE__ */ l(
       "input",
       {
         type: "checkbox",
         id: "extractionPlan",
         checked: t.extractionPlanChecked,
-        onChange: (a) => jc(a.target.checked)
+        onChange: (a) => Hc(a.target.checked)
       }
     ),
-    /* @__PURE__ */ s("span", { children: c("tooth.extractionPlan") })
+    /* @__PURE__ */ l("span", { children: c("tooth.extractionPlan") })
   ] });
-  return /* @__PURE__ */ M(st, { children: [
+  return /* @__PURE__ */ M(lt, { children: [
     /* @__PURE__ */ M("div", { className: "row", children: [
-      /* @__PURE__ */ s("span", { children: c("tooth.baseLabel") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("tooth.baseLabel") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "toothSelect",
           value: t.toothSelectValue,
-          onChange: (a) => Uc(a.target.value),
-          children: t.toothSelectOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, disabled: a.disabled, children: a.label }, a.value))
+          onChange: (a) => Ac(a.target.value),
+          children: t.toothSelectOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, disabled: a.disabled, children: a.label }, a.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("div", { id: "substrateRow", className: t.substrateRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s("span", { children: c("substrate.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("substrate.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "substrateSelect",
           value: t.substrateValue,
-          onChange: (a) => Ec(a.target.value),
-          children: t.substrateOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+          onChange: (a) => Uc(a.target.value),
+          children: t.substrateOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("label", { id: "extractionRow", className: t.extractionRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "extractionWound",
           checked: t.extractionWoundChecked,
-          onChange: (a) => Hc(a.target.checked)
+          onChange: (a) => Lc(a.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("tooth.extractionWound") })
+      /* @__PURE__ */ l("span", { children: c("tooth.extractionWound") })
     ] }),
     /* @__PURE__ */ M("label", { id: "missingClosedRow", className: t.missingClosedRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "missingClosed",
           checked: t.missingClosedChecked,
-          onChange: (a) => Fc(a.target.checked)
+          onChange: (a) => Vc(a.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("tooth.missingClosed") })
+      /* @__PURE__ */ l("span", { children: c("tooth.missingClosed") })
     ] }),
     /* @__PURE__ */ M("div", { id: "restorationRow", className: t.restorationRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s("span", { children: c("restoration.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("restoration.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "restorationSelect",
           value: t.restorationValue,
-          onChange: (a) => Lc(a.target.value),
-          children: t.restorationOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+          onChange: (a) => Ec(a.target.value),
+          children: t.restorationOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("label", { id: "crownLeakageRow", className: t.crownLeakageRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "crownLeakage",
           checked: t.crownLeakageChecked,
-          onChange: (a) => Vc(a.target.checked)
+          onChange: (a) => Rc(a.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("crownLeakage.label") })
+      /* @__PURE__ */ l("span", { children: c("crownLeakage.label") })
     ] }),
     /* @__PURE__ */ M("div", { id: "brokenCrownRow", className: t.brokenCrownRowVisible ? "row inline-checks contact-row" : "row inline-checks contact-row hidden", children: [
       /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "brokenMesial",
             checked: t.brokenMesialChecked,
-            onChange: (a) => Yc(a.target.checked)
+            onChange: (a) => qc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.broken.mesial") })
+        /* @__PURE__ */ l("span", { children: c("tooth.broken.mesial") })
       ] }),
       /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "brokenIncisal",
             checked: t.brokenIncisalChecked,
-            onChange: (a) => Wc(a.target.checked)
+            onChange: (a) => Yc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.broken.incisal") })
+        /* @__PURE__ */ l("span", { children: c("tooth.broken.incisal") })
       ] }),
       /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "brokenDistal",
             checked: t.brokenDistalChecked,
-            onChange: (a) => Jc(a.target.checked)
+            onChange: (a) => Wc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.broken.distal") })
+        /* @__PURE__ */ l("span", { children: c("tooth.broken.distal") })
       ] }),
       t.extractionPlanParent === "brokenCrownRow" && e
     ] }),
     /* @__PURE__ */ M("div", { id: "contactPointRow", className: t.contactPointRowVisible ? "row inline-checks contact-row" : "row inline-checks contact-row hidden", children: [
       /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "contactMesial",
             checked: t.contactMesialChecked,
-            onChange: (a) => Bc(a.target.checked)
+            onChange: (a) => Fc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.contact.mesialMissing") })
+        /* @__PURE__ */ l("span", { children: c("tooth.contact.mesialMissing") })
       ] }),
       /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "contactDistal",
             checked: t.contactDistalChecked,
-            onChange: (a) => Kc(a.target.checked)
+            onChange: (a) => Bc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.contact.distalMissing") })
+        /* @__PURE__ */ l("span", { children: c("tooth.contact.distalMissing") })
       ] })
     ] }),
     /* @__PURE__ */ M("div", { id: "bruxismRow", className: t.bruxismRowVisible ? "inline-checks bruxism-row wear-stack" : "inline-checks bruxism-row wear-stack hidden", children: [
       /* @__PURE__ */ M("div", { id: "wearEdgeRow", className: "row", children: [
         /* @__PURE__ */ M("label", { id: "wearEdgeSelectLabel", className: t.wearSimple ? "hidden" : void 0, children: [
-          /* @__PURE__ */ s("span", { children: c("tooth.bruxism.edgeWear") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("span", { children: c("tooth.bruxism.edgeWear") }),
+          /* @__PURE__ */ l(
             "select",
             {
               id: "wearEdgeSelect",
               value: t.wearEdgeValue,
-              onChange: (a) => _c(a.target.value),
-              children: t.wearEdgeOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+              onChange: (a) => Jc(a.target.value),
+              children: t.wearEdgeOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
             }
           )
         ] }),
         /* @__PURE__ */ M("label", { id: "wearEdgeToggleLabel", className: t.wearSimple ? "inline-check" : "inline-check hidden", children: [
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l(
             "input",
             {
               type: "checkbox",
               id: "wearEdgeToggle",
               checked: t.wearEdgeToggleChecked,
-              onChange: (a) => $c(a.target.checked)
+              onChange: (a) => Xc(a.target.checked)
             }
           ),
-          /* @__PURE__ */ s("span", { children: c("tooth.bruxism.edgeWear") })
+          /* @__PURE__ */ l("span", { children: c("tooth.bruxism.edgeWear") })
         ] })
       ] }),
       /* @__PURE__ */ M("div", { id: "wearCervicalRow", className: "row", children: [
         /* @__PURE__ */ M("label", { id: "wearCervicalSelectLabel", className: t.wearSimple ? "hidden" : void 0, children: [
-          /* @__PURE__ */ s("span", { children: c("tooth.bruxism.neckWear") }),
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l("span", { children: c("tooth.bruxism.neckWear") }),
+          /* @__PURE__ */ l(
             "select",
             {
               id: "wearCervicalSelect",
               value: t.wearCervicalValue,
-              onChange: (a) => Qc(a.target.value),
-              children: t.wearCervicalOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+              onChange: (a) => _c(a.target.value),
+              children: t.wearCervicalOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
             }
           )
         ] }),
         /* @__PURE__ */ M("label", { id: "wearCervicalToggleLabel", className: t.wearSimple ? "inline-check" : "inline-check hidden", children: [
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l(
             "input",
             {
               type: "checkbox",
               id: "wearCervicalToggle",
               checked: t.wearCervicalToggleChecked,
-              onChange: (a) => td(a.target.checked)
+              onChange: (a) => $c(a.target.checked)
             }
           ),
-          /* @__PURE__ */ s("span", { children: c("tooth.bruxism.neckWear") })
+          /* @__PURE__ */ l("span", { children: c("tooth.bruxism.neckWear") })
         ] })
       ] }),
       t.extractionPlanParent === "bruxismRow" && e
     ] }),
     /* @__PURE__ */ M("div", { id: "discolorationRow", className: t.discolorationRowVisible ? "row inline-checks" : "row inline-checks hidden", children: [
       /* @__PURE__ */ M("label", { id: "discolorationSelectLabel", className: t.discoSimple ? "hidden" : void 0, children: [
-        /* @__PURE__ */ s("span", { children: c("discoloration.label") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("discoloration.label") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "discolorationSelect",
             value: t.discolorationValue,
-            onChange: (a) => Xc(a.target.value),
-            children: t.discolorationOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => Qc(a.target.value),
+            children: t.discolorationOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] }),
       /* @__PURE__ */ M("label", { id: "discolorationToggleLabel", className: t.discoSimple ? "inline-check" : "inline-check hidden", children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "discolorationToggle",
             checked: t.discolorationToggleChecked,
-            onChange: (a) => ed(a.target.checked)
+            onChange: (a) => td(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("discoloration.label") })
+        /* @__PURE__ */ l("span", { children: c("discoloration.label") })
       ] })
     ] }),
     /* @__PURE__ */ M("div", { id: "crownActionsRow", className: t.crownActionsRowVisible ? "row inline-checks bridge-actions-row" : "row inline-checks bridge-actions-row hidden", children: [
       /* @__PURE__ */ M("label", { id: "bridgePillarRow", className: t.bridgePillarRowVisible ? "inline-check" : "inline-check hidden", children: [
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "bridgePillar",
             checked: t.bridgePillarChecked,
-            onChange: (a) => qc(a.target.checked)
+            onChange: (a) => Kc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("tooth.bridgePillar") })
+        /* @__PURE__ */ l("span", { children: c("tooth.bridgePillar") })
       ] }),
       t.extractionPlanParent === "crownActionsRow" && e
     ] }),
     /* @__PURE__ */ M("label", { id: "crownReplaceRow", className: t.crownReplaceRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "crownReplace",
           checked: t.crownReplaceChecked,
-          onChange: (a) => Nc(a.target.checked)
+          onChange: (a) => jc(a.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("tooth.crownReplace") })
+      /* @__PURE__ */ l("span", { children: c("tooth.crownReplace") })
     ] }),
     /* @__PURE__ */ M("label", { id: "crownNeededRow", className: t.crownNeededRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "crownNeeded",
           checked: t.crownNeededChecked,
-          onChange: (a) => Rc(a.target.checked)
+          onChange: (a) => Nc(a.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("tooth.crownNeeded") })
+      /* @__PURE__ */ l("span", { children: c("tooth.crownNeeded") })
     ] })
   ] });
 }
 function L4({ ind: t }) {
-  return /* @__PURE__ */ s(
+  return /* @__PURE__ */ l(
     "span",
     {
       className: t.className,
@@ -46186,8 +46173,8 @@ function L4({ ind: t }) {
     }
   );
 }
-function xl({ cells: t }) {
-  return /* @__PURE__ */ s("div", { className: "surface-cross", children: t.map((e) => {
+function bl({ cells: t }) {
+  return /* @__PURE__ */ l("div", { className: "surface-cross", children: t.map((e) => {
     const a = (e.indicators ?? []).filter((r) => r.side === "left"), i = (e.indicators ?? []).filter((r) => r.side === "right");
     return /* @__PURE__ */ M(
       "label",
@@ -46196,8 +46183,8 @@ function xl({ cells: t }) {
         style: e.disabled ? { display: "none" } : void 0,
         ...e.attrs ?? {},
         children: [
-          a.map((r) => /* @__PURE__ */ s(L4, { ind: r }, r.key)),
-          /* @__PURE__ */ s(
+          a.map((r) => /* @__PURE__ */ l(L4, { ind: r }, r.key)),
+          /* @__PURE__ */ l(
             "input",
             {
               type: "checkbox",
@@ -46208,17 +46195,17 @@ function xl({ cells: t }) {
               onChange: (r) => e.onToggle(r.target.checked)
             }
           ),
-          /* @__PURE__ */ s("span", { className: "surf-letter", children: e.letter }),
-          /* @__PURE__ */ s("span", { id: e.labelId, className: "surf-name", children: e.label }),
-          i.map((r) => /* @__PURE__ */ s(L4, { ind: r }, r.key))
+          /* @__PURE__ */ l("span", { className: "surf-letter", children: e.letter }),
+          /* @__PURE__ */ l("span", { id: e.labelId, className: "surf-name", children: e.label }),
+          i.map((r) => /* @__PURE__ */ l(L4, { ind: r }, r.key))
         ]
       },
       e.value
     );
   }) });
 }
-function Xf() {
-  const t = Ye(cc), e = x1(null);
+function Qf() {
+  const t = Ye(sc), e = x1(null);
   fr(() => {
     e.current?.closest("#cariesSection")?.classList.toggle("hidden", !t.cariesSectionVisible);
   });
@@ -46242,34 +46229,34 @@ function Xf() {
           "data-icdas": String(i.icdas),
           ...i.radio ? { "data-radio": i.radio } : {}
         },
-        children: i.isIcdas ? String(i.icdas) : /* @__PURE__ */ M(st, { children: [
-          /* @__PURE__ */ s("i", {}),
-          /* @__PURE__ */ s("i", {}),
-          /* @__PURE__ */ s("i", {})
+        children: i.isIcdas ? String(i.icdas) : /* @__PURE__ */ M(lt, { children: [
+          /* @__PURE__ */ l("i", {}),
+          /* @__PURE__ */ l("i", {}),
+          /* @__PURE__ */ l("i", {})
         ] }),
         onClick: (r) => {
-          !i.checked || _2() || w5(i.surface, r);
+          !i.checked || _2() || M5(i.surface, r);
         }
       }
     ]
   }));
-  return /* @__PURE__ */ M(st, { children: [
-    /* @__PURE__ */ s("div", { className: "hint", ref: e, children: c("caries.hint") }),
+  return /* @__PURE__ */ M(lt, { children: [
+    /* @__PURE__ */ l("div", { className: "hint", ref: e, children: c("caries.hint") }),
     /* @__PURE__ */ M("div", { id: "cariesDepthRow", className: t.cariesDepthVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s("span", { children: c("caries.depthLabel") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("caries.depthLabel") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "cariesDepthSelect",
           value: String(t.cariesActiveDepth),
-          onChange: (i) => pc(Number(i.target.value)),
-          children: c5().map((i) => /* @__PURE__ */ s("option", { value: i.value, title: i.title, children: i.label }, i.value))
+          onChange: (i) => dc(Number(i.target.value)),
+          children: c5().map((i) => /* @__PURE__ */ l("option", { value: i.value, title: i.title, children: i.label }, i.value))
         }
       )
     ] }),
-    /* @__PURE__ */ s("div", { id: "cariesChecks", children: /* @__PURE__ */ s(xl, { cells: a }) }),
-    /* @__PURE__ */ s("div", { id: "cariesSubcrownRow", className: "check-grid subcrown-row", children: /* @__PURE__ */ M("label", { style: t.subcrownDisabled ? { display: "none" } : void 0, children: [
-      /* @__PURE__ */ s(
+    /* @__PURE__ */ l("div", { id: "cariesChecks", children: /* @__PURE__ */ l(bl, { cells: a }) }),
+    /* @__PURE__ */ l("div", { id: "cariesSubcrownRow", className: "check-grid subcrown-row", children: /* @__PURE__ */ M("label", { style: t.subcrownDisabled ? { display: "none" } : void 0, children: [
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
@@ -46280,24 +46267,24 @@ function Xf() {
           onChange: (i) => i4("caries-subcrown", i.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { id: "lbl-caries-subcrown", children: t.subcrownLabel })
+      /* @__PURE__ */ l("span", { id: "lbl-caries-subcrown", children: t.subcrownLabel })
     ] }) }),
     /* @__PURE__ */ M("div", { id: "rootCariesRow", className: t.rootCariesVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s("span", { children: c("caries.rootLabel") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("caries.rootLabel") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "rootCariesSelect",
           value: t.rootCariesDisplay,
-          onChange: (i) => fc(i.target.value),
-          children: H8().map((i) => /* @__PURE__ */ s("option", { value: i.value, children: i.label }, i.value))
+          onChange: (i) => pc(i.target.value),
+          children: L8().map((i) => /* @__PURE__ */ l("option", { value: i.value, children: i.label }, i.value))
         }
       )
     ] })
   ] });
 }
-function $f() {
-  const t = Ye(mc), e = x1(null);
+function Xf() {
+  const t = Ye(hc), e = x1(null);
   fr(() => {
     e.current?.closest("#fillingSection")?.classList.toggle("hidden", !t.fillingSectionVisible);
   });
@@ -46310,7 +46297,7 @@ function $f() {
     checked: i.checked,
     disabled: !1,
     attrs: { "data-material": i.material },
-    onToggle: (r) => gc(i.surface, r),
+    onToggle: (r) => vc(i.surface, r),
     indicators: [
       // LEFT-side structural filling-defect indicator (single `<i>` bar).
       {
@@ -46319,9 +46306,9 @@ function $f() {
         title: c("fillingDefect.label"),
         side: "left",
         attrs: i.hasDefect && i.defectValue ? { "data-defect": i.defectValue } : {},
-        children: /* @__PURE__ */ s("i", {}),
+        children: /* @__PURE__ */ l("i", {}),
         onClick: (r) => {
-          !i.checked || _2() || !Kn() || Zd(i.surface, r);
+          !i.checked || _2() || !Kn() || wd(i.surface, r);
         }
       },
       // RIGHT-side recurrent-caries indicator (CARS badge/bars when the filled
@@ -46332,194 +46319,194 @@ function $f() {
         title: c("caries.recurrentHint"),
         side: "right",
         attrs: i.hasSubcaries ? { "data-depth": i.subDepth, "data-icdas": String(i.subIcdas) } : {},
-        children: i.hasSubcaries && i.isIcdas ? String(i.subIcdas) : /* @__PURE__ */ M(st, { children: [
-          /* @__PURE__ */ s("i", {}),
-          /* @__PURE__ */ s("i", {}),
-          /* @__PURE__ */ s("i", {})
+        children: i.hasSubcaries && i.isIcdas ? String(i.subIcdas) : /* @__PURE__ */ M(lt, { children: [
+          /* @__PURE__ */ l("i", {}),
+          /* @__PURE__ */ l("i", {}),
+          /* @__PURE__ */ l("i", {})
         ] }),
         onClick: (r) => {
-          !i.checked || _2() || w5(i.surface, r);
+          !i.checked || _2() || M5(i.surface, r);
         }
       }
     ]
   }));
-  return /* @__PURE__ */ M(st, { children: [
+  return /* @__PURE__ */ M(lt, { children: [
     /* @__PURE__ */ M("div", { className: "row", ref: e, children: [
-      /* @__PURE__ */ s("span", { children: c("filling.typeLabel") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("filling.typeLabel") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "fillingSelect",
           value: t.fillingMaterial,
-          onChange: (i) => vc(i.target.value),
-          children: t.fillingOptions.map((i) => /* @__PURE__ */ s("option", { value: i.value, children: i.label }, i.value))
+          onChange: (i) => mc(i.target.value),
+          children: t.fillingOptions.map((i) => /* @__PURE__ */ l("option", { value: i.value, children: i.label }, i.value))
         }
       )
     ] }),
-    /* @__PURE__ */ s(
+    /* @__PURE__ */ l(
       "div",
       {
         id: "fillingSurfaceChecks",
         className: [t.surfaceGridVisible ? null : "hidden", t.defectDisabled ? "defect-disabled" : null].filter(Boolean).join(" "),
-        children: /* @__PURE__ */ s(xl, { cells: a })
+        children: /* @__PURE__ */ l(bl, { cells: a })
       }
     ),
     /* @__PURE__ */ M("label", { id: "fillingSimpleRow", className: t.simpleRowVisible ? "row fissure-row" : "row fissure-row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "fillingSimpleToggle",
           checked: t.simpleToggleChecked,
-          onChange: (i) => yc(i.target.checked)
+          onChange: (i) => gc(i.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("filling.simpleToggle") })
+      /* @__PURE__ */ l("span", { children: c("filling.simpleToggle") })
     ] }),
     /* @__PURE__ */ M("div", { id: "fillingSimpleDefectRow", className: t.simpleDefectRowVisible ? "row" : "row hidden", children: [
-      /* @__PURE__ */ s("span", { children: c("fillingDefect.label") }),
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l("span", { children: c("fillingDefect.label") }),
+      /* @__PURE__ */ l(
         "select",
         {
           id: "fillingSimpleDefectSelect",
           value: t.simpleDefectValue,
-          onChange: (i) => uc(i.target.value),
-          children: t.simpleDefectOptions.map((i) => /* @__PURE__ */ s("option", { value: i.value, children: i.label }, i.value))
+          onChange: (i) => yc(i.target.value),
+          children: t.simpleDefectOptions.map((i) => /* @__PURE__ */ l("option", { value: i.value, children: i.label }, i.value))
         }
       )
     ] }),
     /* @__PURE__ */ M("label", { id: "fissureSealingRow", className: t.fissureRowVisible ? "row fissure-row" : "row fissure-row hidden", children: [
-      /* @__PURE__ */ s(
+      /* @__PURE__ */ l(
         "input",
         {
           type: "checkbox",
           id: "fissureSealing",
           checked: t.fissureSealing,
-          onChange: (i) => kc(i.target.checked)
+          onChange: (i) => uc(i.target.checked)
         }
       ),
-      /* @__PURE__ */ s("span", { children: c("filling.fissureSealing") })
+      /* @__PURE__ */ l("span", { children: c("filling.fissureSealing") })
     ] }),
-    /* @__PURE__ */ s("div", { id: "fillingSubcariesSummary", className: t.subcariesSummary ? "hint" : "hint hidden", children: t.subcariesSummary }),
-    /* @__PURE__ */ s("div", { id: "fillingDefectSummary", className: t.defectSummary ? "hint" : "hint hidden", children: t.defectSummary })
+    /* @__PURE__ */ l("div", { id: "fillingSubcariesSummary", className: t.subcariesSummary ? "hint" : "hint hidden", children: t.subcariesSummary }),
+    /* @__PURE__ */ l("div", { id: "fillingDefectSummary", className: t.defectSummary ? "hint" : "hint hidden", children: t.defectSummary })
   ] });
 }
-function th() {
-  const t = Ye(Mc), e = x1(null);
+function $f() {
+  const t = Ye(xc), e = x1(null);
   return fr(() => {
     e.current?.closest("#rootPeriodontiumSection")?.classList.toggle("hidden", !t.sectionVisible);
-  }), /* @__PURE__ */ M(st, { children: [
+  }), /* @__PURE__ */ M(lt, { children: [
     /* @__PURE__ */ M("div", { id: "rpRootBlock", ref: e, className: t.rootBlockVisible ? void 0 : "hidden", children: [
-      /* @__PURE__ */ s("div", { className: "hint", children: c("endo.hint") }),
+      /* @__PURE__ */ l("div", { className: "hint", children: c("endo.hint") }),
       /* @__PURE__ */ M("div", { id: "pulpEndoRow", className: "row", children: [
-        /* @__PURE__ */ s("span", { children: c("pulpEndo.label") }),
+        /* @__PURE__ */ l("span", { children: c("pulpEndo.label") }),
         /* @__PURE__ */ M(
           "select",
           {
             id: "pulpEndoSelect",
             value: t.pulpEndoValue,
             disabled: t.pulpEndoDisabled,
-            onChange: (a) => wc(a.target.value),
+            onChange: (a) => Mc(a.target.value),
             children: [
-              t.pulpEndoNoneOption && /* @__PURE__ */ s("option", { value: t.pulpEndoNoneOption.value, children: t.pulpEndoNoneOption.label }),
-              t.pulpEndoGroups.map((a) => /* @__PURE__ */ s("optgroup", { label: a.label, children: a.options.map((i) => /* @__PURE__ */ s("option", { value: i.value, children: i.label }, i.value)) }, a.label))
+              t.pulpEndoNoneOption && /* @__PURE__ */ l("option", { value: t.pulpEndoNoneOption.value, children: t.pulpEndoNoneOption.label }),
+              t.pulpEndoGroups.map((a) => /* @__PURE__ */ l("optgroup", { label: a.label, children: a.options.map((i) => /* @__PURE__ */ l("option", { value: i.value, children: i.label }, i.value)) }, a.label))
             ]
           }
         )
       ] }),
       /* @__PURE__ */ M("div", { id: "apicalDxRow", className: t.apicalDxRowVisible ? "row" : "row hidden", children: [
-        /* @__PURE__ */ s("span", { children: c("apical.dxLabel") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("apical.dxLabel") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "apicalDxSelect",
             value: t.apicalDxValue,
             disabled: t.apicalDxDisabled,
-            onChange: (a) => Zc(a.target.value),
-            children: t.apicalDxOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => wc(a.target.value),
+            children: t.apicalDxOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] }),
       /* @__PURE__ */ M("div", { id: "periapicalTypeRow", className: t.periapicalRowVisible ? "row" : "row hidden", children: [
-        /* @__PURE__ */ s("span", { children: c("periapical.typeLabel") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("periapical.typeLabel") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "periapicalTypeSelect",
             value: t.periapicalTypeValue,
-            onChange: (a) => Sc(a.target.value),
-            children: t.periapicalTypeOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => Zc(a.target.value),
+            children: t.periapicalTypeOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] }),
       /* @__PURE__ */ M("div", { id: "resorptionRow", className: t.resorptionRowVisible ? "row" : "row hidden", children: [
-        /* @__PURE__ */ s("span", { children: c("root.resorption") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("root.resorption") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "resorptionSelect",
             value: t.resorptionValue,
             disabled: t.resorptionDisabled,
-            onChange: (a) => zc(a.target.value),
-            children: t.resorptionOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => Sc(a.target.value),
+            children: t.resorptionOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] }),
       /* @__PURE__ */ M("div", { className: "row inline-checks", children: [
         /* @__PURE__ */ M("label", { style: t.endoResectionDisabled ? { display: "none" } : void 0, children: [
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l(
             "input",
             {
               type: "checkbox",
               id: "endoResection",
               checked: t.endoResectionChecked,
               disabled: t.endoResectionDisabled,
-              onChange: (a) => Ic(a.target.checked)
+              onChange: (a) => zc(a.target.checked)
             }
           ),
-          /* @__PURE__ */ s("span", { children: c("endo.resection") })
+          /* @__PURE__ */ l("span", { children: c("endo.resection") })
         ] }),
         /* @__PURE__ */ M("label", { style: t.parapulpalPinDisabled ? { display: "none" } : void 0, children: [
-          /* @__PURE__ */ s(
+          /* @__PURE__ */ l(
             "input",
             {
               type: "checkbox",
               id: "parapulpalPin",
               checked: t.parapulpalPinChecked,
               disabled: t.parapulpalPinDisabled,
-              onChange: (a) => Cc(a.target.checked)
+              onChange: (a) => Ic(a.target.checked)
             }
           ),
-          /* @__PURE__ */ s("span", { children: c("endo.parapulpalPin") })
+          /* @__PURE__ */ l("span", { children: c("endo.parapulpalPin") })
         ] })
       ] })
     ] }),
     /* @__PURE__ */ M("div", { id: "rpPerioBlock", className: t.perioBlockVisible ? void 0 : "hidden", children: [
       /* @__PURE__ */ M("div", { id: "mobilityRow", className: t.mobilityRowVisible ? "row" : "row hidden", children: [
-        /* @__PURE__ */ s("span", { children: c("inflammation.mobilityLabel") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("inflammation.mobilityLabel") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "mobilitySelect",
             value: t.mobilityValue,
             disabled: t.mobilityDisabled,
-            onChange: (a) => Pc(a.target.value),
-            children: t.mobilityOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => Cc(a.target.value),
+            children: t.mobilityOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] }),
       /* @__PURE__ */ M("div", { id: "perioRow", className: t.perioRowVisible ? "perio-block" : "perio-block hidden", children: [
-        /* @__PURE__ */ s("div", { className: "perio-block-title", children: c("perio.title") }),
-        /* @__PURE__ */ s("div", { id: "perioGrid", className: "perio-grid" }),
-        /* @__PURE__ */ s("div", { id: "perioReadout", className: "hint perio-readout" })
+        /* @__PURE__ */ l("div", { className: "perio-block-title", children: c("perio.title") }),
+        /* @__PURE__ */ l("div", { id: "perioGrid", className: "perio-grid" }),
+        /* @__PURE__ */ l("div", { id: "perioReadout", className: "hint perio-readout" })
       ] }),
-      /* @__PURE__ */ s("div", { id: "modsChecks", className: "check-grid", children: t.mods.map((a) => /* @__PURE__ */ M(
+      /* @__PURE__ */ l("div", { id: "modsChecks", className: "check-grid", children: t.mods.map((a) => /* @__PURE__ */ M(
         "label",
         {
           className: a.hiddenClass ? "hidden" : void 0,
           style: a.styleHidden ? { display: "none" } : void 0,
           children: [
-            /* @__PURE__ */ s(
+            /* @__PURE__ */ l(
               "input",
               {
                 type: "checkbox",
@@ -46527,122 +46514,122 @@ function th() {
                 value: a.value,
                 checked: a.checked,
                 disabled: a.disabled,
-                onChange: (i) => Gc(a.value, i.target.checked)
+                onChange: (i) => Pc(a.value, i.target.checked)
               }
             ),
-            /* @__PURE__ */ s("span", { id: `lbl-${a.value}`, children: a.label })
+            /* @__PURE__ */ l("span", { id: `lbl-${a.value}`, children: a.label })
           ]
         },
         a.value
       )) }),
-      /* @__PURE__ */ s("div", { id: "calculusRow", className: t.calculusRowVisible ? "row inline-checks" : "row inline-checks hidden", children: /* @__PURE__ */ M("label", { children: [
-        /* @__PURE__ */ s(
+      /* @__PURE__ */ l("div", { id: "calculusRow", className: t.calculusRowVisible ? "row inline-checks" : "row inline-checks hidden", children: /* @__PURE__ */ M("label", { children: [
+        /* @__PURE__ */ l(
           "input",
           {
             type: "checkbox",
             id: "calculusToggle",
             checked: t.calculusChecked,
-            onChange: (a) => Tc(a.target.checked)
+            onChange: (a) => Gc(a.target.checked)
           }
         ),
-        /* @__PURE__ */ s("span", { children: c("calculus.label") })
+        /* @__PURE__ */ l("span", { children: c("calculus.label") })
       ] }) }),
       /* @__PURE__ */ M("div", { id: "periImplantRow", className: t.periImplantRowVisible ? "row" : "row hidden", children: [
-        /* @__PURE__ */ s("span", { children: c("periImplant.label") }),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l("span", { children: c("periImplant.label") }),
+        /* @__PURE__ */ l(
           "select",
           {
             id: "periImplantSelect",
             value: t.periImplantValue,
-            onChange: (a) => Dc(a.target.value),
-            children: t.periImplantOptions.map((a) => /* @__PURE__ */ s("option", { value: a.value, children: a.label }, a.value))
+            onChange: (a) => Tc(a.target.value),
+            children: t.periImplantOptions.map((a) => /* @__PURE__ */ l("option", { value: a.value, children: a.label }, a.value))
           }
         )
       ] })
     ] })
   ] });
 }
-function eh() {
+function th() {
   const { t, showStatusCard: e, showOrthoCard: a } = ei();
   return d1(() => {
-    ll();
+    nl();
   }, []), /* @__PURE__ */ M("div", { className: "panel-odontogram-controls", children: [
     /* @__PURE__ */ M("div", { className: "panel-header", children: [
       /* @__PURE__ */ M("div", { children: [
         /* @__PURE__ */ M("div", { className: "panel-title-row", children: [
-          /* @__PURE__ */ s("span", { className: "panel-title", children: t("panel.controls") }),
+          /* @__PURE__ */ l("span", { className: "panel-title", children: t("panel.controls") }),
           /* @__PURE__ */ M("div", { className: "panel-title-actions", children: [
-            /* @__PURE__ */ s("button", { id: "btnSelectNone", className: "btn btn-ghost btn-icon btn-danger", title: t("panel.clearSelection"), "aria-label": t("panel.clearSelection"), children: t("panel.clearSelection") }),
-            /* @__PURE__ */ s("button", { id: "btnToggleControlsCard", className: "icon-btn", title: t("actions.collapse", { label: t("panel.controls") }), "aria-label": t("actions.collapse", { label: t("panel.controls") }), children: /* @__PURE__ */ s("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
+            /* @__PURE__ */ l("button", { id: "btnSelectNone", className: "btn btn-ghost btn-icon btn-danger", title: t("panel.clearSelection"), "aria-label": t("panel.clearSelection"), children: t("panel.clearSelection") }),
+            /* @__PURE__ */ l("button", { id: "btnToggleControlsCard", className: "icon-btn", title: t("actions.collapse", { label: t("panel.controls") }), "aria-label": t("actions.collapse", { label: t("panel.controls") }), children: /* @__PURE__ */ l("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
           ] })
         ] }),
         /* @__PURE__ */ M("div", { className: "panel-subtitle", children: [
           t("panel.activeTooth"),
           ": ",
-          /* @__PURE__ */ s("span", { id: "activeToothLabel", className: "pill", children: t("selection.none") })
+          /* @__PURE__ */ l("span", { id: "activeToothLabel", className: "pill", children: t("selection.none") })
         ] }),
         /* @__PURE__ */ M("div", { id: "controlsActions", className: "panel-subtitle select-actions", children: [
           /* @__PURE__ */ M("div", { className: "select-actions-row", children: [
-            /* @__PURE__ */ s("button", { id: "btnSelectAll", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.all"), children: t("panel.selectActions.all") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectAllPresent", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.present"), children: t("panel.selectActions.present") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectPermanent", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.permanent"), children: t("panel.selectActions.permanent") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectMilk", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.milk"), children: t("panel.selectActions.milk") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectImplants", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.implants"), children: t("panel.selectActions.implants") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectAllMissing", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.missing"), children: t("panel.selectActions.missing") })
+            /* @__PURE__ */ l("button", { id: "btnSelectAll", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.all"), children: t("panel.selectActions.all") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectAllPresent", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.present"), children: t("panel.selectActions.present") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectPermanent", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.permanent"), children: t("panel.selectActions.permanent") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectMilk", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.milk"), children: t("panel.selectActions.milk") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectImplants", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.implants"), children: t("panel.selectActions.implants") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectAllMissing", className: "btn btn-ghost btn-icon fade-toggle", title: t("panel.selectActions.missing"), children: t("panel.selectActions.missing") })
           ] }),
           /* @__PURE__ */ M("div", { className: "select-actions-row", children: [
-            /* @__PURE__ */ s("button", { id: "btnSelectUpper", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upper"), children: t("panel.selectActions.upper") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectUpperFront", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upperFront"), children: t("panel.selectActions.upperFront") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectUpperMolar", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upperMolar"), children: t("panel.selectActions.upperMolar") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectLower", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lower"), children: t("panel.selectActions.lower") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectLowerFront", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lowerFront"), children: t("panel.selectActions.lowerFront") }),
-            /* @__PURE__ */ s("button", { id: "btnSelectLowerMolar", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lowerMolar"), children: t("panel.selectActions.lowerMolar") })
+            /* @__PURE__ */ l("button", { id: "btnSelectUpper", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upper"), children: t("panel.selectActions.upper") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectUpperFront", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upperFront"), children: t("panel.selectActions.upperFront") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectUpperMolar", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.upperMolar"), children: t("panel.selectActions.upperMolar") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectLower", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lower"), children: t("panel.selectActions.lower") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectLowerFront", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lowerFront"), children: t("panel.selectActions.lowerFront") }),
+            /* @__PURE__ */ l("button", { id: "btnSelectLowerMolar", className: "btn btn-ghost btn-icon", title: t("panel.selectActions.lowerMolar"), children: t("panel.selectActions.lowerMolar") })
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ s("div", { id: "warnings", className: "warnings" })
+      /* @__PURE__ */ l("div", { id: "warnings", className: "warnings" })
     ] }),
     /* @__PURE__ */ M("div", { className: "panel-body", children: [
-      /* @__PURE__ */ s("div", { className: e ? "" : "hidden", children: /* @__PURE__ */ M("section", { className: "card", id: "statusCard", children: [
+      /* @__PURE__ */ l("div", { className: e ? "" : "hidden", children: /* @__PURE__ */ M("section", { className: "card", id: "statusCard", children: [
         /* @__PURE__ */ M("div", { className: "card-title card-title-row", children: [
-          /* @__PURE__ */ s("span", { children: t("status.title") }),
-          /* @__PURE__ */ s("button", { id: "btnToggleStatusCard", className: "icon-btn", title: t("actions.collapse", { label: t("status.title") }), "aria-label": t("actions.collapse", { label: t("status.title") }), children: /* @__PURE__ */ s("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
+          /* @__PURE__ */ l("span", { children: t("status.title") }),
+          /* @__PURE__ */ l("button", { id: "btnToggleStatusCard", className: "icon-btn", title: t("actions.collapse", { label: t("status.title") }), "aria-label": t("actions.collapse", { label: t("status.title") }), children: /* @__PURE__ */ l("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
         ] }),
-        /* @__PURE__ */ s(_f, {})
+        /* @__PURE__ */ l(Jf, {})
       ] }) }),
       /* @__PURE__ */ M("section", { className: "card", children: [
-        /* @__PURE__ */ s("div", { className: "card-title card-title-row", children: /* @__PURE__ */ s("span", { children: t("tooth.title") }) }),
-        /* @__PURE__ */ s(Qf, {})
+        /* @__PURE__ */ l("div", { className: "card-title card-title-row", children: /* @__PURE__ */ l("span", { children: t("tooth.title") }) }),
+        /* @__PURE__ */ l(_f, {})
       ] }),
-      /* @__PURE__ */ s("div", { className: a ? "" : "hidden", children: /* @__PURE__ */ s(Jf, {}) }),
+      /* @__PURE__ */ l("div", { className: a ? "" : "hidden", children: /* @__PURE__ */ l(Wf, {}) }),
       /* @__PURE__ */ M("section", { id: "cariesSection", className: "card", children: [
         /* @__PURE__ */ M("div", { className: "card-title card-title-row", children: [
-          /* @__PURE__ */ s("span", { children: t("caries.title") }),
-          /* @__PURE__ */ s("button", { id: "btnToggleCariesCard", className: "icon-btn", title: t("actions.collapse", { label: t("caries.title") }), "aria-label": t("actions.collapse", { label: t("caries.title") }), children: /* @__PURE__ */ s("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
+          /* @__PURE__ */ l("span", { children: t("caries.title") }),
+          /* @__PURE__ */ l("button", { id: "btnToggleCariesCard", className: "icon-btn", title: t("actions.collapse", { label: t("caries.title") }), "aria-label": t("actions.collapse", { label: t("caries.title") }), children: /* @__PURE__ */ l("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
         ] }),
-        /* @__PURE__ */ s(Xf, {})
+        /* @__PURE__ */ l(Qf, {})
       ] }),
       /* @__PURE__ */ M("section", { id: "fillingSection", className: "card", children: [
         /* @__PURE__ */ M("div", { className: "card-title card-title-row", children: [
-          /* @__PURE__ */ s("span", { children: t("filling.title") }),
-          /* @__PURE__ */ s("button", { id: "btnToggleFillingCard", className: "icon-btn", title: t("actions.collapse", { label: t("filling.title") }), "aria-label": t("actions.collapse", { label: t("filling.title") }), children: /* @__PURE__ */ s("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
+          /* @__PURE__ */ l("span", { children: t("filling.title") }),
+          /* @__PURE__ */ l("button", { id: "btnToggleFillingCard", className: "icon-btn", title: t("actions.collapse", { label: t("filling.title") }), "aria-label": t("actions.collapse", { label: t("filling.title") }), children: /* @__PURE__ */ l("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
         ] }),
-        /* @__PURE__ */ s($f, {})
+        /* @__PURE__ */ l(Xf, {})
       ] }),
       /* @__PURE__ */ M("section", { id: "rootPeriodontiumSection", className: "card", children: [
         /* @__PURE__ */ M("div", { className: "card-title card-title-row", children: [
-          /* @__PURE__ */ s("span", { children: t("card.rootPeriodontium") }),
-          /* @__PURE__ */ s("button", { id: "btnToggleRootPeriodontiumCard", className: "icon-btn", title: t("actions.collapse", { label: t("card.rootPeriodontium") }), "aria-label": t("actions.collapse", { label: t("card.rootPeriodontium") }), children: /* @__PURE__ */ s("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
+          /* @__PURE__ */ l("span", { children: t("card.rootPeriodontium") }),
+          /* @__PURE__ */ l("button", { id: "btnToggleRootPeriodontiumCard", className: "icon-btn", title: t("actions.collapse", { label: t("card.rootPeriodontium") }), "aria-label": t("actions.collapse", { label: t("card.rootPeriodontium") }), children: /* @__PURE__ */ l("span", { className: "toggle-icon", "aria-hidden": "true", children: "−" }) })
         ] }),
-        /* @__PURE__ */ s(th, {})
+        /* @__PURE__ */ l($f, {})
       ] })
     ] })
   ] });
 }
-function Mh(t) {
-  return /* @__PURE__ */ s(Lf, { ...t, children: /* @__PURE__ */ s(ah, {}) });
+function xh(t) {
+  return /* @__PURE__ */ l(Ef, { ...t, children: /* @__PURE__ */ l(eh, {}) });
 }
-function ah() {
+function eh() {
   const {
     t,
     viewMode: e,
@@ -46652,7 +46639,7 @@ function ah() {
     perioChartAvailable: o,
     perioOpen: n,
     confirmOpen: d,
-    settingsState: l,
+    settingsState: s,
     settingsOpen: f,
     setSettingsOpen: p,
     pdfOpen: v,
@@ -46660,11 +46647,11 @@ function ah() {
     creditsOpen: x,
     setCreditsOpen: u
   } = ei();
-  return /* @__PURE__ */ M(st, { children: [
-    /* @__PURE__ */ s(Nf, {}),
+  return /* @__PURE__ */ M(lt, { children: [
+    /* @__PURE__ */ l(jf, {}),
     /* @__PURE__ */ M("main", { className: "layout", children: [
-      /* @__PURE__ */ s("div", { className: "perio-launch-bar" + (o ? "" : " hidden"), children: e === "toggle" ? /* @__PURE__ */ M("div", { id: "appViewToggle", className: "chart-mode-toggle", role: "tablist", children: [
-        /* @__PURE__ */ s(
+      /* @__PURE__ */ l("div", { className: "perio-launch-bar" + (o ? "" : " hidden"), children: e === "toggle" ? /* @__PURE__ */ M("div", { id: "appViewToggle", className: "chart-mode-toggle", role: "tablist", children: [
+        /* @__PURE__ */ l(
           "button",
           {
             id: "appViewOdontogram",
@@ -46676,7 +46663,7 @@ function ah() {
             children: t("view.odontogram")
           }
         ),
-        /* @__PURE__ */ s(
+        /* @__PURE__ */ l(
           "button",
           {
             id: "appViewDentalChart",
@@ -46688,54 +46675,54 @@ function ah() {
             children: t("view.dentalChart")
           }
         )
-      ] }) : /* @__PURE__ */ s(
+      ] }) : /* @__PURE__ */ l(
         "button",
         {
           type: "button",
           id: "openPerioOverlayBtn",
           className: "btn btn-ghost",
-          onClick: () => k9(),
+          onClick: () => u9(),
           title: t("perio.open"),
           "aria-label": t("perio.open"),
           children: t("perio.open")
         }
       ) }),
       !r && /* @__PURE__ */ M("div", { className: "chart-column", children: [
-        /* @__PURE__ */ s(Yf, {}),
-        /* @__PURE__ */ s(Wf, {})
+        /* @__PURE__ */ l(qf, {}),
+        /* @__PURE__ */ l(Yf, {})
       ] }),
-      r && /* @__PURE__ */ s("div", { className: "dental-chart-column", dir: "ltr", children: /* @__PURE__ */ s(I4, { inline: !0 }) }),
-      /* @__PURE__ */ s("aside", { className: "panel", children: r ? /* @__PURE__ */ s(pl, {}) : /* @__PURE__ */ s(eh, {}) })
+      r && /* @__PURE__ */ l("div", { className: "dental-chart-column", dir: "ltr", children: /* @__PURE__ */ l(I4, { inline: !0 }) }),
+      /* @__PURE__ */ l("aside", { className: "panel", children: r ? /* @__PURE__ */ l(dl, {}) : /* @__PURE__ */ l(th, {}) })
     ] }),
-    e === "popup" && /* @__PURE__ */ s(I4, { open: n, onClose: X5 }),
-    /* @__PURE__ */ s(
-      If,
+    e === "popup" && /* @__PURE__ */ l(I4, { open: n, onClose: Q5 }),
+    /* @__PURE__ */ l(
+      zf,
       {
         open: f,
         onClose: () => p(!1),
         t,
-        settings: l
+        settings: s
       }
     ),
-    /* @__PURE__ */ s(
-      Cf,
+    /* @__PURE__ */ l(
+      If,
       {
         open: d,
         t,
-        onAccept: i8,
-        onCancel: r8
+        onAccept: a8,
+        onCancel: i8
       }
     ),
-    /* @__PURE__ */ s(
-      Pf,
+    /* @__PURE__ */ l(
+      Cf,
       {
         open: v,
         t,
         onClose: () => k(!1)
       }
     ),
-    /* @__PURE__ */ s(
-      Of,
+    /* @__PURE__ */ l(
+      Df,
       {
         open: x,
         t,
@@ -46745,165 +46732,165 @@ function ah() {
   ] });
 }
 export {
-  Xf as CariesCard,
-  $f as FillingsCard,
-  Yf as OdontogramChartSurface,
-  Lf as OdontogramProvider,
-  Mh as OdontogramShell,
-  Nf as OdontogramTopbar,
-  Jf as OrthodonticsCard,
+  Qf as CariesCard,
+  Xf as FillingsCard,
+  qf as OdontogramChartSurface,
+  Ef as OdontogramProvider,
+  xh as OdontogramShell,
+  jf as OdontogramTopbar,
+  Wf as OrthodonticsCard,
   I4 as PerioChart,
-  th as RootPeriodontiumCard,
-  _f as StatusesCard,
-  xl as SurfaceCross,
-  eh as ToothControlsSurface,
-  Qf as ToothDetailsCard,
-  Wf as ToothInfoSurface,
-  i8 as acceptDualStateConfirm,
-  yd as applyMixedDentition,
-  gd as applyPrimaryDentition,
-  tp as applyStatusExtra,
-  r8 as cancelDualStateConfirm,
-  bh as clearPersistedState,
-  cp as clearSelection,
-  X5 as closePerioOverlay,
-  Mh as default,
-  sp as destroyOdontogram,
-  tf as disablePersistence,
-  kh as enablePersistence,
-  _9 as exportFhir,
+  $f as RootPeriodontiumCard,
+  Jf as StatusesCard,
+  bl as SurfaceCross,
+  th as ToothControlsSurface,
+  _f as ToothDetailsCard,
+  Yf as ToothInfoSurface,
+  a8 as acceptDualStateConfirm,
+  gd as applyMixedDentition,
+  vd as applyPrimaryDentition,
+  $9 as applyStatusExtra,
+  i8 as cancelDualStateConfirm,
+  kh as clearPersistedState,
+  sp as clearSelection,
+  Q5 as closePerioOverlay,
+  xh as default,
+  lp as destroyOdontogram,
+  $p as disablePersistence,
+  uh as enablePersistence,
+  J9 as exportFhir,
   p4 as exportImage,
-  W9 as exportPdf,
+  Y9 as exportPdf,
   f4 as exportPerioImage,
-  D9 as exportPerioSvg,
-  J9 as exportStatus,
-  T9 as exportSvg,
-  T2 as formatToothLabel,
-  cc as getActiveCaries,
-  mc as getActiveFillings,
-  ic as getActiveOrtho,
-  Mc as getActiveRootPerio,
-  Ac as getActiveToothDetails,
-  dh as getCariesDepthEnabled,
+  T9 as exportPerioSvg,
+  W9 as exportStatus,
+  G9 as exportSvg,
+  G2 as formatToothLabel,
+  sc as getActiveCaries,
+  hc as getActiveFillings,
+  ac as getActiveOrtho,
+  xc as getActiveRootPerio,
+  Oc as getActiveToothDetails,
+  ch as getCariesDepthEnabled,
   c5 as getCariesDepthOptions,
   Fe as getChartMode,
-  l8 as getDiscolorationDetailLevel,
-  Td as getEdentulous,
-  u8 as getFillingComplexity,
+  n8 as getDiscolorationDetailLevel,
+  Gd as getEdentulous,
+  y8 as getFillingComplexity,
   Kn as getFillingDefectEnabled,
-  b8 as getFillingMaterialAvailability,
-  k8 as getFissureSealingEnabled,
-  oh as getIcdasEnabled,
-  uh as getNotesEnabled,
-  dl as getOdontogramSummary,
+  k8 as getFillingMaterialAvailability,
+  u8 as getFissureSealingEnabled,
+  rh as getIcdasEnabled,
+  yh as getNotesEnabled,
+  cl as getOdontogramSummary,
   Ne as getPdfSettings,
   je as getPerioIndexNameMode,
   ja as getPerioRowVisibility,
   c4 as getPerioViewMode,
-  Xd as getPlanChanges,
-  hh as getPlanChart,
-  gh as getPluginState,
-  o8 as getPulpDetailLevel,
-  ch as getRadiographicDepthMode,
+  Qd as getPlanChanges,
+  fh as getPlanChart,
+  vh as getPluginState,
+  r8 as getPulpDetailLevel,
+  sh as getRadiographicDepthMode,
   _2 as getReadOnly,
-  sh as getRootCariesMode,
-  lh as getSecondaryCariesMode,
-  qd as getStatusChart,
+  lh as getRootCariesMode,
+  nh as getSecondaryCariesMode,
+  Kd as getStatusChart,
   n5 as getStatusExtras,
-  nh as getSurfaceNotation,
+  oh as getSurfaceNotation,
   To as getToothAnatomy,
-  yh as getToothStateSummary,
-  n8 as getWearDetailLevel,
+  gh as getToothStateSummary,
+  o8 as getWearDetailLevel,
   Ri as hasAnyPerioData,
   Rr as importStatus,
-  lp as initOdontogram,
-  a8 as isDualStateConfirmPending,
-  b9 as isPerioOverlayOpen,
-  xh as isPersistenceEnabled,
+  np as initOdontogram,
+  e8 as isDualStateConfirmPending,
+  k9 as isPerioOverlayOpen,
+  bh as isPersistenceEnabled,
   vt as onStateChange,
-  w5 as openCariesDepthPopup,
-  Zd as openFillingDefectPopup,
-  k9 as openPerioOverlay,
-  sl as rebuildGrid,
-  dp as registerPlugins,
-  fh as resetMouth,
-  ph as resetTooth,
-  ll as rewireControls,
-  H8 as rootCariesOptions,
-  Zc as setApicalDxForSelection,
-  qc as setBridgePillarForSelection,
-  Jc as setBrokenDistalForSelection,
-  Wc as setBrokenIncisalForSelection,
-  Yc as setBrokenMesialForSelection,
-  Tc as setCalculusForSelection,
-  pc as setCariesActiveDepthForSelection,
+  M5 as openCariesDepthPopup,
+  wd as openFillingDefectPopup,
+  u9 as openPerioOverlay,
+  ll as rebuildGrid,
+  cp as registerPlugins,
+  ph as resetMouth,
+  dh as resetTooth,
+  nl as rewireControls,
+  L8 as rootCariesOptions,
+  wc as setApicalDxForSelection,
+  Kc as setBridgePillarForSelection,
+  Wc as setBrokenDistalForSelection,
+  Yc as setBrokenIncisalForSelection,
+  qc as setBrokenMesialForSelection,
+  Gc as setCalculusForSelection,
+  dc as setCariesActiveDepthForSelection,
   Ro as setCariesDepthEnabled,
   i4 as setCariesSurfaceForSelection,
   Q3 as setChartMode,
-  Kc as setContactDistalForSelection,
-  Bc as setContactMesialForSelection,
-  Vc as setCrownLeakageForSelection,
-  Rc as setCrownNeededForSelection,
-  Nc as setCrownReplaceForSelection,
+  Bc as setContactDistalForSelection,
+  Fc as setContactMesialForSelection,
+  Rc as setCrownLeakageForSelection,
+  Nc as setCrownNeededForSelection,
+  jc as setCrownReplaceForSelection,
   Eo as setDiscolorationDetailLevel,
-  Xc as setDiscolorationForSelection,
-  ed as setDiscolorationToggleForSelection,
+  Qc as setDiscolorationForSelection,
+  td as setDiscolorationToggleForSelection,
   Ke as setEdentulous,
-  Ic as setEndoResectionForSelection,
-  jc as setExtractionPlanForSelection,
-  Hc as setExtractionWoundForSelection,
+  zc as setEndoResectionForSelection,
+  Hc as setExtractionPlanForSelection,
+  Lc as setExtractionWoundForSelection,
   Qo as setFillingComplexity,
   _o as setFillingDefectEnabled,
   $o as setFillingMaterialAvailability,
-  vc as setFillingMaterialForSelection,
-  uc as setFillingSimpleDefectForSelection,
-  yc as setFillingSimpleToggleForSelection,
-  gc as setFillingSurfaceForSelection,
+  mc as setFillingMaterialForSelection,
+  yc as setFillingSimpleDefectForSelection,
+  gc as setFillingSimpleToggleForSelection,
+  vc as setFillingSurfaceForSelection,
   Xo as setFissureSealingEnabled,
-  kc as setFissureSealingForSelection,
+  uc as setFissureSealingForSelection,
   Ha as setHealthyPulpVisible,
   Oo as setIcdasEnabled,
   v4 as setImportFormat,
-  Fc as setMissingClosedForSelection,
-  Pc as setMobilityForSelection,
-  Gc as setModForSelection,
+  Vc as setMissingClosedForSelection,
+  Cc as setMobilityForSelection,
+  Pc as setModForSelection,
   g4 as setNotesEnabled,
-  np as setNumberingSystem,
+  op as setNumberingSystem,
   Pr as setOcclusalVisible,
-  rc as setOrthoApplianceForSelection,
-  oc as setOrthoDriftForSelection,
-  lc as setOrthoRotationForSelection,
-  nc as setOrthoVerticalForSelection,
-  Cc as setParapulpalPinForSelection,
-  N9 as setPdfSettings,
-  Dc as setPeriImplantForSelection,
-  Sc as setPeriapicalTypeForSelection,
-  S9 as setPerioIndexNameMode,
-  Z9 as setPerioRowVisibility,
-  x9 as setPerioViewMode,
-  mh as setPlanChart,
-  vh as setPluginState,
+  ic as setOrthoApplianceForSelection,
+  rc as setOrthoDriftForSelection,
+  nc as setOrthoRotationForSelection,
+  oc as setOrthoVerticalForSelection,
+  Ic as setParapulpalPinForSelection,
+  j9 as setPdfSettings,
+  Tc as setPeriImplantForSelection,
+  Zc as setPeriapicalTypeForSelection,
+  Z9 as setPerioIndexNameMode,
+  w9 as setPerioRowVisibility,
+  b9 as setPerioViewMode,
+  hh as setPlanChart,
+  mh as setPluginState,
   Ao as setPulpDetailLevel,
-  wc as setPulpEndoForSelection,
+  Mc as setPulpEndoForSelection,
   No as setRadiographicDepthMode,
-  kp as setReadOnly,
-  zc as setResorptionForSelection,
-  Lc as setRestorationForSelection,
-  fc as setRootCariesForSelection,
+  up as setReadOnly,
+  Sc as setResorptionForSelection,
+  Ec as setRestorationForSelection,
+  pc as setRootCariesForSelection,
   jo as setRootCariesMode,
   Ho as setSecondaryCariesMode,
   ji as setShowBase,
-  Ec as setSubstrateForSelection,
+  Uc as setSubstrateForSelection,
   Lo as setSurfaceNotation,
-  T7 as setToothAnatomy,
-  Uc as setToothSelectionForSelection,
-  Qc as setWearCervicalForSelection,
-  td as setWearCervicalToggleForSelection,
+  G7 as setToothAnatomy,
+  Ac as setToothSelectionForSelection,
+  _c as setWearCervicalForSelection,
+  $c as setWearCervicalToggleForSelection,
   Uo as setWearDetailLevel,
-  _c as setWearEdgeForSelection,
-  $c as setWearEdgeToggleForSelection,
-  C5 as setWisdomVisible,
-  Jp as startIntroTour,
+  Jc as setWearEdgeForSelection,
+  Xc as setWearEdgeToggleForSelection,
+  I5 as setWisdomVisible,
+  Wp as startIntroTour,
   Ye as useEngineState,
   ei as useOdontogramUi
 };

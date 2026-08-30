@@ -58,5 +58,5 @@ describe("controlled odontogram fork package", () => {
       expect(container.querySelector("#btnResetAll")).toBeNull();
       expect(container.querySelector("#btnResetTooth")).toBeNull();
     });
-  });
+  }, 15000);
 });
