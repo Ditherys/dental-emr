@@ -41,6 +41,9 @@ Uncommitted and untracked fork content is not a source input.
 - Every production behavior uses RED -> GREEN -> REFACTOR.
 - Read the relevant Next.js 16 guide in `node_modules/next/dist/docs/` before
   changing App Router/server-action code.
+- ADR-030 amends O12 for staged FHIR/JSON interchange, authorized output,
+  private clinical photographs, and chronological progress; it preserves
+  ADR-029's local-only completion and deferred Cloud TEST release gate.
 
 ## Planned Target Structure
 
@@ -90,6 +93,27 @@ These numbers are reserved by the accepted sequential plan. If a conflicting
 migration is committed before execution, stop for plan revision rather than
 renumbering silently.
 
+ADR-030 adds the following guarded forward-only revamp sequence. These files
+extend rather than rewrite the existing migration history:
+
+- `20260830010000_odontogram_feature_details.sql`
+- `20260830010100_procedure_cases_and_plan_details.sql`
+- `20260830010200_odontogram_revamp_permission_contract.sql`
+- `20260830010300_odontogram_revamp_rpcs.sql`
+- `20260830010301_odontogram_revamp_rpcs_grants.sql`
+- `20260830010400_procedure_installment_schedules.sql`
+- `20260830010500_clinical_photographs.sql`
+- `20260830010600_clinical_photo_rpcs.sql`
+- `20260830010601_clinical_photo_rpcs_grants.sql`
+- `20260830010700_odontogram_import_staging.sql`
+- `20260830010800_odontogram_interchange_and_progress_rpcs.sql`
+- `20260830010801_odontogram_interchange_and_progress_grants.sql`
+- `20260830010900_odontogram_drawing_retirement.sql`
+- `20260830011000_odontogram_revamp_terminal_grants.sql`
+
+Each remains subject to the existing RLS, zero-base-grant, composite tenant-FK,
+safe-definer, audit, idempotency, and local-only verification requirements.
+
 ## Fork Dependency Disposition
 
 Do not copy the fork manifest or lockfile. The audited fork dependencies are
@@ -133,9 +157,9 @@ detailed source mapping and actions.
 | O9 | O3, O6-O8 | Bridge/implant workflow components/actions and renderer overlays | Matching workflow tests plus relationship pgTAP | Unit/component/action/pgTAP | Draft edit, frozen design, completion materialization, current amendment/void preserve unit/component semantics |
 | O10 | O4-O7 | Perio workspace/actions and renderer chart | Perio component/action tests plus perio pgTAP | Unit/component/pgTAP/responsive E2E | Exam entry/finalize/amend is keyboard-safe and persistent |
 | O11 | O6-O10 | Odontogram components/styles and guarded Playwright specs | Component a11y tests and Playwright axe/keyboard/responsive specs | Vitest and guarded Playwright | Core workflows are keyboard/touch/non-color operable |
-| O12 | O5-O11 | Patient print/history components and print styles | Print/history component/action tests | Unit/build/manual synthetic print review | Attributable history prints; no fork import/export UI exists |
-| O13 | O2-O12 | Final forward migration, obsolete Phase 15 RPC/service/UI removal | Migration compatibility and absence checks | pgTAP, `rg`, full unit/build/security | One canonical write model and measured renderer remain |
-| O14 | O1-O13 | Test registries, generated types, evidence/handoff/acceptance record | Full required matrix | Full command set in O14 and Cloud TEST gate | All requirements verified and independently accepted |
+| O12 | O5-O11 | Staged interchange/progress migrations and RPCs, private clinical media, patient print/history components | Import/export/progress/media component/action/pgTAP tests | Unit/build/manual synthetic print and local storage review | Staged import, authorized output, private photo gallery, and attributable chronology work without a second canonical channel |
+| O13 | O2-O12 | Guarded drawing-retirement/terminal-grant migrations, obsolete Phase 15 RPC/service/UI removal | Migration compatibility, synthetic-drawing guard, and absence checks | pgTAP, `rg`, full unit/build/security | One canonical write model and measured renderer remain; unrecognized drawing data fails closed |
+| O14 | O1-O13 | Test registries, generated types, evidence/handoff/local acceptance record | Full required local matrix plus guarded hosted-spec discovery | Full authorized local command set; Cloud TEST deferred | Locally implemented and verified only; Cloud TEST, independent release review, and final owner acceptance remain pending |
 
 ## O0 — Independent Review, Baseline, and Source Pin
 
@@ -756,28 +780,40 @@ responsive screenshots in guarded TEST.
 **Acceptance:** Core charting and perio workflows are keyboard operable,
 touch-safe, and non-color dependent.
 
-## O12 — Print, History, and Interchange Boundary
+## O12 — Staged Import, Authorized Export, Private Media, Print, and Progress
 
-**Objective:** Preserve useful output/history without importing fork demo export
-infrastructure.
+**Objective:** Deliver a complete authorized longitudinal record without
+importing fork demo infrastructure or creating a second canonical channel.
 
 **Steps:**
 
-1. Extend existing EMR print CSS/view to include measured chart, legend,
-   provider/date, and current/planned distinction.
-2. Display clinical entry, bridge, implant, and perio history from relational
-   rows.
-3. Do not add fork JSON import/export, jsPDF, or image export.
-4. Keep pure FHIR ISO 3950/ICDAS mappings documented as isolated candidates for
-   a later interoperability ADR; do not expose them in production UI now.
+1. Stage bounded FHIR R4 and versioned EMR JSON imports only after patient/actor
+   authorization; validate supported content and tenant association, show a
+   diff, and require dentist confirmation before a transaction appends accepted
+   canonical records with provenance. Parsing alone never writes clinical truth.
+2. Generate audited, server-authorized FHIR R4, versioned EMR JSON, PDF/print,
+   and bounded SVG/PNG output from canonical data. Never export raw fork state,
+   use jsPDF, or send protected payloads to unreviewed third parties.
+3. Add a private clinical-photo gallery through the approved MinIO/R2 adapter:
+   preserve originals, use fixed approved derivatives, permission-check delivery,
+   retain processing/failure status, and prevent derivative recursion.
+4. Display a bounded stable-cursor chronological projection of authorized
+   clinical, plan/execution, case/follow-up, billing, perio, photo, and accepted
+   import events while preserving branch-specific financial visibility.
+5. Extend the existing EMR print view with measured chart, legend, provider/date,
+   current/planned distinction, and attributable history.
 
-**Tests:** Print DOM/CSS semantics, chronological history, unauthorized history
-denial, no FHIR/import/export controls.
+**Tests:** Import staging/tenant-isolation and acceptance denial; mapping/version
+validation; export authorization/audit; private media source/derivative and
+processing tests; chronology ordering/hidden-branch denial; and print DOM/CSS
+semantics with synthetic data.
 
-**Verification:** Unit/component/build and manual print review with synthetic data.
+**Verification:** Unit/component/pgTAP/build, local storage smoke/review, and
+manual synthetic print review.
 
-**Acceptance:** Printable clinical chart is legible and history is attributable;
-no second persistence/import channel exists.
+**Acceptance:** The four stages—staged import, authorized export, private photo
+gallery, and chronological progress projection—are attributable, tenant-safe,
+and preserve one canonical persistence model.
 
 ## O13 — Migration Compatibility and Cleanup
 
@@ -791,17 +827,26 @@ compatibility paths.
 3. Revoke and remove obsolete old mutation RPCs in terminal migration order.
 4. Remove the schematic grid only after measured renderer tests pass.
 5. Remove temporary translation adapters after data backfill and read cutover.
-6. Search the target for Classic/demo/localStorage/fork-global/jsPDF/Vite imports.
-7. Verify third-party notices and source pin.
+6. Retire drawing UI and write paths immediately. In a later guarded forward
+   migration, revoke drawing mutations, verify every physical drawing row has
+   the accepted deterministic synthetic-development marker, delete only those
+   rows, then drop the obsolete drawing objects. Any unrecognized row aborts the
+   migration with data/schema intact; ambiguous or non-synthetic data is a stop
+   condition.
+7. Search the target for Classic/demo/localStorage/fork-global/jsPDF/Vite and
+   drawing-authoring imports.
+8. Verify third-party notices and source pin.
 
 **Verification:** Migration pgTAP, `rg` absence checks, full unit/build/security.
 
 **Acceptance:** One canonical write model and one measured renderer remain; no
-Classic or demo infrastructure is maintained.
+Classic, demo, or drawing-authoring infrastructure is maintained, and physical
+drawing retirement is fail-closed.
 
 ## O14 — Full Regression and Acceptance Gate
 
-**Objective:** Prove clinical behavior, security, local-fork fixes, and release
+**Objective:** Prove clinical behavior, security, local-fork fixes, and local
+completion evidence without representing the deferred hosted gate as release
 readiness.
 
 **Create/modify:** Add `e2e/odontogram-integration.spec.ts`; extend
@@ -829,6 +874,9 @@ checks, evidence, and `docs/AI_HANDOFF.md`.
 | Periodontal recording/CAL/history | Unit + pgTAP + UI |
 | Post-FINAL perio child insert/update/delete denial | pgTAP |
 | Elevated legacy reconciliation and ordinary-dentist denial | pgTAP + action |
+| Dentist payment record allowed only for clinically authorized patient/active receiving branch; adjustment/refund/void/analytics denied | pgTAP + action + Playwright |
+| Staged import, authorized FHIR/JSON/PDF/SVG/PNG output, private clinical photo, and chronological progress | pgTAP + action/component + Playwright |
+| Unrecognized drawing cleanup row fails closed | pgTAP |
 | Responsive/keyboard/accessibility | Playwright/axe |
 | Customized fork fixes | Ported regression fixtures/render tests |
 
@@ -852,11 +900,14 @@ git diff --check
 ```
 
 Use only the accepted forward-only local migration command. Do not use
-`db:reset:local`. Run guarded Cloud TEST database/E2E/security checks before
-production deployment.
+`db:reset:local`. Cloud TEST database, hosted authenticated E2E,
+responsive/accessibility, advisor, and security checks remain deferred but
+mandatory before production deployment or real provider/patient use.
 
-**Acceptance:** All required scenarios pass, an independent clinical/security/
-schema review is recorded, and the project owner explicitly accepts the phase.
+**Acceptance:** O14 may be recorded only as **locally implemented and verified;
+Cloud TEST, independent release review, and final owner acceptance pending**.
+It is not release-ready, production-ready, or approved for real provider/patient
+use until ADR-029's deferred hosted gate is completed.
 
 ## Decision Log
 

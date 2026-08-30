@@ -336,7 +336,7 @@ Default responsibilities:
 | OWNER | All financial permissions organization-wide under ADR-025 |
 | ADMIN | All listed financial permissions; no clinical access is implied |
 | BILLING | `billing.read`, `billing.charge`, and `payment.record`; statements and bounded charge/payment reconciliation only; no adjustment, attribution override, compensation, or provider-earnings analytics |
-| DENTIST | `billing.read` only for already-authorized patients, `billing.charge` only through own/assigned clinical completion, and `compensation.own.read` |
+| DENTIST | `billing.read` only for already-authorized patients; `billing.charge` only through own/assigned clinical completion; bounded `payment.record` only for an already clinically authorized patient at an active permitted receiving branch (with every existing allocation branch check); and `compensation.own.read`. `billing.adjust`, refund, payment void, allocation reversal, PDC clearance, and financial analytics remain denied by default |
 | RECEPTIONIST | `billing.read` and `payment.record`; no charge, adjustment, compensation, or analytics permission |
 | DENTAL_ASSISTANT / VISITING_SPECIALIST | No financial permission by default |
 
@@ -356,7 +356,7 @@ Operation scope is normative:
 | Charge post | Any origin branch, subject to patient/clinical rules | Requires `billing.charge` at the charge-origin branch |
 | Charge adjustment/attribution correction without allocation reversal | Any origin branch with the elevated permission | Requires the applicable elevated permission at the charge-origin branch; ordinary branch billing roles remain denied |
 | Charge void or credit that reverses allocations | Any same-organization origin/receiving combination with elevated permission | Requires `billing.adjust` at the charge-origin branch and `payment.record` at every affected payment-receiving branch |
-| Payment record | Any receiving branch | Requires `payment.record` at the payment-receiving branch |
+| Payment record | Any receiving branch | Requires `payment.record` at the payment-receiving branch. For the DENTIST default, the patient must additionally already be clinically authorized to that dentist and the receiving branch must be active and permitted |
 | Payment void | Any same-organization receiving/origin combination | Requires `payment.record` at the receiving branch and every origin branch with a net allocation |
 | Allocation, allocation reversal, allocated refund component, or PDC clearance | Any same-organization receiving/origin combination | Requires `payment.record` at the receiving branch and at every affected charge-origin branch; Branch-A-only staff cannot mutate a Branch-B charge, so cross-branch credit remains unallocated until an actor with both scopes acts |
 | Unallocated-credit refund component | Any receiving branch | Requires `payment.record` at the payment-receiving branch; it cannot expose charge details from another branch |
@@ -366,6 +366,16 @@ Operation scope is normative:
 All itemized patient-account operations also require the established applicable
 patient permission. A same-organization total never authorizes mutation or
 reveals hidden-branch event descriptions, providers, or procedure details.
+
+The DENTIST `payment.record` amendment is intentionally narrower than the
+BILLING/RECEPTIONIST path. It permits recording a payment and an allocation only
+when the dentist satisfies the clinically authorized patient and active permitted
+receiving-branch predicates and, for every allocation, the existing
+receiving/charge-origin branch checks. It grants no payment void, refund,
+allocation reversal, PDC clearance, charge adjustment, attribution override,
+compensation management, or financial analytics by default. Server code and
+database RPCs must prove these predicates rather than trusting client-supplied
+patient, branch, collector, or role fields.
 
 Every operation is authorized in server code and again in PostgreSQL. The
 browser cannot select its tenant, actor, earnings provider, or audit identity.

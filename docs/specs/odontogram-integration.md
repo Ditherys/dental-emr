@@ -55,8 +55,10 @@ documents and unrelated practice-management modules remain outside this scope.
   fork status JSON blob.
 - Perfecting every tooth SVG during integration.
 - Database fields based on SVG path identifiers or coordinates.
-- Automatic FHIR import/export or clinical interchange in the first release.
-- Porting PDF/image export when EMR print conventions meet the initial need.
+- Unreviewed or direct-to-canonical import, raw fork-state interchange, or
+  renderer-owned clinical persistence.
+- Unbounded export, client-side authorization, or third-party handling of
+  protected clinical export content.
 
 ## Existing EMR Baseline
 
@@ -373,10 +375,10 @@ must not display a derived grade/index from incomplete data.
 | Mobility | PORT WITH ADAPTATION | Per-tooth validated grade |
 | Furcation | PORT WITH ADAPTATION | Per anatomically valid entrance, grade I-IV |
 | Plaque | PORT WITH ADAPTATION | Separate four-surface O'Leary model |
-| FHIR utilities | OMIT | Isolated future interoperability candidate; not runtime/UI in first release |
-| Fork JSON import/export | OMIT | Conflicts with EMR canonical persistence |
+| FHIR utilities | PORT WITH ADAPTATION | Staged FHIR R4 import and supported canonical export only; never fork state |
+| Fork JSON import/export | REIMPLEMENT AGAINST EMR ARCHITECTURE | Versioned EMR JSON staging/export; never raw fork JSON or a second persistence channel |
 | Print | REIMPLEMENT AGAINST EMR ARCHITECTURE | Use EMR clinical print/history conventions |
-| SVG/PDF/image export | OMIT | No fork export channel in first release |
+| SVG/PDF/image export | REIMPLEMENT AGAINST EMR ARCHITECTURE | Authorized server-side PDF/print and bounded SVG/PNG derivatives from the measured chart |
 | Validation utilities | PORT WITH ADAPTATION | Port pure clinically relevant validators into EMR types |
 | Accessibility behavior | PORT WITH ADAPTATION | Preserve and improve semantic SVG controls/focus |
 | Keyboard behavior | PORT WITH ADAPTATION | Preserve navigation/entry patterns in EMR controls |
@@ -462,6 +464,39 @@ transition, bridge mutation, implant component mutation, periodontal examination
 create/finalize/amend, and treatment completion/charge. Audit metadata is bounded
 and excludes narrative clinical content.
 
+## Longitudinal Record, Interchange, and Clinical Media
+
+O12 is amended by ADR-030 to deliver these four bounded stages:
+
+1. **Staged import:** authorize the actor and patient first; safely parse bounded
+   FHIR R4 or versioned EMR JSON; validate supported schema, codes, teeth,
+   surfaces, relationships, and patient/organization association; then store a
+   tenant-scoped temporary batch and diff. A dentist must select and confirm
+   accepted rows before an audited transaction appends canonical records with
+   import provenance. Parsing, failure, expiry, or abandonment never changes the
+   current chart.
+2. **Authorized export:** server-side permission checks and audit cover supported
+   FHIR R4, versioned EMR JSON (never raw fork state), PDF/print, and bounded
+   measured-chart SVG/PNG derivatives. Output is generated from already
+   authorized canonical data and does not send protected content to unreviewed
+   third parties or place clinical narratives, payloads, or presigned URLs in
+   logs.
+3. **Private clinical-photo gallery:** patient clinical photographs use the
+   approved provider-neutral MinIO/R2 storage abstraction with protected
+   metadata, preserved originals, fixed approved derivatives, permission-checked
+   delivery, processing state, and attributed archive/rename/pairing history.
+   Clinical-record authorization, not a broad generic attachment permission,
+   controls access.
+4. **Chronological progress projection:** a bounded, stable-cursor patient
+   projection combines authorized clinical, plan/execution, case/follow-up,
+   charge/payment/allocation, periodontal, photograph, and accepted-import
+   events oldest-to-newest. Existing branch-specific financial visibility applies
+   so hidden-branch details never leak.
+
+No stage creates a second clinical or financial source of truth. RLS, zero unsafe
+base grants, narrow audited RPCs, server-derived tenant/actor/branch context,
+and deterministic synthetic fixtures remain mandatory.
+
 ## UI/UX Expectations
 
 The odontogram is the visual center of the existing patient clinical workspace,
@@ -505,6 +540,12 @@ clinical state remains legible without relying on color alone.
   place; completion/amendment/void preserves predecessors.
 - Fixture, abutment, implant crown, and implant bridge support remain distinct.
 - Periodontal readings validate, persist, calculate CAL, and retain history.
+- Staged FHIR/JSON parsing alone creates no canonical clinical record; accepted
+  rows are attributable and transactionally appended.
+- Authorized FHIR/JSON/PDF/SVG/PNG output contains canonical EMR data rather
+  than raw fork state, and its access/export audit is recorded.
+- Private clinical photographs preserve originals, restrict source/derivative
+  delivery, and appear in the authorized chronological progress projection.
 - FINAL periodontal parents reject child INSERT/UPDATE/DELETE and reopening.
 - Measured anatomy and local overlay/layout fixes pass regression tests.
 - Classic, demo shell, localStorage persistence, demo settings, and demo build

@@ -45,6 +45,11 @@ history.
 6. All high-impact writes use narrow server-authorized database boundaries that
    derive actor, organization, and permitted branch server-side, record an
    audit event atomically, and preserve clinical/provider authority rules.
+7. As amended by ADR-030, DENTIST receives bounded `payment.record` only for an
+   already clinically authorized patient and active permitted receiving branch.
+   Existing receiving/charge-origin allocation checks still apply. DENTIST does
+   not receive adjustment, refund, payment void, allocation reversal, PDC
+   clearance, or financial-analytics authority by default.
 
 ## Consequences
 
@@ -55,6 +60,10 @@ history.
 - Existing treatment-plan values require an expand/compatibility/contract
   migration sequence; the legacy decimal estimate is removed only after the
   reviewed compatibility evidence required by B11.
+- The dentist payment exception is implemented only by later guarded,
+  server-authorized revamp permission/RPC migrations with negative authorization
+  coverage; it neither weakens cross-branch allocation checks nor rewrites
+  billing ledger history.
 
 ## Revisit triggers
 

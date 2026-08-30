@@ -36,6 +36,12 @@ TypeScript strict, Zod 4, shadcn/ui, Vitest/Testing Library, Playwright.
   over JSON/forms), currency is PHP, and rates are integer basis points.
 - BIR invoices/receipts remain out of scope under Phase 21 discovery.
 - Every production behavior follows RED -> GREEN -> REFACTOR.
+- ADR-030 amends the DENTIST default after B11: `payment.record` is permitted
+  only for an already clinically authorized patient at an active permitted
+  receiving branch. Existing receiving/charge-origin allocation checks remain;
+  adjustment, refund, void, allocation reversal, PDC clearance, and analytics
+  remain denied by default. This is implemented only through the later guarded
+  odontogram revamp permission/RPC migrations, never by rewriting billing history.
 
 ## Planned File Map
 
@@ -206,8 +212,11 @@ ledger tables.
    replaced by the accepted narrower charge/adjust permissions and role matrix.
 6. Encode the exact defaults: OWNER and ADMIN all listed financial permissions;
    BILLING read/charge/payment only; DENTIST patient-bounded read, clinical-only
-   charge, and own compensation; RECEPTIONIST read/payment only; assistant and
-   specialist none. Suspended/foreign actors get none.
+   charge, own compensation, and (under ADR-030's later guarded revamp contract)
+   payment record only for an already clinically authorized patient at an active
+   permitted receiving branch; RECEPTIONIST read/payment only; assistant and
+   specialist none. Dentist adjustment/refund/void/analytics remain denied.
+   Suspended/foreign actors get none.
 7. Preserve the existing organization-wide versus branch-scoped assignment
    semantics for every financial operation. Document that custom roles may
    narrow delegation but cannot weaken tenant, branch, patient, provider-own, or
@@ -391,6 +400,11 @@ mutable balance.
    void has the same receiving/origin requirements; charge void/credit requires
    `billing.adjust` at origin plus `payment.record` at every affected receiving
    branch.
+10. In the ADR-030 revamp permission/RPC tests, prove a dentist can record a
+    payment only for an already clinically authorized patient at an active
+    permitted receiving branch; prove inactive/wrong-patient/wrong-branch and
+    cross-branch allocation denials, plus default denial of adjustment, refund,
+    void, allocation reversal, PDC clearance, and analytics.
 
 **Verification:** Focused pgTAP and two-client concurrency probe.
 

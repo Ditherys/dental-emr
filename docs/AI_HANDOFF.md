@@ -1,5 +1,26 @@
 # AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
+## ADR-030 authority checkpoint — odontogram longitudinal record revamp (2026-08-30)
+
+- Added ADR-030 before schema or application work. It amends O12 for staged
+  FHIR/JSON import, authorized FHIR/JSON/PDF/SVG/PNG output, private clinical
+  photographs, and an authorized chronological progress projection; canonical
+  clinical, ledger, tenancy, audit, and private-file foundations remain intact.
+- The accepted billing contract now grants DENTIST bounded `payment.record` only
+  for an already clinically authorized patient at an active permitted receiving
+  branch. Existing receiving/charge-origin allocation checks remain mandatory;
+  adjustment, refund, void, allocation reversal, PDC clearance, and analytics
+  remain denied by default.
+- Drawing UI and writes are retired by the revamp. Physical drawing-table cleanup
+  is reserved for a guarded O13 forward migration that deletes only positively
+  identified deterministic synthetic rows and fails closed on unrecognized data.
+- ADR-029 remains controlling for execution boundaries: work is local-only on
+  `main` with forward migrations and deterministic synthetic data; `db:reset:local`,
+  hosted commands, production deployment, and real provider/patient use remain
+  unauthorized. O14 can be recorded only as locally implemented and verified;
+  Cloud TEST, independent release review, and final owner acceptance remain
+  pending.
+
 ## Sidebar and information alignment Tasks 1–6 — local review evidence (2026-08-30)
 
 - Checkpointed sequence: `1d9739e` adds the paired description-row primitive;
