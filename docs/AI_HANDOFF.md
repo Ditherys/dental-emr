@@ -2777,3 +2777,25 @@ no database or migration files were changed.
   entries and that save payloads contain no disabled rows.
 - Hosted Cloud TEST and O14 release gates remain deferred under the approved
   local-completion scope.
+
+### Task 11 independent-review repair (2026-08-30)
+
+The independent review identified that missing/implant exclusions were only
+enforced by the browser and that the chart roles/navigation needed hardening.
+Commit `0256e4f` adds the forward-only migration
+`20260830010430_periodontal_current_odontogram_state_guard.sql`. It replaces
+the existing authorized periodontal save RPC body only after verifying its
+signature/body anchors, derives current missing entries and implant fixture
+roots from the same organization and patient, rejects all four periodontal
+payload categories for excluded teeth before child/audit writes, and preserves
+the RPC's SECURITY DEFINER, empty search path, tenant checks, and grants.
+
+The registered synthetic pgTAP suite
+`supabase/tests/periodontal_current_state_guard.test.sql` proves forged
+missing/implant submissions roll back without child or audit rows and that a
+natural tooth save remains valid. The chart now owns its row/cell roles under
+an accessible `role="grid"` and arrow traversal skips disabled missing/implant
+teeth. The focused 11-test UI/a11y pass, typecheck, ESLint, and suite-guard
+tests pass. The local database runner reaches PASS for the new suite and then
+stops at the unrelated pre-existing `treatment_plans.test.sql` completion-marker
+residual. No hosted or production execution was attempted.
