@@ -159,3 +159,9 @@ Review repair: `20260830010302` adds persistent actor/organization-scoped
 bridge/implant idempotency records and fingerprints; `20260830010303` revokes
 all browser roles from the provider-accepting legacy bridge, implant, and
 clinical-entry signatures and restores only the reviewed v3 grants.
+
+Follow-up migrated the legacy clinical-entry pgTAP callers to v3 and updated
+the provider-picker privilege inventory. The remaining legacy standalone
+implant fixture exposes that its historical writer requires a charge link while
+the provider-free v3 wrapper deliberately accepts no client charge; it now
+fails at that delegated invariant and needs a reviewed charge-resolution rule.

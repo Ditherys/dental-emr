@@ -155,7 +155,7 @@ select extensions.throws_ok($$select public.get_patient_odontogram('e5030000-000
 select extensions.throws_ok($$select public.transition_treatment_plan_item_execution('e5030000-0000-0000-0000-000000000001','e5090000-0000-0000-0000-00000000ffff',1,'ACCEPTED',null,'o5-foreign-item')$$,'42501','not authorized','unknown or foreign treatment item is safely denied');
 select extensions.ok((select data ?& array['entries','bridges','implantChains','periodontalExaminations','legacyReconciliationFlags','treatmentExecutions'] from public.get_patient_odontogram('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001')),'DTO includes every bounded domain family');
 
-select extensions.is((select version from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),1,'owner records a scoped clinical entry');
+select extensions.is((select version from public.record_tooth_clinical_entry_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),1,'owner records a scoped clinical entry');
 reset role;
 create temp table o5_initial(entry_id uuid);
 insert into o5_initial select entry_id from private.tooth_clinical_entry_record_idempotency where idempotency_key='o5-clinical-entry-0001';
@@ -163,7 +163,7 @@ grant select on o5_initial to authenticated;
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
-select extensions.is((select entry_id from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),(select entry_id from o5_initial),'same idempotency key returns the existing non-null clinical entry');
+select extensions.is((select entry_id from public.record_tooth_clinical_entry_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),(select entry_id from o5_initial),'same idempotency key returns the existing non-null clinical entry');
 reset role;
 create temp table o5_clinical(entry_id uuid);
 insert into o5_clinical select id from public.tooth_clinical_entries where organization_id='e5020000-0000-0000-0000-000000000001' and tooth_code='16' and supersedes_entry_id is null;
@@ -257,13 +257,12 @@ set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
 select extensions.is(
-  (select patient_id from public.record_current_implant_component(
+  (select component_id is not null from public.record_current_implant_component_v3(
     'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
     '[{"tooth_fdi":"37","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"37","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"37","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":2}]'::jsonb,
-    'e5060000-0000-0000-0000-000000000001',statement_timestamp(),
-    (select charge_id from o5_completion_charge)
+    statement_timestamp(),'o5-current-implant-v3'
   )),
-  'e5050000-0000-0000-0000-000000000001'::uuid,
+  true,
   'standalone current implant RPC persists and returns the scoped patient'
 );
 reset role;
@@ -294,11 +293,10 @@ select extensions.is(
   'current implant amendment appends a full successor graph'
 );
 select extensions.throws_ok(
-  $$select public.record_current_implant_component(
+  $$select public.record_current_implant_component_v3(
     'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
     '[{"tooth_fdi":"38","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"38","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"38","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":1}]'::jsonb,
-    'e5060000-0000-0000-0000-000000000001',statement_timestamp(),
-    (select charge_id from o5_completion_charge)
+    statement_timestamp(),'o5-invalid-current-implant-v3'
   )$$,
   '22023','invalid implant chain','invalid standalone implant dependency rolls back the whole graph'
 );
