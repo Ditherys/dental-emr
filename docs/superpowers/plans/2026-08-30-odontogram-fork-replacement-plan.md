@@ -28,6 +28,7 @@ Files:
 - Create vendor/react-advanced-odontogram/package.json
 - Create vendor/react-advanced-odontogram/LICENSE
 - Create vendor/react-advanced-odontogram/SOURCE_REVISION.md
+- Create vendor/react-advanced-odontogram/fork-patches/remove-reset-controls.patch
 - Copy controlled-fork build artifacts to vendor/react-advanced-odontogram/dist
 - Modify package.json, package-lock.json, and src/app/layout.tsx
 - Create src/components/odontogram/fork-package.test.ts
@@ -38,7 +39,7 @@ Interfaces:
 
 - [ ] Step 1: Write a failing package-resolution test asserting that the package exposes the provider, chart surface, importStatus, and setPlanChart functions.
 - [ ] Step 2: Run npm run test:unit -- src/components/odontogram/fork-package.test.ts and verify failure because the dependency is absent.
-- [ ] Step 3: Copy the controlled fork dist JavaScript/CSS/declaration artifacts and required relative loader chunks. Create a versioned local manifest with the fork revision, copy LICENSE unchanged, and record the exact fork commit and artifact list in SOURCE_REVISION.md.
+- [ ] Step 3: Apply the controlled fork source patch that removes the whole-mouth reset and tooth-reset buttons from the patient composition, run the fork library build, and copy its dist JavaScript/CSS/declaration artifacts and required relative loader chunks. Store the exact patch in vendor/react-advanced-odontogram/fork-patches/remove-reset-controls.patch, copy LICENSE unchanged, and record the fork source commit, patch commit, and artifact list in SOURCE_REVISION.md.
 - [ ] Step 4: Add file:vendor/react-advanced-odontogram to package.json, update package-lock.json with npm install --package-lock-only, and import react-advanced-odontogram/style.css once from src/app/layout.tsx.
 - [ ] Step 5: Run npm run test:unit -- src/components/odontogram/fork-package.test.ts and verify it passes.
 - [ ] Step 6: Commit with message build: vendor controlled odontogram fork.
@@ -77,7 +78,7 @@ Interfaces:
 
 - [ ] Step 1: Write failing component tests asserting fork selectors (#toothGrid, #statusCard, #cariesSection, #rootPeriodontiumSection), inline anatomical SVG layers, current/plan hydration, absence of #btnResetAll/#btnResetTooth/classic controls, and canonical draft callback emission.
 - [ ] Step 2: Run npm run test:unit -- src/components/odontogram/fork-odontogram.test.tsx and verify failure because the wrapper does not exist and the patient page still mounts MeasuredChart.
-- [ ] Step 3: Implement a patient-keyed provider wrapper. After mount, hydrate status with importStatus(buildForkPayload(dto).status) and plan with setPlanChart. Suppress the hydration echo from onStateChange, then call forkPayloadToClinicalDraft for user edits. Do not use the fork default App; compose only the surfaces needed by the patient workflow and omit reset controls.
+- [ ] Step 3: Implement a patient-keyed provider wrapper. After mount, hydrate status with importStatus(buildForkPayload(dto).status) and plan with setPlanChart. Suppress the hydration echo from onStateChange, then call forkPayloadToClinicalDraft for user edits. Do not use the fork default App; compose only the surfaces needed by the patient workflow. The vendored fork patch already removes reset buttons, so the wrapper must assert they are absent rather than hiding them with CSS.
 - [ ] Step 4: Replace the patient chart imports/rendering in odontogram-section.tsx with ForkOdontogram. Keep safe DTO loading, selected FDI state, inspector sheet, periodontal dialog, chronological ProgressRecordTable, billing/treatment/photo sections, and patient-keyed cleanup.
 - [ ] Step 5: Add scoped dental-emr-fork styles mapping fork variables/controls to EMR tokens, preserving anatomical SVG sizing, iPad chart scrolling, Geist typography, and reset/classic omission.
 - [ ] Step 6: Run the wrapper and patient-section tests and verify fork DOM is present while old measured-chart DOM is absent.
