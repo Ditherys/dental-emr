@@ -10,7 +10,7 @@ import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odont
 import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
 import { ForkSaveController } from "@/components/odontogram/fork-save-controller";
 import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
-import { OdontogramPrintHistory } from "@/components/odontogram/print-history";
+import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { ToothInspector } from "@/components/odontogram/tooth-inspector";
@@ -259,7 +259,7 @@ export function OdontogramSection({
               </Button>
             </div>
             <div className="mt-4">
-              <OdontogramPrintHistory dto={dto} />
+              <ForkPrintChart dto={dto} renderChart={false} />
             </div>
           </div>
 

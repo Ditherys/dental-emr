@@ -337,8 +337,8 @@ describe("OdontogramSection O7", () => {
       />,
     );
 
-    expect(screen.getByTestId("odontogram-print-history")).toBeInTheDocument();
-    expect(screen.getByText(/printable clinical chart/i)).toBeInTheDocument();
+    expect(screen.getByTestId("fork-print-chart")).toBeInTheDocument();
+    expect(screen.getByText(/anatomical clinical chart/i)).toBeInTheDocument();
   });
 
   it("makes the relationship workflows reachable from the selected-tooth inspector", async () => {

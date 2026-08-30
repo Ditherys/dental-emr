@@ -136,6 +136,15 @@ function emptyChart(): ForkChart {
   };
 }
 
+/**
+ * Returns a renderer-only blank v2.20 chart. This is used to clear the
+ * controlled fork's module-level plan store when a patient has no plan; it is
+ * never a canonical persistence payload.
+ */
+export function buildForkEmptyChart(): Record<string, unknown> {
+  return emptyChart();
+}
+
 function isCurrentEntry(entry: PatientOdontogramDTO["entries"][number]) {
   return entry.lifecycle === "OPEN" && entry.event_state === "CURRENT" && entry.voided_at === null && entry.superseded_by_entry_id === null;
 }

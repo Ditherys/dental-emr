@@ -438,6 +438,39 @@
   }
 }
 
+/* Controlled-fork print projection. The screen chart supplies the SVG in the
+ * patient composition; standalone print previews can render the same fork
+ * surfaces through .dental-emr-fork-print-svg. */
+.fork-print-root {
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.fork-print-root .fork-print-chart {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.fork-print-root .dental-emr-fork-print-svg {
+  min-width: 58rem;
+}
+
+@media print {
+  .fork-print-root {
+    border-color: rgb(226 232 240) !important;
+    break-inside: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .fork-print-root .dental-emr-fork-print-svg .tooth-info,
+  .fork-print-root .dental-emr-fork-print-svg .panel,
+  .fork-print-root .dental-emr-fork-print-svg button,
+  .fork-print-root .dental-emr-fork-print-svg .chart-actions {
+    display: none !important;
+  }
+}
+
 .odontogram-print-history li[data-voided="1"] {
   opacity: 0.65;
   text-decoration: line-through;

@@ -17,6 +17,7 @@ import {
 
 import {
   buildForkPayload,
+  buildForkEmptyChart,
   buildForkRelationshipBaselines,
   forkClinicalDraftKey,
   forkPayloadToClinicalDraft,
@@ -103,7 +104,10 @@ function RuntimeBridge({ status, plan, relationshipBaselines, onDraftChange, onE
       // keeps both that notification and the provider's init notification from
       // entering the dentist-edit flow.
       importStatus(status);
-      if (plan !== null) setPlanChart(plan);
+      // The fork keeps plan state in a module singleton. Explicitly hydrate a
+      // blank plan when this patient has none so a prior patient's plan cannot
+      // remain visible after a patient switch.
+      setPlanChart(plan ?? buildForkEmptyChart());
 
       if (!attachWhenGridIsReady()) {
         const grid = document.getElementById("toothGrid");
