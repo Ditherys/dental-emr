@@ -323,7 +323,10 @@ describe("odontogram service RPC contract", () => {
       p_kind: "FINDING",
       p_clinical_code: "CARIES",
       p_status: "EXISTING",
+      p_detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null },
       p_notes: null,
+      p_occurred_at: null,
+      p_idempotency_key: "odontogram-entry-0001",
     });
 
     rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, patient_id: patientId, version: 2 }], error: null });

@@ -506,6 +506,8 @@ const ODONTOGRAM_O5_O8_FINAL_RECONCILIATION_GRANTS_MIGRATION =
   "20260828020539_odontogram_o5_o8_final_reconciliation_grants.sql";
 const ODONTOGRAM_O5_O8_SERIALIZED_FINAL_GRANTS_MIGRATION =
   "20260828020541_odontogram_o5_o8_serialized_final_grants.sql";
+const ODONTOGRAM_FEATURE_DETAILS_RPC_GRANTS_MIGRATION =
+  "20260830010003_odontogram_feature_details_rpc_grants.sql";
 
 const odontogramO5O8TerminalGrants = Object.freeze([
   "public.get_patient_odontogram(uuid,uuid)",
@@ -1469,6 +1471,17 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: ODONTOGRAM_O5_O8_SERIALIZED_FINAL_GRANTS_MIGRATION,
     grants: odontogramO5O8FinalReconciliationGrants,
+  }),
+  Object.freeze({
+    file: ODONTOGRAM_FEATURE_DETAILS_RPC_GRANTS_MIGRATION,
+    grants: Object.freeze([{
+      grantee: "authenticated",
+      objectClass: "function",
+      object: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+      privilege: "execute",
+      columns: [],
+      reason: "O2 narrow audited clinical-entry write boundary; derives tenant from an authorized active branch, atomically persists constrained detail/history, and provides actor-scoped idempotency without base-table grants.",
+    }]),
   }),
 ]);
 

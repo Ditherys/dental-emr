@@ -6253,6 +6253,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tooth_clinical_entry_details_entry_feature_fk"
+            columns: ["organization_id", "entry_id", "feature_code"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id", "clinical_code"]
+          },
+          {
             foreignKeyName: "tooth_clinical_entry_details_entry_fk"
             columns: ["organization_id", "entry_id"]
             isOneToOne: true
@@ -8853,22 +8860,42 @@ export type Database = {
           cheque_id: string
         }[]
       }
-      record_tooth_clinical_entry: {
-        Args: {
-          p_acting_branch_id: string
-          p_clinical_code: string
-          p_kind: string
-          p_notes: string
-          p_patient_id: string
-          p_status: string
-          p_surfaces: string[]
-          p_tooth_code: string
-        }
-        Returns: {
-          entry_id: string
-          version: number
-        }[]
-      }
+      record_tooth_clinical_entry:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_clinical_code: string
+              p_detail: Json
+              p_idempotency_key: string
+              p_kind: string
+              p_notes: string
+              p_occurred_at: string
+              p_patient_id: string
+              p_status: string
+              p_surfaces: string[]
+              p_tooth_code: string
+            }
+            Returns: {
+              entry_id: string
+              version: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_clinical_code: string
+              p_kind: string
+              p_notes: string
+              p_patient_id: string
+              p_status: string
+              p_surfaces: string[]
+              p_tooth_code: string
+            }
+            Returns: {
+              entry_id: string
+              version: number
+            }[]
+          }
       refund_payment: {
         Args: {
           p_acting_branch_id: string

@@ -38,7 +38,7 @@ select extensions.ok(
 
 select extensions.ok(
   has_function_privilege('authenticated','public.get_patient_odontogram(uuid,uuid)','execute')
-  and has_function_privilege('authenticated','public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)','execute')
+  and has_function_privilege('authenticated','public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute')
   and has_function_privilege('authenticated','public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)','execute')
   and has_function_privilege('authenticated','public.void_tooth_clinical_entry(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)','execute')

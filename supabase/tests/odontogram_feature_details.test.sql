@@ -1,6 +1,6 @@
 begin;
 
-select plan(8);
+select plan(9);
 
 select extensions.ok(
   (select relrowsecurity from pg_catalog.pg_class where oid = 'public.tooth_clinical_entry_details'::regclass),
@@ -16,6 +16,13 @@ insert into public.patients (id, organization_id, patient_number, first_name, la
 insert into public.tooth_clinical_entries (id, organization_id, patient_id, tooth_code, kind, clinical_code, status, provenance) values
   ('f3030000-0000-0000-0000-000000000001', 'f3010000-0000-0000-0000-000000000001', 'f3020000-0000-0000-0000-000000000001', '16', 'FINDING', 'CARIES', 'ACTIVE', 'INTERNAL'),
   ('f3030000-0000-0000-0000-000000000002', 'f3010000-0000-0000-0000-000000000002', 'f3020000-0000-0000-0000-000000000002', '16', 'FINDING', 'CARIES', 'ACTIVE', 'INTERNAL');
+
+select extensions.throws_ok(
+  $$insert into public.tooth_clinical_entry_details
+      (organization_id, entry_id, feature_code, detail)
+    values ('f3010000-0000-0000-0000-000000000001', 'f3030000-0000-0000-0000-000000000001', 'ROOT_CANAL', '{"code":"ROOT_CANAL","state":"endo-filling"}')$$,
+  '23503', null, 'same-tenant detail feature must match the parent clinical code'
+);
 
 select extensions.throws_ok(
   $$insert into public.tooth_clinical_entry_details

@@ -182,7 +182,10 @@ export async function recordToothClinicalEntry(input: unknown) {
     p_kind: value.kind,
     p_clinical_code: value.detail.code,
     p_status: value.status,
+    p_detail: value.detail,
     p_notes: value.notes ?? null,
+    p_occurred_at: value.occurredAt ?? null,
+    p_idempotency_key: value.idempotencyKey,
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "CLINICAL_ENTRY", row.entry_id);
   return { entryId: row.entry_id, patientId, version: row.version };
