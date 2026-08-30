@@ -1,0 +1,40 @@
+diff --git a/src/surfaces/ToothControlsSurface.tsx b/src/surfaces/ToothControlsSurface.tsx
+index 9127401..404642b 100644
+--- a/src/surfaces/ToothControlsSurface.tsx
++++ b/src/surfaces/ToothControlsSurface.tsx
+@@ -11,7 +11,7 @@
+ 
+ import { useEffect } from "react";
+ import { useOdontogramUi } from "../OdontogramContext";
+-import { rewireControls, resetTooth } from "../odontogram";
++import { rewireControls } from "../odontogram";
+ import OrthodonticsCard from "./cards/OrthodonticsCard";
+ import StatusesCard from "./cards/StatusesCard";
+ import ToothDetailsCard from "./cards/ToothDetailsCard";
+@@ -79,7 +79,6 @@ export default function ToothControlsSurface() {
+             <section className="card">
+               <div className="card-title card-title-row">
+                 <span>{t("tooth.title")}</span>
+-                <button id="btnResetTooth" className="btn btn-ghost btn-sm" title={t("tooth.resetTitle")} aria-label={t("tooth.resetTitle")} onClick={() => resetTooth()}>{t("tooth.reset")}</button>
+               </div>
+               <ToothDetailsCard />
+             </section>
+diff --git a/src/surfaces/cards/StatusesCard.tsx b/src/surfaces/cards/StatusesCard.tsx
+index d545e3d..0ca87a5 100644
+--- a/src/surfaces/cards/StatusesCard.tsx
++++ b/src/surfaces/cards/StatusesCard.tsx
+@@ -20,7 +20,6 @@ import { t } from "../../i18n/useI18n";
+ import {
+   getEdentulous,
+   setEdentulous,
+-  resetMouth,
+   applyPrimaryDentition,
+   applyMixedDentition,
+   getStatusExtras,
+@@ -44,7 +43,6 @@ export default function StatusesCard() {
+   return (
+     <>
+       <div className="row status-actions" id="statusCardBody">
+-        <button id="btnResetAll" className="btn btn-ghost btn-sm" onClick={() => resetMouth()}>{t("status.resetAll")}</button>
+         <button id="btnPrimaryDentition" className="btn btn-ghost btn-sm" onClick={() => applyPrimaryDentition()}>{t("status.primaryDentition")}</button>
+         <button id="btnMixedDentition" className="btn btn-ghost btn-sm" onClick={() => applyMixedDentition()}>{t("status.mixedDentition")}</button>

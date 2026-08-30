@@ -1,0 +1,24 @@
+# Controlled odontogram fork artifact record
+
+- Source repository: `https://github.com/Ditherys/React-Odontogram-Modul`
+- Source path: `C:\Users\Latitude 7430\Desktop\React-Odontogram-Modul`
+- Fork source commit: `5e28d931feefe4c3382513dbb0f5a9db9cf9948c`
+- Patch commit: `cb9b58f3c35b49c7b9467d01c3ef84c388dae007`
+- Build date: `2026-08-30` (Asia/Manila)
+- Build command: `npm run build:lib`
+- Patch: `fork-patches/remove-reset-controls.patch`
+
+Artifacts copied from `dist/`:
+
+- `index.d.ts`
+- `loader-BN_gLe6T.js`
+- `loader-BN_gLe6T.js.map`
+- `notoArabic-En58EmGw.js`
+- `notoArabic-En58EmGw.js.map`
+- `notoSC-G1i3iX-D.js`
+- `notoSC-G1i3iX-D.js.map`
+- `odontogram.js`
+- `odontogram.js.map`
+- `roboto-Bywi16HJ.js`
+- `roboto-Bywi16HJ.js.map`
+- `style.css`

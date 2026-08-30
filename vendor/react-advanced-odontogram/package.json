@@ -1,0 +1,26 @@
+{
+  "name": "react-advanced-odontogram",
+  "version": "2.4.0-dental-emr.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "files": ["dist", "LICENSE", "SOURCE_REVISION.md"],
+  "main": "./dist/odontogram.js",
+  "module": "./dist/odontogram.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/odontogram.js"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "sideEffects": ["**/*.css"],
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1"
+  }
+}

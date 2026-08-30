@@ -62,6 +62,7 @@
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-advanced-odontogram": "file:vendor/react-advanced-odontogram",
     "react-hook-form": "^7.85.0",
     "shadcn": "^4.16.2",
     "sharp": "0.35.4",
