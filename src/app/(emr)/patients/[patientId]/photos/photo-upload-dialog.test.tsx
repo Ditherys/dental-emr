@@ -80,6 +80,16 @@ describe("PhotoUploadDialog", () => {
     expect(screen.getByRole("button", { name: "Confirm and add to record" })).toBeDisabled();
   });
 
+  it("rejects empty image files before they reach private storage", () => {
+    render(<PhotoUploadDialog open onOpenChange={vi.fn()} canWriteClinical onSubmit={vi.fn()} />);
+
+    const file = new File([], "empty.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Photo file"), { target: { files: [file] } });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/must not be empty/i);
+    expect(screen.getByRole("button", { name: "Confirm and add to record" })).toBeDisabled();
+  });
+
   it("does not expose upload controls to a read-only user", () => {
     render(<PhotoUploadDialog open onOpenChange={vi.fn()} canWriteClinical={false} onSubmit={vi.fn()} />);
 

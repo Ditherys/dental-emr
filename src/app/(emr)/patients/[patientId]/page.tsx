@@ -4,6 +4,7 @@ import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasPermission, hasSharedPatientPermission } from "@/lib/authorization/policy";
 import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
+import { ClinicalPhotoServiceError, listClinicalPhotos } from "@/lib/clinical-media/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
 import { OdontogramServiceError, getPatientOdontogram } from "@/lib/odontogram/service";
@@ -132,6 +133,8 @@ export default async function PatientPage({
   let clinicalLoadFailed = false;
   let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
   let clinicalProvidersUnavailable = false;
+  let initialClinicalPhotos: Awaited<ReturnType<typeof listClinicalPhotos>> = [];
+  let clinicalPhotosUnavailable = false;
   let intakeForms: Awaited<ReturnType<typeof listIntakeForms>> = [];
   let intakeLoadFailed = false;
   let consentTemplates: Awaited<ReturnType<typeof listConsentTemplates>> = [];
@@ -197,6 +200,12 @@ export default async function PatientPage({
       clinicalLoadFailed = true;
     }
     try {
+      initialClinicalPhotos = await listClinicalPhotos({ actingBranchId, patientId });
+    } catch (error) {
+      if (!(error instanceof ClinicalPhotoServiceError || error instanceof AuthorizationError)) throw error;
+      clinicalPhotosUnavailable = true;
+    }
+    try {
       clinicalProviders = await listProviders({ actingBranchId });
     } catch (error) {
       if (!(error instanceof ProviderServiceError || error instanceof AuthorizationError)) throw error;
@@ -257,6 +266,8 @@ export default async function PatientPage({
       initialProviders={clinicalProviders}
       clinicalLoadFailed={clinicalLoadFailed}
       clinicalProvidersUnavailable={clinicalProvidersUnavailable}
+      initialClinicalPhotos={initialClinicalPhotos}
+      clinicalPhotosUnavailable={clinicalPhotosUnavailable}
       canManageIntake={canManageIntake}
       initialIntakeForms={intakeForms}
       intakeLoadFailed={intakeLoadFailed}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Ellipsis, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,7 @@ import type { ClinicalEncounter, MedicalRecord } from "@/lib/clinical/types";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
+import type { ClinicalPhotoDTO, ClinicalPhotoVariant } from "@/lib/clinical-media/types";
 import type { ConsentTemplateOption, IntakeFormSummary } from "@/lib/intake/types";
 import type { z } from "zod";
 import type { patientAccountRowSchema, paymentMethodRowSchema } from "@/lib/billing/schema";
@@ -54,6 +55,17 @@ import { FilesSection } from "./files/files-section";
 import { ReferralsSection } from "./referrals-section";
 import { IntakeSection } from "./intake-section";
 import { BillingSection } from "./billing-section";
+import {
+  archiveClinicalPhotoAction,
+  confirmClinicalPhotoUploadAction,
+  createClinicalPhotoUploadAction,
+  downloadClinicalPhotoDerivativeAction,
+  pairClinicalPhotosAction,
+  processClinicalPhotoAction,
+  renameClinicalPhotoAction,
+} from "./photos/actions";
+import { ClinicalPhotoGallery, type ClinicalPhotoDisplay } from "./photos/clinical-photo-gallery";
+import { PhotoUploadDialog, type PhotoUploadDraft, type PhotoUploadSubmitResult } from "./photos/photo-upload-dialog";
 import {
   patientDisplayName,
   patientMutationMessage,
@@ -87,6 +99,8 @@ type Props = {
   initialProviders?: ProviderListItem[];
   clinicalLoadFailed?: boolean;
   clinicalProvidersUnavailable?: boolean;
+  initialClinicalPhotos?: ClinicalPhotoDTO[];
+  clinicalPhotosUnavailable?: boolean;
   canManageIntake?: boolean;
   initialIntakeForms?: IntakeFormSummary[];
   intakeLoadFailed?: boolean;
@@ -132,6 +146,8 @@ export function PatientWorkspace({
   initialProviders = [],
   clinicalLoadFailed,
   clinicalProvidersUnavailable,
+  initialClinicalPhotos = [],
+  clinicalPhotosUnavailable = false,
   canManageIntake = false,
   initialIntakeForms = [],
   intakeLoadFailed,
@@ -153,6 +169,93 @@ export function PatientWorkspace({
   const [lifecycle, setLifecycle] = useState<"archive" | "reactivate" | null>(null);
   const [review, setReview] = useState<DuplicateReview | null>(null);
   const [reviewRequest, setReviewRequest] = useState<DuplicateRequest | null>(null);
+  const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
+
+  const photoFailureMessage = useCallback((code: string) => {
+    if (code === "NOT_AUTHORIZED") return "Your access or selected branch changed. Refresh the record and try again.";
+    if (code === "STALE_VERSION") return "This photograph changed while you were working. Refresh before trying again.";
+    if (code === "INVALID_STATE") return "That photograph is no longer available for this action.";
+    if (code === "INVALID_INPUT") return "Check the photograph details and try again.";
+    return "The clinical photograph could not be saved. Try again.";
+  }, []);
+
+  const resolvePhotoDerivative = useCallback(async (photo: ClinicalPhotoDisplay, variant: ClinicalPhotoVariant) => {
+    const result = await downloadClinicalPhotoDerivativeAction({
+      actingBranchId,
+      patientId: patient.patientId,
+      photoId: photo.photoId,
+      variant,
+    });
+    if (!result.ok) throw new Error(photoFailureMessage(result.code));
+    return result.downloadUrl;
+  }, [actingBranchId, patient.patientId, photoFailureMessage]);
+
+  const uploadClinicalPhoto = useCallback(async (draft: PhotoUploadDraft): Promise<PhotoUploadSubmitResult> => {
+    const created = await createClinicalPhotoUploadAction({
+      actingBranchId,
+      patientId: patient.patientId,
+      mimeType: draft.file.type,
+      sizeBytes: draft.file.size,
+    });
+    if (!created.ok) return { ok: false, message: photoFailureMessage(created.code) };
+
+    let transferred = false;
+    try {
+      transferred = (await fetch(created.uploadUrl, {
+        method: "PUT",
+        body: draft.file,
+        headers: { "Content-Type": draft.file.type },
+      })).ok;
+    } catch {
+      transferred = false;
+    }
+    if (!transferred) return { ok: false, message: "The photograph could not be transferred to private storage. Check your connection and try again." };
+
+    const confirmed = await confirmClinicalPhotoUploadAction({
+      actingBranchId,
+      patientId: patient.patientId,
+      fileId: created.fileId,
+      expectedVersion: created.version,
+      category: draft.category,
+      displayFilename: draft.displayFilename,
+      originalClientFilename: draft.originalClientFilename,
+      captureAt: draft.captureAt,
+      toothCodes: draft.toothCodes,
+      surfaces: draft.surfaces,
+      note: draft.note,
+      procedureCaseId: draft.procedureCaseId,
+    });
+    if (!confirmed.ok) return { ok: false, message: photoFailureMessage(confirmed.code) };
+
+    // Confirmation attempts derivative processing server-side. A failed
+    // processing attempt leaves the confirmed source retryable, so expose one
+    // explicit retry from this same confirmation flow without duplicating a
+    // successful processing call.
+    if (confirmed.processingStatus === "FAILED") {
+      const processed = await processClinicalPhotoAction({ actingBranchId, photoId: confirmed.photoId });
+      if (!processed.ok) return { ok: false, message: photoFailureMessage(processed.code) };
+    }
+    router.refresh();
+    return { ok: true };
+  }, [actingBranchId, patient.patientId, photoFailureMessage, router]);
+
+  const renameClinicalPhoto = useCallback(async (photo: ClinicalPhotoDisplay, displayFilename: string) => {
+    const result = await renameClinicalPhotoAction({ actingBranchId, photoId: photo.photoId, expectedVersion: photo.version, displayFilename });
+    if (!result.ok) throw new Error(photoFailureMessage(result.code));
+    router.refresh();
+  }, [actingBranchId, photoFailureMessage, router]);
+
+  const pairClinicalPhotos = useCallback(async (before: ClinicalPhotoDisplay, after: ClinicalPhotoDisplay) => {
+    const result = await pairClinicalPhotosAction({ actingBranchId, beforePhotoId: before.photoId, afterPhotoId: after.photoId });
+    if (!result.ok) throw new Error(photoFailureMessage(result.code));
+    router.refresh();
+  }, [actingBranchId, photoFailureMessage, router]);
+
+  const archiveClinicalPhoto = useCallback(async (photo: ClinicalPhotoDisplay) => {
+    const result = await archiveClinicalPhotoAction({ actingBranchId, patientId: patient.patientId, photoId: photo.photoId, expectedVersion: photo.version, reason: "Archived from the patient clinical-photo gallery" });
+    if (!result.ok) throw new Error(photoFailureMessage(result.code));
+    router.refresh();
+  }, [actingBranchId, patient.patientId, photoFailureMessage, router]);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -380,22 +483,43 @@ export function PatientWorkspace({
           />
         )}
         {section === "clinical" && canReadClinical && (
-          <ClinicalSection
-            patientId={patient.patientId}
-            actingBranchId={actingBranchId}
-            canWriteClinical={canWriteClinical}
-            initialEncounters={initialClinicalEncounters}
-            initialMedicalRecords={initialMedicalRecords}
-            initialToothConditions={initialToothConditions}
-            initialOdontogram={initialOdontogram}
-            initialTreatmentPlans={initialTreatmentPlans}
-            canGenerateDocuments={canGenerateDocuments}
-            initialProviders={initialProviders}
-            providersUnavailable={clinicalProvidersUnavailable}
-            loadFailed={clinicalLoadFailed}
-            canReadBilling={canReadBilling}
-            initialProcedureSummaries={initialProcedureSummaries}
-          />
+          <>
+            <ClinicalSection
+              patientId={patient.patientId}
+              actingBranchId={actingBranchId}
+              canWriteClinical={canWriteClinical}
+              initialEncounters={initialClinicalEncounters}
+              initialMedicalRecords={initialMedicalRecords}
+              initialToothConditions={initialToothConditions}
+              initialOdontogram={initialOdontogram}
+              initialTreatmentPlans={initialTreatmentPlans}
+              canGenerateDocuments={canGenerateDocuments}
+              initialProviders={initialProviders}
+              providersUnavailable={clinicalProvidersUnavailable}
+              loadFailed={clinicalLoadFailed}
+              canReadBilling={canReadBilling}
+              initialProcedureSummaries={initialProcedureSummaries}
+            />
+            <ClinicalPhotoGallery
+              patientId={patient.patientId}
+              actingBranchId={actingBranchId}
+              canWriteClinical={canWriteClinical}
+              initialPhotos={initialClinicalPhotos}
+              loadFailed={clinicalPhotosUnavailable}
+              onOpenUpload={canWriteClinical ? () => setPhotoUploadOpen(true) : undefined}
+              onRefresh={() => router.refresh()}
+              resolveDerivativeUrl={resolvePhotoDerivative}
+              onRename={canWriteClinical ? renameClinicalPhoto : undefined}
+              onPair={canWriteClinical ? pairClinicalPhotos : undefined}
+              onArchive={canWriteClinical ? archiveClinicalPhoto : undefined}
+            />
+            <PhotoUploadDialog
+              open={photoUploadOpen}
+              onOpenChange={setPhotoUploadOpen}
+              canWriteClinical={canWriteClinical}
+              onSubmit={uploadClinicalPhoto}
+            />
+          </>
         )}
         {section === "intake" && canManageIntake && (
           <IntakeSection

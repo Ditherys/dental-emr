@@ -284,6 +284,7 @@ export function ClinicalPhotoGallery({
     setPairingError(null);
     setArchiveError(null);
     setRenameError(null);
+    setResolvedUrls({});
   }, [patientId, actingBranchId]);
 
   async function confirmArchive() {
@@ -298,6 +299,13 @@ export function ClinicalPhotoGallery({
     } finally {
       setArchivePending(false);
     }
+  }
+
+  function refreshGallery() {
+    setResolvedUrls({});
+    setPreview(null);
+    setComparison(null);
+    onRefresh?.();
   }
 
   function requestRename(photo: ClinicalPhotoDisplay) {
@@ -335,7 +343,7 @@ export function ClinicalPhotoGallery({
 
   async function viewPhoto(photo: ClinicalPhotoDisplay) {
     setPreview(photo);
-    if (!resolveDerivativeUrl || photo.processingStatus !== "READY" || photo.displayUrl || photo.previewUrl || photo.thumbnailUrl) return;
+    if (!resolveDerivativeUrl || photo.processingStatus !== "READY" || photo.displayUrl) return;
     try {
       const url = await resolveDerivativeUrl(photo, "display");
       if (url) {
@@ -347,11 +355,26 @@ export function ClinicalPhotoGallery({
     }
   }
 
-  function comparePhoto(photo: ClinicalPhotoDisplay) {
-    const pair = getPair(photo, photos);
+  async function comparePhoto(photo: ClinicalPhotoDisplay) {
+    const pair = getPair(photo, photosWithUrls);
     if (!pair) return;
     setPreview(null);
-    setComparison(pair);
+    if (!resolveDerivativeUrl) {
+      setComparison(pair);
+      return;
+    }
+    const withDisplayUrl = await Promise.all([pair.before, pair.after].map(async (candidate) => {
+      if (candidate.displayUrl || candidate.processingStatus !== "READY") return candidate;
+      try {
+        const url = await resolveDerivativeUrl(candidate, "display");
+        if (!url) return candidate;
+        setResolvedUrls((current) => ({ ...current, [candidate.photoId]: { ...current[candidate.photoId], display: url } }));
+        return { ...candidate, displayUrl: url };
+      } catch {
+        return candidate;
+      }
+    }));
+    setComparison({ before: withDisplayUrl[0]!, after: withDisplayUrl[1]! });
   }
 
   async function selectPair(photo: ClinicalPhotoDisplay) {
@@ -376,7 +399,7 @@ export function ClinicalPhotoGallery({
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Private before, progress, and diagnostic images attached to this patient record.</p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          {onRefresh && <Button type="button" variant="outline" className="min-h-11" onClick={onRefresh}><RefreshCw aria-hidden="true" />Refresh</Button>}
+          {onRefresh && <Button type="button" variant="outline" className="min-h-11" onClick={refreshGallery}><RefreshCw aria-hidden="true" />Refresh</Button>}
           {canWriteClinical && onOpenUpload && <Button type="button" className="min-h-11" onClick={onOpenUpload}><Plus aria-hidden="true" />Add clinical photograph</Button>}
         </div>
       </div>
@@ -410,7 +433,7 @@ export function ClinicalPhotoGallery({
         <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
           <DialogHeader><DialogTitle>Photo preview</DialogTitle><DialogDescription>Permission-checked private derivative for the clinical record.</DialogDescription></DialogHeader>
           {preview && <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_15rem]"><div className="overflow-hidden border bg-muted/30"><PhotoImage photo={preview} size="display" /></div><div className="min-w-0"><p className="break-words text-sm font-medium">{preview.displayFilename}</p><p className="mt-1 text-xs text-muted-foreground"><time dateTime={preview.captureAt}>{formatDateTime(preview.captureAt)}</time></p><p className="mt-3 text-xs text-muted-foreground">{categoryLabel(preview.category)}{preview.toothCodes.length ? ` · Tooth ${preview.toothCodes.join(", ")}` : ""}</p>{preview.note && <p className="mt-3 border-t pt-3 text-sm text-muted-foreground">{preview.note}</p>}</div></div>}
-          <DialogFooter>{preview && getPair(preview, photos) && <Button type="button" variant="outline" className="min-h-11" onClick={() => comparePhoto(preview)}><GitCompareArrows aria-hidden="true" />Compare before and after</Button>}<Button type="button" variant="outline" className="min-h-11" onClick={() => setPreview(null)}>Close</Button></DialogFooter>
+          <DialogFooter>{preview && getPair(preview, photosWithUrls) && <Button type="button" variant="outline" className="min-h-11" onClick={() => void comparePhoto(preview)}><GitCompareArrows aria-hidden="true" />Compare before and after</Button>}<Button type="button" variant="outline" className="min-h-11" onClick={() => setPreview(null)}>Close</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

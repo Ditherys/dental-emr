@@ -2857,3 +2857,50 @@ next O12 slice.
   is configured; the authorized `node scripts/generate-database-types.mjs
   --local --check` passed. Cloud TEST, hosted E2E/axe, advisor/security
   gates, and production release acceptance remain pending under ADR-029.
+
+## Task 13 — O12 patient clinical-photo gallery and chronology integration (2026-08-30)
+
+Codex integrated the approved private clinical-photo workflow into the patient
+clinical record on `main`. Original image bytes still bypass Server Actions via
+the provider-neutral MinIO/R2 presigned upload path; PostgreSQL metadata remains
+canonical and the UI receives only short-lived, permission-checked derivative
+URLs.
+
+### Implementation
+
+- Added dentist/same-branch clinical-write Server Actions for source upload
+  creation, storage-attested confirmation, idempotent derivative processing,
+  rename, BEFORE/AFTER pairing, and AAL2-protected archive. Read/list and
+  derivative delivery require clinical-read; receptionist and foreign
+  patient/branch requests collapse to safe authorization failures.
+- Added a chronological patient gallery below the clinical odontogram/records
+  section with date/category/procedure/tooth/photographer filters, status and
+  note metadata, private thumbnail/display hydration, preview, before/after
+  comparison, pairing, safe display-filename rename, and archive confirmation.
+  The original client filename and storage object key are never rendered.
+- Added direct-upload confirmation and processing retry behavior to the patient
+  workspace, preserving confirmed metadata when derivative processing fails.
+- Added forward-only `20260830010621`/`10622` action migrations and
+  `20260830010623` archive-processing hardening. Archived rows are excluded from
+  active list/delivery and are immutable; claim, failure, trusted completion,
+  rename, pairing, and a database trigger reject post-archive mutation while
+  retaining canonical history and audit events.
+
+### Verification
+
+- Photo/media/action/gallery/workspace focused suites pass (8 files / 44
+  media-and-photo tests, plus 5 files / 33 gallery/action/workspace tests).
+- Full serial unit suite passes (164 files / 1,563 tests).
+- Local clinical-photo pgTAP suite passes (33 assertions, `P1_TEST_PASS`),
+  including receptionist/foreign-patient denial, AAL2 archive, active-list and
+  derivative exclusion, and archive race lifecycle guards. The full local DB
+  runner reaches this suite and later stops at the pre-existing
+  `treatment_plans.test.sql` completion-marker residual.
+- `npm run security:migrations` passes (293 files, 2,928 statements, 1,279
+  privilege statements, 80 grant terminals, 386 approved final privileges).
+  Typecheck, build, lint (three pre-existing treatment-plan warnings only),
+  secret scan, dependency audit, database-type generation/check, and diff
+  checks pass.
+- Cloud TEST, hosted E2E/axe, advisor/security, and final release acceptance
+  remain pending under ADR-029. The processing claim lease/token remains a
+  documented pre-production hardening item.

@@ -24,10 +24,25 @@ const fileActions = vi.hoisted(() => ({
   createFileUploadAction: vi.fn(),
   downloadUrlAction: vi.fn(),
 }));
+const photoActions = vi.hoisted(() => ({
+  archiveClinicalPhotoAction: vi.fn(),
+  confirmClinicalPhotoUploadAction: vi.fn(),
+  createClinicalPhotoUploadAction: vi.fn(),
+  downloadClinicalPhotoDerivativeAction: vi.fn(),
+  pairClinicalPhotosAction: vi.fn(),
+  processClinicalPhotoAction: vi.fn(),
+  renameClinicalPhotoAction: vi.fn(),
+}));
 const router = { refresh: vi.fn() };
 
 vi.mock("./actions", () => actions);
 vi.mock("./files/actions", () => fileActions);
+vi.mock("./photos/actions", () => photoActions);
+vi.mock("./photos/clinical-photo-gallery", () => ({
+  ClinicalPhotoGallery: ({ initialPhotos, canWriteClinical }: { initialPhotos: unknown[]; canWriteClinical: boolean }) => (
+    <div data-testid="clinical-photo-gallery">{initialPhotos.length} photos · {canWriteClinical ? "write" : "read"}</div>
+  ),
+}));
 vi.mock("./clinical-section", () => ({ ClinicalSection: () => <div data-testid="clinical-section" /> }));
 vi.mock("./intake-section", () => ({ IntakeSection: () => <div data-testid="intake-section" /> }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -103,6 +118,7 @@ describe("PatientWorkspace", () => {
 
     expect(screen.getByRole("link", { name: "Clinical" })).toBeVisible();
     expect(screen.getByTestId("clinical-section")).toBeInTheDocument();
+    expect(screen.getByTestId("clinical-photo-gallery")).toHaveTextContent("0 photos · write");
     expect(screen.queryByTestId("intake-section")).not.toBeInTheDocument();
   });
 

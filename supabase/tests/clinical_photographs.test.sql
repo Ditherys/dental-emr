@@ -51,6 +51,13 @@ update public.file_objects set mime_type='image/jpeg' where id='e6200000-0000-00
 set local role authenticated;
 
 select extensions.is((select public.archive_clinical_photo('32000000-0000-0000-0000-000000000001','d45e073b-77d0-4c67-a656-aed601cc5c18',(select photo_id from clinical_photo_test_ids),3,'Synthetic duplicate upload')),true,'AAL2 clinical archive succeeds with a reason');
+select extensions.throws_ok($$select public.claim_clinical_photo_processing('32000000-0000-0000-0000-000000000001',(select photo_id from clinical_photo_test_ids))$$,'P0001','invalid state','archived photos cannot be claimed for processing');
+select extensions.throws_ok($$select public.fail_clinical_photo_processing('32000000-0000-0000-0000-000000000001',(select photo_id from clinical_photo_test_ids))$$,'P0001','invalid state','archived photos cannot be marked failed');
+set local role postgres;
+select set_config('request.jwt.claim','{"role":"service_role"}',true);
+select extensions.throws_ok($$select public.complete_clinical_photo_derivatives('12000000-0000-0000-0000-000000000001','32000000-0000-0000-0000-000000000001',(select photo_id from clinical_photo_test_ids),repeat('a',64),100,jsonb_build_array(jsonb_build_object('variant','thumbnail'),jsonb_build_object('variant','preview'),jsonb_build_object('variant','display')))$$,'P0001','invalid state','archived photos cannot be completed by a racing worker');
+set local role authenticated;
+select set_config('request.jwt.claim','{"role":"authenticated","aal":"aal2"}',true);
 select extensions.throws_ok($$select public.rename_clinical_photo('32000000-0000-0000-0000-000000000001',(select photo_id from clinical_photo_test_ids),4,'archived.png')$$,'P0001','invalid state','archived photos cannot be renamed');
 select extensions.is((select count(*)::integer from public.list_clinical_photos('32000000-0000-0000-0000-000000000001','d45e073b-77d0-4c67-a656-aed601cc5c18')),0,'archived photos are excluded from the ordinary gallery list');
 select extensions.throws_ok($$select public.get_clinical_photo_derivative('32000000-0000-0000-0000-000000000001','d45e073b-77d0-4c67-a656-aed601cc5c18',(select photo_id from clinical_photo_test_ids),'preview')$$,'42501','not authorized','archived derivatives cannot be downloaded');

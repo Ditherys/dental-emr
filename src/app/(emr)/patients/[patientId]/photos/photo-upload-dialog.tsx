@@ -103,7 +103,9 @@ export function PhotoUploadDialog({
     }
     setFile(nextFile);
     setFilenameWasEdited(false);
-    if (!ACCEPTED_MIME_TYPES.includes(nextFile.type as (typeof ACCEPTED_MIME_TYPES)[number])) {
+    if (nextFile.size <= 0) {
+      setError("The image must not be empty.");
+    } else if (!ACCEPTED_MIME_TYPES.includes(nextFile.type as (typeof ACCEPTED_MIME_TYPES)[number])) {
       setError("Use a JPEG, PNG, or WebP image.");
     } else if (nextFile.size > MAX_FILE_BYTES) {
       setError("The image must be 25 MB or smaller.");
@@ -111,7 +113,7 @@ export function PhotoUploadDialog({
   }
 
   const effectiveDisplayFilename = filenameWasEdited ? displayFilename : suggested;
-  const valid = Boolean(canWriteClinical && file && ACCEPTED_MIME_TYPES.includes(file.type as (typeof ACCEPTED_MIME_TYPES)[number]) && file.size <= MAX_FILE_BYTES && effectiveDisplayFilename.trim() && captureAt && !error);
+  const valid = Boolean(canWriteClinical && file && file.size > 0 && ACCEPTED_MIME_TYPES.includes(file.type as (typeof ACCEPTED_MIME_TYPES)[number]) && file.size <= MAX_FILE_BYTES && effectiveDisplayFilename.trim() && captureAt && !error);
 
   async function submit() {
     if (!valid || !file) return;
