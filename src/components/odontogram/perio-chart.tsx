@@ -120,14 +120,25 @@ export function PerioChart({
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     event.preventDefault();
     const step = event.key === "ArrowRight" ? 1 : -1;
-    const index = PERIO_SITE_ORDER.indexOf(site) + step;
+    const siteIndex = PERIO_SITE_ORDER.indexOf(site);
     const toothIndex = teeth.indexOf(tooth);
-    if (index >= 0 && index < PERIO_SITE_ORDER.length) {
-      focusElement(tooth, PERIO_SITE_ORDER[index]!);
-    } else if (index < 0 && toothIndex > 0) {
-      focusElement(teeth[toothIndex - 1]!, PERIO_SITE_ORDER[PERIO_SITE_ORDER.length - 1]!);
-    } else if (index >= PERIO_SITE_ORDER.length && toothIndex < teeth.length - 1) {
-      focusElement(teeth[toothIndex + 1]!, PERIO_SITE_ORDER[0]!);
+    if (siteIndex < 0 || toothIndex < 0) return;
+
+    // Move through a single linear keyboard order, skipping entire teeth that
+    // cannot receive periodontal measurements. Every arrow destination is a
+    // PD input (including when the key originated from a GM input).
+    let cursor = toothIndex * PERIO_SITE_ORDER.length + siteIndex + step;
+    while (cursor >= 0 && cursor < teeth.length * PERIO_SITE_ORDER.length) {
+      const candidateTooth = teeth[Math.floor(cursor / PERIO_SITE_ORDER.length)];
+      const candidateSite = PERIO_SITE_ORDER[cursor % PERIO_SITE_ORDER.length];
+      if (candidateTooth && candidateSite) {
+        const candidateState = getState(candidateTooth);
+        if (!readOnly && candidateState.toothPresent && !candidateState.implantContext) {
+          focusElement(candidateTooth, candidateSite);
+          return;
+        }
+      }
+      cursor += step;
     }
   };
 
@@ -135,7 +146,7 @@ export function PerioChart({
     <div data-arch={label} className="min-w-0" role="region" aria-label={`${label} periodontal grid`}>
       <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">{label}</div>
       <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]" tabIndex={0} aria-label={`${label} horizontal scroll, use arrow keys to pan`}>
-        <div className="min-w-[720px]">
+        <div className="min-w-[720px]" role="grid" aria-label={`${label} periodontal measurements`}>
           <div role="row" className="grid" style={{ gridTemplateColumns: `48px repeat(${teeth.length}, minmax(0, 1fr))` }}>
             <div role="columnheader" className="px-1 py-1 text-[10px] font-medium text-slate-500">Site</div>
             {teeth.map((tooth) => {
@@ -163,13 +174,13 @@ export function PerioChart({
           </div>
 
           <div role="row" className="grid" style={{ gridTemplateColumns: `48px repeat(${teeth.length}, minmax(0, 1fr))` }}>
-            <div className="px-1 py-1 text-[10px] text-slate-500">Vis</div>
+            <div role="rowheader" className="px-1 py-1 text-[10px] text-slate-500">Vis</div>
             {teeth.map((tooth) => {
               const calValues = PERIO_SITE_ORDER.map((site) => getMeasurement(tooth, site)?.calMm ?? null).filter((value): value is number => value !== null);
               const average = calValues.length ? Math.round(calValues.reduce((sum, value) => sum + value, 0) / calValues.length) : null;
               const previousValues = PERIO_SITE_ORDER.map((site) => getHistorical(tooth, site)?.calMm ?? null).filter((value): value is number => value !== null);
               const previousAverage = previousValues.length ? Math.round(previousValues.reduce((sum, value) => sum + value, 0) / previousValues.length) : null;
-              return <div key={tooth} className="flex justify-center px-0.5 py-1"><VisBar cal={average} prevCal={previousAverage} /></div>;
+              return <div key={tooth} role="gridcell" className="flex justify-center px-0.5 py-1"><VisBar cal={average} prevCal={previousAverage} /></div>;
             })}
           </div>
 

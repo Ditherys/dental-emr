@@ -115,6 +115,33 @@ describe("PerioWorkspace O10", () => {
     expect(screen.getAllByRole("button", { name: /tooth 11/i })[0]).toHaveFocus();
   });
 
+  it("skips missing and implant teeth when arrowing between probing inputs", async () => {
+    const user = userEvent.setup();
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        toothStates={{
+          "21": { toothPresent: false },
+          "22": { toothPresent: true, implantContext: true },
+        }}
+        initialSites={[]}
+      />,
+    );
+
+    const start = screen.getAllByRole("spinbutton", { name: /tooth 11 disto-lingual probing depth/i })[0]!;
+    const nextPresent = screen.getAllByRole("spinbutton", { name: /tooth 23 mesio-buccal probing depth/i })[0]!;
+
+    start.focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(nextPresent).toHaveFocus();
+
+    await user.keyboard("{ArrowLeft}");
+    expect(start).toHaveFocus();
+  });
+
   it("disables periodontal fields for missing teeth and implant-only exclusions", () => {
     render(
       <PerioWorkspace

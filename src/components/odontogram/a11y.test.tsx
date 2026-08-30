@@ -192,6 +192,10 @@ describe("O11 odontogram a11y", () => {
       />,
     );
 
+    const grid = screen.getByRole("grid", { name: /maxilla periodontal measurements/i });
+    expect(grid).toBeInTheDocument();
+    expect(grid.querySelectorAll(':scope > [role="row"]')).toHaveLength(8);
+    expect(grid.querySelectorAll(':scope > [role="row"] > [role="gridcell"]')).toHaveLength(7);
     expect(screen.getByRole("button", { name: /tooth 11 periodontal entry/i })).toHaveAccessibleDescription(/present/i);
     expect(screen.getByRole("spinbutton", { name: /tooth 11 buccal probing depth/i })).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: /tooth 11 buccal gingival margin/i })).toBeInTheDocument();
