@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildForkPayload, forkPayloadToClinicalDraft } from "./fork-adapter";
+import { buildForkPayload, buildForkRelationshipBaselines, forkPayloadToClinicalDraft, forkRelationshipContextFromDto } from "./fork-adapter";
 import type { PatientOdontogramDTO } from "./types";
 
 const PATIENT_ID = "00000000-0000-4000-8000-000000000001";
@@ -52,7 +52,7 @@ function entry(overrides: Partial<PatientOdontogramDTO["entries"][number]>): Pat
 
 describe("fork adapter", () => {
   it("maps canonical current and planned data to fixed v2.20 fork payloads without identities", () => {
-    const result = buildForkPayload(dto({
+    const input = dto({
       entries: [
         entry({
           tooth_code: "11",
@@ -152,7 +152,8 @@ describe("fork adapter", () => {
           { id: "00000000-0000-4000-8000-000000000012", ordinal: 3, component_kind: "CROWN", attachment_value: null, depends_on_component_id: "00000000-0000-4000-8000-000000000011", supersedes_component_id: null, version: 1, sealed_at: RECORDED_AT, event_state: "CURRENT" },
         ],
       }],
-    }));
+    });
+    const result = buildForkPayload(input);
 
     const status = result.status as { version?: string; teeth?: Record<string, unknown> };
     const plan = result.plan as { version?: string; teeth?: Record<string, unknown> } | null;
@@ -177,6 +178,17 @@ describe("fork adapter", () => {
     expect(plan).toMatchObject({
       version: "2.20",
       teeth: { "16": { caries: ["caries-occlusal"], note: "Synthetic planned treatment note" } },
+    });
+    expect(buildForkRelationshipBaselines(input)).toEqual([
+      { toothCode: "21", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+      { toothCode: "22", kind: "BRIDGE", status: "ACTIVE", role: "PONTIC" },
+      { toothCode: "23", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+      { toothCode: "24", kind: "IMPLANT", status: "ACTIVE" },
+    ]);
+    expect(forkRelationshipContextFromDto(input)).toEqual({
+      bridgeToothCodes: ["21", "22", "23"],
+      implantToothCodes: ["24"],
+      periodontalToothCodes: [],
     });
   });
 
@@ -263,6 +275,27 @@ describe("fork adapter", () => {
     })).toEqual([
       expect.objectContaining({ toothCode: "11", detail: { code: "TOOTH_STATE", state: "MISSING" } }),
     ]);
+  });
+
+  it("keeps fork bridge baseline out of ordinary clinical drafts and emits safe relationship context", () => {
+    const payload = {
+      version: "2.20",
+      patientId: PATIENT_ID,
+      globals: { organizationId: "forged-org", branchId: "forged-branch" },
+      teeth: {
+        "11": { toothSelection: "tooth-base", bridgePillar: true, patient_id: PATIENT_ID },
+        "12": { toothSelection: "none", restorationType: "bridge", restorationMaterial: "metal", organization_id: "forged-org" },
+        "13": { toothSelection: "tooth-base", bridgePillar: true, provider_id: "forged-provider" },
+        "14": {
+          perio: { pd: { MB: 4, INVALID: 99 }, gm: { MB: 1 }, bop: ["MB", "INVALID"], sup: ["MB"] },
+          patient_id: PATIENT_ID,
+        },
+        "15": { toothSelection: "implant", component_id: "forged-component" },
+      },
+    };
+
+    expect(forkPayloadToClinicalDraft(payload)).toEqual([]);
+    expect(forkPayloadToClinicalDraft(payload, { relationshipToothCodes: ["11", "12", "13", "15"] })).toEqual([]);
   });
 
   it("preserves crown leakage only for valid crown or bridge restorations", () => {

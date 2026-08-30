@@ -60,6 +60,72 @@ export type ForkClinicalDraft = {
   note: string | null;
 };
 
+/**
+ * Renderer-independent relationship context used by the save boundary.  The
+ * fork can display these structures, but its JSON has no bridge/component IDs
+ * and must never be treated as an instruction to create or void a relationship.
+ * Callers use this context to route confirmed structural changes through the
+ * existing bridge/implant actions with the canonical DTO as the authority.
+ */
+export type ForkRelationshipContext = {
+  bridgeToothCodes: readonly string[];
+  implantToothCodes: readonly string[];
+  periodontalToothCodes: readonly string[];
+};
+
+/** Bounded, renderer-independent periodontal input for a later save boundary. */
+export type ForkPeriodontalDraft = {
+  kind: "PERIODONTAL";
+  toothCode: string;
+  sites: readonly {
+    site: "MB" | "B" | "DB" | "ML" | "L" | "DL";
+    probingDepthMm: number;
+    gingivalMarginMm: number | null;
+    bleedingOnProbing: boolean;
+    suppuration: boolean;
+  }[];
+};
+
+export function forkRelationshipContextFromDto(dto: PatientOdontogramDTO): ForkRelationshipContext {
+  const bridgeToothCodes = new Set<string>();
+  for (const bridge of dto.bridges) {
+    if (bridge.voided_at !== null || bridge.event_state === "VOIDED" || bridge.event_state === "SUPERSEDED") continue;
+    for (const unit of bridge.units) bridgeToothCodes.add(unit.tooth_fdi);
+  }
+  const implantToothCodes = new Set<string>();
+  for (const chain of dto.implantChains) {
+    if (chain.event_state === "VOIDED" || chain.event_state === "SUPERSEDED") continue;
+    implantToothCodes.add(chain.tooth_fdi);
+  }
+  const periodontalToothCodes = new Set<string>();
+  for (const examination of dto.periodontalExaminations) {
+    for (const site of examination.sites) periodontalToothCodes.add(site.tooth_fdi);
+    for (const tooth of examination.tooth) periodontalToothCodes.add(tooth.tooth_fdi);
+  }
+  return {
+    bridgeToothCodes: [...bridgeToothCodes],
+    implantToothCodes: [...implantToothCodes],
+    periodontalToothCodes: [...periodontalToothCodes],
+  };
+}
+
+/**
+ * Canonical relationship context that a later audited action may use to decide
+ * whether a fork overlay is a baseline rather than a clinical condition. It
+ * intentionally contains no relationship, component, patient, or tenant IDs.
+ */
+export type ForkRelationshipBaseline = {
+  toothCode: string;
+  kind: "BRIDGE" | "IMPLANT";
+  status: "ACTIVE" | "PLANNED";
+  role?: "ABUTMENT" | "PONTIC";
+};
+
+export type ForkClinicalDraftOptions = {
+  /** Canonical relationship overlay teeth; never derived from untrusted JSON. */
+  relationshipToothCodes?: readonly string[];
+};
+
 function emptyChart(): ForkChart {
   return {
     version: "2.20",
@@ -190,6 +256,34 @@ function mapRelationships(chart: ForkChart, dto: PatientOdontogramDTO, recordKin
   }
 }
 
+/**
+ * Produces ID-free relationship overlay context for the renderer/diff layer.
+ * Bridge, implant, and periodontal mutations remain dedicated canonical flows;
+ * this adapter never turns their fork display fields into write identifiers.
+ */
+export function buildForkRelationshipBaselines(dto: PatientOdontogramDTO): readonly ForkRelationshipBaseline[] {
+  const baselines: ForkRelationshipBaseline[] = [];
+  for (const recordKind of ["CURRENT", "PLAN_DESIGN"] as const) {
+    const status = recordKind === "CURRENT" ? "ACTIVE" : "PLANNED";
+    const expectedState = recordKind === "CURRENT" ? "CURRENT" : "PLANNED";
+    for (const bridge of dto.bridges) {
+      if (bridge.record_kind !== recordKind || bridge.voided_at !== null || bridge.event_state !== expectedState ||
+          (recordKind === "CURRENT" && bridge.sealed_at === null)) continue;
+      for (const unit of bridge.units) {
+        if (!FDI_TOOTH_SET.has(unit.tooth_fdi)) continue;
+        baselines.push({ toothCode: unit.tooth_fdi, kind: "BRIDGE", status, role: unit.role });
+      }
+    }
+    for (const chain of dto.implantChains) {
+      if (chain.record_kind !== recordKind || chain.event_state !== expectedState) continue;
+      if (!chain.components.some((component) => component.component_kind === "FIXTURE" && component.event_state === expectedState &&
+          (recordKind === "PLAN_DESIGN" || component.sealed_at !== null))) continue;
+      if (FDI_TOOTH_SET.has(chain.tooth_fdi)) baselines.push({ toothCode: chain.tooth_fdi, kind: "IMPLANT", status });
+    }
+  }
+  return baselines;
+}
+
 /** Builds fork v2.20 display input from the canonical patient DTO. */
 export function buildForkPayload(dto: PatientOdontogramDTO): { status: Record<string, unknown>; plan: Record<string, unknown> | null } {
   const status = emptyChart();
@@ -238,7 +332,11 @@ function draft(
   return { toothCode, surfaces, kind, status, detail, note };
 }
 
-function extractChart(value: unknown, status: ForkClinicalDraft["status"]): ForkClinicalDraft[] {
+function extractChart(
+  value: unknown,
+  status: ForkClinicalDraft["status"],
+  relationshipToothCodes: ReadonlySet<string>,
+): ForkClinicalDraft[] {
   if (!isRecord(value) || value.version !== "2.20" || !isRecord(value.teeth)) return [];
   const drafts: ForkClinicalDraft[] = [];
 
@@ -246,6 +344,8 @@ function extractChart(value: unknown, status: ForkClinicalDraft["status"]): Fork
     const tooth = value.teeth[toothCode];
     if (!isRecord(tooth)) continue;
     const note = boundedNote(tooth.note);
+    const relationshipBaseline = relationshipToothCodes.has(toothCode);
+    const bridgePontic = tooth.toothSelection === "none" && tooth.restorationType === "bridge";
     const cariesSeverity = isRecord(tooth.cariesSeverity) ? tooth.cariesSeverity : {};
     if (Array.isArray(tooth.caries)) {
       for (const caries of tooth.caries) {
@@ -279,18 +379,18 @@ function extractChart(value: unknown, status: ForkClinicalDraft["status"]): Fork
       tooth.toothSubstrate === "crownprep" ? "CROWN_PREPARATION" : null;
     // `tooth-base` is the fork's untouched display default, not a clinical
     // delta. Importing it would fabricate 32 PRESENT entries on every save.
-    if (tooth.toothSelection === "none") {
+    if (!relationshipBaseline && !bridgePontic && tooth.toothSelection === "none") {
       drafts.push(draft(toothCode, ["O"], "FINDING", status, {
         code: "TOOTH_STATE", state: tooth.extractionWound === true ? "EXTRACTION_WOUND" : "MISSING",
       }, note));
-    } else if (tooth.toothSelection === "tooth-under-gum") {
+    } else if (!relationshipBaseline && tooth.toothSelection === "tooth-under-gum") {
       drafts.push(draft(toothCode, ["O"], "FINDING", status, { code: "TOOTH_STATE", state: "SUBGINGIVAL" }, note));
     }
-    if (substrateState !== null) {
+    if (!relationshipBaseline && substrateState !== null) {
       drafts.push(draft(toothCode, ["O"], "FINDING", status, { code: "TOOTH_STATE", state: substrateState }, note));
     }
 
-    if (isValidFixedRestoration(tooth.restorationType, tooth.restorationMaterial)) {
+    if (!relationshipBaseline && !bridgePontic && isValidFixedRestoration(tooth.restorationType, tooth.restorationMaterial)) {
       drafts.push(draft(toothCode, ["O"], "FINDING", status, {
         code: "RESTORATION", restorationType: tooth.restorationType, material: tooth.restorationMaterial as RestorationMaterial, marginalLeakage: (tooth.restorationType === "crown" || tooth.restorationType === "bridge") && tooth.crownLeakage === true,
       }, note));
@@ -321,10 +421,16 @@ function extractChart(value: unknown, status: ForkClinicalDraft["status"]): Fork
  * Parses a fork payload as untrusted renderer state. Identity-like and
  * renderer-only fields are ignored; callers must review drafts before writes.
  */
-export function forkPayloadToClinicalDraft(payload: unknown): readonly ForkClinicalDraft[] {
+export function forkPayloadToClinicalDraft(
+  payload: unknown,
+  options: ForkClinicalDraftOptions = {},
+): readonly ForkClinicalDraft[] {
   if (!isRecord(payload)) return [];
+  const relationshipToothCodes = new Set(
+    (options.relationshipToothCodes ?? []).filter((toothCode) => FDI_TOOTH_SET.has(toothCode)),
+  );
   const statusPayload = isRecord(payload.status) ? payload.status : payload;
-  const drafts = extractChart(statusPayload, "ACTIVE");
-  if (isRecord(payload.plan)) drafts.push(...extractChart(payload.plan, "PLANNED"));
+  const drafts = extractChart(statusPayload, "ACTIVE", relationshipToothCodes);
+  if (isRecord(payload.plan)) drafts.push(...extractChart(payload.plan, "PLANNED", relationshipToothCodes));
   return drafts;
 }
