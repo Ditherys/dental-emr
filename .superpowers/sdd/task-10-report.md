@@ -7,7 +7,7 @@ mounted only for server-authorized, open/in-progress cases.
 
 ## Implemented
 
-- Forward-only O8 completion migrations `20260830010418` through `20260830010426`, including RLS/no table grants, provider derivation, idempotency, explicit finding-resolution links, immutable execution completion, completion context, and approved final RPC grant registration.
+- Forward-only O8 completion migrations `20260830010418` through `20260830010428`, including RLS/no table grants, provider derivation, idempotency, explicit finding-resolution links, immutable execution completion, completion context, approved final RPC grant registration, and a pre-charge immutable-materialization guard.
 - Structured treatment-plan fields replace drawing UI/types/includes; legacy drawing response fields are explicitly transformed at the read boundary rather than broadly stripped.
 - `PlanModePanel` confirmation component and focused tests: patient, procedure, date, signed-in dentist, selected findings, exact PHP amount; it has no provider selector or payment collection control.
 - `completeTreatmentAction` has server authorization for clinical write plus billing charge; completion input contains no provider identity.
@@ -31,12 +31,18 @@ mounted only for server-authorized, open/in-progress cases.
 - Current bridge and implant materialization now retain a source link to their
   immutable PLAN_DESIGN records. The atomic pgTAP fixture includes a synthetic
   bridge design and proves the CURRENT bridge preserves that source ID.
+- A plan-linked completion now locks its materialization contract and relevant
+  PLAN_DESIGN row, scopes the design to the case patient and item plan, and
+  rejects a changed bridge/implant payload before `post_charge`. Clinical
+  completion is constrained to the contract tooth and an explicit safe mapping:
+  ROOT_CANAL -> ROOT_CANAL, CROWN -> RESTORATION with crown type, and generic
+  OTHER -> RESTORATION or OTHER; unsupported extraction completion is rejected.
 
 ## Verification
 
-- `npm run db:migrate:local`: forward-applied local migrations 10423–10426; no reset.
+- `npm run db:migrate:local`: forward-applied local migrations 10423–10428; no reset.
 - `npm run test:db:local`: the updated atomic suite passed after migration
-  10426, as did all suites before the existing `treatment_plans.test.sql`
+  10428, as did all suites before the existing `treatment_plans.test.sql`
   completion-marker residual.
 - `npm run test:unit -- src/lib/treatment-plan src/components/odontogram 'src/app/(emr)/patients/[patientId]/treatment-plan-section.test.tsx'`: 15 files / 82 tests passed.
 - `npm run typecheck`: passed.

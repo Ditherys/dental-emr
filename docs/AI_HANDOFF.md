@@ -102,12 +102,17 @@
   collect payment. Clinical detail requires explicit selection; frozen bridge
   and implant designs are passed as completion payloads. The action repeats
   clinical-write and billing.charge authorization before the narrow atomic RPC.
-- Forward migrations 10418–10426 add append-only finding resolution, atomic
-  completion, the completion-context DTO, and idempotency request fingerprint.
+- Forward migrations 10418–10428 add append-only finding resolution, atomic
+  completion, the completion-context DTO, idempotency request fingerprint, and
+  pre-charge immutable materialization enforcement.
   pgTAP proves selected-only resolution, immutable acknowledged proposal,
   exact retry, cross-case same-key rejection, rollback on failed completion,
   execution transition, context derivation, and CURRENT-to-PLAN_DESIGN bridge
-  provenance. No local reset was used.
+  provenance. Direct authenticated drift tests prove that a plan-linked bridge
+  span/role/support change, implant tooth/ordinal/dependency/attachment change,
+  and clinical ROOT_CANAL mismatch each fail before charge, execution,
+  relationship, or finding-resolution side effects. PLAN_DESIGN provenance is
+  scoped to the linked case patient and plan. No local reset was used.
 - Fresh evidence: 15 focused Vitest files / 82 tests, strict typecheck, and
   migration privilege lint pass. Local pgTAP passes through the new atomic
   suite and then stops at the pre-existing `treatment_plans.test.sql`
