@@ -109,6 +109,7 @@ describe("ForkPrintChart", () => {
       expect(screen.getByTestId("fork-print-svg")).toHaveAttribute("data-projection-ready", "true");
       expect(screen.getByTestId("fork-print-current-svg").querySelector("svg")).toBeInTheDocument();
       expect(screen.getByTestId("fork-print-planned-svg").querySelector("svg")).toBeInTheDocument();
+      expect(document.querySelector(".fork-print-chart.dental-emr-fork")).toBeInTheDocument();
     }, { timeout: 15000 });
   }, 30000);
 

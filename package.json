@@ -46,7 +46,8 @@
     "db:types": "node scripts/generate-database-types.mjs",
     "db:types:local": "node scripts/generate-database-types.mjs --local",
     "db:types:check": "node scripts/generate-database-types.mjs --check",
-    "db:types:check:test": "node scripts/generate-database-types.mjs --check --require-test-target"
+    "db:types:check:test": "node scripts/generate-database-types.mjs --check --require-test-target",
+    "odontogram:scope-css": "node scripts/scope-odontogram-css.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1118.0",

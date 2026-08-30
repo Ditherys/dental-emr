@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import "react-advanced-odontogram/style.css";
+import "react-advanced-odontogram/emr-style.css";
 
 const geistSans = Geist({
   subsets: ["latin"],

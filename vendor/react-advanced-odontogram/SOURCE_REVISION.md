@@ -23,3 +23,8 @@ Artifacts copied from `dist/`:
 - `roboto-Bywi16HJ.js`
 - `roboto-Bywi16HJ.js.map`
 - `style.css`
+
+The application imports `emr-style.css`, generated from the pinned `style.css`
+with `npm run odontogram:scope-css`. The generated entrypoint prefixes the
+fork's demo selectors with `.dental-emr-fork` so generic rules such as
+`.hidden`, `body`, and `select` cannot alter the surrounding EMR shell.

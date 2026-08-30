@@ -2984,3 +2984,22 @@ This is a local renderer correction, not a claim that every fork control/state
 has yet been exposed in the patient domain. Canonical data remains outside the
 renderer; Cloud TEST, hosted E2E/axe, advisor/security gates, and final release
 acceptance remain pending under ADR-029.
+
+### Codex layout-regression repair (2026-08-31)
+
+After the controlled fork replacement, the patient page could collapse to the
+shell's 15rem grid track: the fork's demo stylesheet was imported globally and
+its `.hidden { display: none !important; }` overrode Tailwind responsive classes,
+keeping the sidebar hidden while the grid still reserved its column. Codex
+added a generated `emr-style.css` entrypoint, scoped to `.dental-emr-fork`, and
+switched the root layout to that entrypoint. The pinned raw fork stylesheet is
+retained unchanged; `npm run odontogram:scope-css` regenerates the scoped
+artifact. Standalone print charts now mount inside a print-safe fork host so
+the scoped renderer CSS still applies without hiding the print preview.
+
+Verification: the stylesheet-scope regression test and five fork/print/clinical
+test files pass (16 tests); the production build, typecheck, and ESLint pass
+with only the three pre-existing treatment-plan warnings. A browser probe at
+1920px reports the expected 240px sidebar and 1680px content column after a
+clean dev-server restart. Cloud TEST, hosted E2E/axe, advisor/security gates,
+and final release acceptance remain pending under ADR-029.

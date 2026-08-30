@@ -13,7 +13,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/odontogram.js"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./emr-style.css": "./dist/emr-style.css"
   },
   "sideEffects": ["**/*.css"],
   "peerDependencies": {

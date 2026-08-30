@@ -284,7 +284,7 @@ export function ForkPrintChart({
       </header>
 
       {shouldRenderStandaloneChart ? (
-        <div className="fork-print-chart mt-3" aria-label="Read-only anatomical odontogram">
+        <div className="fork-print-chart dental-emr-fork dental-emr-fork-print-host mt-3" aria-label="Read-only anatomical odontogram">
           <OdontogramProvider
             key={`print-${dto.patientId}`}
             language="en"

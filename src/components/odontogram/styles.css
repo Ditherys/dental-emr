@@ -151,7 +151,7 @@
    * current/planned SVG clones live in ForkPrintChart below the chart, so do
    * not print the interactive singleton a second time. Standalone print
    * previews use a different class and remain visible. */
-  .dental-emr-fork {
+  .dental-emr-fork:not(.dental-emr-fork-print-host) {
     display: none !important;
   }
 
