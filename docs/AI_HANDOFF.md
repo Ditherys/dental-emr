@@ -2826,7 +2826,7 @@ next O12 slice.
   JPEGs under opaque keys, and returns source/derivative checksums. Derivative
   recursion is rejected.
 - Because 10500–10601 had already been applied in local development, repairs
-  10602–10609 are retained as guarded forward-only corrections; applied
+  10602–10610 are retained as guarded forward-only corrections; applied
   migrations were not rewritten.
 
 ### Verification
@@ -2841,7 +2841,7 @@ next O12 slice.
   derivative-recursion rejection.
 - Full unit suite passes (160 files / 1,530 tests). Migration privilege lint,
   guarded database-suite tests (139 tests), typecheck, build, and secret scan
-  pass. The focused clinical-photo pgTAP suite reports P1_TEST_PASS (20
+  pass. The focused clinical-photo pgTAP suite reports P1_TEST_PASS (21
   assertions); the full local runner reaches that suite and later stops at
   the unrelated pre-existing `treatment_plans.test.sql` completion-marker
   residual.
