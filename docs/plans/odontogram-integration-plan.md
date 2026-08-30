@@ -5,9 +5,12 @@
 > available, or `superpowers:executing-plans`, and follow test-driven development
 > task by task.
 
-**Status:** Accepted by the project owner on 2026-08-28. Execute O0-O4 only,
-after billing B0-B11 is complete, under ADR-027; see
-`docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`.
+**Status:** Accepted by the project owner on 2026-08-28 and amended by
+ADR-029/ADR-030. Execute O1-O14 locally in plan order on `main` after billing
+B0-B11, using guarded forward migrations and deterministic synthetic data.
+Cloud TEST, independent release review, and final owner acceptance remain
+deferred mandatory gates; see `docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`
+and ADR-029.
 
 **Goal:** Replace the Phase 15 schematic chart with an EMR-native, database-
 authoritative clinical odontogram using the customized fork's measured engine
@@ -127,7 +130,7 @@ classified exhaustively:
 | `tailwindcss` | Already present as Tailwind 4; reimplement styles with EMR tokens rather than copying Tailwind 3 configuration |
 | `dompurify` | Unnecessary: plugin/runtime SVG injection is omitted and static SVG renders as React nodes |
 | `jspdf` | Unnecessary: fork PDF export is omitted; use existing EMR print behavior |
-| `@types/fhir` | Unnecessary in this phase: FHIR import/export is omitted and reference mappings are ported only as dependency-free domain fixtures where accepted |
+| `@types/fhir` | No external fork dependency: amended O12 requires EMR-owned bounded staged FHIR/JSON import and audited FHIR/JSON/PDF/SVG/PNG output using internal supported mappings; do not copy fork demo FHIR UI or dependencies |
 | `vite`, `@vitejs/plugin-react`, `vite-plugin-dts`, `@microsoft/api-extractor`, `typedoc` | Source-library build/publishing only; omit because Next.js owns the target build |
 | `gh-pages` | Demo hosting only; omit |
 | `autoprefixer`, `postcss` | Replace with the existing Next.js/Tailwind pipeline; do not add fork versions |
@@ -923,8 +926,8 @@ use until ADR-029's deferred hosted gate is completed.
 | Implants | Frozen designs and separately materialized CURRENT dependency chains/bridge support references |
 | Perio | Exact fork PD/GM/CAL/site semantics; immutable finalized relational versions; rebuilt UI |
 | SVG strategy | Measured assets behind adapter; anatomy refinement deferred |
-| FHIR | Omitted from first release; isolated later candidate |
-| Import/export | Fork JSON/PDF/image omitted; EMR print retained |
+| FHIR | Amended O12 requires EMR-owned bounded staged FHIR R4/JSON import and audited supported FHIR R4 output; unsupported mappings are shown, never guessed |
+| Import/export | Amended O12 requires authorized versioned EMR JSON, FHIR R4, PDF/print, and bounded SVG/PNG output from canonical data; raw fork state and fork demo export infrastructure remain excluded |
 | Pricing/provider | Completed in-clinic treatment links to billing charge and treating provider |
 
 ## Risk Register

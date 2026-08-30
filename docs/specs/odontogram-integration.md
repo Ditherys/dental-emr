@@ -1,8 +1,10 @@
 # Customized Odontogram Integration Specification
 
-**Status:** Accepted by the project owner on 2026-08-28. Implementation is
-authorized only through O4 after billing B0-B11 completes; see
-`docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md`.
+**Status:** Accepted by the project owner on 2026-08-28 and amended by
+ADR-029/ADR-030. O1-O14 local implementation is authorized in plan order on
+`main` after billing B0-B11; Cloud TEST, independent release review, and final
+owner acceptance remain deferred mandatory gates. See
+`docs/BILLING_ODONTOGRAM_ACCEPTANCE_REVIEW.md` and ADR-029.
 
 **Authoritative source fork:**
 `C:\Users\Latitude 7430\Desktop\React-Odontogram-Modul` at audited commit
@@ -423,7 +425,9 @@ Concrete audited behavior at `5e28d93`:
   filling session flags (`808505f`, `1f111bb`).
 - `src/fhir/iso3950.ts` and registry mappings: lossless primary ISO 3950 mapping.
 - `src/fhir/codesystems.ts` and registry FHIR mapping: ICDAS/CARS coding behavior,
-  retained as reference even while FHIR UI/import/export is omitted.
+  retained as reference for the EMR-owned bounded staged FHIR/JSON import and
+  audited FHIR/JSON/PDF/SVG/PNG output required by amended O12; fork demo UI,
+  dependencies, and raw fork-state interchange remain excluded.
 - `src/pluginSanitize.ts`: DOMPurify sanitization of plugin SVG; no plugin system
   is needed initially, but any reused dynamic SVG boundary must preserve the
   equivalent sanitization invariant.
