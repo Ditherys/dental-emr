@@ -260,7 +260,7 @@ select extensions.is(
   (select component_id is not null from public.record_current_implant_component_v3(
     'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
     '[{"tooth_fdi":"37","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"37","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"37","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":2}]'::jsonb,
-    statement_timestamp(),'o5-current-implant-v3'
+    statement_timestamp(),(select charge_id from o5_completion_charge),'o5-current-implant-v3'
   )),
   true,
   'standalone current implant RPC persists and returns the scoped patient'
@@ -296,7 +296,7 @@ select extensions.throws_ok(
   $$select public.record_current_implant_component_v3(
     'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
     '[{"tooth_fdi":"38","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"38","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"38","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":1}]'::jsonb,
-    statement_timestamp(),'o5-invalid-current-implant-v3'
+    statement_timestamp(),(select charge_id from o5_completion_charge),'o5-invalid-current-implant-v3'
   )$$,
   '22023','invalid implant chain','invalid standalone implant dependency rolls back the whole graph'
 );

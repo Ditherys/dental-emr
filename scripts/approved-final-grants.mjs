@@ -515,6 +515,7 @@ const PROCEDURE_CASE_PLAN_DETAIL_RPC_GRANTS_MIGRATION =
 const TREATMENT_PLAN_DETAIL_PRESENCE_RPC_GRANTS_MIGRATION = "20260830010109_treatment_plan_detail_presence_rpcs_grants.sql";
 const ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION = "20260830010301_odontogram_revamp_rpcs_grants.sql";
 const ODONTOGRAM_REVAMP_TERMINAL_REPAIR_GRANTS_MIGRATION = "20260830010303_odontogram_revamp_terminal_repair_grants.sql";
+const ODONTOGRAM_REVAMP_IMPLANT_CHARGE_GRANTS_MIGRATION = "20260830010305_odontogram_revamp_implant_charge_grants.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -1545,6 +1546,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   ]) }),
   Object.freeze({ file: ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION, grants: odontogramRevampRpcGrants }),
   Object.freeze({ file: ODONTOGRAM_REVAMP_TERMINAL_REPAIR_GRANTS_MIGRATION, grants: odontogramRevampRpcGrants.filter((grant) => ["public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)", "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)"].includes(grant.object)) }),
+  Object.freeze({ file: ODONTOGRAM_REVAMP_IMPLANT_CHARGE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)", privilege: "execute", columns: [], reason: "Provider-free current implant writer retains a validated same-patient charge link while deriving provider server-side." }]) }),
 ]);
 
 /**
