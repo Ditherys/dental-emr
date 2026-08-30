@@ -38,6 +38,14 @@ Next.js App Router owns the target build.
 **Review record:** see `docs/decisions/ADR-028-odontogram-renderer-domain-boundary.md`
 and the O0 acceptance record `docs/ODONTOGRAM_O0_ACCEPTANCE.md`.
 
+**EMR adapter boundary (O6):** `MeasuredChart` and `MeasuredTooth` consume the
+renderer-independent `ToothRenderState` plus relationship projections. The
+adapter exposes selection and display preferences only; it has no clinical
+write, reset, persistence, module-global fork state, dynamic import, or runtime
+HTML/SVG injection capability. Current and planned findings are painted by the
+allowlisted overlay registry, while FDI remains the canonical tooth key and
+Universal/Palmer are display conversions.
+
 **O6 measured asset transplant (2026-08-28):** 21 measured tooth-template SVGs
 copied verbatim from the pinned fork into
 `src/components/odontogram/assets/measured/*.svg` (11–18, 31–38, 14_occl,

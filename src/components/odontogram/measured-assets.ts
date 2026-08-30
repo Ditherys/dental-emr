@@ -43,7 +43,7 @@ import asset55OcclUrl from "./assets/measured/55_occl.svg";
 import asset74OcclUrl from "./assets/measured/74_occl.svg";
 import asset75OcclUrl from "./assets/measured/75_occl.svg";
 
-export const MEASURED_FRONT_URLS: Record<number, string> = {
+export const MEASURED_FRONT_URLS: Readonly<Record<number, string>> = Object.freeze({
   11: asset11Url,
   12: asset12Url,
   13: asset13Url,
@@ -70,9 +70,9 @@ export const MEASURED_FRONT_URLS: Record<number, string> = {
   73: asset73Url,
   74: asset74Url,
   75: asset75Url,
-};
+});
 
-export const MEASURED_OCCLUSAL_URLS: Record<number, string> = {
+export const MEASURED_OCCLUSAL_URLS: Readonly<Record<number, string>> = Object.freeze({
   14: asset14OcclUrl,
   15: asset15OcclUrl,
   16: asset16OcclUrl,
@@ -87,7 +87,7 @@ export const MEASURED_OCCLUSAL_URLS: Record<number, string> = {
   55: asset55OcclUrl,
   74: asset74OcclUrl,
   75: asset75OcclUrl,
-};
+});
 
 export const MEASURED_TEMPLATE_IDS = [11, 12, 13, 14, 15, 16, 17, 18, 31, 32, 33, 34, 35, 36, 37, 38, 51, 52, 53, 54, 55, 71, 72, 73, 74, 75] as const;
 export const MEASURED_OCCLUSAL_IDS = [14, 15, 16, 17, 18, 34, 35, 36, 37, 38, 54, 55, 74, 75] as const;

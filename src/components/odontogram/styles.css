@@ -55,6 +55,129 @@
   border-style: dashed;
 }
 
+/* The overlay registry emits only these fixed, named layers. Their geometry is
+ * intentionally small and adapter-owned; no clinical SVG or user markup is
+ * interpreted at runtime. Text labels and data attributes remain the semantic
+ * source of truth when colour is unavailable. */
+.odontogram-measured-root .odontogram-overlay-stack {
+  pointer-events: none;
+  z-index: 2;
+}
+
+.odontogram-measured-root .odontogram-overlay {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.odontogram-measured-root .odontogram-overlay-caries {
+  inset: 33% 31% 33% 31%;
+  border: 2px solid rgb(217 119 6);
+  border-radius: 999px;
+  background: repeating-linear-gradient(135deg, rgb(245 158 11 / 0.7) 0 2px, transparent 2px 4px);
+}
+
+.odontogram-measured-root .odontogram-overlay-restoration {
+  inset: 27% 25% 35% 25%;
+  border: 2px solid rgb(5 150 105);
+  border-radius: 35%;
+  background: rgb(16 185 129 / 0.24);
+}
+
+.odontogram-measured-root .odontogram-overlay-restoration[data-material="zircon"],
+.odontogram-measured-root .odontogram-overlay-restoration[data-material="emax"] {
+  border-color: rgb(14 116 144);
+  background: rgb(103 232 249 / 0.24);
+}
+
+.odontogram-measured-root .odontogram-overlay-restoration[data-material="gold"] {
+  border-color: rgb(161 98 7);
+  background: rgb(250 204 21 / 0.32);
+}
+
+.odontogram-measured-root .odontogram-overlay-restoration[data-material="temporary"] {
+  border-style: dashed;
+}
+
+.odontogram-measured-root .odontogram-overlay-root-fill-complete,
+.odontogram-measured-root .odontogram-overlay-root-fill-incomplete,
+.odontogram-measured-root .odontogram-overlay-root-fill-medicament {
+  inset: 57% 46% 5% 46%;
+  border-radius: 999px;
+  background: rgb(71 85 105 / 0.85);
+}
+
+.odontogram-measured-root .odontogram-overlay-root-fill-incomplete {
+  background: repeating-linear-gradient(0deg, rgb(234 88 12 / 0.9) 0 3px, transparent 3px 6px);
+}
+
+.odontogram-measured-root .odontogram-overlay-root-fill-medicament {
+  background: rgb(124 58 237 / 0.75);
+}
+
+.odontogram-measured-root .odontogram-overlay-planned {
+  inset: 4%;
+  border: 2px dashed rgb(217 119 6);
+  border-radius: 0.35rem;
+  background: repeating-linear-gradient(135deg, rgb(245 158 11 / 0.13) 0 3px, transparent 3px 7px);
+}
+
+.odontogram-measured-root .odontogram-overlay-crown,
+.odontogram-measured-root .odontogram-overlay-crown-preparation {
+  inset: 17% 13% 31% 13%;
+  border: 2px solid rgb(2 132 199);
+  border-radius: 38%;
+}
+
+.odontogram-measured-root .odontogram-overlay-implant-fixture,
+.odontogram-measured-root .odontogram-overlay-implant-abutment,
+.odontogram-measured-root .odontogram-overlay-implant-crown {
+  inset: 25% 27% 20% 27%;
+  border: 2px solid rgb(124 58 237);
+  border-radius: 0.25rem;
+  background: repeating-linear-gradient(90deg, rgb(139 92 246 / 0.25) 0 3px, transparent 3px 6px);
+}
+
+.odontogram-measured-root .odontogram-overlay-implant-abutment {
+  inset: 20% 31% 32% 31%;
+  border-radius: 999px;
+}
+
+.odontogram-measured-root .odontogram-overlay-implant-crown {
+  inset: 12% 18% 31% 18%;
+  border-radius: 38%;
+  background: rgb(139 92 246 / 0.18);
+}
+
+.odontogram-measured-root .odontogram-overlay-tooth-missing,
+.odontogram-measured-root .odontogram-overlay-extraction-wound {
+  inset: 21% 27% 22% 27%;
+  border: 2px solid rgb(100 116 139);
+  border-radius: 999px;
+}
+
+.odontogram-measured-root .odontogram-overlay-tooth-missing::after,
+.odontogram-measured-root .odontogram-overlay-extraction-wound::after {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgb(71 85 105);
+  content: "×";
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.odontogram-measured-root .odontogram-bridge-role {
+  inset: 8% 8%;
+  border: 1px solid rgb(124 58 237 / 0.7);
+  border-radius: 999px;
+}
+
+.odontogram-measured-root .odontogram-tooth[data-bridge-role="PONTIC"] .odontogram-bridge-role {
+  border-style: dashed;
+}
+
 /* Phone-safe: stacks arch grids vertically on very narrow viewport */
 @container (max-width: 420px) {
   .odontogram-measured-root .odontogram-grid {
