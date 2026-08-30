@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(13);
+select extensions.plan(17);
 select extensions.ok(to_regclass('public.procedure_installment_schedule_operations') is not null, 'durable schedule replay table exists');
 select extensions.ok((select relrowsecurity from pg_class where oid='public.procedure_installment_schedules'::regclass), 'schedule table has RLS');
 select extensions.ok(not has_table_privilege('authenticated','public.procedure_installment_schedules','select'), 'schedule table has no browser grant');
@@ -12,7 +12,9 @@ insert into public.organization_members(id,organization_id,user_id,membership_st
 insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by) select 'd7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000001',id,'d7100000-0000-0000-0000-000000000001' from public.roles where organization_id is null and code='OWNER';
 insert into public.patients(id,organization_id,patient_number,first_name,last_name,birth_date,preferred_branch_id) values ('d7140000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH-1','Synthetic','Schedule','1990-01-01','d7120000-0000-0000-0000-000000000001');
 insert into public.procedures(id,organization_id,code,name,status) values ('d7150000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH','Schedule','active');
+insert into public.charges(id,organization_id,patient_id,branch_id,procedure_id,amount_centavos,service_date,idempotency_key,non_clinical) values ('d7170000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001',1000,date '2026-09-01','schedule-charge-a',true),('d7170000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001',1000,date '2026-09-01','schedule-charge-b',true);
 insert into public.procedure_cases(id,organization_id,patient_id,origin_branch_id,procedure_id,opened_by) values ('d7160000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001'),('d7160000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001');
+select set_config('test.cash_method',(select id::text from public.payment_methods where organization_id='d7110000-0000-0000-0000-000000000001' and code='CASH'),true);
 
 set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true); select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001',true);
 select set_config('test.schedule_id',(public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000001','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','schedule-create'))->>'schedule_id',true);
@@ -28,6 +30,12 @@ select extensions.is((public.amend_procedure_installment_schedule('d7120000-0000
 select set_config('test.complete_id',(public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000002','[{"dueDate":"2026-11-01","expectedCentavos":"300"}]','schedule-complete-create'))->>'schedule_id',true);
 select extensions.is((public.amend_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001',current_setting('test.complete_id')::uuid,'COMPLETED',null,'completed','schedule-complete'))->>'status','COMPLETED','active schedule can be completed');
 select extensions.throws_ok($$select public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000099','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','foreign-case')$$,'42501','not authorized','foreign or missing case is denied');
+select set_config('test.payment_id',(select payment_id::text from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,500,'receipt-1','payment-record')),true);
+select extensions.ok(current_setting('test.payment_id')::uuid is not null,'authorized payment recording returns a receipt');
+select extensions.is((select payment_id::text from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,500,'receipt-1','payment-record')),current_setting('test.payment_id'),'payment exact retry returns original receipt');
+select extensions.throws_ok($$select * from public.record_payment('d7120000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',current_setting('test.cash_method')::uuid,501,'receipt-1','payment-record')$$,'22023','idempotency key conflicts with a different request','payment changed payload conflicts');
+select public.allocate_payment('d7120000-0000-0000-0000-000000000001',current_setting('test.payment_id')::uuid,'d7170000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001',500,'schedule-allocation');
 reset role;
-select extensions.is((select count(*)::integer from public.payment_allocations where organization_id='d7110000-0000-0000-0000-000000000001'),0,'schedule lifecycle never writes ledger allocations');
+select extensions.is((select count(*)::integer from public.payment_allocations where charge_id='d7170000-0000-0000-0000-000000000001'),1,'allocation affects the selected charge only');
+select extensions.is((select count(*)::integer from public.payment_allocations where charge_id='d7170000-0000-0000-0000-000000000002'),0,'allocation does not mutate unrelated charge');
 select * from extensions.finish(); rollback;
