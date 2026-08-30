@@ -246,11 +246,6 @@ export async function pairClinicalPhotos(input: unknown): Promise<void> {
   });
 }
 
-export async function recordClinicalPhotoDerivatives(input: unknown): Promise<void> {
-  const value = recordClinicalPhotoDerivativesInputSchema.parse(input);
-  await completeClinicalPhotoDerivatives(await getActorUserId(), value);
-}
-
 async function completeClinicalPhotoDerivatives(
   actorUserId: string,
   input: z.infer<typeof recordClinicalPhotoDerivativesInputSchema>,
