@@ -29,10 +29,11 @@ type Props = {
   patientId: string;
   actingBranchId: string;
   procedureId: string;
+  procedureCaseId?: string | null;
   initialSummary: ProcedurePaymentSummary | null;
 };
 
-export function ProcedurePaymentSummaryCard({ patientId, actingBranchId, procedureId, initialSummary }: Props) {
+export function ProcedurePaymentSummaryCard({ patientId, actingBranchId, procedureId, procedureCaseId = null, initialSummary }: Props) {
   const [summary, setSummary] = useState<ProcedurePaymentSummary | null>(initialSummary);
   const [error, setError] = useState<string | null>(null);
   const [isFetching, setIsFetching] = useState(false);
@@ -75,7 +76,7 @@ export function ProcedurePaymentSummaryCard({ patientId, actingBranchId, procedu
       {isFetching && <p className="mt-2 inline-flex items-center gap-1 text-muted-foreground"><LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" /> Refreshing</p>}
       {error && <p role="alert" className="mt-2 text-destructive">{error}</p>}
       <button type="button" className="mt-2 min-h-11 text-xs underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30" onClick={() => setVersion((value) => value + 1)}>Refresh</button>
-      <InstallmentScheduleDialog branchId={actingBranchId} patientId={patientId} procedureCaseId={procedureId} actualAllocatedCentavos={String(summary.paidCentavos)} />
+      {procedureCaseId && <InstallmentScheduleDialog branchId={actingBranchId} patientId={patientId} procedureCaseId={procedureCaseId} actualAllocatedCentavos={String(summary.paidCentavos)} />}
     </div>
   );
 }
