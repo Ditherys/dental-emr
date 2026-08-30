@@ -8240,6 +8240,13 @@ export type Database = {
           data: Json
         }[]
       }
+      get_patient_odontogram_v3: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          data: Json
+          entry_id: string
+        }[]
+      }
       get_procedure_configuration: {
         Args: { p_acting_branch_id: string; p_procedure_id: string }
         Returns: Json
@@ -9017,6 +9024,19 @@ export type Database = {
           version: number
         }[]
       }
+      record_current_bridge_v3: {
+        Args: {
+          p_acting_branch_id: string
+          p_idempotency_key: string
+          p_occurred_at: string
+          p_patient_id: string
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          version: number
+        }[]
+      }
       record_current_implant_component: {
         Args: {
           p_acting_branch_id: string
@@ -9029,6 +9049,33 @@ export type Database = {
         Returns: {
           component_id: string
           patient_id: string
+          version: number
+        }[]
+      }
+      record_current_implant_component_v3: {
+        Args: {
+          p_acting_branch_id: string
+          p_components: Json
+          p_idempotency_key: string
+          p_occurred_at: string
+          p_patient_id: string
+        }
+        Returns: {
+          component_id: string
+          version: number
+        }[]
+      }
+      record_direct_treatment_with_charge: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_idempotency_key: string
+          p_patient_id: string
+          p_payload: Json
+          p_procedure_id: string
+        }
+        Returns: {
+          event_id: string
           version: number
         }[]
       }
@@ -9059,6 +9106,19 @@ export type Database = {
         }
         Returns: {
           cheque_id: string
+        }[]
+      }
+      record_procedure_followup: {
+        Args: {
+          p_acting_branch_id: string
+          p_idempotency_key: string
+          p_notes: string
+          p_occurred_at: string
+          p_procedure_case_id: string
+        }
+        Returns: {
+          event_id: string
+          version: number
         }[]
       }
       record_tooth_clinical_entry:
@@ -9097,6 +9157,25 @@ export type Database = {
               version: number
             }[]
           }
+      record_tooth_clinical_entry_v3: {
+        Args: {
+          p_acting_branch_id: string
+          p_clinical_code: string
+          p_detail: Json
+          p_idempotency_key: string
+          p_kind: string
+          p_notes: string
+          p_occurred_at: string
+          p_patient_id: string
+          p_status: string
+          p_surfaces: string[]
+          p_tooth_code: string
+        }
+        Returns: {
+          entry_id: string
+          version: number
+        }[]
+      }
       refund_payment: {
         Args: {
           p_acting_branch_id: string

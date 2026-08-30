@@ -155,7 +155,7 @@ export async function listToothConditions(input: unknown): Promise<ToothConditio
 
 export async function getPatientOdontogram(input: unknown): Promise<PatientOdontogramDTO> {
   const value = getPatientOdontogramInputSchema.parse(input);
-  const data = await callRpc("get_patient_odontogram", {
+  const data = await callRpc("get_patient_odontogram_v3" as FunctionName, {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
   });
@@ -174,7 +174,7 @@ export async function getPatientOdontogram(input: unknown): Promise<PatientOdont
 
 export async function recordToothClinicalEntry(input: unknown) {
   const value = recordToothClinicalEntryInputSchema.parse(input);
-  const row = toothClinicalEntryMutationRowSchema.parse(firstRow(await callRpc("record_tooth_clinical_entry", {
+  const row = toothClinicalEntryMutationRowSchema.parse(firstRow(await callRpc("record_tooth_clinical_entry_v3" as FunctionName, {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_tooth_code: value.toothCode,
@@ -262,13 +262,12 @@ export async function updateDraftPlanBridgeDesign(input: unknown) {
 
 export async function recordCurrentBridge(input: unknown) {
   const value = recordCurrentBridgeInputSchema.parse(input);
-  const row = bridgeMutationRowSchema.parse(firstRow(await callRpc("record_current_bridge", {
+  const row = bridgeMutationRowSchema.parse(firstRow(await callRpc("record_current_bridge_v3" as FunctionName, {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_units: value.units,
-    p_treating_provider_id: value.treatingProviderId,
-    p_executed_at: value.executedAt,
-    p_charge_id: value.chargeId,
+    p_occurred_at: value.occurredAt ?? null,
+    p_idempotency_key: value.idempotencyKey,
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "BRIDGE", row.bridge_id);
   return { bridgeId: row.bridge_id, patientId, version: row.version };
@@ -328,13 +327,12 @@ export async function updateDraftPlanImplantDesign(input: unknown) {
 
 export async function recordCurrentImplantComponent(input: unknown) {
   const value = recordCurrentImplantComponentInputSchema.parse(input);
-  const row = implantMutationRowSchema.parse(firstRow(await callRpc("record_current_implant_component", {
+  const row = implantMutationRowSchema.parse(firstRow(await callRpc("record_current_implant_component_v3" as FunctionName, {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_components: value.components,
-    p_treating_provider_id: value.treatingProviderId ?? null,
-    p_executed_at: value.executedAt ?? null,
-    p_charge_id: value.chargeId ?? null,
+    p_occurred_at: value.occurredAt ?? null,
+    p_idempotency_key: value.idempotencyKey,
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "IMPLANT_COMPONENT", row.component_id);
   return { componentId: row.component_id, patientId, version: row.version };

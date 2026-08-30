@@ -216,9 +216,8 @@ export const recordCurrentBridgeInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   units: z.array(bridgeUnitSchema).min(2).max(16),
-  treatingProviderId: databaseUuid,
-  executedAt: isoTimestamp,
-  chargeId: databaseUuid,
+  occurredAt: isoTimestamp.optional(),
+  idempotencyKey: boundedText(1, 128),
 }).strict();
 
 export const amendCurrentBridgeInputSchema = z.object({
@@ -272,9 +271,8 @@ export const recordCurrentImplantComponentInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   components: implantChainSchema,
-  treatingProviderId: databaseUuid.nullable().optional(),
-  executedAt: isoTimestamp.nullable().optional(),
-  chargeId: databaseUuid.nullable().optional(),
+  occurredAt: isoTimestamp.optional(),
+  idempotencyKey: boundedText(1, 128),
 }).strict();
 
 export const amendCurrentImplantComponentInputSchema = z.object({

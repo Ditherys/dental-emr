@@ -513,6 +513,19 @@ const PROCEDURE_CASE_PLAN_DETAIL_GRANTS_MIGRATION =
 const PROCEDURE_CASE_PLAN_DETAIL_RPC_GRANTS_MIGRATION =
   "20260830010107_procedure_case_plan_detail_rpcs_grants.sql";
 const TREATMENT_PLAN_DETAIL_PRESENCE_RPC_GRANTS_MIGRATION = "20260830010109_treatment_plan_detail_presence_rpcs_grants.sql";
+const ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION = "20260830010301_odontogram_revamp_rpcs_grants.sql";
+
+const odontogramRevampRpcGrants = Object.freeze([
+  "public.get_patient_odontogram_v3(uuid,uuid)",
+  "public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+  "public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)",
+  "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)",
+  "public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)",
+  "public.record_procedure_followup(uuid,uuid,text,timestamptz,text)",
+].map((object) => ({
+  grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [],
+  reason: "O5 revamp browser boundary: SECURITY DEFINER derives tenant, signed-in active provider, and branch authorization; writes are bounded, audited, idempotent, and expose no base-table grant.",
+})));
 
 const odontogramO5O8TerminalGrants = Object.freeze([
   "public.get_patient_odontogram(uuid,uuid)",
@@ -1529,6 +1542,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
     { grantee: "authenticated", objectClass: "function", object: "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text,boolean,boolean,boolean,boolean)", privilege: "execute", columns: [], reason: "Presence-aware structured draft item creation delegates tenant, branch, authorization, versioning, and audit to the reviewed clinical writer before persisting bounded detail." },
     { grantee: "authenticated", objectClass: "function", object: "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text,boolean,boolean,boolean,boolean)", privilege: "execute", columns: [], reason: "Presence-aware structured draft item patch delegates tenant, branch, authorization, versioning, frozen-plan protection, and audit to the reviewed clinical writer." },
   ]) }),
+  Object.freeze({ file: ODONTOGRAM_REVAMP_RPCS_GRANTS_MIGRATION, grants: odontogramRevampRpcGrants }),
 ]);
 
 /**

@@ -154,6 +154,19 @@ describe("odontogram O5 input validation boundary — forged tenant keys", () =>
   });
 });
 
+describe("odontogram provider identity boundary", () => {
+  beforeEach(() => rpc.mockReset());
+
+  it("rejects caller-selected providers and accepts provider-free current bridge input", async () => {
+    const units = [
+      { tooth_fdi: "16", ordinal: 1, role: "ABUTMENT" as const, support_kind: "NATURAL_TOOTH" as const, support_component_id: null },
+      { tooth_fdi: "15", ordinal: 2, role: "PONTIC" as const, support_kind: "NONE" as const, support_component_id: null },
+    ];
+    const { recordCurrentBridgeInputSchema } = await import("./schema");
+    expect(recordCurrentBridgeInputSchema.safeParse({ actingBranchId: branchId, patientId, units, treatingProviderId: providerId, executedAt: recordedAt, chargeId }).success).toBe(false);
+  });
+});
+
 describe("odontogram service RPC contract", () => {
   beforeEach(() => rpc.mockReset());
 
@@ -305,7 +318,7 @@ describe("odontogram service RPC contract", () => {
   it("binds O5 getPatientOdontogram to its exact contract", async () => {
     rpc.mockResolvedValueOnce({ data: [{ data: { patientId, entries: [], bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [] } }], error: null });
     await expect(getPatientOdontogram({ actingBranchId: branchId, patientId })).resolves.toEqual({ patientId, entries: [], bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [] });
-    expect(rpc).toHaveBeenLastCalledWith("get_patient_odontogram", {
+    expect(rpc).toHaveBeenLastCalledWith("get_patient_odontogram_v3", {
       p_acting_branch_id: branchId,
       p_patient_id: patientId,
     });
@@ -315,7 +328,7 @@ describe("odontogram service RPC contract", () => {
     rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, patient_id: patientId, version: 1 }], error: null });
     rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });
     await expect(recordToothClinicalEntry({ actingBranchId: branchId, patientId, toothCode: "16", surfaces: ["O"], kind: "FINDING", status: "EXISTING", detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null }, idempotencyKey: "odontogram-entry-0001" })).resolves.toEqual({ entryId, patientId, version: 1 });
-    expect(rpc).toHaveBeenCalledWith("record_tooth_clinical_entry", {
+    expect(rpc).toHaveBeenCalledWith("record_tooth_clinical_entry_v3", {
       p_acting_branch_id: branchId,
       p_patient_id: patientId,
       p_tooth_code: "16",

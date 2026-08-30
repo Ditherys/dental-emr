@@ -7,6 +7,7 @@ export type OdontogramServiceErrorCode =
   | "INVALID_INPUT"
   | "STALE_VERSION"
   | "INVALID_STATE"
+  | "CONFLICT"
   | "FAILED";
 
 export class OdontogramServiceError extends Error {
@@ -30,5 +31,6 @@ export function mapOdontogramRpcError(error: unknown) {
   if (parsed.data.code === "P0001" && parsed.data.message.includes("batch too large")) return new OdontogramServiceError("INVALID_INPUT");
   // Unique violation for duplicate legacy resolution surfaces as invalid_state in service layer
   if (parsed.data.code === "23505") return new OdontogramServiceError("INVALID_STATE");
+  if (parsed.data.code === "P0001" && parsed.data.message.includes("idempotency conflict")) return new OdontogramServiceError("CONFLICT");
   return new OdontogramServiceError("FAILED");
 }

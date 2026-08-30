@@ -54,7 +54,7 @@ import {
 } from "@/lib/odontogram/service";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 
-type OdontogramMutationCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "FAILED";
+type OdontogramMutationCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "CONFLICT" | "FAILED";
 export type OdontogramMutationResult = { ok: true } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 export type OdontogramDTOListResult = { ok: true; odontogram: PatientOdontogramDTO } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 export type OdontogramIdResult = { ok: true; id: string; version: number } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };

@@ -1,0 +1,12 @@
+begin;
+select extensions.plan(8);
+select extensions.ok(has_function_privilege('authenticated','public.get_patient_odontogram_v3(uuid,uuid)','execute'),'v3 odontogram read is callable');
+select extensions.ok(has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'v3 clinical entry is callable');
+select extensions.ok(has_function_privilege('authenticated','public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)','execute'),'direct treatment boundary is callable');
+select extensions.ok(has_function_privilege('authenticated','public.record_procedure_followup(uuid,uuid,text,timestamptz,text)','execute'),'follow-up boundary is callable');
+select extensions.ok(not has_function_privilege('service_role','public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)','execute'),'service role cannot bypass direct treatment boundary');
+select extensions.ok(not has_function_privilege('service_role','public.record_procedure_followup(uuid,uuid,text,timestamptz,text)','execute'),'service role cannot bypass follow-up boundary');
+select extensions.throws_ok($$select public.record_procedure_followup(null,null,null,null,null)$$,'42501','not authorized','anonymous caller cannot record a follow-up');
+select extensions.throws_ok($$select public.record_direct_treatment_with_charge(null,null,null,null,'{}'::jsonb,null)$$,'42501','not authorized','anonymous caller cannot post direct treatment');
+with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$') select case when count(*)=0 then 'P1_TEST_PASS' else 'P1_TEST_FAIL' end as p1_test_result from test_failures;
+rollback;

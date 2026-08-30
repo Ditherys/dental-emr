@@ -17,7 +17,7 @@ import {
   savePeriodontalMeasurements,
 } from "@/lib/odontogram/service";
 
-type PerioCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "FAILED";
+type PerioCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "CONFLICT" | "FAILED";
 export type PerioActionResult = { ok: true; id?: string; version?: number } | { ok: false; code: PerioCode; fieldErrors?: Record<string, string[]> };
 
 function invalidResult(schema: { safeParse(i: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown): PerioActionResult | null {
