@@ -1542,6 +1542,204 @@ export type Database = {
           },
         ]
       }
+      clinical_photo_derivatives: {
+        Row: {
+          checksum_sha256: string
+          created_at: string
+          height: number
+          id: string
+          mime_type: string
+          object_key: string
+          organization_id: string
+          photo_id: string
+          processing_attempts: number
+          size_bytes: number
+          variant: string
+          width: number
+        }
+        Insert: {
+          checksum_sha256: string
+          created_at?: string
+          height: number
+          id?: string
+          mime_type: string
+          object_key: string
+          organization_id: string
+          photo_id: string
+          processing_attempts?: number
+          size_bytes: number
+          variant: string
+          width: number
+        }
+        Update: {
+          checksum_sha256?: string
+          created_at?: string
+          height?: number
+          id?: string
+          mime_type?: string
+          object_key?: string
+          organization_id?: string
+          photo_id?: string
+          processing_attempts?: number
+          size_bytes?: number
+          variant?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_photo_derivatives_organization_id_photo_id_fkey"
+            columns: ["organization_id", "photo_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_photographs"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      clinical_photo_pairings: {
+        Row: {
+          after_photo_id: string
+          before_photo_id: string
+          created_at: string
+          created_by: string
+          organization_id: string
+          patient_id: string
+        }
+        Insert: {
+          after_photo_id: string
+          before_photo_id: string
+          created_at?: string
+          created_by: string
+          organization_id: string
+          patient_id: string
+        }
+        Update: {
+          after_photo_id?: string
+          before_photo_id?: string
+          created_at?: string
+          created_by?: string
+          organization_id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_photo_pairings_organization_id_after_photo_id_pat_fkey"
+            columns: ["organization_id", "after_photo_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_photographs"
+            referencedColumns: ["organization_id", "id", "patient_id"]
+          },
+          {
+            foreignKeyName: "clinical_photo_pairings_organization_id_before_photo_id_pa_fkey"
+            columns: ["organization_id", "before_photo_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_photographs"
+            referencedColumns: ["organization_id", "id", "patient_id"]
+          },
+          {
+            foreignKeyName: "clinical_photo_pairings_organization_id_created_by_fkey"
+            columns: ["organization_id", "created_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "clinical_photo_pairings_organization_id_patient_id_fkey"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      clinical_photographs: {
+        Row: {
+          capture_at: string
+          category: string
+          created_by: string
+          display_filename: string
+          id: string
+          note: string | null
+          organization_id: string
+          original_client_filename: string
+          patient_id: string
+          procedure_case_id: string | null
+          processing_status: string
+          source_checksum_sha256: string | null
+          source_file_id: string
+          source_size_bytes: number | null
+          surfaces: string[]
+          tooth_codes: string[]
+          version: number
+        }
+        Insert: {
+          capture_at: string
+          category: string
+          created_by: string
+          display_filename: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          original_client_filename: string
+          patient_id: string
+          procedure_case_id?: string | null
+          processing_status?: string
+          source_checksum_sha256?: string | null
+          source_file_id: string
+          source_size_bytes?: number | null
+          surfaces?: string[]
+          tooth_codes?: string[]
+          version?: number
+        }
+        Update: {
+          capture_at?: string
+          category?: string
+          created_by?: string
+          display_filename?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          original_client_filename?: string
+          patient_id?: string
+          procedure_case_id?: string | null
+          processing_status?: string
+          source_checksum_sha256?: string | null
+          source_file_id?: string
+          source_size_bytes?: number | null
+          surfaces?: string[]
+          tooth_codes?: string[]
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_photographs_organization_id_created_by_fkey"
+            columns: ["organization_id", "created_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "clinical_photographs_organization_id_patient_id_fkey"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_photographs_organization_id_procedure_case_id_fkey"
+            columns: ["organization_id", "procedure_case_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_photographs_organization_id_source_file_id_fkey"
+            columns: ["organization_id", "source_file_id"]
+            isOneToOne: true
+            referencedRelation: "file_objects"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       communications: {
         Row: {
           appointment_id: string | null
@@ -4592,6 +4790,85 @@ export type Database = {
           },
           {
             foreignKeyName: "procedure_case_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_case_finding_resolutions: {
+        Row: {
+          bridge_id: string | null
+          clinical_entry_id: string | null
+          finding_entry_id: string
+          id: string
+          implant_component_id: string | null
+          organization_id: string
+          procedure_case_id: string
+          resolved_at: string
+          resolved_by: string
+        }
+        Insert: {
+          bridge_id?: string | null
+          clinical_entry_id?: string | null
+          finding_entry_id: string
+          id?: string
+          implant_component_id?: string | null
+          organization_id: string
+          procedure_case_id: string
+          resolved_at?: string
+          resolved_by: string
+        }
+        Update: {
+          bridge_id?: string | null
+          clinical_entry_id?: string | null
+          finding_entry_id?: string
+          id?: string
+          implant_component_id?: string | null
+          organization_id?: string
+          procedure_case_id?: string
+          resolved_at?: string
+          resolved_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_bridge_fk"
+            columns: ["organization_id", "bridge_id"]
+            isOneToOne: false
+            referencedRelation: "dental_bridges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_case_fk"
+            columns: ["organization_id", "procedure_case_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_clinical_fk"
+            columns: ["organization_id", "clinical_entry_id"]
+            isOneToOne: false
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_finding_fk"
+            columns: ["organization_id", "finding_entry_id"]
+            isOneToOne: true
+            referencedRelation: "tooth_clinical_entries"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_implant_fk"
+            columns: ["organization_id", "implant_component_id"]
+            isOneToOne: false
+            referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_finding_resolutions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -7745,6 +8022,25 @@ export type Database = {
           version: number
         }[]
       }
+      complete_treatment_case: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_case_id: string
+          p_completion: Json
+          p_expected_version: number
+          p_idempotency_key: string
+          p_plan_item_id: string
+          p_resolved_finding_ids: string[]
+        }
+        Returns: {
+          bridge_id: string
+          case_id: string
+          charge_id: string
+          clinical_entry_id: string
+          implant_component_id: string
+        }[]
+      }
       complete_treatment_plan_item_with_charge: {
         Args: {
           p_acting_branch_id: string
@@ -7896,6 +8192,35 @@ export type Database = {
         }
         Returns: {
           note_id: string
+          version: number
+        }[]
+      }
+      create_clinical_photo: {
+        Args: {
+          p_acting_branch_id: string
+          p_capture_at: string
+          p_category: string
+          p_display_filename: string
+          p_note?: string
+          p_original_client_filename: string
+          p_patient_id: string
+          p_procedure_case_id: string
+          p_source_file_id: string
+          p_surfaces?: string[]
+          p_tooth_codes?: string[]
+        }
+        Returns: {
+          capture_at: string
+          category: string
+          display_filename: string
+          note: string
+          paired_photo_id: string
+          patient_id: string
+          photo_id: string
+          procedure_case_id: string
+          processing_status: string
+          surfaces: string[]
+          tooth_codes: string[]
           version: number
         }[]
       }
@@ -8521,6 +8846,10 @@ export type Database = {
           status: string
         }[]
       }
+      get_treatment_plan_completion_context: {
+        Args: { p_acting_branch_id: string; p_plan_id: string }
+        Returns: Json
+      }
       get_treatment_plan_detail: {
         Args: { p_acting_branch_id: string; p_plan_id: string }
         Returns: Json
@@ -8669,6 +8998,23 @@ export type Database = {
           finalized_at: string
           status: string
           treating_provider_id: string
+          version: number
+        }[]
+      }
+      list_clinical_photos: {
+        Args: { p_acting_branch_id: string; p_patient_id: string }
+        Returns: {
+          capture_at: string
+          category: string
+          display_filename: string
+          note: string
+          paired_photo_id: string
+          patient_id: string
+          photo_id: string
+          procedure_case_id: string
+          processing_status: string
+          surfaces: string[]
+          tooth_codes: string[]
           version: number
         }[]
       }
@@ -9115,6 +9461,14 @@ export type Database = {
           version: number
         }[]
       }
+      pair_clinical_photos: {
+        Args: {
+          p_acting_branch_id: string
+          p_after_photo_id: string
+          p_before_photo_id: string
+        }
+        Returns: boolean
+      }
       post_charge: {
         Args: {
           p_acting_branch_id: string
@@ -9262,6 +9616,16 @@ export type Database = {
           quantity_on_hand: number
           version: number
         }[]
+      }
+      record_clinical_photo_derivatives: {
+        Args: {
+          p_acting_branch_id: string
+          p_derivatives: Json
+          p_photo_id: string
+          p_source_checksum_sha256: string
+          p_source_size_bytes: number
+        }
+        Returns: boolean
       }
       record_current_bridge: {
         Args: {
@@ -9495,6 +9859,28 @@ export type Database = {
         }
         Returns: {
           item_id: string
+        }[]
+      }
+      rename_clinical_photo: {
+        Args: {
+          p_acting_branch_id: string
+          p_display_filename: string
+          p_expected_version: number
+          p_photo_id: string
+        }
+        Returns: {
+          capture_at: string
+          category: string
+          display_filename: string
+          note: string
+          paired_photo_id: string
+          patient_id: string
+          photo_id: string
+          procedure_case_id: string
+          processing_status: string
+          surfaces: string[]
+          tooth_codes: string[]
+          version: number
         }[]
       }
       requeue_communication: {

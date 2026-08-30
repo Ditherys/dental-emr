@@ -1,0 +1,12 @@
+import { z } from "zod";
+import { databaseUuid } from "@/lib/validation/database-uuid";
+import { PHOTO_CATEGORIES, PHOTO_VARIANTS } from "./types";
+export const photoCategorySchema=z.enum(PHOTO_CATEGORIES);
+export const photoVariantSchema=z.enum(Object.keys(PHOTO_VARIANTS) as [string,...string[]]);
+export const clinicalPhotoRowSchema=z.object({photo_id:databaseUuid,patient_id:databaseUuid,procedure_case_id:databaseUuid.nullable(),category:photoCategorySchema,display_filename:z.string().min(1).max(255),capture_at:z.iso.datetime({offset:true}),tooth_codes:z.array(z.string()),surfaces:z.array(z.string()),note:z.string().nullable(),processing_status:z.enum(["PENDING","PROCESSING","READY","FAILED"]),paired_photo_id:databaseUuid.nullable(),version:z.number().int().positive()}).strict();
+export const createClinicalPhotoInputSchema=z.object({actingBranchId:databaseUuid,patientId:databaseUuid,sourceFileId:databaseUuid,category:photoCategorySchema,displayFilename:z.string().min(1).max(255),originalClientFilename:z.string().min(1).max(255),captureAt:z.iso.datetime({offset:true}),toothCodes:z.array(z.string()).max(32).default([]),surfaces:z.array(z.string()).max(32).default([]),note:z.string().max(2000).nullable().default(null),procedureCaseId:databaseUuid.nullable().default(null)}).strict();
+export const listClinicalPhotosInputSchema=z.object({actingBranchId:databaseUuid,patientId:databaseUuid}).strict();
+export const processClinicalPhotoInputSchema=z.object({photoId:databaseUuid,actingBranchId:databaseUuid}).strict();
+export const renameClinicalPhotoInputSchema=z.object({actingBranchId:databaseUuid,photoId:databaseUuid,expectedVersion:z.number().int().positive(),displayFilename:z.string().min(1).max(255)}).strict();
+export const pairClinicalPhotoInputSchema=z.object({actingBranchId:databaseUuid,beforePhotoId:databaseUuid,afterPhotoId:databaseUuid}).strict();
+export const recordClinicalPhotoDerivativesInputSchema=z.object({actingBranchId:databaseUuid,photoId:databaseUuid,sourceChecksumSha256:z.string().regex(/^[0-9a-f]{64}$/),sourceSizeBytes:z.number().int().positive(),derivatives:z.array(z.object({variant:photoVariantSchema,objectKey:z.string().min(1).max(500),mimeType:z.literal("image/jpeg"),width:z.number().int().positive(),height:z.number().int().positive(),sizeBytes:z.number().int().positive(),checksumSha256:z.string().regex(/^[0-9a-f]{64}$/)}).strict()).length(3)}).strict();

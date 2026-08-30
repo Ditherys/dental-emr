@@ -472,6 +472,8 @@ const specialistRequestRpcGrants = Object.freeze([
 
 const CLINICAL_RPCS_GRANTS_MIGRATION =
   "20260827013001_clinical_rpcs_grants.sql";
+const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
+  "20260830010601_clinical_photo_rpcs_grants.sql";
 
 const ODONTOGRAM_RPCS_GRANTS_MIGRATION =
   "20260827013201_odontogram_rpcs_grants.sql";
@@ -780,6 +782,21 @@ const clinicalRpcGrants = Object.freeze([
   "public.create_prescription(uuid,uuid,jsonb)",
   "public.finalize_prescription(uuid,uuid,integer)",
 ].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
+
+const clinicalPhotoRpcGrants = Object.freeze([
+  "public.create_clinical_photo(uuid,uuid,uuid,uuid,text,text,text,timestamptz,text[],text[],text)",
+  "public.list_clinical_photos(uuid,uuid)",
+  "public.rename_clinical_photo(uuid,uuid,integer,text)",
+  "public.pair_clinical_photos(uuid,uuid,uuid)",
+  "public.record_clinical_photo_derivatives(uuid,uuid,text,bigint,jsonb)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason: "The narrow private clinical-photo metadata/processing boundary. Each function derives the organization from an active acting branch, enforces patient.clinical.read/write inside a SECURITY DEFINER body with an empty search path, preserves opaque source objects, and writes only bounded patient-linked audit events; no photo table or service-role privilege is exposed.",
+})));
 
 const INVENTORY_RPCS_GRANTS_MIGRATION =
   "20260827014201_inventory_rpcs_grants.sql";
@@ -1596,6 +1613,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
     grantee: "authenticated", objectClass: "function", object: "public.get_treatment_plan_completion_context(uuid,uuid)", privilege: "execute", columns: [],
     reason: "O8/O9 bounded completion-context read derives the acknowledged plan, patient, open in-progress case/version, unresolved findings, signed-in active dentist, and immutable bridge/implant design server-side before the browser may offer completion; it grants no base-table access.",
   }]) }),
+  Object.freeze({
+    file: CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION,
+    grants: clinicalPhotoRpcGrants,
+  }),
 ]);
 
 /**

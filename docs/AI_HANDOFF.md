@@ -2799,3 +2799,53 @@ teeth. The focused 11-test UI/a11y pass, typecheck, ESLint, and suite-guard
 tests pass. The local database runner reaches PASS for the new suite and then
 stops at the unrelated pre-existing `treatment_plans.test.sql` completion-marker
 residual. No hosted or production execution was attempted.
+
+## Task 12 — O12 clinical photograph metadata/private derivative backend (2026-08-30)
+
+Codex implemented the approved backend-only media slice on `main`; the gallery,
+private delivery actions, chronological photo projection, and UI remain the
+next O12 slice.
+
+### Implementation
+
+- Added the exact-reviewed `sharp@0.35.4` dependency and generated database
+  types for the local schema.
+- Added tenant-safe `clinical_photographs`, `clinical_photo_pairings`, and
+  `clinical_photo_derivatives` metadata tables with same-organization
+  composite foreign keys, RLS, zero browser/service-role base grants, and
+  patient/capture/category/procedure indexes.
+- Added narrowly granted SECURITY DEFINER photo RPCs for metadata creation,
+  chronological listing, display-name rename with optimistic versioning,
+  BEFORE/AFTER pairing, and idempotent derivative completion. Original client
+  filenames never appear in ordinary DTOs; source objects remain canonical.
+  Creation, pairing, rename, and processing write bounded clinical audit events.
+- Added server-only schema/service/types/filename helpers and a server-only
+  Sharp processor using the MinIO/R2 adapter. It validates canonical source
+  keys, stat/get size and MIME consistency, JPEG/PNG/WEBP magic bytes and
+  dimensions, auto-rotates, strips EXIF, emits fixed thumbnail/preview/display
+  JPEGs under opaque keys, and returns source/derivative checksums. Derivative
+  recursion is rejected.
+- Because 10500–10601 had already been applied in local development, repairs
+  10602–10609 are retained as guarded forward-only corrections; applied
+  migrations were not rewritten.
+
+### Verification
+
+- Sharp gate: `sharp@0.35.4`, Apache-2.0, Node-compatible; production
+  `npm audit --omit=dev --audit-level=high` reports zero vulnerabilities.
+- `npm run db:migrate:local` applied the forward repairs; local generated
+  types are current; MinIO storage smoke passed all put/stat/get/signing,
+  CORS, and delete checks.
+- Clinical media unit tests pass (4 files / 11 tests), including checksum,
+  exact fixed dimensions, EXIF removal, filename safety, spoof rejection, and
+  derivative-recursion rejection.
+- Full unit suite passes (160 files / 1,530 tests). Migration privilege lint,
+  guarded database-suite tests (139 tests), typecheck, build, and secret scan
+  pass. The focused clinical-photo pgTAP suite reports P1_TEST_PASS (20
+  assertions); the full local runner reaches that suite and later stops at
+  the unrelated pre-existing `treatment_plans.test.sql` completion-marker
+  residual.
+- Generic `db:types:check` was not run against a linked project because none
+  is configured; the authorized `node scripts/generate-database-types.mjs
+  --local --check` passed. Cloud TEST, hosted E2E/axe, advisor/security
+  gates, and production release acceptance remain pending under ADR-029.

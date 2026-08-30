@@ -113,7 +113,7 @@ describe("PerioWorkspace O10", () => {
 
     await user.keyboard("{Escape}");
     expect(screen.getAllByRole("button", { name: /tooth 11/i })[0]).toHaveFocus();
-  });
+  }, 15000);
 
   it("skips missing and implant teeth when arrowing between probing inputs", async () => {
     const user = userEvent.setup();

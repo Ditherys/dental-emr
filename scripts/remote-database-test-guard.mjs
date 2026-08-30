@@ -94,6 +94,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "odontogram_atomic_completion_revamp.test.sql",
   "odontogram_rpcs_v2.test.sql",
   "periodontal_charting.test.sql",
+  "clinical_photographs.test.sql",
   "periodontal_current_state_guard.test.sql",
   "procedure_cases_and_plan_details.test.sql",
   "workforce_invitations.test.sql",
