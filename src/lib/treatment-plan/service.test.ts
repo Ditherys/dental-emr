@@ -149,7 +149,14 @@ describe("treatment-plan service RPC contract", () => {
       p_acting_branch_id: branchId, p_plan_id: planId, p_expected_version: 1, p_procedure_id: null,
       p_tooth_code: null, p_description: "Detailed", p_estimated_fee_centavos: null,
       p_priority: "HIGH", p_sequence_no: 2, p_surfaces: ["O", "M"], p_notes: "Synthetic detail",
+      p_has_priority: true, p_has_sequence_no: true, p_has_surfaces: true, p_has_notes: true,
     });
+
+    rpc.mockResolvedValueOnce({ data: [{ item_id: itemId, line_no: 2 }], error: null });
+    await updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 2, description: "Partial", notes: null });
+    expect(rpc).toHaveBeenLastCalledWith("update_treatment_plan_item_centavos", expect.objectContaining({
+      p_has_priority: false, p_has_sequence_no: false, p_has_surfaces: false, p_has_notes: true, p_notes: null,
+    }));
 
     rpc.mockResolvedValueOnce({ data: [{ item_id: itemId, line_no: 1 }], error: null });
     await expect(updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 2, description: "Updated", estimatedFeeCentavos: "300000" })).resolves.toEqual({ itemId, lineNo: 1 });

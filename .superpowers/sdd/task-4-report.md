@@ -45,3 +45,11 @@ registry. No reset, hosted command, or production write was used.
 - Per owner direction, existing local migration history is retained untouched;
   isolated disposable local verification from the committed sequence remains
   pending and is not represented as evidence from the existing container.
+
+## Presence-aware remediation
+
+- `20260830010108`/`10109` add terminally granted, presence-aware writer
+  overloads. The service sends explicit presence flags; omitted structured
+  fields retain persisted values and explicit `notes: null` clears only notes.
+- Focused service unit, strict typecheck, migration privilege lint, and diff
+  hygiene passed. Isolated pgTAP round-trip verification remains pending.

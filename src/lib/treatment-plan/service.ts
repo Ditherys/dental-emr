@@ -59,6 +59,10 @@ function structuredDetailArgs(value: { priority?: string; sequenceNo?: number; s
     p_sequence_no: value.sequenceNo ?? null,
     p_surfaces: value.surfaces ?? null,
     p_notes: value.notes ?? null,
+    p_has_priority: value.priority !== undefined,
+    p_has_sequence_no: value.sequenceNo !== undefined,
+    p_has_surfaces: value.surfaces !== undefined,
+    p_has_notes: value.notes !== undefined,
   };
 }
 
