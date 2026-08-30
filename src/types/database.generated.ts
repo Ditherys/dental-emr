@@ -7177,21 +7177,41 @@ export type Database = {
           line_no: number
         }[]
       }
-      add_treatment_plan_item_centavos: {
-        Args: {
-          p_acting_branch_id: string
-          p_description?: string
-          p_estimated_fee_centavos?: number
-          p_expected_version: number
-          p_plan_id: string
-          p_procedure_id?: string
-          p_tooth_code?: string
-        }
-        Returns: {
-          item_id: string
-          line_no: number
-        }[]
-      }
+      add_treatment_plan_item_centavos:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_description?: string
+              p_estimated_fee_centavos?: number
+              p_expected_version: number
+              p_plan_id: string
+              p_procedure_id?: string
+              p_tooth_code?: string
+            }
+            Returns: {
+              item_id: string
+              line_no: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_description: string
+              p_estimated_fee_centavos: number
+              p_expected_version: number
+              p_notes: string
+              p_plan_id: string
+              p_priority: string
+              p_procedure_id: string
+              p_sequence_no: number
+              p_surfaces: string[]
+              p_tooth_code: string
+            }
+            Returns: {
+              item_id: string
+              line_no: number
+            }[]
+          }
       adjust_stock: {
         Args: {
           p_acting_branch_id: string
@@ -9699,22 +9719,43 @@ export type Database = {
           line_no: number
         }[]
       }
-      update_treatment_plan_item_centavos: {
-        Args: {
-          p_acting_branch_id: string
-          p_description?: string
-          p_estimated_fee_centavos?: number
-          p_expected_version: number
-          p_item_id: string
-          p_plan_id: string
-          p_procedure_id?: string
-          p_tooth_code?: string
-        }
-        Returns: {
-          item_id: string
-          line_no: number
-        }[]
-      }
+      update_treatment_plan_item_centavos:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_description?: string
+              p_estimated_fee_centavos?: number
+              p_expected_version: number
+              p_item_id: string
+              p_plan_id: string
+              p_procedure_id?: string
+              p_tooth_code?: string
+            }
+            Returns: {
+              item_id: string
+              line_no: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_description: string
+              p_estimated_fee_centavos: number
+              p_expected_version: number
+              p_item_id: string
+              p_notes: string
+              p_plan_id: string
+              p_priority: string
+              p_procedure_id: string
+              p_sequence_no: number
+              p_surfaces: string[]
+              p_tooth_code: string
+            }
+            Returns: {
+              item_id: string
+              line_no: number
+            }[]
+          }
       upsert_payment_method: {
         Args: {
           p_acting_branch_id: string

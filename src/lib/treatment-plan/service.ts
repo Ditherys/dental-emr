@@ -53,6 +53,15 @@ function firstRow(data: unknown) {
   return Array.isArray(data) ? data[0] : undefined;
 }
 
+function structuredDetailArgs(value: { priority?: string; sequenceNo?: number; surfaces?: string[]; notes?: string | null }) {
+  return value.priority === undefined && value.sequenceNo === undefined && value.surfaces === undefined && value.notes === undefined ? {} : {
+    p_priority: value.priority ?? null,
+    p_sequence_no: value.sequenceNo ?? null,
+    p_surfaces: value.surfaces ?? null,
+    p_notes: value.notes ?? null,
+  };
+}
+
 export async function createTreatmentPlan(input: unknown): Promise<TreatmentPlanMutationResult> {
   const value = createTreatmentPlanInputSchema.parse(input);
   const row = treatmentPlanMutationRowSchema.parse(firstRow(await callRpc("create_treatment_plan", {
@@ -104,6 +113,7 @@ export async function addTreatmentPlanItem(input: unknown): Promise<TreatmentPla
     p_tooth_code: value.toothCode ?? null,
     p_description: value.description,
     p_estimated_fee_centavos: value.estimatedFeeCentavos ?? null,
+    ...structuredDetailArgs(value),
   })));
   return { itemId: row.item_id, lineNo: row.line_no };
 }
@@ -119,6 +129,7 @@ export async function updateTreatmentPlanItem(input: unknown): Promise<Treatment
     p_tooth_code: value.toothCode ?? null,
     p_description: value.description,
     p_estimated_fee_centavos: value.estimatedFeeCentavos ?? null,
+    ...structuredDetailArgs(value),
   })));
   return { itemId: row.item_id, lineNo: row.line_no };
 }

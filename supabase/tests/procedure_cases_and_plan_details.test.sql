@@ -49,8 +49,17 @@ select extensions.throws_ok(
   $$update public.treatment_plan_items set notes = 'changed' where id = 'f4070000-0000-0000-0000-000000000001'$$,
   'P0001', 'treatment_plan_items are immutable when parent plan is PRESENTED/ACKNOWLEDGED; execution progresses separately', 'acknowledged structured plan details remain frozen'
 );
-insert into public.procedure_case_events(organization_id,procedure_case_id,event_type,occurred_at,recorded_by) values
- ('f4020000-0000-0000-0000-000000000001','f4080000-0000-0000-0000-000000000001','TREATMENT',statement_timestamp(),'f4010000-0000-0000-0000-000000000001');
+insert into public.procedure_case_events(id,organization_id,procedure_case_id,event_type,occurred_at,recorded_by) values
+ ('f4090000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','f4080000-0000-0000-0000-000000000001','TREATMENT',statement_timestamp(),'f4010000-0000-0000-0000-000000000001');
+insert into public.procedure_case_events(organization_id,procedure_case_id,event_type,occurred_at,recorded_by,reason,correction_of_event_id) values
+ ('f4020000-0000-0000-0000-000000000001','f4080000-0000-0000-0000-000000000001','CORRECTION',statement_timestamp(),'f4010000-0000-0000-0000-000000000001','Synthetic correction','f4090000-0000-0000-0000-000000000001');
+select extensions.ok((select count(*)=2 from public.procedure_case_events where procedure_case_id='f4080000-0000-0000-0000-000000000001'),'same-case correction is accepted');
+insert into public.procedure_cases(id,organization_id,patient_id,origin_branch_id,procedure_id,opened_by) values
+ ('f4080000-0000-0000-0000-000000000002','f4020000-0000-0000-0000-000000000001','f4040000-0000-0000-0000-000000000001','f4030000-0000-0000-0000-000000000001','f4050000-0000-0000-0000-000000000001','f4010000-0000-0000-0000-000000000001');
+select extensions.throws_ok(
+  $$insert into public.procedure_case_events(organization_id,procedure_case_id,event_type,occurred_at,recorded_by,reason,correction_of_event_id) values ('f4020000-0000-0000-0000-000000000001','f4080000-0000-0000-0000-000000000002','CORRECTION',statement_timestamp(),'f4010000-0000-0000-0000-000000000001','Synthetic correction','f4090000-0000-0000-0000-000000000001')$$,
+  '23514','procedure case correction must target an event in the same case','cross-case correction is rejected'
+);
 select extensions.throws_ok(
   $$update public.procedure_case_events set event_type='CORRECTION' where procedure_case_id='f4080000-0000-0000-0000-000000000001'$$,
   'P0001', 'procedure_case_events are append-only', 'case history cannot be rewritten'

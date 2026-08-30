@@ -31,3 +31,17 @@ registry. No reset, hosted command, or production write was used.
 - Procedure-case plan-item and charge links are additionally checked to the same patient, not only the same organization.
 - Structured plan details freeze under the existing PRESENTED/ACKNOWLEDGED trigger. No drawing, payment, media, UI, or new write RPC was introduced.
 - The forward projection repairs are intentionally narrow and guard their expected prior definition before dynamic replacement; Cloud TEST remains a required deferred gate.
+
+## Review remediation
+
+- `20260830010106` adds same-case correction validation and detail-aware,
+  authenticated RPC overloads. They delegate to the existing audited,
+  tenant/branch/version/frozen-plan writers, then persist bounded structured
+  details in the same transaction. `20260830010107` is the reviewed terminal
+  EXECUTE grant registration; no base-table grant was added.
+- pgTAP now proves a same-case correction succeeds and a cross-case correction
+  fails. Focused local pgTAP is `P1_TEST_PASS`; focused units remain 30/30;
+  typecheck and strict migration lint pass.
+- Per owner direction, existing local migration history is retained untouched;
+  isolated disposable local verification from the committed sequence remains
+  pending and is not represented as evidence from the existing container.

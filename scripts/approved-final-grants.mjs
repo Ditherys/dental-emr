@@ -510,6 +510,8 @@ const ODONTOGRAM_FEATURE_DETAILS_RPC_GRANTS_MIGRATION =
   "20260830010003_odontogram_feature_details_rpc_grants.sql";
 const PROCEDURE_CASE_PLAN_DETAIL_GRANTS_MIGRATION =
   "20260830010102_procedure_case_plan_detail_grants.sql";
+const PROCEDURE_CASE_PLAN_DETAIL_RPC_GRANTS_MIGRATION =
+  "20260830010107_procedure_case_plan_detail_rpcs_grants.sql";
 
 const odontogramO5O8TerminalGrants = Object.freeze([
   "public.get_patient_odontogram(uuid,uuid)",
@@ -1504,6 +1506,23 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
       columns: [],
       reason: "Restores the existing bounded treatment-plan detail read after its projection gains renderer-independent structured item details and an optional same-tenant procedure-case link; authorization remains clinical.read at the active acting branch and no base-table grant is introduced.",
     }]),
+  }),
+  Object.freeze({
+    file: PROCEDURE_CASE_PLAN_DETAIL_RPC_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      {
+        grantee: "authenticated", objectClass: "function",
+        object: "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text)",
+        privilege: "execute", columns: [],
+        reason: "Adds bounded renderer-independent priority, sequence, surfaces, and notes only through the existing audited clinical-write and optimistic-version item creation boundary; tenant and branch derive inside the delegated writer.",
+      },
+      {
+        grantee: "authenticated", objectClass: "function",
+        object: "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text)",
+        privilege: "execute", columns: [],
+        reason: "Updates bounded renderer-independent structured item detail only through the existing audited clinical-write and optimistic-version item update boundary; frozen plan checks remain in the delegated writer.",
+      },
+    ]),
   }),
 ]);
 
