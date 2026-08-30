@@ -6,25 +6,31 @@ import type {
   addTreatmentPlanDiscussionInputSchema,
   addTreatmentPlanItemInputSchema,
   createTreatmentPlanInputSchema,
-  drawingJsonSchema,
+  completeTreatmentInputSchema,
+  bridgeCompletionPayloadSchema,
   generateTreatmentPlanDocumentInputSchema,
   getTreatmentPlanDetailInputSchema,
+  getTreatmentPlanCompletionContextInputSchema,
   listTreatmentPlansInputSchema,
   presentTreatmentPlanInputSchema,
   removeTreatmentPlanItemInputSchema,
-  saveTreatmentPlanDrawingInputSchema,
   treatmentPlanAlternativeJsonSchema,
   treatmentPlanDetailJsonSchema,
+  treatmentPlanCompletionContextJsonSchema,
   treatmentPlanDiscussionJsonSchema,
-  treatmentPlanDrawingJsonSchema,
   treatmentPlanItemJsonSchema,
   treatmentPlanJsonSchema,
   treatmentPlanStatusSchema,
+  implantCompletionPayloadSchema,
   updateTreatmentPlanInputSchema,
   updateTreatmentPlanItemInputSchema,
 } from "./schema";
 
 export type TreatmentPlanStatus = z.infer<typeof treatmentPlanStatusSchema>;
+export type BridgeCompletionPayload = z.infer<typeof bridgeCompletionPayloadSchema>;
+export type ImplantCompletionPayload = z.infer<typeof implantCompletionPayloadSchema>;
+export type CompleteTreatmentInput = z.infer<typeof completeTreatmentInputSchema>;
+export type CompleteTreatmentResult = { caseId: string; chargeId: string; clinicalEntryId: string | null; bridgeId: string | null; implantComponentId: string | null };
 
 export type TreatmentPlan = {
   planId: string;
@@ -33,22 +39,19 @@ export type TreatmentPlan = {
   version: number;
   createdAt: string;
   itemCount: number;
-  hasDrawing: boolean;
 };
 
 export type TreatmentPlanDetailPlan = z.infer<typeof treatmentPlanJsonSchema>;
 export type TreatmentPlanItem = z.infer<typeof treatmentPlanItemJsonSchema>;
 export type TreatmentPlanAlternative = z.infer<typeof treatmentPlanAlternativeJsonSchema>;
 export type TreatmentPlanDiscussion = z.infer<typeof treatmentPlanDiscussionJsonSchema>;
-export type TreatmentPlanDrawing = z.infer<typeof treatmentPlanDrawingJsonSchema>;
-export type TreatmentPlanDrawingCanvas = z.infer<typeof drawingJsonSchema>;
 export type TreatmentPlanDetail = z.infer<typeof treatmentPlanDetailJsonSchema>;
+export type TreatmentPlanCompletionContext = z.infer<typeof treatmentPlanCompletionContextJsonSchema>;
 
 export type TreatmentPlanMutationResult = { planId: string; version: number };
 export type TreatmentPlanItemMutationResult = { itemId: string; lineNo: number };
 export type TreatmentPlanAlternativeMutationResult = { alternativeId: string; alternativeNo: number };
 export type TreatmentPlanDiscussionMutationResult = { discussionId: string; discussedAt: string };
-export type TreatmentPlanDrawingMutationResult = { drawingId: string; version: number };
 
 export type CreateTreatmentPlanInput = z.infer<typeof createTreatmentPlanInputSchema>;
 export type UpdateTreatmentPlanInput = z.infer<typeof updateTreatmentPlanInputSchema>;
@@ -59,7 +62,7 @@ export type UpdateTreatmentPlanItemInput = z.infer<typeof updateTreatmentPlanIte
 export type RemoveTreatmentPlanItemInput = z.infer<typeof removeTreatmentPlanItemInputSchema>;
 export type AddTreatmentPlanAlternativeInput = z.infer<typeof addTreatmentPlanAlternativeInputSchema>;
 export type AddTreatmentPlanDiscussionInput = z.infer<typeof addTreatmentPlanDiscussionInputSchema>;
-export type SaveTreatmentPlanDrawingInput = z.infer<typeof saveTreatmentPlanDrawingInputSchema>;
 export type ListTreatmentPlansInput = z.infer<typeof listTreatmentPlansInputSchema>;
 export type GetTreatmentPlanDetailInput = z.infer<typeof getTreatmentPlanDetailInputSchema>;
+export type GetTreatmentPlanCompletionContextInput = z.infer<typeof getTreatmentPlanCompletionContextInputSchema>;
 export type GenerateTreatmentPlanDocumentInput = z.infer<typeof generateTreatmentPlanDocumentInputSchema>;

@@ -12,11 +12,12 @@ const treatmentPlanActions = vi.hoisted(() => ({
   addTreatmentPlanDiscussionAction: vi.fn(),
   addTreatmentPlanItemAction: vi.fn(),
   createTreatmentPlanAction: vi.fn(),
+  completeTreatmentAction: vi.fn(),
+  getTreatmentPlanCompletionContextAction: vi.fn(),
   getTreatmentPlanDetailAction: vi.fn(),
   presentTreatmentPlanAction: vi.fn(),
   printTreatmentPlanAction: vi.fn(),
   removeTreatmentPlanItemAction: vi.fn(),
-  saveTreatmentPlanDrawingAction: vi.fn(),
   updateTreatmentPlanAction: vi.fn(),
   updateTreatmentPlanItemAction: vi.fn(),
 }));
@@ -84,15 +85,14 @@ const providerId = "d9200000-0000-0000-0000-000000000001";
 
 const provider: ProviderListItem = { providerId, displayName: "Dr. Synthetic Dentist", providerType: "REGULAR", status: "active", websiteVisible: false, primarySpecialtyLabel: null, branchCount: 1 };
 
-const draftPlan: TreatmentPlan = { planId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", itemCount: 1, hasDrawing: false };
-const acknowledgedPlan: TreatmentPlan = { planId: acknowledgedPlanId, title: "Implants and crowns", status: "ACKNOWLEDGED", version: 3, createdAt: "2026-08-27T10:00:00+00:00", itemCount: 2, hasDrawing: true };
+const draftPlan: TreatmentPlan = { planId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", itemCount: 1 };
+const acknowledgedPlan: TreatmentPlan = { planId: acknowledgedPlanId, title: "Implants and crowns", status: "ACKNOWLEDGED", version: 3, createdAt: "2026-08-27T10:00:00+00:00", itemCount: 2 };
 
 const detailDraft: TreatmentPlanDetail = {
   plan: { planId, patientId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", updatedAt: "2026-08-27T09:00:00+00:00", createdBy: "d7100000-0000-0000-0000-000000000002" },
   items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", priority: "ROUTINE", sequenceNo: 1, surfaces: [], notes: null, procedureCaseId: null, createdAt: "2026-08-27T09:00:00+00:00" }],
   alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt: "2026-08-27T09:00:00+00:00" }],
   discussions: [{ discussionId, discussedBy: "d7100000-0000-0000-0000-000000000002", treatingProviderId: providerId, discussedAt: "2026-08-27T09:30:00+00:00", context: "Case discussion", notes: null, createdAt: "2026-08-27T09:30:00+00:00" }],
-  drawing: null,
 };
 
 const detailAcknowledged: TreatmentPlanDetail = {
@@ -100,7 +100,6 @@ const detailAcknowledged: TreatmentPlanDetail = {
   items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "16", description: "Implant crown on 16.", estimatedFeeCentavos: "4500000", priority: "ROUTINE", sequenceNo: 1, surfaces: [], notes: null, procedureCaseId: null, createdAt: "2026-08-27T10:00:00+00:00" }],
   alternatives: [],
   discussions: [{ discussionId, discussedBy: "d7100000-0000-0000-0000-000000000002", treatingProviderId: null, discussedAt: "2026-08-27T10:30:00+00:00", context: "Consent discussion", notes: null, createdAt: "2026-08-27T10:30:00+00:00" }],
-  drawing: { drawingId: "d7a00000-0000-0000-0000-000000000013", drawing: { strokes: [{ points: [{ x: 1, y: 2 }, { x: 30, y: 40 }] }], width: 320, height: 200 }, updatedBy: "d7100000-0000-0000-0000-000000000002", updatedAt: "2026-08-27T10:45:00+00:00", version: 1 },
 };
 
 const patient: PatientDetail = {
@@ -145,12 +144,29 @@ beforeEach(() => {
     detail: input.planId === acknowledgedPlanId ? detailAcknowledged : detailDraft,
   }));
   treatmentPlanActions.printTreatmentPlanAction.mockResolvedValue({ ok: true, documentId: "d7f00000-0000-0000-0000-00000000000f" });
+  treatmentPlanActions.getTreatmentPlanCompletionContextAction.mockResolvedValue({
+    ok: true,
+    context: {
+      patientName: "Synthetic Patient",
+      signedInDentist: "Dr. Synthetic Dentist",
+      serviceDate: "2026-08-30",
+      findingChoices: [{ id: "d7a00000-0000-0000-0000-000000000099", label: "Caries on 16" }],
+      cases: [{
+        caseId: "d7a00000-0000-0000-0000-000000000098",
+        planItemId: itemId,
+        expectedVersion: 2,
+        procedureName: "Implant crown on 16.",
+        completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false },
+      }],
+    },
+  });
+  treatmentPlanActions.completeTreatmentAction.mockResolvedValue({ ok: true });
   vi.spyOn(window, "open").mockImplementation(() => null);
 });
 afterEach(cleanup);
 
 describe("TreatmentPlanSection list", () => {
-  it("renders the dense table and phone list with status, item count, and drawing presence", () => {
+  it("renders the dense table and phone list with status and item count", () => {
     const { container } = renderSection();
 
     expect(container.querySelector("table")).not.toBeNull();
@@ -160,7 +176,6 @@ describe("TreatmentPlanSection list", () => {
     expect(screen.getAllByText("Draft").length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Open plan" }).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("1")).toBeVisible();
-    expect(screen.getByText("Yes")).toBeVisible();
   });
 
 it("keeps 44px touch targets on list actions", () => {
@@ -191,7 +206,7 @@ it("keeps 44px touch targets on list actions", () => {
 });
 
 describe("TreatmentPlanSection DRAFT plan detail", () => {
-  it("opens a DRAFT plan with editable items, alternatives, drawing, and present", async () => {
+  it("opens a DRAFT plan with editable structured items, alternatives, and present", async () => {
     renderSection({ canWriteClinical: true });
 
 fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
@@ -199,7 +214,6 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     expect(screen.getByRole("button", { name: "Add item" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Add alternative" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Present" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Save drawing" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Acknowledge" })).not.toBeInTheDocument();
     expect(treatmentPlanActions.getTreatmentPlanDetailAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId });
   });
@@ -216,10 +230,10 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     fireEvent.change(within(dialog).getByLabelText("Estimated fee"), { target: { value: "5000" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Add item" }));
 
-    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanItemAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, expectedVersion: 1, procedureId: null, toothCode: "27", description: "Crown on 27.", estimatedFeeCentavos: "500000" }));
+    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanItemAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, expectedVersion: 1, procedureId: null, toothCode: "27", description: "Crown on 27.", estimatedFeeCentavos: "500000", priority: "ROUTINE", sequenceNo: 2, surfaces: [], notes: null }));
   });
 
-  it("adds an alternative and a discussion capturing provider, time, and context", async () => {
+  it("adds an alternative and an append-only discussion", async () => {
     renderSection({ canWriteClinical: true });
     fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     await screen.findByText("Case discussion");
@@ -233,9 +247,8 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Add discussion" }));
     dialog = await screen.findByRole("dialog", { name: "Add discussion" });
     fireEvent.change(within(dialog).getByLabelText("Context"), { target: { value: "Consent discussion" } });
-    fireEvent.change(within(dialog).getByLabelText("Treating provider"), { target: { value: providerId } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save discussion" }));
-    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, treatingProviderId: providerId, context: "Consent discussion" }));
+    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, treatingProviderId: null, context: "Consent discussion" }));
 
     expect(screen.getByText("Case discussion")).toBeVisible();
     expect(screen.getByText(/Dr. Synthetic Dentist/)).toBeVisible();
@@ -267,29 +280,35 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     expect((await screen.findAllByText(/already presented or acknowledged and can no longer be edited/)).length).toBeGreaterThan(0);
   });
 
-it("saves the drawing canvas through the pointer capture", async () => {
-    renderSection({ canWriteClinical: true });
-    fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
-    await screen.findAllByText("Composite filling on 26.");
-
-    const svg = screen.getByLabelText("Treatment plan drawing canvas");
-    fireEvent.pointerDown(svg, { clientX: 10, clientY: 10, pointerId: 1 });
-    fireEvent.pointerMove(svg, { clientX: 20, clientY: 20, pointerId: 1 });
-    fireEvent.pointerUp(svg, { clientX: 30, clientY: 30, pointerId: 1 });
-    expect(svg.querySelectorAll("polyline").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Save drawing" }));
-
-    await waitFor(() => expect(treatmentPlanActions.saveTreatmentPlanDrawingAction).toHaveBeenCalledWith({
-      actingBranchId: branchId,
-      planId,
-      expectedVersion: 1,
-      drawing: expect.objectContaining({ width: 320, height: 200, strokes: expect.any(Array) }),
-    }));
-  });
 });
 
 describe("TreatmentPlanSection ACKNOWLEDGED plan detail", () => {
-  it("renders an acknowledged plan read-only with the drawing shown and the immutability note", async () => {
+  it("loads authoritative completion context and records a selected case without a provider selector", async () => {
+    const completionItem = { ...detailAcknowledged.items[0], procedureCaseId: "d7a00000-0000-0000-0000-000000000098" };
+    treatmentPlanActions.getTreatmentPlanDetailAction.mockResolvedValue({ ok: true, detail: { ...detailAcknowledged, items: [completionItem] } });
+    renderSection({ canWriteClinical: true });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[1]);
+    await screen.findByText("Plan completion");
+    expect(treatmentPlanActions.getTreatmentPlanCompletionContextAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId: acknowledgedPlanId });
+    expect(screen.queryByLabelText(/provider/i)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Actual charge (PHP)"), { target: { value: "45000" } });
+    fireEvent.click(screen.getByLabelText("Caries on 16"));
+    fireEvent.click(screen.getByRole("button", { name: "Review completion" }));
+    fireEvent.click(within(screen.getByRole("alertdialog", { name: "Confirm treatment completion" })).getByRole("button", { name: "Confirm charge and completion" }));
+
+    await waitFor(() => expect(treatmentPlanActions.completeTreatmentAction).toHaveBeenCalledWith(expect.objectContaining({
+      actingBranchId: branchId,
+      caseId: "d7a00000-0000-0000-0000-000000000098",
+      planItemId: itemId,
+      expectedVersion: 2,
+      resolvedFindingIds: ["d7a00000-0000-0000-0000-000000000099"],
+      amountCentavos: "4500000",
+    })));
+  });
+
+  it("renders an acknowledged plan read-only with the immutability note", async () => {
     renderSection({ canWriteClinical: true });
 fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[1]);
     expect((await screen.findAllByText("Implants and crowns")).length).toBeGreaterThan(0);
@@ -298,13 +317,9 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[1]);
     expect(screen.queryByRole("button", { name: "Add item" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Present" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Acknowledge" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Save drawing" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add alternative" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add item" })).not.toBeInTheDocument();
 
-    const drawing = screen.getByLabelText("Treatment plan drawing (read-only)");
-    expect(drawing.querySelector("polyline")).not.toBeNull();
-    expect(drawing.querySelector("polyline")!.getAttribute("points")).toContain("1.0,2.0");
   });
 
   it("still allows an append-only discussion on an acknowledged plan", async () => {
@@ -332,7 +347,7 @@ describe("TreatmentPlanSection print", () => {
       actingBranchId: branchId,
       patientId,
       planId,
-      includeSet: { items: true, alternatives: true, discussions: true, drawing: true },
+      includeSet: { items: true, alternatives: true, discussions: true },
     }));
     expect(window.open).toHaveBeenCalledWith("/documents/d7f00000-0000-0000-0000-00000000000f/print", "_blank", "noopener,noreferrer");
   });

@@ -12,16 +12,18 @@ import {
   addTreatmentPlanDiscussionInputSchema,
   addTreatmentPlanItemInputSchema,
   createTreatmentPlanInputSchema,
+  completeTreatmentInputSchema,
+  completeTreatmentRowSchema,
   generateTreatmentPlanDocumentInputSchema,
   getTreatmentPlanDetailInputSchema,
+  getTreatmentPlanCompletionContextInputSchema,
   listTreatmentPlansInputSchema,
   presentTreatmentPlanInputSchema,
   removeTreatmentPlanItemInputSchema,
-  saveTreatmentPlanDrawingInputSchema,
   treatmentPlanAlternativeMutationRowSchema,
   treatmentPlanDetailJsonSchema,
+  treatmentPlanCompletionContextJsonSchema,
   treatmentPlanDiscussionMutationRowSchema,
-  treatmentPlanDrawingMutationRowSchema,
   treatmentPlanItemMutationRowSchema,
   treatmentPlanItemRemovalRowSchema,
   treatmentPlanListRowSchema,
@@ -34,9 +36,10 @@ import type {
   TreatmentPlanAlternativeMutationResult,
   TreatmentPlanDetail,
   TreatmentPlanDiscussionMutationResult,
-  TreatmentPlanDrawingMutationResult,
   TreatmentPlanItemMutationResult,
   TreatmentPlanMutationResult,
+  CompleteTreatmentResult,
+  TreatmentPlanCompletionContext,
 } from "./types";
 
 type Rpc = (name: string, args: Record<string, unknown>) => Promise<unknown>;
@@ -47,6 +50,21 @@ async function callRpc(name: string, args: Record<string, unknown>) {
   const response = rpcResponseSchema.parse(await (supabase.rpc as unknown as Rpc)(name, args));
   if (response.error) throw mapTreatmentPlanRpcError(response.error);
   return response.data;
+}
+
+export async function completeTreatment(input: unknown): Promise<CompleteTreatmentResult> {
+  const value = completeTreatmentInputSchema.parse(input);
+  const row = completeTreatmentRowSchema.parse(firstRow(await callRpc("complete_treatment_case", {
+    p_acting_branch_id: value.actingBranchId,
+    p_case_id: value.caseId,
+    p_plan_item_id: value.planItemId ?? null,
+    p_expected_version: value.expectedVersion,
+    p_resolved_finding_ids: value.resolvedFindingIds,
+    p_amount_centavos: value.amountCentavos,
+    p_completion: value.completion,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return { caseId: row.case_id, chargeId: row.charge_id, clinicalEntryId: row.clinical_entry_id, bridgeId: row.bridge_id, implantComponentId: row.implant_component_id };
 }
 
 function firstRow(data: unknown) {
@@ -172,17 +190,6 @@ export async function addTreatmentPlanDiscussion(input: unknown): Promise<Treatm
   return { discussionId: row.discussion_id, discussedAt: row.discussed_at };
 }
 
-export async function saveTreatmentPlanDrawing(input: unknown): Promise<TreatmentPlanDrawingMutationResult> {
-  const value = saveTreatmentPlanDrawingInputSchema.parse(input);
-  const row = treatmentPlanDrawingMutationRowSchema.parse(firstRow(await callRpc("save_treatment_plan_drawing", {
-    p_acting_branch_id: value.actingBranchId,
-    p_plan_id: value.planId,
-    p_expected_version: value.expectedVersion,
-    p_drawing: value.drawing,
-  })));
-  return { drawingId: row.drawing_id, version: row.version };
-}
-
 export async function listTreatmentPlans(input: unknown): Promise<TreatmentPlan[]> {
   const value = listTreatmentPlansInputSchema.parse(input);
   return z.array(treatmentPlanListRowSchema).parse(await callRpc("list_treatment_plans", {
@@ -195,13 +202,20 @@ export async function listTreatmentPlans(input: unknown): Promise<TreatmentPlan[
     version: row.version,
     createdAt: row.created_at,
     itemCount: row.item_count,
-    hasDrawing: row.has_drawing,
   }));
 }
 
 export async function getTreatmentPlanDetail(input: unknown): Promise<TreatmentPlanDetail> {
   const value = getTreatmentPlanDetailInputSchema.parse(input);
   return treatmentPlanDetailJsonSchema.parse(await callRpc("get_treatment_plan_detail", {
+    p_acting_branch_id: value.actingBranchId,
+    p_plan_id: value.planId,
+  }));
+}
+
+export async function getTreatmentPlanCompletionContext(input: unknown): Promise<TreatmentPlanCompletionContext> {
+  const value = getTreatmentPlanCompletionContextInputSchema.parse(input);
+  return treatmentPlanCompletionContextJsonSchema.parse(await callRpc("get_treatment_plan_completion_context", {
     p_acting_branch_id: value.actingBranchId,
     p_plan_id: value.planId,
   }));
@@ -218,7 +232,7 @@ export async function generateTreatmentPlanDocument(input: unknown): Promise<{ d
       items: value.includeSet.items === true,
       alternatives: value.includeSet.alternatives === true,
       discussions: value.includeSet.discussions === true,
-      drawing: value.includeSet.drawing === true,
+      drawing: false,
     },
   });
 }

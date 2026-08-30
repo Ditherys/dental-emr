@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { moneyCentavoStringSchema } from "@/lib/billing/schema";
-import { toothClinicalSurfaceSchema, toothCodeSchema } from "@/lib/odontogram/schema";
+import { bridgeUnitSchema, clinicalFeatureDetailSchema, toothClinicalSurfaceSchema, toothCodeSchema } from "@/lib/odontogram/schema";
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
 const isoTimestamp = z.iso.datetime({ offset: true });
@@ -22,6 +22,39 @@ const titleSchema = () => z.string().trim().min(1).max(200);
 const expectedVersionSchema = z.number().int().positive();
 const estimatedFeeCentavosSchema = moneyCentavoStringSchema.nullable().optional();
 const nullableUuid = () => databaseUuid.nullable().optional();
+
+export const bridgeCompletionPayloadSchema = z.object({
+  kind: z.literal("BRIDGE"),
+  units: z.array(bridgeUnitSchema).min(2).max(16),
+}).strict();
+
+const implantCompletionComponentSchema = z.object({
+  tooth_fdi: toothCodeSchema,
+  ordinal: z.number().int().positive(),
+  component_kind: z.enum(["FIXTURE", "ABUTMENT", "CROWN", "ATTACHMENT"]),
+  attachment_value: z.enum(["locator", "bar"]).nullable().optional(),
+  depends_on_ordinal: z.number().int().positive().optional(),
+  provenance: z.enum(["INTERNAL", "PREEXISTING_EXTERNAL"]).optional(),
+}).strict();
+
+export const implantCompletionPayloadSchema = z.object({
+  kind: z.literal("IMPLANT"),
+  components: z.array(implantCompletionComponentSchema).min(1).max(4),
+}).strict();
+
+export const completeTreatmentInputSchema = z.object({
+  actingBranchId: databaseUuid,
+  caseId: databaseUuid,
+  planItemId: databaseUuid.optional(),
+  expectedVersion: expectedVersionSchema,
+  resolvedFindingIds: z.array(databaseUuid).max(100).refine((ids) => new Set(ids).size === ids.length, "finding ids must be unique"),
+  amountCentavos: moneyCentavoStringSchema,
+  completion: z.union([clinicalFeatureDetailSchema, bridgeCompletionPayloadSchema, implantCompletionPayloadSchema]).refine(
+    (value) => "kind" in value || ["RESTORATION", "ROOT_CANAL", "OTHER"].includes(value.code),
+    "unsupported clinical completion",
+  ),
+  idempotencyKey: z.string().trim().min(1).max(80),
+}).strict();
 
 export const createTreatmentPlanInputSchema = z.object({
   actingBranchId: databaseUuid,
@@ -93,15 +126,6 @@ export const addTreatmentPlanDiscussionInputSchema = z.object({
   notes: boundedNullableText(4000),
 }).strict();
 
-export const drawingJsonSchema = z.record(z.string(), z.unknown());
-
-export const saveTreatmentPlanDrawingInputSchema = z.object({
-  actingBranchId: databaseUuid,
-  planId: databaseUuid,
-  expectedVersion: expectedVersionSchema,
-  drawing: drawingJsonSchema,
-}).strict();
-
 export const listTreatmentPlansInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
@@ -112,11 +136,15 @@ export const getTreatmentPlanDetailInputSchema = z.object({
   planId: databaseUuid,
 }).strict();
 
+export const getTreatmentPlanCompletionContextInputSchema = z.object({
+  actingBranchId: databaseUuid,
+  planId: databaseUuid,
+}).strict();
+
 export const treatmentPlanDocumentIncludeSetSchema = z.object({
   items: z.boolean().optional(),
   alternatives: z.boolean().optional(),
   discussions: z.boolean().optional(),
-  drawing: z.boolean().optional(),
 }).strict();
 
 export const generateTreatmentPlanDocumentInputSchema = z.object({
@@ -150,9 +178,12 @@ export const treatmentPlanDiscussionMutationRowSchema = z.object({
   discussed_at: isoTimestamp,
 }).strict();
 
-export const treatmentPlanDrawingMutationRowSchema = z.object({
-  drawing_id: databaseUuid,
-  version: z.number().int().positive(),
+export const completeTreatmentRowSchema = z.object({
+  case_id: databaseUuid,
+  charge_id: databaseUuid,
+  clinical_entry_id: databaseUuid.nullable(),
+  bridge_id: databaseUuid.nullable(),
+  implant_component_id: databaseUuid.nullable(),
 }).strict();
 
 export const treatmentPlanListRowSchema = z.object({
@@ -163,7 +194,7 @@ export const treatmentPlanListRowSchema = z.object({
   created_at: isoTimestamp,
   item_count: z.number().int().nonnegative(),
   has_drawing: z.boolean(),
-}).strict();
+}).strict().transform(({ has_drawing: _legacyDrawingPresence, ...plan }) => plan);
 
 export const treatmentPlanJsonSchema = z.object({
   planId: databaseUuid,
@@ -208,9 +239,9 @@ export const treatmentPlanDiscussionJsonSchema = z.object({
   createdAt: isoTimestamp,
 }).strict();
 
-export const treatmentPlanDrawingJsonSchema = z.object({
+const legacyTreatmentPlanDrawingJsonSchema = z.object({
   drawingId: databaseUuid,
-  drawing: drawingJsonSchema,
+  drawing: z.record(z.string(), z.unknown()),
   updatedBy: databaseUuid,
   updatedAt: isoTimestamp,
   version: z.number().int().positive(),
@@ -221,5 +252,28 @@ export const treatmentPlanDetailJsonSchema = z.object({
   items: z.array(treatmentPlanItemJsonSchema),
   alternatives: z.array(treatmentPlanAlternativeJsonSchema),
   discussions: z.array(treatmentPlanDiscussionJsonSchema),
-  drawing: treatmentPlanDrawingJsonSchema.nullable(),
+  drawing: legacyTreatmentPlanDrawingJsonSchema.nullable(),
+}).strict().transform(({ drawing: _legacyDrawing, ...detail }) => detail);
+
+const completionPayloadSchema = z.union([
+  clinicalFeatureDetailSchema,
+  bridgeCompletionPayloadSchema,
+  implantCompletionPayloadSchema,
+]);
+
+export const treatmentPlanCompletionContextJsonSchema = z.object({
+  patientName: z.string().trim().min(1).max(400),
+  signedInDentist: z.string().trim().min(1).max(400),
+  serviceDate: z.iso.date(),
+  findingChoices: z.array(z.object({
+    id: databaseUuid,
+    label: z.string().trim().min(1).max(400),
+  }).strict()).max(100),
+  cases: z.array(z.object({
+    caseId: databaseUuid,
+    planItemId: databaseUuid,
+    expectedVersion: z.number().int().positive(),
+    procedureName: z.string().trim().min(1).max(2000),
+    completion: completionPayloadSchema.nullable(),
+  }).strict()).max(200),
 }).strict();

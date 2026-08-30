@@ -16,12 +16,13 @@ import {
   addTreatmentPlanDiscussion,
   addTreatmentPlanItem,
   createTreatmentPlan,
+  completeTreatment,
   generateTreatmentPlanDocument,
+  getTreatmentPlanCompletionContext,
   getTreatmentPlanDetail,
   listTreatmentPlans,
   presentTreatmentPlan,
   removeTreatmentPlanItem,
-  saveTreatmentPlanDrawing,
   updateTreatmentPlan,
   updateTreatmentPlanItem,
 } from "./service";
@@ -85,15 +86,56 @@ describe("treatment-plan service input validation boundary", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  it("rejects malformed discussion, drawing, and read inputs", async () => {
+  it("binds case completion to the atomic server boundary without provider identity", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ case_id: planId, charge_id: drawingId, clinical_entry_id: itemId, bridge_id: null, implant_component_id: null }], error: null });
+    await expect(completeTreatment({
+      actingBranchId: branchId,
+      caseId: planId,
+      expectedVersion: 1,
+      resolvedFindingIds: [],
+      amountCentavos: "5000000",
+      completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false },
+      idempotencyKey: "complete-1",
+    })).resolves.toEqual({ caseId: planId, chargeId: drawingId, clinicalEntryId: itemId, bridgeId: null, implantComponentId: null });
+    expect(rpc).toHaveBeenLastCalledWith("complete_treatment_case", {
+      p_acting_branch_id: branchId,
+      p_case_id: planId,
+      p_plan_item_id: null,
+      p_expected_version: 1,
+      p_resolved_finding_ids: [],
+      p_amount_centavos: "5000000",
+      p_completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false },
+      p_idempotency_key: "complete-1",
+    });
+  });
+
+  it("accepts the immutable ordinal implant chain required by the completion RPC", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ case_id: planId, charge_id: drawingId, clinical_entry_id: null, bridge_id: null, implant_component_id: itemId }], error: null });
+    await expect(completeTreatment({
+      actingBranchId: branchId,
+      caseId: planId,
+      planItemId: itemId,
+      expectedVersion: 1,
+      resolvedFindingIds: [],
+      amountCentavos: "5000000",
+      completion: { kind: "IMPLANT", components: [
+        { tooth_fdi: "26", ordinal: 1, component_kind: "FIXTURE", attachment_value: null },
+        { tooth_fdi: "26", ordinal: 2, component_kind: "ABUTMENT", attachment_value: null, depends_on_ordinal: 1 },
+        { tooth_fdi: "26", ordinal: 3, component_kind: "CROWN", attachment_value: null, depends_on_ordinal: 2 },
+      ] },
+      idempotencyKey: "complete-implant-1",
+    })).resolves.toEqual({ caseId: planId, chargeId: drawingId, clinicalEntryId: null, bridgeId: null, implantComponentId: itemId });
+  });
+
+  it("rejects malformed discussion and read inputs", async () => {
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "   " })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "C".repeat(201) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "Context", notes: "N".repeat(4001) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, treatingProviderId: "forged", context: "Context" })).rejects.toBeInstanceOf(z.ZodError);
-    await expect(saveTreatmentPlanDrawing({ actingBranchId: branchId, planId, expectedVersion: 1, drawing: [1, 2, 3] })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId: "forged" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId, organizationId: "foreign-org" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(getTreatmentPlanDetail({ actingBranchId: branchId, planId: "forged" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getTreatmentPlanCompletionContext({ actingBranchId: branchId, planId: "forged" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(generateTreatmentPlanDocument({ actingBranchId: branchId, patientId, planId, includeSet: { items: true, billing: true } })).rejects.toBeInstanceOf(z.ZodError);
     expect(rpc).not.toHaveBeenCalled();
   });
@@ -172,7 +214,7 @@ describe("treatment-plan service RPC contract", () => {
     });
   });
 
-  it("binds alternative, discussion, and drawing to their exact contracts", async () => {
+  it("binds alternative and discussion to their exact contracts", async () => {
     rpc.mockResolvedValueOnce({ data: [{ alternative_id: alternativeId, alternative_no: 1 }], error: null });
     await expect(addTreatmentPlanAlternative({ actingBranchId: branchId, planId, expectedVersion: 1, summary: "Extraction and implant alternative." })).resolves.toEqual({ alternativeId, alternativeNo: 1 });
     expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_alternative", {
@@ -186,18 +228,12 @@ describe("treatment-plan service RPC contract", () => {
       p_context: "Case discussion", p_notes: "Patient prefers conservative care.",
     });
 
-    rpc.mockResolvedValueOnce({ data: [{ drawing_id: drawingId, version: 1 }], error: null });
-    await expect(saveTreatmentPlanDrawing({ actingBranchId: branchId, planId, expectedVersion: 1, drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] } })).resolves.toEqual({ drawingId, version: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("save_treatment_plan_drawing", {
-      p_acting_branch_id: branchId, p_plan_id: planId, p_expected_version: 1,
-      p_drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] },
-    });
   });
 
   it("lists plans with the bounded camelCase projection", async () => {
     rpc.mockResolvedValueOnce({ data: [{ plan_id: planId, title: "Full mouth restoration", status: "DRAFT", version: 1, created_at: createdAt, item_count: 2, has_drawing: false }], error: null });
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId })).resolves.toEqual([{
-      planId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt, itemCount: 2, hasDrawing: false,
+      planId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt, itemCount: 2,
     }]);
     expect(rpc).toHaveBeenLastCalledWith("list_treatment_plans", {
       p_acting_branch_id: branchId, p_patient_id: patientId,
@@ -210,12 +246,28 @@ describe("treatment-plan service RPC contract", () => {
       items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", priority: "HIGH", sequenceNo: 1, surfaces: ["O"], notes: "Synthetic detail", procedureCaseId: null, createdAt }],
       alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt }],
       discussions: [{ discussionId, discussedBy: createdBy, treatingProviderId: providerId, discussedAt: createdAt, context: "Case discussion", notes: "Patient prefers conservative care.", createdAt }],
-      drawing: { drawingId, drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] }, updatedBy: createdBy, updatedAt: createdAt, version: 1 },
+      drawing: null,
     };
     rpc.mockResolvedValueOnce({ data: detail, error: null });
-    await expect(getTreatmentPlanDetail({ actingBranchId: branchId, planId })).resolves.toEqual(detail);
+    await expect(getTreatmentPlanDetail({ actingBranchId: branchId, planId })).resolves.toEqual(expect.objectContaining({ plan: detail.plan, items: detail.items, alternatives: detail.alternatives, discussions: detail.discussions }));
     expect(rpc).toHaveBeenLastCalledWith("get_treatment_plan_detail", {
       p_acting_branch_id: branchId, p_plan_id: planId,
+    });
+  });
+
+  it("loads only the validated, server-authoritative completion context", async () => {
+    const context = {
+      patientName: "Synthetic Patient",
+      signedInDentist: "Dr. Synthetic Dentist",
+      serviceDate: "2026-08-30",
+      findingChoices: [{ id: drawingId, label: "Tooth 26 — CARIES" }],
+      cases: [{ caseId: planId, planItemId: itemId, expectedVersion: 2, procedureName: "Crown on 26", completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false } }],
+    };
+    rpc.mockResolvedValueOnce({ data: context, error: null });
+    await expect(getTreatmentPlanCompletionContext({ actingBranchId: branchId, planId })).resolves.toEqual(context);
+    expect(rpc).toHaveBeenLastCalledWith("get_treatment_plan_completion_context", {
+      p_acting_branch_id: branchId,
+      p_plan_id: planId,
     });
   });
 
@@ -253,14 +305,14 @@ describe("treatment-plan service RPC contract", () => {
 
 describe("generateTreatmentPlanDocument", () => {
   it("forwards the plan selector and the selected sections to the document service", async () => {
-    await expect(generateTreatmentPlanDocument({ actingBranchId: branchId, patientId, planId, includeSet: { items: true, drawing: true } })).resolves.toEqual({ documentId: "d7f00000-0000-0000-0000-00000000000f", version: 1 });
+    await expect(generateTreatmentPlanDocument({ actingBranchId: branchId, patientId, planId, includeSet: { items: true } })).resolves.toEqual({ documentId: "d7f00000-0000-0000-0000-00000000000f", version: 1 });
     const { generateDocument } = await import("@/lib/documents/service");
     expect(generateDocument).toHaveBeenCalledWith({
       actingBranchId: branchId,
       patientId,
       documentType: "TREATMENT_PLAN",
       planId,
-      includeSet: { items: true, alternatives: false, discussions: false, drawing: true },
+      includeSet: { items: true, alternatives: false, discussions: false, drawing: false },
     });
   });
 });

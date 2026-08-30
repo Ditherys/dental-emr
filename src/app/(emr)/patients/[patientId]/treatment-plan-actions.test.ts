@@ -8,13 +8,14 @@ const {
   addTreatmentPlanDiscussion,
   addTreatmentPlanItem,
   createTreatmentPlan,
+  completeTreatment,
   generateTreatmentPlanDocument,
+  getTreatmentPlanCompletionContext,
   getTreatmentPlanDetail,
   presentTreatmentPlan,
   removeTreatmentPlanItem,
   revalidatePath,
   requirePermission,
-  saveTreatmentPlanDrawing,
   updateTreatmentPlan,
   updateTreatmentPlanItem,
 } = vi.hoisted(() => ({
@@ -28,13 +29,14 @@ const {
   addTreatmentPlanDiscussion: vi.fn(),
   addTreatmentPlanItem: vi.fn(),
   createTreatmentPlan: vi.fn(),
+  completeTreatment: vi.fn(),
   generateTreatmentPlanDocument: vi.fn(),
+  getTreatmentPlanCompletionContext: vi.fn(),
   getTreatmentPlanDetail: vi.fn(),
   presentTreatmentPlan: vi.fn(),
   removeTreatmentPlanItem: vi.fn(),
   revalidatePath: vi.fn(),
   requirePermission: vi.fn(),
-  saveTreatmentPlanDrawing: vi.fn(),
   updateTreatmentPlan: vi.fn(),
   updateTreatmentPlanItem: vi.fn(),
 }));
@@ -48,11 +50,12 @@ vi.mock("@/lib/treatment-plan/service", () => ({
   addTreatmentPlanDiscussion,
   addTreatmentPlanItem,
   createTreatmentPlan,
+  completeTreatment,
   generateTreatmentPlanDocument,
+  getTreatmentPlanCompletionContext,
   getTreatmentPlanDetail,
   presentTreatmentPlan,
   removeTreatmentPlanItem,
-  saveTreatmentPlanDrawing,
   updateTreatmentPlan,
   updateTreatmentPlanItem,
 }));
@@ -63,11 +66,12 @@ import {
   addTreatmentPlanDiscussionAction,
   addTreatmentPlanItemAction,
   createTreatmentPlanAction,
+  completeTreatmentAction,
+  getTreatmentPlanCompletionContextAction,
   getTreatmentPlanDetailAction,
   presentTreatmentPlanAction,
   printTreatmentPlanAction,
   removeTreatmentPlanItemAction,
-  saveTreatmentPlanDrawingAction,
   updateTreatmentPlanAction,
   updateTreatmentPlanItemAction,
 } from "./treatment-plan-actions";
@@ -83,7 +87,6 @@ const detail = {
   items: [],
   alternatives: [],
   discussions: [],
-  drawing: null,
 };
 
 const createInput = { actingBranchId: branchId, patientId, title: "Full mouth restoration" };
@@ -92,6 +95,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requirePermission.mockResolvedValue({});
   createTreatmentPlan.mockResolvedValue({ planId, version: 1 });
+  completeTreatment.mockResolvedValue({ caseId: planId, chargeId: itemId, clinicalEntryId: itemId, bridgeId: null, implantComponentId: null });
   updateTreatmentPlan.mockResolvedValue({ planId, version: 2 });
   presentTreatmentPlan.mockResolvedValue({ planId, version: 2 });
   acknowledgeTreatmentPlan.mockResolvedValue({ planId, version: 3 });
@@ -100,8 +104,8 @@ beforeEach(() => {
   removeTreatmentPlanItem.mockResolvedValue({ itemId });
   addTreatmentPlanAlternative.mockResolvedValue({ alternativeId: "d7a00000-0000-0000-0000-000000000003", alternativeNo: 1 });
   addTreatmentPlanDiscussion.mockResolvedValue({ discussionId: "d7a00000-0000-0000-0000-000000000004", discussedAt: "2026-08-27T09:30:00+00:00" });
-  saveTreatmentPlanDrawing.mockResolvedValue({ drawingId: "d7a00000-0000-0000-0000-000000000005", version: 1 });
   getTreatmentPlanDetail.mockResolvedValue(detail);
+  getTreatmentPlanCompletionContext.mockResolvedValue({ patientName: "Synthetic Patient", signedInDentist: "Dr. Synthetic Dentist", serviceDate: "2026-08-30", findingChoices: [], cases: [] });
   generateTreatmentPlanDocument.mockResolvedValue({ documentId: "d7f00000-0000-0000-0000-00000000000f", version: 1 });
 });
 
@@ -148,6 +152,16 @@ describe("treatment plan plan-level actions", () => {
   });
 });
 
+describe("completeTreatmentAction", () => {
+  it("requires clinical and billing authority before the atomic case completion", async () => {
+    const input = { actingBranchId: branchId, caseId: planId, expectedVersion: 1, resolvedFindingIds: [], amountCentavos: "5000000", completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false }, idempotencyKey: "complete-1" };
+    await expect(completeTreatmentAction(input)).resolves.toEqual({ ok: true });
+    expect(requirePermission).toHaveBeenNthCalledWith(1, { permission: "patient.clinical.write", branchId });
+    expect(requirePermission).toHaveBeenNthCalledWith(2, { permission: "billing.charge", branchId });
+    expect(completeTreatment).toHaveBeenCalledWith(input);
+  });
+});
+
 describe("treatment plan item and alternative actions", () => {
   it("recheck clinical-write at the submitted branch", async () => {
     const addItem = { actingBranchId: branchId, planId, expectedVersion: 1, description: "Composite filling on 26.", toothCode: "26", estimatedFeeCentavos: "250000" };
@@ -178,16 +192,13 @@ describe("treatment plan item and alternative actions", () => {
   });
 });
 
-describe("treatment plan discussion and drawing actions", () => {
+describe("treatment plan discussion actions", () => {
   it("recheck clinical-write and forward the bounded inputs", async () => {
     const discussion = { actingBranchId: branchId, planId, treatingProviderId: providerId, context: "Case discussion" };
     await expect(addTreatmentPlanDiscussionAction(discussion)).resolves.toEqual({ ok: true });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
     expect(addTreatmentPlanDiscussion).toHaveBeenCalledWith(discussion);
 
-    const drawing = { actingBranchId: branchId, planId, expectedVersion: 1, drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] } };
-    await expect(saveTreatmentPlanDrawingAction(drawing)).resolves.toEqual({ ok: true });
-    expect(saveTreatmentPlanDrawing).toHaveBeenCalledWith(drawing);
   });
 
   it("rejects malformed discussion context before authorization", async () => {
@@ -212,9 +223,19 @@ describe("getTreatmentPlanDetailAction", () => {
   });
 });
 
+describe("getTreatmentPlanCompletionContextAction", () => {
+  it("requires live clinical-write and charge authority before returning completion data", async () => {
+    const input = { actingBranchId: branchId, planId };
+    await expect(getTreatmentPlanCompletionContextAction(input)).resolves.toMatchObject({ ok: true });
+    expect(requirePermission).toHaveBeenNthCalledWith(1, { permission: "patient.clinical.write", branchId });
+    expect(requirePermission).toHaveBeenNthCalledWith(2, { permission: "billing.charge", branchId });
+    expect(getTreatmentPlanCompletionContext).toHaveBeenCalledWith(input);
+  });
+});
+
 describe("printTreatmentPlanAction", () => {
   it("rechecks clinical-read and document.generate before generating the document", async () => {
-    const input = { actingBranchId: branchId, patientId, planId, includeSet: { items: true, alternatives: true, discussions: true, drawing: true } };
+    const input = { actingBranchId: branchId, patientId, planId, includeSet: { items: true, alternatives: true, discussions: true } };
     await expect(printTreatmentPlanAction(input)).resolves.toEqual({ ok: true, documentId: "d7f00000-0000-0000-0000-00000000000f" });
     expect(requirePermission).toHaveBeenNthCalledWith(1, { permission: "patient.clinical.read", branchId });
     expect(requirePermission).toHaveBeenNthCalledWith(2, { permission: "document.generate", branchId });

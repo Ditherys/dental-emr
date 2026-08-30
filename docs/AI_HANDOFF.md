@@ -88,6 +88,33 @@
 > Rolling handoff between coding agents. The repository, approved plans,
 > migrations, tests, ADRs, and Git history remain authoritative.
 
+## Odontogram O8/O9 Task 10 — structured plan completion checkpoint (2026-08-30)
+
+- Replaced treatment-plan drawing UI/action inputs with structured items,
+  alternatives, notes, and immutable presentation/acknowledgment behavior.
+  `PlanModePanel` is mounted only after the browser loads the narrow
+  `get_treatment_plan_completion_context` DTO for an acknowledged plan with an
+  OPEN, IN_PROGRESS case. The DTO derives patient/dentist/service-date/finding
+  labels/case version/design server-side; it has clinical read/write,
+  billing.charge, and active-provider gates.
+- Completion confirms the PHP charge, patient, procedure, server date,
+  signed-in dentist and selected findings. It does not choose a provider or
+  collect payment. Clinical detail requires explicit selection; frozen bridge
+  and implant designs are passed as completion payloads. The action repeats
+  clinical-write and billing.charge authorization before the narrow atomic RPC.
+- Forward migrations 10418–10426 add append-only finding resolution, atomic
+  completion, the completion-context DTO, and idempotency request fingerprint.
+  pgTAP proves selected-only resolution, immutable acknowledged proposal,
+  exact retry, cross-case same-key rejection, rollback on failed completion,
+  execution transition, context derivation, and CURRENT-to-PLAN_DESIGN bridge
+  provenance. No local reset was used.
+- Fresh evidence: 15 focused Vitest files / 82 tests, strict typecheck, and
+  migration privilege lint pass. Local pgTAP passes through the new atomic
+  suite and then stops at the pre-existing `treatment_plans.test.sql`
+  completion-marker residual. Cloud TEST, E2E/responsive/accessibility,
+  advisor, release review, and owner acceptance remain deferred mandatory
+  gates under ADR-029.
+
 ## Billing B5 — post-dated cheques (2026-08-28)
 
 ## Billing B6 — RPC, authorization, and audit boundary (locally complete, 2026-08-28)

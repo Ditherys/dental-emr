@@ -524,6 +524,8 @@ const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_REPAIR_GRANTS_MIGRATION = "2026
 const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_CONCURRENCY_GRANTS_MIGRATION = "20260830010409_installment_schedule_idempotency_concurrency_grants.sql";
 const PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_ORDERING_GRANTS_MIGRATION = "20260830010411_installment_schedule_lifecycle_ordering_grants.sql";
 const ODONTOGRAM_DTO_FEATURE_DETAIL_GRANTS_MIGRATION = "20260830010417_odontogram_dto_feature_detail_projection_grants.sql";
+const ATOMIC_CASE_COMPLETION_GRANTS_MIGRATION = "20260830010419_atomic_case_completion_grants.sql";
+const TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION = "20260830010424_treatment_plan_completion_context_grants.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -1583,6 +1585,17 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
       reason: "Restores the reviewed authenticated clinical-read boundary after the bounded DTO projection replacement adds constrained renderer-independent feature detail; base clinical tables remain inaccessible to browser roles.",
     },
   ]) }),
+  Object.freeze({ file: ATOMIC_CASE_COMPLETION_GRANTS_MIGRATION, grants: Object.freeze([{
+    grantee: "authenticated", objectClass: "function", object: "public.complete_treatment_case(uuid,uuid,uuid,integer,uuid[],bigint,jsonb,text)", privilege: "execute", columns: [],
+    reason: "O8/O9 completion boundary derives tenant and signed-in provider server-side, checks live clinical and charge permissions, atomically posts the immutable charge, materializes clinical state, resolves only explicit findings, and serializes idempotent retries.",
+  }, {
+    grantee: "authenticated", objectClass: "function", object: "public.get_patient_odontogram(uuid,uuid)", privilege: "execute", columns: [],
+    reason: "Restores the existing bounded renderer-independent clinical DTO after its O8 projection replacement; base tables remain unavailable to browser roles.",
+  }]) }),
+  Object.freeze({ file: TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION, grants: Object.freeze([{
+    grantee: "authenticated", objectClass: "function", object: "public.get_treatment_plan_completion_context(uuid,uuid)", privilege: "execute", columns: [],
+    reason: "O8/O9 bounded completion-context read derives the acknowledged plan, patient, open in-progress case/version, unresolved findings, signed-in active dentist, and immutable bridge/implant design server-side before the browser may offer completion; it grants no base-table access.",
+  }]) }),
 ]);
 
 /**

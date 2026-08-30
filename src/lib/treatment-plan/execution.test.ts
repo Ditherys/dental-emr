@@ -6,6 +6,7 @@ import {
   isProcedureCaseTerminal,
   validateProcedureCaseEvent,
   validateExecutionTransition,
+  validateCompleteTreatment,
   validateTreatmentCompletion,
 } from "./execution";
 
@@ -72,5 +73,25 @@ describe("treatment-plan execution rules", () => {
     expect(validateTreatmentCompletion({ kind: "CLINICAL", amountCentavos: 125000, payload: { toothCode: "26", clinicalCode: "CROWN" } }).ok).toBe(true);
     expect(validateTreatmentCompletion({ kind: "BRIDGE", amountCentavos: -1, payload: {} }).ok).toBe(false);
     expect(validateTreatmentCompletion({ kind: "IMPLANT", amountCentavos: 1, payload: null }).ok).toBe(false);
+  });
+
+  it("accepts a case-bound completion with decimal-string money and rejects provider forgery", () => {
+    expect(validateCompleteTreatment({
+      caseId: "00000000-0000-4000-a000-000000000001",
+      expectedVersion: 1,
+      resolvedFindingIds: [],
+      amountCentavos: "5000000",
+      completion: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false },
+      idempotencyKey: "complete-1",
+    })).toEqual({ ok: true });
+    expect(validateCompleteTreatment({
+      caseId: "00000000-0000-4000-a000-000000000001",
+      expectedVersion: 1,
+      resolvedFindingIds: [],
+      amountCentavos: "5000000",
+      completion: {},
+      idempotencyKey: "complete-1",
+      providerId: "00000000-0000-4000-a000-000000000002",
+    }).ok).toBe(false);
   });
 });

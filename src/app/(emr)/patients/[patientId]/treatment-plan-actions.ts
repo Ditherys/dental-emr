@@ -10,11 +10,12 @@ import {
   addTreatmentPlanDiscussion,
   addTreatmentPlanItem,
   createTreatmentPlan,
+  completeTreatment,
   generateTreatmentPlanDocument,
   getTreatmentPlanDetail,
+  getTreatmentPlanCompletionContext,
   presentTreatmentPlan,
   removeTreatmentPlanItem,
-  saveTreatmentPlanDrawing,
   updateTreatmentPlan,
   updateTreatmentPlanItem,
 } from "@/lib/treatment-plan/service";
@@ -24,19 +25,21 @@ import {
   addTreatmentPlanDiscussionInputSchema,
   addTreatmentPlanItemInputSchema,
   createTreatmentPlanInputSchema,
+  completeTreatmentInputSchema,
   generateTreatmentPlanDocumentInputSchema,
   getTreatmentPlanDetailInputSchema,
+  getTreatmentPlanCompletionContextInputSchema,
   presentTreatmentPlanInputSchema,
   removeTreatmentPlanItemInputSchema,
-  saveTreatmentPlanDrawingInputSchema,
   updateTreatmentPlanInputSchema,
   updateTreatmentPlanItemInputSchema,
 } from "@/lib/treatment-plan/schema";
-import type { TreatmentPlanDetail } from "@/lib/treatment-plan/types";
+import type { TreatmentPlanCompletionContext, TreatmentPlanDetail } from "@/lib/treatment-plan/types";
 
 type TreatmentPlanMutationCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "FAILED";
 export type TreatmentPlanMutationResult = { ok: true } | { ok: false; code: TreatmentPlanMutationCode; fieldErrors?: Record<string, string[]> };
 export type TreatmentPlanDetailResult = { ok: true; detail: TreatmentPlanDetail } | { ok: false; code: TreatmentPlanMutationCode; fieldErrors?: Record<string, string[]> };
+export type TreatmentPlanCompletionContextResult = { ok: true; context: TreatmentPlanCompletionContext } | { ok: false; code: TreatmentPlanMutationCode; fieldErrors?: Record<string, string[]> };
 export type TreatmentPlanPrintResult = { ok: true; documentId: string } | { ok: false; message: string };
 
 function invalid(schema: { safeParse(input: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown) {
@@ -65,6 +68,17 @@ export async function createTreatmentPlanAction(input: unknown): Promise<Treatme
     await authorizeWrite(value.actingBranchId);
     await createTreatmentPlan(input as never);
     revalidatePath(`/patients/${value.patientId}`, "page");
+    return { ok: true };
+  } catch (error) { return result(error); }
+}
+
+export async function completeTreatmentAction(input: unknown): Promise<TreatmentPlanMutationResult> {
+  const invalidResult = invalid(completeTreatmentInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = completeTreatmentInputSchema.parse(input);
+    await authorizeWrite(value.actingBranchId);
+    await requirePermission({ permission: "billing.charge", branchId: value.actingBranchId });
+    await completeTreatment(value);
     return { ok: true };
   } catch (error) { return result(error); }
 }
@@ -141,20 +155,23 @@ export async function addTreatmentPlanDiscussionAction(input: unknown): Promise<
   } catch (error) { return result(error); }
 }
 
-export async function saveTreatmentPlanDrawingAction(input: unknown): Promise<TreatmentPlanMutationResult> {
-  const invalidResult = invalid(saveTreatmentPlanDrawingInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    await authorizeWrite((input as { actingBranchId: string }).actingBranchId);
-    await saveTreatmentPlanDrawing(input as never);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
 export async function getTreatmentPlanDetailAction(input: unknown): Promise<TreatmentPlanDetailResult> {
   const invalidResult = invalid(getTreatmentPlanDetailInputSchema, input); if (invalidResult) return invalidResult;
   try {
     await authorizeRead((input as { actingBranchId: string }).actingBranchId);
     return { ok: true, detail: await getTreatmentPlanDetail(input as never) };
+  } catch (error) {
+    const failure = result(error);
+    return { ok: false, code: failure.code, fieldErrors: failure.fieldErrors };
+  }
+}
+
+export async function getTreatmentPlanCompletionContextAction(input: unknown): Promise<TreatmentPlanCompletionContextResult> {
+  const invalidResult = invalid(getTreatmentPlanCompletionContextInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    await authorizeWrite((input as { actingBranchId: string }).actingBranchId);
+    await requirePermission({ permission: "billing.charge", branchId: (input as { actingBranchId: string }).actingBranchId });
+    return { ok: true, context: await getTreatmentPlanCompletionContext(input as never) };
   } catch (error) {
     const failure = result(error);
     return { ok: false, code: failure.code, fieldErrors: failure.fieldErrors };

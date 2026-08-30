@@ -80,3 +80,18 @@ export function validateTreatmentCompletion(input: {
   }
   return { ok: true };
 }
+
+export function validateCompleteTreatment(input: {
+  caseId: string;
+  expectedVersion: number;
+  resolvedFindingIds: readonly string[];
+  amountCentavos: string;
+  completion: unknown;
+  idempotencyKey: string;
+  providerId?: unknown;
+}): RuleResult {
+  if ("providerId" in input || !/^(0|[1-9][0-9]{0,10})$/.test(input.amountCentavos)) return { ok: false, reason: "invalid-completion-input" };
+  if (!input.caseId || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1 || !input.idempotencyKey.trim()) return { ok: false, reason: "invalid-completion-input" };
+  if (new Set(input.resolvedFindingIds).size !== input.resolvedFindingIds.length || !input.completion || typeof input.completion !== "object" || Array.isArray(input.completion)) return { ok: false, reason: "invalid-completion-input" };
+  return { ok: true };
+}
