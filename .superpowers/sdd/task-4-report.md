@@ -52,4 +52,5 @@ registry. No reset, hosted command, or production write was used.
   overloads. The service sends explicit presence flags; omitted structured
   fields retain persisted values and explicit `notes: null` clears only notes.
 - Focused service unit, strict typecheck, migration privilege lint, and diff
-  hygiene passed. Isolated pgTAP round-trip verification remains pending.
+  hygiene passed. Authenticated focused pgTAP now proves add/update detail
+  round-trip, omitted-field preservation, and explicit-null note clearing.

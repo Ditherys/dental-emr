@@ -19,6 +19,12 @@ insert into public.organizations(id,legal_name,business_name,slug) values
 insert into public.branches(id,organization_id,name,slug,code,address_line1,city,province) values
  ('f4030000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','Case A Main','case-a-main','CA','1 Synthetic','Test','Test'),
  ('f4030000-0000-0000-0000-000000000002','f4020000-0000-0000-0000-000000000002','Case B Main','case-b-main','CB','1 Synthetic','Test','Test');
+insert into public.organization_members(id,organization_id,user_id,membership_status,joined_at) values
+ ('f4100000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','f4010000-0000-0000-0000-000000000001','active',statement_timestamp());
+insert into public.branch_memberships(organization_id,branch_id,organization_member_id,access_status) values
+ ('f4020000-0000-0000-0000-000000000001','f4030000-0000-0000-0000-000000000001','f4100000-0000-0000-0000-000000000001','active');
+insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by)
+select 'f4020000-0000-0000-0000-000000000001','f4100000-0000-0000-0000-000000000001',id,'f4010000-0000-0000-0000-000000000001' from public.roles where organization_id is null and code='OWNER';
 insert into public.patients(id,organization_id,patient_number,first_name,last_name,birth_date,preferred_branch_id) values
  ('f4040000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','CA-1','Synthetic','A','1990-01-01','f4030000-0000-0000-0000-000000000001'),
  ('f4040000-0000-0000-0000-000000000002','f4020000-0000-0000-0000-000000000002','CB-1','Synthetic','B','1990-01-01','f4030000-0000-0000-0000-000000000002');
@@ -36,6 +42,19 @@ select extensions.throws_ok(
     values ('f4020000-0000-0000-0000-000000000001','f4040000-0000-0000-0000-000000000002','f4030000-0000-0000-0000-000000000001','f4050000-0000-0000-0000-000000000001','f4010000-0000-0000-0000-000000000001')$$,
   '23503', null, 'a case cannot cross tenant patient ownership'
 );
+
+insert into public.treatment_plans(id,organization_id,patient_id,title,status,version,created_by) values
+ ('f4060000-0000-0000-0000-000000000002','f4020000-0000-0000-0000-000000000001','f4040000-0000-0000-0000-000000000001','Authenticated detail plan','DRAFT',1,'f4010000-0000-0000-0000-000000000001');
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f4010000-0000-0000-0000-000000000001',true);
+select extensions.ok(exists(select 1 from public.add_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',1,'f4050000-0000-0000-0000-000000000001','12','Authenticated structured item',2500,'HIGH',7,array['O','M']::text[],'Initial note',true,true,true,true)),'authenticated add overload accepts non-default structured detail');
+select extensions.ok((select detail #>> '{items,0,priority}'='HIGH' and detail #>> '{items,0,sequenceNo}'='7' and detail #>> '{items,0,notes}'='Initial note' and detail #> '{items,0,surfaces}'='["O", "M"]'::jsonb from (select public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002') detail) x),'authenticated detail projection round-trips structured add');
+select extensions.ok(exists(select 1 from public.update_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',((public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002')->'items'->0->>'itemId')::uuid),1,'f4050000-0000-0000-0000-000000000001','12','Partial structured item',2500,null,null,null,null,false,false,false,false)),'partial authenticated update succeeds');
+select extensions.ok((select detail #>> '{items,0,priority}'='HIGH' and detail #>> '{items,0,sequenceNo}'='7' and detail #>> '{items,0,notes}'='Initial note' from (select public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002') detail) x),'partial update preserves omitted structured detail');
+select extensions.ok(exists(select 1 from public.update_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',((public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002')->'items'->0->>'itemId')::uuid),1,'f4050000-0000-0000-0000-000000000001','12','Clear note',2500,null,null,null,null,false,false,false,true)),'explicit null note update succeeds');
+select extensions.ok((select detail #> '{items,0,notes}'='null'::jsonb from (select public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002') detail) x),'explicit null clears note');
+reset role;
 insert into public.procedure_cases(id,organization_id,patient_id,origin_branch_id,procedure_id,treatment_plan_item_id,opened_by) values
  ('f4080000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','f4040000-0000-0000-0000-000000000001','f4030000-0000-0000-0000-000000000001','f4050000-0000-0000-0000-000000000001','f4070000-0000-0000-0000-000000000001','f4010000-0000-0000-0000-000000000001');
 select extensions.ok(exists(select 1 from public.procedure_cases where id='f4080000-0000-0000-0000-000000000001'), 'same-tenant case accepts its plan item');
