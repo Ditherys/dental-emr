@@ -28,6 +28,9 @@ type Props = {
   patientId: string;
   actingBranchId: string;
   canWriteClinical: boolean;
+  printPatientName?: string;
+  printBranchName?: string;
+  printProviderName?: string;
   /** @deprecated O13 read cutover — use initialOdontogram (get_patient_odontogram DTO). */
   initialConditions?: unknown;
   initialOdontogram?: PatientOdontogramDTO | null;
@@ -41,6 +44,9 @@ export function OdontogramSection({
   patientId,
   actingBranchId,
   canWriteClinical,
+  printPatientName,
+  printBranchName,
+  printProviderName,
   initialOdontogram,
   initialProgressEvents,
   procedureCases: suppliedProcedureCases,
@@ -259,7 +265,14 @@ export function OdontogramSection({
               </Button>
             </div>
             <div className="mt-4">
-              <ForkPrintChart dto={dto} renderChart={false} />
+              <ForkPrintChart
+                dto={dto}
+                patientName={printPatientName}
+                branchName={printBranchName}
+                providerName={printProviderName}
+                progressEvents={progressEvents}
+                renderChart={false}
+              />
             </div>
           </div>
 

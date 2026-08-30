@@ -488,6 +488,8 @@ export function PatientWorkspace({
               patientId={patient.patientId}
               actingBranchId={actingBranchId}
               canWriteClinical={canWriteClinical}
+              printPatientName={patientDisplayName(patient)}
+              printBranchName={patient.preferredBranch?.name ?? undefined}
               initialEncounters={initialClinicalEncounters}
               initialMedicalRecords={initialMedicalRecords}
               initialToothConditions={initialToothConditions}

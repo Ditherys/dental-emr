@@ -12,7 +12,9 @@ import {
 } from "react-advanced-odontogram";
 
 import { buildForkEmptyChart, buildForkPayload } from "@/lib/odontogram/fork-adapter";
+import { formatPhpCentavos } from "@/lib/billing/money";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
+import type { ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import "./styles.css";
 
 export type ForkPrintChartProps = {
@@ -21,6 +23,7 @@ export type ForkPrintChartProps = {
   branchName?: string;
   providerName?: string;
   printedAt?: string;
+  progressEvents?: readonly ProgressEventDTO[];
   /**
    * Standalone print previews mount a read-only fork chart. The patient page
    * already has one fork chart mounted, so it passes false to avoid duplicate
@@ -40,6 +43,15 @@ function providerLabel(value: string | null | undefined): string {
   return value.length > 80 ? `${value.slice(0, 77)}…` : value;
 }
 
+function amountLabel(value: string | null): string | null {
+  if (value === null || !/^-?[0-9]+$/.test(value)) return null;
+  try {
+    return formatPhpCentavos(BigInt(value));
+  } catch {
+    return null;
+  }
+}
+
 type ChronologyRow = {
   id: string;
   occurredAt: string | null;
@@ -49,7 +61,7 @@ type ChronologyRow = {
   status: string;
 };
 
-function chronology(dto: PatientOdontogramDTO): ChronologyRow[] {
+function chronology(dto: PatientOdontogramDTO, progressEvents: readonly ProgressEventDTO[] = []): ChronologyRow[] {
   const rows: ChronologyRow[] = dto.entries.map((entry) => ({
     id: `entry-${entry.id}`,
     occurredAt: entry.recorded_at,
@@ -82,6 +94,16 @@ function chronology(dto: PatientOdontogramDTO): ChronologyRow[] {
     provider: exam.finalized_by ?? exam.finalized_provider_id ?? exam.examined_provider_id,
     status: exam.status,
   })));
+  rows.push(...progressEvents
+    .filter((event) => event.eventType === "CHARGE" || event.eventType === "PAYMENT")
+    .map((event) => ({
+      id: `billing-${event.eventId}`,
+      occurredAt: event.occurredAt,
+      label: `${event.eventType === "CHARGE" ? "Charge" : "Payment"}${event.procedureDisplay ? ` · ${event.procedureDisplay}` : ""}`,
+      detail: [amountLabel(event.chargeCentavos) ? `Charge ${amountLabel(event.chargeCentavos)}` : null, amountLabel(event.paymentCentavos) ? `Payment ${amountLabel(event.paymentCentavos)}` : null, amountLabel(event.caseBalanceCentavos) ? `Balance ${amountLabel(event.caseBalanceCentavos)}` : null, event.note].filter(Boolean).join(" · "),
+      provider: event.actorDisplay,
+      status: event.eventType,
+    })));
   return rows.sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
 }
 
@@ -108,9 +130,10 @@ export function ForkPrintChart({
   branchName,
   providerName,
   printedAt,
+  progressEvents,
   renderChart = true,
 }: ForkPrintChartProps): React.ReactElement {
-  const rows = React.useMemo(() => chronology(dto), [dto]);
+  const rows = React.useMemo(() => chronology(dto, progressEvents), [dto, progressEvents]);
   return (
     <section data-testid="fork-print-chart" className="fork-print-root border bg-white p-4 print:break-inside-auto">
       <header className="fork-print-header border-b pb-3">
