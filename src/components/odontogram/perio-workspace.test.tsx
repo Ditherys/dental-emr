@@ -94,4 +94,91 @@ describe("PerioWorkspace O10", () => {
     expect(payload.sites.length).toBeLessThanOrEqual(200);
     expect(payload.sites.length).toBe(2);
   }, 15000);
+
+  it("traverses six-site probing inputs with arrows and returns Escape focus to the tooth", async () => {
+    const user = userEvent.setup();
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[{ toothFdi: "11", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 }]}
+      />,
+    );
+
+    const mb = screen.getAllByRole("spinbutton", { name: /tooth 11 mesio-buccal probing depth/i })[0]!;
+    mb.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getAllByRole("spinbutton", { name: /tooth 11 buccal probing depth/i })[0]).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+    expect(screen.getAllByRole("button", { name: /tooth 11/i })[0]).toHaveFocus();
+  });
+
+  it("disables periodontal fields for missing teeth and implant-only exclusions", () => {
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        toothStates={{ "11": { toothPresent: false }, "12": { toothPresent: true, implantContext: true } }}
+        initialSites={[
+          { toothFdi: "11", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 },
+          { toothFdi: "12", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 },
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole("spinbutton", { name: /tooth 11 mesio-buccal probing depth/i })[0]).toBeDisabled();
+    expect(screen.getAllByRole("spinbutton", { name: /tooth 12 mesio-buccal probing depth/i })[0]).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: /tooth 11/i })[0]).toHaveAccessibleDescription(/missing/i);
+    expect(screen.getAllByRole("button", { name: /tooth 12/i })[0]).toHaveAccessibleDescription(/implant/i);
+  });
+
+  it("requires explicit confirmation before finalization", async () => {
+    const user = userEvent.setup();
+    const onFinalize = vi.fn(async () => ({ ok: true }));
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[{ toothFdi: "11", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 }]}
+        onFinalize={onFinalize}
+      />,
+    );
+
+    await user.click(screen.getByTestId("perio-finalize"));
+    expect(onFinalize).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(/finalize periodontal examination/i);
+
+    await user.click(screen.getByRole("button", { name: /confirm finalization/i }));
+    expect(onFinalize).toHaveBeenCalledWith({
+      actingBranchId: "00000000-0000-4000-a000-000000000010",
+      examinationId: exam.id,
+      expectedVersion: exam.version,
+    });
+  });
+
+  it("does not submit measurements that are invalid for a missing or implant-context tooth", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => ({ ok: true }));
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        toothStates={{ "11": { toothPresent: false }, "12": { toothPresent: true, implantContext: true } }}
+        initialSites={[
+          { toothFdi: "11", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 },
+          { toothFdi: "12", site: "MB", probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 },
+        ]}
+        onSave={onSave}
+      />,
+    );
+
+    await user.click(screen.getByTestId("perio-save"));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId("perio-message")).toHaveTextContent(/nothing valid to save/i);
+  });
 });

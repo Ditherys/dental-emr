@@ -36,12 +36,18 @@ function revalidateAuthoritativePatient(patientId: string) {
   revalidatePath(`/patients/${patientId}`, "page");
 }
 
+async function authorizePerioWrite(branchId: string) {
+  // Every mutation keeps its branch-scoped server authorization at the action
+  // boundary. The RPC repeats this check against the authenticated actor.
+  await requirePermission({ permission: "patient.clinical.write", branchId });
+}
+
 export async function createPeriodontalExaminationAction(input: unknown): Promise<PerioActionResult> {
   const inv = invalidResult(createPeriodontalExaminationInputSchema, input);
   if (inv) return inv;
   try {
     const v = createPeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: v.actingBranchId });
+    await authorizePerioWrite(v.actingBranchId);
     const res = await createPeriodontalExamination(v);
     revalidateAuthoritativePatient(res.patientId);
     return { ok: true, id: res.examinationId, version: res.version };
@@ -53,7 +59,7 @@ export async function savePeriodontalMeasurementsAction(input: unknown): Promise
   if (inv) return inv;
   try {
     const v = savePeriodontalMeasurementsInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: v.actingBranchId });
+    await authorizePerioWrite(v.actingBranchId);
     const res = await savePeriodontalMeasurements(v);
     revalidateAuthoritativePatient(res.patientId);
     return { ok: true, id: res.examinationId, version: res.version };
@@ -65,7 +71,7 @@ export async function finalizePeriodontalExaminationAction(input: unknown): Prom
   if (inv) return inv;
   try {
     const v = finalizePeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: v.actingBranchId });
+    await authorizePerioWrite(v.actingBranchId);
     const res = await finalizePeriodontalExamination(v);
     revalidateAuthoritativePatient(res.patientId);
     return { ok: true, id: res.examinationId, version: res.version };
@@ -77,7 +83,7 @@ export async function amendPeriodontalExaminationAction(input: unknown): Promise
   if (inv) return inv;
   try {
     const v = amendPeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: v.actingBranchId });
+    await authorizePerioWrite(v.actingBranchId);
     await requirePermission({ permission: "patient.clinical.correct", branchId: v.actingBranchId });
     const res = await amendPeriodontalExamination(v);
     revalidateAuthoritativePatient(res.patientId);

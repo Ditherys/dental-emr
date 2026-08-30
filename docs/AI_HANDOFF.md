@@ -2728,3 +2728,52 @@ px vitest run (full unit suite) — 132 files / 1387 tests, all
   permission path is intact. The page will now render the empty
   finance report ("No financial activity in this window.") instead
   of the error.
+
+## Task 11 — O10/O11 periodontal, accessibility, and responsive hardening (2026-08-30)
+
+Codex implemented the approved Task 11 slice on `main`; no database or
+migration files were changed.
+
+### Implementation
+
+- Replaced the periodontal chart placeholder with a responsive six-site
+  PerioChart for MB/B/DB/ML/L/DL. Source PD/GM inputs produce derived CAL,
+  with labelled BOP/suppuration controls, previous-value comparison, and
+  text/severity semantics independent of colour.
+- Added keyboard traversal across sites and teeth with ArrowRight/ArrowLeft;
+  Escape returns focus to the tooth control. Missing and implant teeth expose
+  accessible status descriptions and disable measurement controls.
+- PerioWorkspace filters invalid missing/implant rows before bounded saves,
+  keeps batches at 200 rows, and preserves existing patient integration props,
+  save/finalize/amend contracts. Finalization requires explicit confirmation;
+  finalized examinations use an attributed amendment action rather than
+  editing finalized children.
+- Patient odontogram integration now derives current missing/implant state and
+  passes it into the periodontal workspace.
+- Added guarded `@responsive` Playwright discovery coverage across the existing
+  360, 430, iPad portrait, iPad landscape, and desktop projects.
+- Replaced the `perio-chart-stub` placeholder with the real implementation and
+  added component/accessibility tests for focus, guards, finalization,
+  invalid-row filtering, and accessible labels.
+
+### Verification
+
+- `npm run test:unit -- src/components/odontogram/perio-workspace.test.tsx` —
+  1 file / 6 tests passed.
+- `npm run test:unit -- 'src/components/odontogram' 'src/app/(emr)/patients/[patientId]/perio-actions.test.ts' 'src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx'` —
+  14 files / 50 tests passed.
+- Guarded `npm run test:e2e:list -- --grep '@responsive odontogram remains'`
+  with synthetic local target metadata discovered 6 matrix tests. The guard
+  intentionally fails closed when `APP_ENVIRONMENT` is absent; no hosted E2E
+  execution or trace was attempted.
+- Targeted ESLint, `npm run lint`, `npm run typecheck`, and `git diff --check`
+  passed. Full lint reports only three pre-existing Task 10 warnings.
+
+### Review focus
+
+- Confirm the six-site keyboard path and responsive matrix when the local
+  guarded E2E environment is available.
+- Confirm missing/implant state derivation is correct for current odontogram
+  entries and that save payloads contain no disabled rows.
+- Hosted Cloud TEST and O14 release gates remain deferred under the approved
+  local-completion scope.

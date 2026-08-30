@@ -6,6 +6,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { MeasuredChart } from "./measured-chart";
+import { PerioChart } from "./perio-chart";
 
 const dto = {
   entries: [
@@ -176,5 +177,25 @@ describe("O11 odontogram a11y", () => {
     const tabbables2 = [...c2.querySelectorAll<HTMLElement>("[data-fdi]")].filter((el) => el.getAttribute("tabindex") === "0");
     expect(tabbables2).toHaveLength(1);
     expect(tabbables2[0]?.getAttribute("data-fdi")).toBe("11");
+  });
+
+  it("exposes six-site periodontal inputs with source labels and non-color status", () => {
+    const sites = new Map([
+      ["11:MB", { toothFdi: "11", site: "MB" as const, probingDepthMm: 3, gingivalMarginMm: 1, calMm: 4 }],
+    ]);
+    render(
+      <PerioChart
+        teeth={["11"]}
+        label="maxilla"
+        sites={sites}
+        onSiteChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /tooth 11 periodontal entry/i })).toHaveAccessibleDescription(/present/i);
+    expect(screen.getByRole("spinbutton", { name: /tooth 11 buccal probing depth/i })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: /tooth 11 buccal gingival margin/i })).toBeInTheDocument();
+    expect(screen.getByTestId("perio-cal-11-MB")).toHaveAccessibleName(/CAL 4 moderate/i);
+    expect(screen.getByTestId("perio-vis-bar")).toHaveAccessibleName(/CAL 4 moderate/i);
   });
 });

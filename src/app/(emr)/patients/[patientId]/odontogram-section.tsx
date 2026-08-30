@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { MeasuredChart } from "@/components/odontogram/measured-chart";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
 import { OdontogramToolbar, type ChartViewFilter, type DentitionFilter } from "@/components/odontogram/odontogram-toolbar";
-import { PerioWorkspace, type PerioMeasurement } from "@/components/odontogram/perio-workspace";
+import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
 import { OdontogramPrintHistory } from "@/components/odontogram/print-history";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
@@ -173,6 +173,28 @@ export function OdontogramSection({
     }));
   }, [selectedPeriodontalExam]);
 
+  const perioToothStates = React.useMemo<Readonly<Record<string, PerioToothState>>>(() => {
+    const states: Record<string, PerioToothState> = {};
+    if (!dto) return states;
+
+    for (const entry of dto.entries ?? []) {
+      if (entry.status === "PLANNED" || entry.lifecycle !== "OPEN" || entry.event_state !== "CURRENT") continue;
+      const isMissing = entry.clinical_code === "MISSING" || (entry.detail?.code === "TOOTH_STATE" && entry.detail.state === "MISSING");
+      if (isMissing) states[entry.tooth_code] = { toothPresent: false };
+    }
+    for (const chain of dto.implantChains ?? []) {
+      if (chain.record_kind === "CURRENT" && chain.event_state === "CURRENT") states[chain.tooth_fdi] = { toothPresent: true, implantContext: true };
+    }
+    for (const site of selectedPeriodontalExam?.sites ?? []) {
+      const existing = states[site.tooth_fdi] ?? {};
+      states[site.tooth_fdi] = {
+        toothPresent: site.tooth_present === false ? false : existing.toothPresent,
+        implantContext: site.implant_context === true || existing.implantContext,
+      };
+    }
+    return states;
+  }, [dto, selectedPeriodontalExam]);
+
   const progressEvents = React.useMemo(
     () => isCurrentPatientSnapshot ? (suppliedProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
     [dto, isCurrentPatientSnapshot, suppliedProgressEvents],
@@ -333,6 +355,7 @@ export function OdontogramSection({
                 encounterId: selectedPeriodontalExam.encounter_id,
               }}
               initialSites={selectedPerioSites}
+              toothStates={perioToothStates}
               onSave={async (payload) => {
                 const result = await savePeriodontalMeasurementsAction(payload);
                 if (result.ok) void refetch();
