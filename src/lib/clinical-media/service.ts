@@ -11,15 +11,25 @@ import { databaseUuid } from "@/lib/validation/database-uuid";
 import { ClinicalPhotoServiceError, mapClinicalPhotoRpcError } from "./errors";
 import { processClinicalPhoto as runClinicalPhotoProcessor } from "./processor";
 import {
+  archiveClinicalPhotoInputSchema,
   clinicalPhotoRowSchema,
+  clinicalPhotoDerivativeRowSchema,
+  clinicalPhotoSourceMetadataRowSchema,
+  clinicalPhotoSourceUploadInputSchema,
+  clinicalPhotoSourceUploadRowSchema,
+  confirmClinicalPhotoUploadInputSchema,
   createClinicalPhotoInputSchema,
+  getClinicalPhotoDerivativeUrlInputSchema,
   listClinicalPhotosInputSchema,
   pairClinicalPhotoInputSchema,
   processClinicalPhotoInputSchema,
   recordClinicalPhotoDerivativesInputSchema,
   renameClinicalPhotoInputSchema,
 } from "./schema";
-import type { ClinicalPhotoDTO } from "./types";
+import type { ClinicalPhotoDTO, ClinicalPhotoDerivativeUrlResult, ClinicalPhotoSourceUploadResult, ClinicalPhotoVariant } from "./types";
+
+const PRESIGN_EXPIRATION_SECONDS = 900;
+const MAX_CLINICAL_PHOTO_SOURCE_BYTES = 25 * 1024 * 1024;
 
 type Rpc = (name: string, args: Record<string, unknown>) => Promise<unknown>;
 const rpcResponseSchema = z.object({ data: z.unknown(), error: z.unknown().nullable() });
@@ -217,6 +227,73 @@ export async function createClinicalPhoto(input: unknown): Promise<ClinicalPhoto
   return map(clinicalPhotoRowSchema.parse(firstRow(rows)));
 }
 
+export async function createClinicalPhotoSourceUpload(input: unknown, storage?: StorageAdapter): Promise<ClinicalPhotoSourceUploadResult> {
+  const value = clinicalPhotoSourceUploadInputSchema.parse(input);
+  const adapter = storage ?? createStorageClient();
+  const rows = await callRpc("create_clinical_photo_source_upload", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_mime_type: value.mimeType,
+    ...(value.sizeBytes === undefined ? {} : { p_size_bytes: value.sizeBytes }),
+  });
+  const row = clinicalPhotoSourceUploadRowSchema.parse(firstRow(rows));
+
+  try {
+    const upload = await adapter.createUploadUrl(
+      row.object_key,
+      value.mimeType,
+      PRESIGN_EXPIRATION_SECONDS,
+    );
+    return { fileId: row.file_id, uploadUrl: upload.url, expiresAt: upload.expiresAt, version: row.version };
+  } catch {
+    throw new ClinicalPhotoServiceError("STORAGE_READ_FAILED");
+  }
+}
+
+export async function confirmClinicalPhotoUpload(input: unknown, storage?: StorageAdapter): Promise<ClinicalPhotoDTO> {
+  const value = confirmClinicalPhotoUploadInputSchema.parse(input);
+  const adapter = storage ?? createStorageClient();
+  const metadata = clinicalPhotoSourceMetadataRowSchema.parse(firstRow(await callRpc("get_clinical_photo_source_upload", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_file_id: value.fileId,
+  })));
+
+  if (metadata.status !== "pending") throw new ClinicalPhotoServiceError("INVALID_STATE");
+
+  let stat;
+  try {
+    stat = await adapter.stat(metadata.object_key);
+  } catch {
+    throw new ClinicalPhotoServiceError("STORAGE_READ_FAILED");
+  }
+  if (!Number.isSafeInteger(stat.sizeBytes) || stat.sizeBytes <= 0 || stat.sizeBytes > MAX_CLINICAL_PHOTO_SOURCE_BYTES || stat.contentType !== metadata.mime_type) {
+    throw new ClinicalPhotoServiceError("STORAGE_INTEGRITY_FAILED");
+  }
+
+  await callRpc("confirm_clinical_photo_source_upload", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_file_id: value.fileId,
+    p_expected_version: value.expectedVersion,
+    p_verified_size_bytes: stat.sizeBytes,
+  });
+
+  return createClinicalPhoto({
+    actingBranchId: value.actingBranchId,
+    patientId: value.patientId,
+    sourceFileId: value.fileId,
+    category: value.category,
+    displayFilename: value.displayFilename,
+    originalClientFilename: value.originalClientFilename,
+    captureAt: value.captureAt,
+    toothCodes: value.toothCodes,
+    surfaces: value.surfaces,
+    note: value.note,
+    procedureCaseId: value.procedureCaseId,
+  });
+}
+
 export async function listClinicalPhotos(input: unknown): Promise<ClinicalPhotoDTO[]> {
   const value = listClinicalPhotosInputSchema.parse(input);
   const rows = await callRpc("list_clinical_photos", {
@@ -243,6 +320,35 @@ export async function pairClinicalPhotos(input: unknown): Promise<void> {
     p_acting_branch_id: value.actingBranchId,
     p_before_photo_id: value.beforePhotoId,
     p_after_photo_id: value.afterPhotoId,
+  });
+}
+
+export async function getClinicalPhotoDerivativeUrl(input: unknown, storage?: StorageAdapter): Promise<ClinicalPhotoDerivativeUrlResult> {
+  const value = getClinicalPhotoDerivativeUrlInputSchema.parse(input);
+  const adapter = storage ?? createStorageClient();
+  const row = clinicalPhotoDerivativeRowSchema.parse(firstRow(await callRpc("get_clinical_photo_derivative", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_photo_id: value.photoId,
+    p_variant: value.variant,
+  })));
+
+  try {
+    const download = await adapter.createDownloadUrl(row.object_key, PRESIGN_EXPIRATION_SECONDS);
+    return { photoId: row.photo_id, variant: row.variant as ClinicalPhotoVariant, downloadUrl: download.url, expiresAt: download.expiresAt, mimeType: row.mime_type };
+  } catch {
+    throw new ClinicalPhotoServiceError("STORAGE_READ_FAILED");
+  }
+}
+
+export async function archiveClinicalPhoto(input: unknown): Promise<void> {
+  const value = archiveClinicalPhotoInputSchema.parse(input);
+  await callRpc("archive_clinical_photo", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_photo_id: value.photoId,
+    p_expected_version: value.expectedVersion,
+    p_reason: value.reason,
   });
 }
 

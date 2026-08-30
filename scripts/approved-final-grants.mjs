@@ -480,6 +480,8 @@ const CLINICAL_PHOTO_BROWSER_COMPLETION_REVOKE_MIGRATION =
   "20260830010618_clinical_photo_browser_completion_revoke.sql";
 const CLINICAL_PHOTO_SERVER_COMPLETION_GRANTS_MIGRATION =
   "20260830010620_clinical_photo_server_completion_grants.sql";
+const CLINICAL_PHOTO_ACTION_RPCS_GRANTS_MIGRATION =
+  "20260830010622_clinical_photo_action_rpcs_grants.sql";
 
 const ODONTOGRAM_RPCS_GRANTS_MIGRATION =
   "20260827013201_odontogram_rpcs_grants.sql";
@@ -1665,6 +1667,24 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
           "Server-only clinical-photo completion boundary. The worker calls it only after reading and hashing every private derivative through the storage adapter; the explicit actor parameter preserves attributable audit events while no browser role can fabricate READY metadata.",
       },
     ]),
+  }),
+  Object.freeze({
+    file: CLINICAL_PHOTO_ACTION_RPCS_GRANTS_MIGRATION,
+    grants: Object.freeze([
+      "public.create_clinical_photo_source_upload(uuid,uuid,text,bigint)",
+      "public.get_clinical_photo_source_upload(uuid,uuid,uuid)",
+      "public.confirm_clinical_photo_source_upload(uuid,uuid,uuid,integer,bigint)",
+      "public.get_clinical_photo_derivative(uuid,uuid,uuid,text)",
+      "public.archive_clinical_photo(uuid,uuid,uuid,integer,text)",
+    ].map((object) => ({
+      grantee: "authenticated",
+      objectClass: "function",
+      object,
+      privilege: "execute",
+      columns: [],
+      reason:
+        "The narrow clinical-photo action boundary derives tenant and patient association inside SECURITY DEFINER RPCs, requires the appropriate live clinical permission (and AAL2 for archival), preserves private opaque objects, and returns no base-table access or original client filename.",
+    }))),
   }),
 ]);
 

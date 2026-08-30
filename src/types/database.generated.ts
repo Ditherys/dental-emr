@@ -1653,6 +1653,9 @@ export type Database = {
       }
       clinical_photographs: {
         Row: {
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           capture_at: string
           category: string
           created_by: string
@@ -1672,6 +1675,9 @@ export type Database = {
           version: number
         }
         Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           capture_at: string
           category: string
           created_by: string
@@ -1691,6 +1697,9 @@ export type Database = {
           version?: number
         }
         Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           capture_at?: string
           category?: string
           created_by?: string
@@ -1710,6 +1719,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "clinical_photographs_organization_archived_by_fkey"
+            columns: ["organization_id", "archived_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
           {
             foreignKeyName: "clinical_photographs_organization_id_created_by_fkey"
             columns: ["organization_id", "created_by"]
@@ -7851,6 +7867,16 @@ export type Database = {
         }[]
       }
       archive_branch: { Args: { target_branch_id: string }; Returns: string }
+      archive_clinical_photo: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_patient_id: string
+          p_photo_id: string
+          p_reason: string
+        }
+        Returns: boolean
+      }
       archive_file: {
         Args: {
           p_acting_branch_id: string
@@ -8085,6 +8111,19 @@ export type Database = {
           version: number
         }[]
       }
+      confirm_clinical_photo_source_upload: {
+        Args: {
+          p_acting_branch_id: string
+          p_expected_version: number
+          p_file_id: string
+          p_patient_id: string
+          p_verified_size_bytes: number
+        }
+        Returns: {
+          file_id: string
+          version: number
+        }[]
+      }
       confirm_file_upload:
         | {
             Args: {
@@ -8244,6 +8283,19 @@ export type Database = {
           processing_status: string
           surfaces: string[]
           tooth_codes: string[]
+          version: number
+        }[]
+      }
+      create_clinical_photo_source_upload: {
+        Args: {
+          p_acting_branch_id: string
+          p_mime_type: string
+          p_patient_id: string
+          p_size_bytes?: number
+        }
+        Returns: {
+          file_id: string
+          object_key: string
           version: number
         }[]
       }
@@ -8767,6 +8819,38 @@ export type Database = {
       get_clinical_encounter_detail: {
         Args: { p_acting_branch_id: string; p_encounter_id: string }
         Returns: Json
+      }
+      get_clinical_photo_derivative: {
+        Args: {
+          p_acting_branch_id: string
+          p_patient_id: string
+          p_photo_id: string
+          p_variant: string
+        }
+        Returns: {
+          height: number
+          mime_type: string
+          object_key: string
+          photo_id: string
+          size_bytes: number
+          variant: string
+          width: number
+        }[]
+      }
+      get_clinical_photo_source_upload: {
+        Args: {
+          p_acting_branch_id: string
+          p_file_id: string
+          p_patient_id: string
+        }
+        Returns: {
+          file_id: string
+          mime_type: string
+          object_key: string
+          size_bytes: number
+          status: string
+          version: number
+        }[]
       }
       get_document_snapshot: {
         Args: { p_acting_branch_id: string; p_document_id: string }

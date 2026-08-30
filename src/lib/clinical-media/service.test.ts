@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ rpc
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn(() => ({ rpc })) }));
 
 import { ClinicalPhotoServiceError, mapClinicalPhotoRpcError } from "./errors";
-import { createClinicalPhoto, listClinicalPhotos, processClinicalPhoto, renameClinicalPhoto, pairClinicalPhotos } from "./service";
+import { confirmClinicalPhotoUpload, createClinicalPhoto, createClinicalPhotoSourceUpload, getClinicalPhotoDerivativeUrl, listClinicalPhotos, processClinicalPhoto, renameClinicalPhoto, pairClinicalPhotos } from "./service";
 
 const ids = { actingBranchId: "11111111-1111-4111-8111-111111111111", patientId: "22222222-2222-4222-8222-222222222222", sourceFileId: "33333333-3333-4333-8333-333333333333" };
 const row = { photo_id: ids.sourceFileId, patient_id: ids.patientId, procedure_case_id: null, category: "BEFORE", display_filename: "before.jpg", capture_at: "2026-08-30T02:00:00.000Z", tooth_codes: [], surfaces: [], note: null, processing_status: "PENDING", paired_photo_id: null, version: 1 };
@@ -31,6 +31,32 @@ describe("clinical photo service", () => {
     await expect(createClinicalPhoto({ ...ids, category: "BEFORE", displayFilename: "before.jpg", originalClientFilename: "camera.jpg", captureAt: "2026-08-30T10:00:00+08:00" })).resolves.toMatchObject({ photoId: ids.sourceFileId, displayFilename: "before.jpg" });
     await expect(listClinicalPhotos({ actingBranchId: ids.actingBranchId, patientId: ids.patientId })).resolves.toHaveLength(1);
     expect(rpc.mock.calls.map(([name]) => name)).toEqual(["create_clinical_photo", "list_clinical_photos"]);
+  });
+
+  it("presigns an image source, verifies its stored size and MIME, then creates metadata", async () => {
+    const storage = {
+      createUploadUrl: vi.fn(async () => ({ url: "https://storage.example/put", expiresAt: new Date() })),
+      stat: vi.fn(async () => ({ sizeBytes: 2048, contentType: "image/jpeg" })),
+    };
+    const sourceObjectKey = `org/55555555-5555-4555-8555-555555555555/patients/${ids.patientId}/files/${ids.sourceFileId}`;
+    const sourceCreated = { file_id: ids.sourceFileId, object_key: sourceObjectKey, version: 1 };
+    const source = { ...sourceCreated, mime_type: "image/jpeg", size_bytes: null, status: "pending" };
+    rpc.mockResolvedValueOnce({ data: [sourceCreated], error: null })
+      .mockResolvedValueOnce({ data: [source], error: null })
+      .mockResolvedValueOnce({ data: [{ file_id: ids.sourceFileId, version: 2 }], error: null })
+      .mockResolvedValueOnce({ data: [row], error: null });
+
+    await expect(createClinicalPhotoSourceUpload({ actingBranchId: ids.actingBranchId, patientId: ids.patientId, mimeType: "image/jpeg" }, storage as never)).resolves.toMatchObject({ fileId: ids.sourceFileId, uploadUrl: "https://storage.example/put" });
+    await expect(confirmClinicalPhotoUpload({ actingBranchId: ids.actingBranchId, patientId: ids.patientId, fileId: ids.sourceFileId, expectedVersion: 1, category: "BEFORE", displayFilename: "before.jpg", originalClientFilename: "camera.jpg", captureAt: "2026-08-30T10:00:00+08:00" }, storage as never)).resolves.toMatchObject({ photoId: ids.sourceFileId });
+    expect(storage.stat).toHaveBeenCalledWith(source.object_key);
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual(["create_clinical_photo_source_upload", "get_clinical_photo_source_upload", "confirm_clinical_photo_source_upload", "create_clinical_photo"]);
+  });
+
+  it("only signs the authorized derivative metadata returned by the clinical read RPC", async () => {
+    const storage = { createDownloadUrl: vi.fn(async () => ({ url: "https://storage.example/get", expiresAt: new Date() })) };
+    rpc.mockResolvedValueOnce({ data: [{ photo_id: ids.sourceFileId, variant: "preview", object_key: `org/55555555-5555-4555-8555-555555555555/patients/${ids.patientId}/clinical-photos/${ids.sourceFileId}/preview.jpg`, mime_type: "image/jpeg", width: 1280, height: 960, size_bytes: 2048 }], error: null });
+    await expect(getClinicalPhotoDerivativeUrl({ actingBranchId: ids.actingBranchId, patientId: ids.patientId, photoId: ids.sourceFileId, variant: "preview" }, storage as never)).resolves.toMatchObject({ downloadUrl: "https://storage.example/get", variant: "preview" });
+    expect(storage.createDownloadUrl).toHaveBeenCalledWith(expect.stringContaining("/preview.jpg"), 900);
   });
   it("uses optimistic versioning for rename and supports pairing", async () => {
     rpc.mockResolvedValueOnce({ data: [row], error: null }).mockResolvedValueOnce({ data: true, error: null });

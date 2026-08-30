@@ -268,6 +268,11 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.pair_clinical_photos(uuid,uuid,uuid)",
     "public.claim_clinical_photo_processing(uuid,uuid)",
     "public.fail_clinical_photo_processing(uuid,uuid)",
+    "public.create_clinical_photo_source_upload(uuid,uuid,text,bigint)",
+    "public.get_clinical_photo_source_upload(uuid,uuid,uuid)",
+    "public.confirm_clinical_photo_source_upload(uuid,uuid,uuid,integer,bigint)",
+    "public.get_clinical_photo_derivative(uuid,uuid,uuid,text)",
+    "public.archive_clinical_photo(uuid,uuid,uuid,integer,text)",
     "public.create_intake_form(uuid, uuid, text, uuid)",
     "public.public_get_intake_form(text, text)",
     "public.public_submit_intake_form(text, text, jsonb, boolean)",
@@ -1444,7 +1449,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(256);
+    expect(approved.size).toBe(261);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {
