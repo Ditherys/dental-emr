@@ -25,3 +25,8 @@ Complete locally. The controlled fork is vendored at `vendor/react-advanced-odon
 - The generated declaration file retains upstream reset-function documentation comments, but the built runtime contains no `btnResetAll` or `btnResetTooth` controls; the public reset APIs remain available for compatibility.
 - Full Cloud TEST, E2E, responsive/accessibility, advisor, and security gates remain deferred as required by the current phase authorization.
 - Existing unrelated modifications to `.superpowers/sdd/progress.md` were left untouched.
+
+## Review follow-up
+
+- Added a jsdom Testing Library composition regression test that mounts the vendored `OdontogramProvider`, `OdontogramChartSurface`, and `ToothControlsSurface`, then asserts both reset buttons are absent.
+- `npx vitest run src/components/odontogram/fork-package.test.ts --no-file-parallelism --maxWorkers=1` — `1 file passed; 2 tests passed`.
