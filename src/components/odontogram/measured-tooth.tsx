@@ -3,20 +3,97 @@
 import * as React from "react";
 
 import type { ClinicalFeatureDetail, ToothRenderState } from "@/lib/odontogram/feature-contract";
+import type { ClinicalFeatureCode } from "@/lib/odontogram/clinical-codes";
 import type { ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
 import { MeasuredAssetImage, MeasuredInlinePlaceholder, templateForFdi } from "./measured-assets";
-import { overlayRendererFor } from "./overlay-registry";
+import { overlayRendererFor, surfaceOverlayRendererFor, type RendererSurface } from "./overlay-registry";
 
 export type RendererMode = "CURRENT" | "PLANNED" | "ALL";
 export type LabelDensity = "comfortable" | "compact";
 export type LayerVisibility = Readonly<Record<string, boolean>>;
 
+/**
+ * The RPC read shape is intentionally a small extension of the legacy DTO.
+ * O2 details are read-only here: they are parsed into the renderer-independent
+ * feature contract and never written back or used to select markup.
+ */
+export type RendererClinicalEntryDTO = Omit<ToothClinicalEntryDTO, "clinical_code"> & {
+  clinical_code: ToothClinicalEntryDTO["clinical_code"] | ClinicalFeatureCode | "TOOTH_STATE";
+  detail?: unknown;
+  clinical_detail?: unknown;
+  feature_detail?: unknown;
+  root_state?: unknown;
+  rootState?: unknown;
+  restoration_type?: unknown;
+  restorationType?: unknown;
+  restoration_material?: unknown;
+  restorationMaterial?: unknown;
+  marginal_leakage?: unknown;
+  marginalLeakage?: unknown;
+};
+
+const RENDERER_SURFACES: readonly RendererSurface[] = ["O", "B", "L", "M", "D", "I", "F"];
+const ENDO_STATES = ["endo-medical-filling", "endo-filling", "endo-filling-incomplete", "endo-glass-pin", "endo-metal-pin"] as const;
+const RESTORATION_TYPES = ["none", "crown", "inlay", "onlay", "veneer", "bridge"] as const;
+const RESTORATION_MATERIALS = ["none", "emax", "gold", "gradia", "zircon", "metal", "metal-ceramic", "telescope", "temporary", "amalgam", "composite", "gic"] as const;
+const TOOTH_STATES = ["PRESENT", "MISSING", "EXTRACTION_WOUND", "SUBGINGIVAL", "RADIX", "BROKEN", "CROWN_PREPARATION"] as const;
+
+type UnknownRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as UnknownRecord : null;
+}
+
+function isOneOf<T>(value: unknown, values: readonly T[]): value is T {
+  return values.includes(value as T);
+}
+
+function boundedNullableText(value: unknown): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length >= 1 && trimmed.length <= 100 ? trimmed : null;
+}
+
+function parseDetail(value: unknown): ClinicalFeatureDetail | null {
+  const candidate = asRecord(value);
+  if (!candidate || typeof candidate.code !== "string") return null;
+  if (candidate.code === "CARIES" && isOneOf(candidate.depth, ["ENAMEL", "DENTIN", "PULPAL"] as const)) {
+    const icdas = candidate.icdas === null || isOneOf(candidate.icdas, [0, 1, 2, 3, 4, 5, 6] as const) ? candidate.icdas : null;
+    const cars = boundedNullableText(candidate.cars);
+    const radiographicDepth = boundedNullableText(candidate.radiographicDepth);
+    return { code: "CARIES", depth: candidate.depth, icdas, cars, radiographicDepth };
+  }
+  if (candidate.code === "RESTORATION" && isOneOf(candidate.restorationType, RESTORATION_TYPES) && isOneOf(candidate.material, RESTORATION_MATERIALS) && typeof candidate.marginalLeakage === "boolean") {
+    return { code: "RESTORATION", restorationType: candidate.restorationType, material: candidate.material, marginalLeakage: candidate.marginalLeakage };
+  }
+  if (candidate.code === "ROOT_CANAL" && isOneOf(candidate.state, ENDO_STATES)) return { code: "ROOT_CANAL", state: candidate.state };
+  if (candidate.code === "TOOTH_STATE" && isOneOf(candidate.state, TOOTH_STATES)) return { code: "TOOTH_STATE", state: candidate.state };
+  if (candidate.code === "ORTHODONTIC" && isOneOf(candidate.appliance, ["BRACKET", "BAND"] as const) && (candidate.movement === null || isOneOf(candidate.movement, ["DRIFT", "INTRUSION", "EXTRUSION", "ROTATION"] as const))) {
+    return { code: "ORTHODONTIC", appliance: candidate.appliance, movement: candidate.movement };
+  }
+  if (candidate.code === "OTHER" && typeof candidate.controlledCode === "string" && candidate.controlledCode.trim().length > 0 && candidate.controlledCode.trim().length <= 100) {
+    return { code: "OTHER", controlledCode: candidate.controlledCode.trim() };
+  }
+  return null;
+}
+
+function detailMatchesEntry(entryCode: RendererClinicalEntryDTO["clinical_code"], detail: ClinicalFeatureDetail): boolean {
+  if (entryCode === "ROOT_CANAL") return detail.code === "ROOT_CANAL";
+  if (entryCode === "RESTORATION") return detail.code === "RESTORATION";
+  if (entryCode === "CARIES") return detail.code === "CARIES";
+  if (entryCode === "ORTHODONTIC") return detail.code === "ORTHODONTIC";
+  if (entryCode === "MISSING" || entryCode === "CROWN") return detail.code === "TOOTH_STATE";
+  if (entryCode === "TOOTH_STATE") return detail.code === "TOOTH_STATE";
+  return detail.code === "OTHER";
+}
+
 export interface MeasuredToothProps {
   fdi: number;
   state?: ToothRenderState;
   /** DTO compatibility until the O7 patient section consumes a projection. */
-  entries?: ToothClinicalEntryDTO[];
+  entries?: RendererClinicalEntryDTO[];
   selected: boolean;
   onSelect: (fdi: number) => void;
   view?: "front" | "occlusal";
@@ -30,7 +107,24 @@ export interface MeasuredToothProps {
   language?: "en" | "fil";
 }
 
-function detailForEntry(entry: ToothClinicalEntryDTO): ClinicalFeatureDetail {
+export function detailForEntry(entry: RendererClinicalEntryDTO): ClinicalFeatureDetail {
+  const record = entry as UnknownRecord;
+  const explicit = [record.detail, record.clinical_detail, record.feature_detail]
+    .map(parseDetail)
+    .find((detail): detail is ClinicalFeatureDetail => detail !== null);
+  if (explicit && detailMatchesEntry(entry.clinical_code, explicit)) return explicit;
+  if (entry.clinical_code === "ROOT_CANAL") {
+    const state = record.root_state ?? record.rootState;
+    if (isOneOf(state, ENDO_STATES)) return { code: "ROOT_CANAL", state };
+  }
+  if (entry.clinical_code === "RESTORATION") {
+    const restorationType = record.restoration_type ?? record.restorationType;
+    const material = record.restoration_material ?? record.restorationMaterial;
+    const marginalLeakage = record.marginal_leakage ?? record.marginalLeakage;
+    if (isOneOf(restorationType, RESTORATION_TYPES) && isOneOf(material, RESTORATION_MATERIALS) && typeof marginalLeakage === "boolean") {
+      return { code: "RESTORATION", restorationType, material, marginalLeakage };
+    }
+  }
   switch (entry.clinical_code) {
     case "CARIES":
       return { code: "CARIES", depth: "ENAMEL", icdas: null, cars: null, radiographicDepth: null };
@@ -40,35 +134,70 @@ function detailForEntry(entry: ToothClinicalEntryDTO): ClinicalFeatureDetail {
       return { code: "TOOTH_STATE", state: "MISSING" };
     case "CROWN":
       return { code: "TOOTH_STATE", state: "CROWN_PREPARATION" };
+    case "ROOT_CANAL":
+      // Legacy ROOT_CANAL rows predate O2 detail. Keep the clinical code
+      // visible with a bounded, approved complete-filling representation;
+      // never coerce it into an unrelated OTHER feature.
+      return { code: "ROOT_CANAL", state: "endo-filling" };
     default:
-      return { code: "OTHER", controlledCode: entry.clinical_code };
+      return { code: "OTHER", controlledCode: typeof entry.clinical_code === "string" && entry.clinical_code.trim().length <= 100 ? entry.clinical_code.trim() : "OTHER" };
   }
 }
 
-export function stateFromEntries(fdi: number, entries: ToothClinicalEntryDTO[]): ToothRenderState {
+function rootTreatmentFor(detail: ClinicalFeatureDetail): ToothRenderState["rootTreatment"] {
+  if (detail.code !== "ROOT_CANAL") return "NONE";
+  if (detail.state === "endo-medical-filling") return "MEDICAMENT";
+  if (detail.state === "endo-filling-incomplete") return "INCOMPLETE";
+  return "COMPLETE";
+}
+
+function stateLayerFor(detail: ClinicalFeatureDetail): string | null {
+  if (detail.code === "CARIES") return "CARIES";
+  if (detail.code === "RESTORATION") return "RESTORATION";
+  if (detail.code === "ROOT_CANAL") return rootTreatmentFor(detail) === "MEDICAMENT" ? "ROOT_FILL_MEDICAMENT" : rootTreatmentFor(detail) === "INCOMPLETE" ? "ROOT_FILL_INCOMPLETE" : "ROOT_FILL_COMPLETE";
+  if (detail.code === "TOOTH_STATE") {
+    if (detail.state === "MISSING") return "TOOTH_MISSING";
+    if (detail.state === "EXTRACTION_WOUND") return "EXTRACTION_WOUND";
+    if (detail.state === "SUBGINGIVAL") return "SUBGINGIVAL_ROOT";
+    if (detail.state === "RADIX") return "RADIX";
+    if (detail.state === "BROKEN") return "BROKEN_TOOTH";
+    if (detail.state === "CROWN_PREPARATION") return "CROWN_PREPARATION";
+  }
+  if (detail.code === "ORTHODONTIC") return "ORTHODONTIC";
+  return null;
+}
+
+export function stateFromEntries(fdi: number, entries: RendererClinicalEntryDTO[]): ToothRenderState {
   const current: ClinicalFeatureDetail[] = [];
   const planned: ClinicalFeatureDetail[] = [];
   const layers: string[] = [];
   let anatomy: ToothRenderState["anatomy"] = "NATURAL";
   let showNaturalCrown = true;
+  let rootTreatment: ToothRenderState["rootTreatment"] = "NONE";
 
   for (const entry of entries) {
-    if (entry.voided_at || entry.lifecycle === "VOIDED" || entry.event_state === "VOIDED") continue;
+    if (entry.voided_at || entry.lifecycle === "VOIDED" || entry.lifecycle === "SUPERSEDED" || entry.event_state === "VOIDED" || entry.event_state === "SUPERSEDED") continue;
     const detail = detailForEntry(entry);
     if (entry.status === "PLANNED") {
       planned.push(detail);
       continue;
     }
     current.push(detail);
-    if (entry.clinical_code === "MISSING") {
+    if (detail.code === "TOOTH_STATE" && detail.state === "MISSING") {
       anatomy = "MISSING";
       showNaturalCrown = false;
       layers.push("TOOTH_MISSING");
-    } else if (entry.clinical_code === "RESTORATION") layers.push("RESTORATION");
-    else if (entry.clinical_code === "CARIES") layers.push("CARIES");
-    else if (entry.clinical_code === "CROWN") layers.push("CROWN");
+    } else if (detail.code === "TOOTH_STATE" && detail.state === "EXTRACTION_WOUND") {
+      anatomy = "EXTRACTION_WOUND";
+      showNaturalCrown = false;
+      layers.push("EXTRACTION_WOUND");
+    }
+    const layer = stateLayerFor(detail);
+    if (layer) layers.push(layer);
+    const treatment = rootTreatmentFor(detail);
+    if (treatment !== "NONE") rootTreatment = treatment;
   }
-  return { fdi, anatomy, showNaturalCrown, rootTreatment: "NONE", current, planned, layers: [...new Set(layers)] };
+  return { fdi, anatomy, showNaturalCrown, rootTreatment, current, planned, layers: [...new Set(layers)] };
 }
 
 function detailText(detail: ClinicalFeatureDetail): string {
@@ -80,8 +209,11 @@ function detailText(detail: ClinicalFeatureDetail): string {
   return detail.controlledCode;
 }
 
-function entrySummary(entries: ToothClinicalEntryDTO[]): string {
-  return entries.map((entry) => `${entry.clinical_code} ${entry.status}${entry.surfaces.length ? ` surfaces ${entry.surfaces.join(",")}` : ""}`).join("; ");
+function entrySummary(entries: RendererClinicalEntryDTO[]): string {
+  return entries.map((entry) => {
+    const surfaces = entrySurfaces(entry);
+    return `${entry.clinical_code} ${entry.status}${surfaces.length ? ` surfaces ${surfaces.join(",")}` : ""}`;
+  }).join("; ");
 }
 
 function layerForDetail(detail: ClinicalFeatureDetail): string | null {
@@ -127,6 +259,42 @@ function renderFeature(
   return output;
 }
 
+function renderSurfaceFeature(
+  fdi: number,
+  detail: ClinicalFeatureDetail,
+  surface: RendererSurface,
+  planned: boolean,
+  visibleLayers: LayerVisibility,
+  view: "front" | "occlusal",
+): React.ReactNode[] {
+  const featureLayer = layerForDetail(detail);
+  if (!featureLayer || !isVisible(featureLayer, visibleLayers)) return [];
+  const output: React.ReactNode[] = [];
+  if (planned && isVisible("PLANNED", visibleLayers)) {
+    const plannedRenderer = overlayRendererFor("PLANNED");
+    if (plannedRenderer) output.push(React.cloneElement(plannedRenderer({ fdi, detail, planned: true }), { key: `${fdi}-${surface}-planned-${detailText(detail)}` }));
+  }
+  const renderer = surfaceOverlayRendererFor(surface);
+  if (renderer) output.push(React.cloneElement(renderer({ fdi, detail, planned, surface, view }), { key: `${fdi}-${surface}-${featureLayer}-${detailText(detail)}` }));
+  return output;
+}
+
+function entrySurfaces(entry: RendererClinicalEntryDTO): RendererSurface[] {
+  const output: RendererSurface[] = [];
+  for (const token of (entry.surfaces as readonly unknown[])) {
+    if (token === "FULL") {
+      output.push(...RENDERER_SURFACES);
+      continue;
+    }
+    if (typeof token === "string" && RENDERER_SURFACES.includes(token as RendererSurface)) output.push(token as RendererSurface);
+  }
+  return [...new Set(output)];
+}
+
+function isRenderableEntry(entry: RendererClinicalEntryDTO): boolean {
+  return !entry.voided_at && entry.lifecycle !== "VOIDED" && entry.lifecycle !== "SUPERSEDED" && entry.event_state !== "VOIDED" && entry.event_state !== "SUPERSEDED";
+}
+
 function summary(state: ToothRenderState, mode: RendererMode): string {
   const details = mode === "CURRENT" ? state.current : mode === "PLANNED" ? state.planned : [...state.current, ...state.planned];
   if (details.length === 0) return "healthy, no clinical entries";
@@ -150,6 +318,7 @@ export function MeasuredTooth({
   language = "en",
 }: MeasuredToothProps): React.ReactElement {
   const state = suppliedState ?? stateFromEntries(fdi, entries);
+  const renderableEntries = entries.filter(isRenderableEntry);
   const template = templateForFdi(fdi, view);
   const universal = toLabel(fdi, "UNIVERSAL");
   const palmer = toLabel(fdi, "PALMER");
@@ -159,7 +328,7 @@ export function MeasuredTooth({
   const isPlanned = mode !== "CURRENT" && hasPlanned;
   const isCurrent = mode !== "PLANNED" && hasCurrent;
   const natural = state.showNaturalCrown && state.anatomy === "NATURAL";
-  const clinicalSummary = entries.length > 0 ? entrySummary(entries) : summary(state, mode);
+  const clinicalSummary = renderableEntries.length > 0 ? entrySummary(renderableEntries) : summary(state, mode);
   const planSegment = isPlanned && isCurrent ? "current and planned" : isPlanned ? "planned" : isCurrent ? "current" : "no active state";
   const bridgeLabel = bridgeRole ? `bridge ${bridgeRole.toLowerCase()}` : "no bridge role";
   const ariaLabel = `Tooth ${fdi} — FDI ${fdi}, Universal ${universal}, Palmer ${palmer} — notation ${notation} ${label} — ${clinicalSummary} — ${bridgeLabel} — ${planSegment}`;
@@ -167,8 +336,11 @@ export function MeasuredTooth({
   const translatedCurrent = language === "fil" ? "kasalukuyan" : "current";
   const translatedPlanned = language === "fil" ? "nakaplano" : "planned";
 
-  const currentOverlays = mode === "PLANNED" ? [] : state.current.flatMap((detail) => renderFeature(fdi, detail, false, visibleLayers));
-  const plannedOverlays = mode === "CURRENT" ? [] : state.planned.flatMap((detail) => renderFeature(fdi, detail, true, visibleLayers));
+  const hasSurfaceEntries = renderableEntries.some((entry) => entrySurfaces(entry).length > 0);
+  const currentEntryOverlays = renderableEntries.flatMap((entry) => entry.status === "PLANNED" ? [] : entrySurfaces(entry).flatMap((surface) => renderSurfaceFeature(fdi, detailForEntry(entry), surface, false, visibleLayers, view)));
+  const plannedEntryOverlays = renderableEntries.flatMap((entry) => entry.status !== "PLANNED" ? [] : entrySurfaces(entry).flatMap((surface) => renderSurfaceFeature(fdi, detailForEntry(entry), surface, true, visibleLayers, view)));
+  const currentOverlays = mode === "PLANNED" ? [] : hasSurfaceEntries ? currentEntryOverlays : state.current.flatMap((detail) => renderFeature(fdi, detail, false, visibleLayers));
+  const plannedOverlays = mode === "CURRENT" ? [] : hasSurfaceEntries ? plannedEntryOverlays : state.planned.flatMap((detail) => renderFeature(fdi, detail, true, visibleLayers));
   const derivedAnatomyLayer = state.anatomy === "MISSING" ? "TOOTH_MISSING" : state.anatomy === "EXTRACTION_WOUND" ? "EXTRACTION_WOUND" : state.anatomy === "IMPLANT_FIXTURE" || state.anatomy === "IMPLANT_ABUTMENT" || state.anatomy === "IMPLANT_CROWN" ? state.anatomy : null;
   const derivedRootLayer = state.rootTreatment === "COMPLETE" ? "ROOT_FILL_COMPLETE" : state.rootTreatment === "INCOMPLETE" ? "ROOT_FILL_INCOMPLETE" : state.rootTreatment === "MEDICAMENT" ? "ROOT_FILL_MEDICAMENT" : null;
   const stateLayerNames = [...state.layers, derivedAnatomyLayer, derivedRootLayer].filter((name): name is string => name !== null);

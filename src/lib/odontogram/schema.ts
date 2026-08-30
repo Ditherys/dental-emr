@@ -84,6 +84,9 @@ export const clinicalCodeSchema = z.enum([
   "SEALANT",
   "FRACTURE",
   "OTHER",
+  "ROOT_CANAL",
+  "TOOTH_STATE",
+  "ORTHODONTIC",
 ]);
 export const clinicalStatusSchema = z.enum([
   "ACTIVE",
@@ -503,6 +506,7 @@ export const toothClinicalEntryDataSchema = z.object({
   supersedes_entry_id: databaseUuid.nullable(),
   superseded_by_entry_id: databaseUuid.nullable(),
   surfaces: z.array(toothClinicalSurfaceSchema),
+  detail: clinicalFeatureDetailSchema.nullable().optional(),
 }).strict();
 
 export const dentalBridgeDataSchema = z.object({

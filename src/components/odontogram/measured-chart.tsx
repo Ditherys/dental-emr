@@ -2,11 +2,11 @@
 
 import * as React from "react";
 
-import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
+import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 import type { PatientChartProjection } from "@/lib/odontogram/chart-projection";
 import type { ToothRenderState } from "@/lib/odontogram/feature-contract";
 import type { NumberingSystem } from "@/lib/odontogram/dentition";
-import { MeasuredTooth, stateFromEntries, type LabelDensity, type LayerVisibility, type RendererMode } from "./measured-tooth";
+import { MeasuredTooth, stateFromEntries, type LabelDensity, type LayerVisibility, type RendererClinicalEntryDTO, type RendererMode } from "./measured-tooth";
 import { BridgeOverlay } from "./bridge-overlay";
 import "./styles.css";
 
@@ -43,13 +43,19 @@ export interface MeasuredBridgeProjection {
 export type MeasuredChartProjection = PatientChartProjection & {
   bridges?: readonly MeasuredBridgeProjection[];
   /** Internal compatibility data; new projections should provide ToothRenderState. */
-  entriesByTooth?: ReadonlyMap<number, ToothClinicalEntryDTO[]>;
+  entriesByTooth?: ReadonlyMap<number, RendererClinicalEntryDTO[]>;
+};
+
+/** Read boundary used by the service-shaped DTO. Detail fields are optional
+ * for compatibility with pre-O2 rows, but are preserved when present. */
+export type MeasuredChartReadDTO = Omit<PatientOdontogramDTO, "entries"> & {
+  entries: RendererClinicalEntryDTO[];
 };
 
 export interface MeasuredChartProps {
   projection?: MeasuredChartProjection;
   /** DTO compatibility until the O7 patient section consumes a projection. */
-  dto?: PatientOdontogramDTO;
+  dto?: MeasuredChartReadDTO;
   mode?: RendererMode;
   selectedFdi: number | null;
   onSelect: (fdi: number) => void;
@@ -65,8 +71,8 @@ export interface MeasuredChartProps {
 type LegacyProjection = MeasuredChartProjection;
 const EMPTY_BRIDGES: readonly MeasuredBridgeProjection[] = [];
 
-function groupByTooth(entries: ToothClinicalEntryDTO[]): Map<number, ToothClinicalEntryDTO[]> {
-  const grouped = new Map<number, ToothClinicalEntryDTO[]>();
+function groupByTooth(entries: RendererClinicalEntryDTO[]): Map<number, RendererClinicalEntryDTO[]> {
+  const grouped = new Map<number, RendererClinicalEntryDTO[]>();
   for (const entry of entries) {
     const fdi = Number(entry.tooth_code);
     if (!Number.isInteger(fdi)) continue;
@@ -77,7 +83,7 @@ function groupByTooth(entries: ToothClinicalEntryDTO[]): Map<number, ToothClinic
   return grouped;
 }
 
-function dtoProjection(dto: PatientOdontogramDTO): LegacyProjection {
+function dtoProjection(dto: MeasuredChartReadDTO): LegacyProjection {
   const byTooth = groupByTooth(dto.entries ?? []);
   const teeth = new Map<number, ToothRenderState>();
   for (const [fdi, entries] of byTooth) teeth.set(fdi, stateFromEntries(fdi, entries));
@@ -197,30 +203,28 @@ export function MeasuredChart({
   }, [activeTeeth, effectiveFocusedFdi, focusTooth, lowerTeeth, upperTeeth]);
 
   const arch = (teeth: readonly number[], archName: "upper" | "lower") => (
-    <div className="odontogram-arch" data-arch={`${dentition}-${archName}`} role="row" aria-label={`${dentition} ${archName} arch`}>
-      <div className="odontogram-arch-label mb-1 px-1">{language === "fil" ? `${archName === "upper" ? "Itaas" : "Ibaba"} na arko` : `${archName} arch`}</div>
-      <div role="grid" aria-label={`${archName} teeth`} className="odontogram-grid grid grid-cols-4 gap-1 sm:grid-cols-8 lg:grid-cols-16" onKeyDown={handleGridKeyDown}>
-        {teeth.map((fdi) => (
-          <div key={fdi} role="gridcell" className="min-w-0">
-            <MeasuredTooth
-              fdi={fdi}
-              state={projection.teeth.get(fdi)}
-              entries={projection.entriesByTooth?.get(fdi) ?? []}
-              selected={selectedFdi === fdi}
-              onSelect={onSelect}
-              view={view}
-              notation={notation}
-              bridgeRole={bridgeRoles.get(fdi) ?? null}
-              tabIndex={effectiveFocusedFdi === fdi ? 0 : -1}
-              onFocusChange={setFocusedFdi}
-              mode={mode}
-              visibleLayers={visibleLayers}
-              labelDensity={labelDensity}
-              language={language}
-            />
-          </div>
-        ))}
-      </div>
+    <div className="odontogram-arch odontogram-grid grid grid-cols-4 gap-1 sm:grid-cols-8 lg:grid-cols-16" data-arch={`${dentition}-${archName}`} role="row" aria-label={`${dentition} ${archName} arch`} onKeyDown={handleGridKeyDown}>
+      <div role="presentation" className="odontogram-arch-label col-span-full mb-1 px-1">{language === "fil" ? `${archName === "upper" ? "Itaas" : "Ibaba"} na arko` : `${archName} arch`}</div>
+      {teeth.map((fdi) => (
+        <div key={fdi} role="gridcell" className="min-w-0">
+          <MeasuredTooth
+            fdi={fdi}
+            state={projection.teeth.get(fdi)}
+            entries={projection.entriesByTooth?.get(fdi) ?? []}
+            selected={selectedFdi === fdi}
+            onSelect={onSelect}
+            view={view}
+            notation={notation}
+            bridgeRole={bridgeRoles.get(fdi) ?? null}
+            tabIndex={effectiveFocusedFdi === fdi ? 0 : -1}
+            onFocusChange={setFocusedFdi}
+            mode={mode}
+            visibleLayers={visibleLayers}
+            labelDensity={labelDensity}
+            language={language}
+          />
+        </div>
+      ))}
     </div>
   );
 

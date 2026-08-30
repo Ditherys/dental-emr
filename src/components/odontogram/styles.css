@@ -99,6 +99,73 @@
   border-style: dashed;
 }
 
+/* Surface descriptors are deliberately fixed to measured, static geometry.
+ * The data-surface attribute is semantic and allowlisted by the registry; it
+ * is never used as a selector that can introduce client-controlled CSS. */
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"] {
+  border-width: 1px;
+  border-radius: 0.2rem;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="O"] {
+  inset: 35% 34% 35% 34%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="B"] {
+  inset: 35% 20% 35% 56%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="L"] {
+  inset: 35% 56% 35% 20%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="M"] {
+  inset: 27% 67% 27% 23%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="D"] {
+  inset: 27% 23% 27% 67%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="I"] {
+  inset: 18% 34% 62% 34%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-surface="F"] {
+  inset: 62% 34% 18% 34%;
+}
+
+/* Occlusal assets use the fork's top-down measured geometry. */
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="O"] {
+  inset: 31% 31% 31% 31%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="B"] {
+  inset: 48% 18% 18% 18%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="L"] {
+  inset: 18% 18% 48% 18%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="M"] {
+  inset: 18% 48% 18% 18%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="D"] {
+  inset: 18% 18% 18% 48%;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="I"] {
+  inset: 38% 38% 38% 38%;
+  border-style: dashed;
+}
+
+.odontogram-measured-root .odontogram-overlay[data-surface-overlay="1"][data-view="occlusal"][data-surface="F"] {
+  inset: 8% 8% 8% 8%;
+  border-style: dotted;
+}
+
 .odontogram-measured-root .odontogram-overlay-root-fill-complete,
 .odontogram-measured-root .odontogram-overlay-root-fill-incomplete,
 .odontogram-measured-root .odontogram-overlay-root-fill-medicament {

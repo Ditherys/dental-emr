@@ -7,6 +7,7 @@ import { render, screen } from "@testing-library/react";
 import type { PatientChartProjection } from "@/lib/odontogram/chart-projection";
 import type { ToothRenderState } from "@/lib/odontogram/feature-contract";
 import { MeasuredChart } from "./measured-chart";
+import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 
 function state(fdi: number, patch: Partial<ToothRenderState> = {}): ToothRenderState {
   return {
@@ -98,5 +99,217 @@ describe("O6 measured projection parity", () => {
     expect(container.innerHTML.toLowerCase()).not.toContain("dangerouslysetinnerhtml");
     expect(container.innerHTML.toLowerCase()).not.toContain("localstorage");
     expect(container.querySelector("[data-fork-global-state]")).toBeNull();
+  });
+
+  it("preserves detail from a get_patient_odontogram-shaped read DTO", () => {
+    const readDto = {
+      entries: [
+        {
+          id: "00000000-0000-4000-a000-000000000011",
+          patient_id: "00000000-0000-4000-a000-000000000020",
+          tooth_code: "11",
+          kind: "TREATMENT",
+          clinical_code: "ROOT_CANAL",
+          status: "COMPLETED",
+          lifecycle: "OPEN",
+          event_state: "CURRENT",
+          provenance: "INTERNAL",
+          notes: null,
+          version: 1,
+          recorded_at: new Date().toISOString(),
+          recorded_by: null,
+          treating_provider_id: null,
+          encounter_id: null,
+          treatment_plan_item_id: null,
+          charge_id: null,
+          effective_at: null,
+          completed_at: null,
+          voided_at: null,
+          supersedes_entry_id: null,
+          superseded_by_entry_id: null,
+          surfaces: ["O"],
+          detail: { code: "ROOT_CANAL", state: "endo-filling-incomplete" },
+        },
+        {
+          id: "00000000-0000-4000-a000-000000000016",
+          patient_id: "00000000-0000-4000-a000-000000000020",
+          tooth_code: "16",
+          kind: "TREATMENT",
+          clinical_code: "RESTORATION",
+          status: "COMPLETED",
+          lifecycle: "OPEN",
+          event_state: "CURRENT",
+          provenance: "INTERNAL",
+          notes: null,
+          version: 1,
+          recorded_at: new Date().toISOString(),
+          recorded_by: null,
+          treating_provider_id: null,
+          encounter_id: null,
+          treatment_plan_item_id: null,
+          charge_id: null,
+          effective_at: null,
+          completed_at: null,
+          voided_at: null,
+          supersedes_entry_id: null,
+          superseded_by_entry_id: null,
+          surfaces: ["B", "L"],
+          detail: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: false },
+        },
+      ],
+      bridges: [],
+      implantChains: [],
+      periodontalExaminations: [],
+      legacyReconciliationFlags: [],
+      treatmentExecutions: [],
+    } as unknown as PatientOdontogramDTO;
+
+    const { container } = render(<MeasuredChart dto={readDto} mode="CURRENT" selectedFdi={null} onSelect={vi.fn()} />);
+    const rootTooth = container.querySelector('[data-testid="tooth-11"]');
+    const restorationTooth = container.querySelector('[data-testid="tooth-16"]');
+    expect(rootTooth?.querySelector('[data-layer="ROOT_FILL_INCOMPLETE"]')).toBeTruthy();
+    expect(restorationTooth?.querySelector('[data-layer="RESTORATION"]')).toHaveAttribute("data-material", "zircon");
+    expect(restorationTooth?.querySelector('[data-layer="RESTORATION"]')).toHaveAttribute("data-restoration-type", "crown");
+
+    const legacyRoot = { ...readDto, entries: readDto.entries.map((entry) => ({ ...entry, detail: undefined })) };
+    const { container: legacyContainer } = render(<MeasuredChart dto={legacyRoot} mode="CURRENT" selectedFdi={null} onSelect={vi.fn()} />);
+    const legacyTooth = legacyContainer.querySelector('[data-testid="tooth-11"]');
+    expect(legacyTooth?.querySelector('[data-layer="ROOT_FILL_COMPLETE"]')).toBeTruthy();
+    expect(legacyTooth?.querySelector('[data-layer="OTHER"]')).toBeNull();
+  });
+
+  it("renders only fixed, allowlisted surface overlays for permanent and primary teeth", () => {
+    const surfaceDto = {
+      entries: [
+        {
+          id: "00000000-0000-4000-a000-000000000111",
+          patient_id: "00000000-0000-4000-a000-000000000020",
+          tooth_code: "11",
+          kind: "FINDING",
+          clinical_code: "CARIES",
+          status: "ACTIVE",
+          lifecycle: "OPEN",
+          event_state: "CURRENT",
+          provenance: "INTERNAL",
+          notes: null,
+          version: 1,
+          recorded_at: new Date().toISOString(),
+          recorded_by: null,
+          treating_provider_id: null,
+          encounter_id: null,
+          treatment_plan_item_id: null,
+          charge_id: null,
+          effective_at: null,
+          completed_at: null,
+          voided_at: null,
+          supersedes_entry_id: null,
+          superseded_by_entry_id: null,
+          surfaces: ["O", "M", "<svg onload=alert(1) />"],
+        },
+        {
+          id: "00000000-0000-4000-a000-000000000151",
+          patient_id: "00000000-0000-4000-a000-000000000020",
+          tooth_code: "51",
+          kind: "FINDING",
+          clinical_code: "CARIES",
+          status: "ACTIVE",
+          lifecycle: "OPEN",
+          event_state: "CURRENT",
+          provenance: "INTERNAL",
+          notes: null,
+          version: 1,
+          recorded_at: new Date().toISOString(),
+          recorded_by: null,
+          treating_provider_id: null,
+          encounter_id: null,
+          treatment_plan_item_id: null,
+          charge_id: null,
+          effective_at: null,
+          completed_at: null,
+          voided_at: null,
+          supersedes_entry_id: null,
+          superseded_by_entry_id: null,
+          surfaces: ["B", "F"],
+        },
+        {
+          id: "00000000-0000-4000-a000-000000000199",
+          patient_id: "00000000-0000-4000-a000-000000000020",
+          tooth_code: "11",
+          kind: "FINDING",
+          clinical_code: "CARIES",
+          status: "ACTIVE",
+          lifecycle: "SUPERSEDED",
+          event_state: "SUPERSEDED",
+          provenance: "INTERNAL",
+          notes: null,
+          version: 1,
+          recorded_at: new Date().toISOString(),
+          recorded_by: null,
+          treating_provider_id: null,
+          encounter_id: null,
+          treatment_plan_item_id: null,
+          charge_id: null,
+          effective_at: null,
+          completed_at: null,
+          voided_at: null,
+          supersedes_entry_id: null,
+          superseded_by_entry_id: null,
+          surfaces: ["D"],
+        },
+      ],
+      bridges: [],
+      implantChains: [],
+      periodontalExaminations: [],
+      legacyReconciliationFlags: [],
+      treatmentExecutions: [],
+    } as unknown as PatientOdontogramDTO;
+
+    const { container } = render(<MeasuredChart dto={surfaceDto} mode="CURRENT" dentition="mixed" selectedFdi={null} onSelect={vi.fn()} />);
+    const permanent = container.querySelector('[data-testid="tooth-11"]');
+    const primary = container.querySelector('[data-testid="tooth-51"]');
+    expect(permanent?.querySelector('[data-layer="CARIES"][data-surface="O"]')).toBeTruthy();
+    expect(permanent?.querySelector('[data-layer="CARIES"][data-surface="M"]')).toBeTruthy();
+    expect(permanent?.querySelector('[data-surface="<svg onload=alert(1) />"]')).toBeNull();
+    expect(permanent?.querySelector('[data-layer="CARIES"]:not([data-surface])')).toBeNull();
+    expect(permanent?.querySelector('[data-layer="CARIES"][data-surface="D"]')).toBeNull();
+    expect(permanent?.getAttribute("aria-label")).not.toContain("<svg");
+    expect(primary?.querySelector('[data-layer="CARIES"][data-surface="B"]')).toBeTruthy();
+    expect(primary?.querySelector('[data-layer="CARIES"][data-surface="F"]')).toBeTruthy();
+  });
+
+  it("uses a separate fixed geometry descriptor for occlusal surface rendering", () => {
+    const surfaceDto = {
+      entries: [{
+        id: "00000000-0000-4000-a000-000000000211",
+        patient_id: "00000000-0000-4000-a000-000000000020",
+        tooth_code: "16",
+        kind: "FINDING",
+        clinical_code: "CARIES",
+        status: "ACTIVE",
+        lifecycle: "OPEN",
+        event_state: "CURRENT",
+        provenance: "INTERNAL",
+        notes: null,
+        version: 1,
+        recorded_at: new Date().toISOString(),
+        recorded_by: null,
+        treating_provider_id: null,
+        encounter_id: null,
+        treatment_plan_item_id: null,
+        charge_id: null,
+        effective_at: null,
+        completed_at: null,
+        voided_at: null,
+        supersedes_entry_id: null,
+        superseded_by_entry_id: null,
+        surfaces: ["O"],
+      }],
+      bridges: [], implantChains: [], periodontalExaminations: [], legacyReconciliationFlags: [], treatmentExecutions: [],
+    } as unknown as PatientOdontogramDTO;
+
+    const { container } = render(<MeasuredChart dto={surfaceDto} mode="CURRENT" view="occlusal" selectedFdi={null} onSelect={vi.fn()} />);
+    const overlay = container.querySelector('[data-testid="tooth-16"] [data-surface="O"]');
+    expect(overlay).toHaveAttribute("data-view", "occlusal");
+    expect(overlay?.className).toContain("odontogram-overlay-surface-o");
   });
 });

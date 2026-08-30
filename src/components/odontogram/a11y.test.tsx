@@ -64,6 +64,15 @@ const dto = {
 } as unknown as import("@/lib/odontogram/types").PatientOdontogramDTO;
 
 describe("O11 odontogram a11y", () => {
+  it("uses one grid with rows and direct gridcells, without nested grids", () => {
+    const { container } = render(<MeasuredChart dto={dto} selectedFdi={null} onSelect={() => {}} />);
+
+    expect(container.querySelectorAll('[role="grid"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[role="row"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[role="row"] > [role="gridcell"]')).toHaveLength(32);
+    expect(container.querySelectorAll('[role="grid"] [role="grid"]')).toHaveLength(0);
+  });
+
   it("adds accessible names for tooth with FDI/Universal/Palmer + notation + clinical state + bridge role", async () => {
     const onSelect = () => {};
     const { container } = render(<MeasuredChart dto={dto} selectedFdi={null} onSelect={onSelect} notation="FDI" />);

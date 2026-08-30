@@ -36,11 +36,22 @@ export type OverlayLayer =
  * closed union and not an arbitrary string. */
 export type RendererLayer = OverlayLayer;
 
+/** Surface names accepted by the measured adapter. FULL is expanded before
+ * rendering so no renderer ever receives an arbitrary surface token. */
+export type RendererSurface = "O" | "B" | "L" | "M" | "D" | "I" | "F";
+
 export interface OverlayRenderContext {
   fdi: number;
   detail?: ClinicalFeatureDetail;
   planned?: boolean;
 }
+
+export interface SurfaceOverlayRenderContext extends OverlayRenderContext {
+  surface: RendererSurface;
+  view?: "front" | "occlusal";
+}
+
+export type SurfaceOverlayRenderer = (context: SurfaceOverlayRenderContext) => ReactElement;
 
 export type OverlayRenderer = (context: OverlayRenderContext) => ReactElement;
 
@@ -109,6 +120,69 @@ export const OVERLAY_LAYERS: readonly OverlayLayer[] = Object.freeze(Object.keys
 export function overlayRendererFor(layerName: string): OverlayRenderer | undefined {
   return Object.prototype.hasOwnProperty.call(OVERLAY_REGISTRY, layerName)
     ? OVERLAY_REGISTRY[layerName as OverlayLayer]
+    : undefined;
+}
+
+function renderSurfaceFeature(surface: RendererSurface): SurfaceOverlayRenderer {
+  function SurfaceOverlay(context: SurfaceOverlayRenderContext): ReactElement {
+    const detail = context.detail;
+    const featureLayer: OverlayLayer = detail?.code === "CARIES"
+      ? "CARIES"
+      : detail?.code === "RESTORATION"
+        ? "RESTORATION"
+        : detail?.code === "ROOT_CANAL"
+          ? detail.state === "endo-medical-filling"
+            ? "ROOT_FILL_MEDICAMENT"
+            : detail.state === "endo-filling-incomplete"
+              ? "ROOT_FILL_INCOMPLETE"
+              : "ROOT_FILL_COMPLETE"
+          : detail?.code === "ORTHODONTIC"
+            ? "ORTHODONTIC"
+            : detail?.code === "TOOTH_STATE"
+              ? detail.state === "MISSING"
+                ? "TOOTH_MISSING"
+                : detail.state === "EXTRACTION_WOUND"
+                  ? "EXTRACTION_WOUND"
+                  : detail.state === "SUBGINGIVAL"
+                    ? "SUBGINGIVAL_ROOT"
+                    : detail.state === "RADIX"
+                      ? "RADIX"
+                      : detail.state === "BROKEN"
+                        ? "BROKEN_TOOTH"
+                        : detail.state === "CROWN_PREPARATION"
+                          ? "CROWN_PREPARATION"
+                          : "OTHER"
+            : "OTHER";
+    const renderer = overlayRendererFor(featureLayer);
+    const base = renderer?.({ ...context, planned: context.planned }) ?? layer("OTHER", context);
+    const baseProps = base.props as Record<string, unknown>;
+    return createElement("span", {
+      ...baseProps,
+      "data-surface": surface,
+      "data-surface-overlay": "1",
+      "data-view": context.view ?? "front",
+      "data-planned": context.planned ? "1" : "0",
+      className: `${typeof baseProps.className === "string" ? baseProps.className : ""} odontogram-overlay-surface-${surface.toLowerCase()}`.trim(),
+    });
+  }
+  return SurfaceOverlay;
+}
+
+/** Fixed semantic descriptors for each dental surface. The map is closed and
+ * callers must validate a surface before selecting a descriptor. */
+export const SURFACE_OVERLAY_REGISTRY: Readonly<Record<RendererSurface, SurfaceOverlayRenderer>> = {
+  O: renderSurfaceFeature("O"),
+  B: renderSurfaceFeature("B"),
+  L: renderSurfaceFeature("L"),
+  M: renderSurfaceFeature("M"),
+  D: renderSurfaceFeature("D"),
+  I: renderSurfaceFeature("I"),
+  F: renderSurfaceFeature("F"),
+};
+
+export function surfaceOverlayRendererFor(surface: string): SurfaceOverlayRenderer | undefined {
+  return Object.prototype.hasOwnProperty.call(SURFACE_OVERLAY_REGISTRY, surface)
+    ? SURFACE_OVERLAY_REGISTRY[surface as RendererSurface]
     : undefined;
 }
 
