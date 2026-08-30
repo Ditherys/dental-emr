@@ -43,7 +43,7 @@ opened a sheet. Both now pass in the focused suite above.
 
 ## Commit
 
-Commit SHA: pending amend after local checkpoint creation.
+Implementation commit: `a54644554c9fd03aaa4929b58a8617013213c841` — `feat: add patient odontogram status workspace`.
 
 ## Residual gates
 
