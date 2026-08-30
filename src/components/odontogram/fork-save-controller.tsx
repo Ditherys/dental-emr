@@ -64,6 +64,16 @@ export function ForkSaveController({
   const [saving, setSaving] = React.useState(false);
   const [failedKey, setFailedKey] = React.useState<string | null>(null);
   const confirmedKeys = React.useRef(new Set<string>());
+  const mutationKeys = React.useRef(new Map<string, string>());
+  const identityRef = React.useRef(`${patientId}:${actingBranchId}`);
+
+  React.useEffect(() => {
+    const nextIdentity = `${patientId}:${actingBranchId}`;
+    if (identityRef.current === nextIdentity) return;
+    identityRef.current = nextIdentity;
+    mutationKeys.current.clear();
+    confirmedKeys.current.clear();
+  }, [actingBranchId, patientId]);
 
   React.useEffect(() => {
     if (!canWriteClinical) {
@@ -102,6 +112,14 @@ export function ForkSaveController({
     if (!saving) setReviewKey(null);
   }
 
+  function mutationKeyFor(key: string): string {
+    const existing = mutationKeys.current.get(key);
+    if (existing) return existing;
+    const next = idempotencyKey();
+    mutationKeys.current.set(key, next);
+    return next;
+  }
+
   async function confirmReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!reviewDraft || !occurredDate || saving) return;
@@ -121,7 +139,9 @@ export function ForkSaveController({
         detail: reviewDraft.detail,
         notes: note.trim() || null,
         occurredAt: occurrenceTimestamp(occurredDate),
-        idempotencyKey: idempotencyKey(),
+        // A retry after an ambiguous response must replay the same mutation
+        // key so the audited RPC can return its original result.
+        idempotencyKey: mutationKeyFor(key),
       });
       if (!result.ok) {
         setFailedKey(key);

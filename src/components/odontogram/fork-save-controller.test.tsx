@@ -166,4 +166,28 @@ describe("ForkSaveController", () => {
     expect(screen.getByText(/tooth 16/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry chart change/i })).toBeInTheDocument();
   });
+
+  it("reuses the same idempotency key when retrying after an ambiguous network failure", async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    const onError = vi.fn();
+    recordToothClinicalEntryAction
+      .mockRejectedValueOnce(new Error("synthetic network failure"))
+      .mockResolvedValueOnce({ ok: true });
+    renderController({ onSaved, onError });
+
+    await user.click(screen.getByRole("button", { name: /review chart change/i }));
+    await user.type(screen.getByLabelText(/occurrence date/i), "2026-08-30");
+    await user.click(screen.getByRole("button", { name: /confirm chart change/i }));
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+
+    await user.click(screen.getByRole("button", { name: /retry chart change/i }));
+    await user.type(screen.getByLabelText(/occurrence date/i), "2026-08-30");
+    await user.click(screen.getByRole("button", { name: /confirm chart change/i }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+
+    const firstKey = (recordToothClinicalEntryAction.mock.calls[0]?.[0] as { idempotencyKey: string }).idempotencyKey;
+    const retryKey = (recordToothClinicalEntryAction.mock.calls[1]?.[0] as { idempotencyKey: string }).idempotencyKey;
+    expect(retryKey).toBe(firstKey);
+  });
 });
