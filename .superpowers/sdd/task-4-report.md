@@ -25,6 +25,20 @@ registry. No reset, hosted command, or production write was used.
 - `npm run security:migrations`: passed (223 migrations; strict grant-last invariant intact).
 - `git diff --check`: passed.
 
+## Idempotency retry remediation
+
+- A review identified that a network/response failure could generate a new key
+  on retry after the server had already committed the mutation.
+- `ForkSaveController` now binds one idempotency key to each draft and reuses
+  it for failed/stale/network retries. The key map and confirmed set are
+  cleared when the patient/branch identity changes; the patient section also
+  keys the controller by that identity.
+- Added a synthetic regression test proving an ambiguous network failure and
+  retry send the same key while a distinct queued draft still receives a
+  fresh key.
+- Focused controller/wrapper/patient tests: 22/22 passed; typecheck, targeted
+  ESLint, and `git diff --check` passed.
+
 ## Self-review / concerns
 
 - Cases/events are renderer-independent, tenant-qualified through composite FKs, RLS-enabled, have no browser base grants, and events are append-only.
@@ -65,3 +79,39 @@ registry. No reset, hosted command, or production write was used.
 - Generated database types now expose the 16-argument presence-aware overloads.
   Focused pgTAP also proves PRESENTED/ACKNOWLEDGED public writes reject and an
   unauthenticated public writer call is denied.
+
+## Controlled fork persistence slice
+
+Implemented `ForkSaveController` and connected it to the patient odontogram.
+The controller receives only bounded `ForkClinicalDraft` values and supplies
+route-scoped `patientId`/`actingBranchId` to the existing
+`recordToothClinicalEntryAction`. The server action remains responsible for
+clinical permission, tenant/branch checks, and signed-in provider derivation;
+no provider selector or opaque fork JSON is accepted.
+
+Each draft is reviewed in a confirmation dialog with FDI tooth, surfaces,
+finding/procedure, occurrence date, and a 2,000-character note. Confirmed
+mutations receive a fresh idempotency key, execute one at a time, and invoke a
+patient refetch only after success. Equal drafts are deduplicated; failed,
+stale, unauthorized, and conflict results retain the local draft and expose a
+retry action. Read-only mode renders no save affordance.
+
+The existing fork callback now filters its full-chart state against a stable
+canonical draft baseline, so persisted entries are not re-presented as new
+changes after an unrelated edit. Charge-bearing workflows remain the existing
+audited bridge/implant/treatment-plan procedure flows; the chart-only tooth
+entry action does not create a charge because its canonical schema has no
+charge field. No migration or billing schema was changed.
+
+## Verification
+
+- RED: `fork-save-controller.test.tsx` initially failed because the controller
+  module did not exist.
+- GREEN: controller tests passed 5/5, including route scoping, provider
+  omission, confirmation, duplicate suppression, serialization, fresh
+  idempotency keys, read-only no-op, and stale-draft retention.
+- GREEN: fork wrapper + patient section tests passed 21/21 after canonical
+  baseline filtering.
+- `npm run typecheck`: passed.
+- Targeted ESLint for controller, wrapper, and patient section: passed.
+- `git diff --check`: passed.

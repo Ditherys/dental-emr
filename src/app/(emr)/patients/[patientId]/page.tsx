@@ -77,6 +77,7 @@ export default async function PatientPage({
   if (!actingBranchId) {
     return <PermissionDenied description="An active branch is required to open a patient record." />;
   }
+  const actingBranchName = state.activeBranches.find((branch) => branch.id === actingBranchId)?.name;
   try {
     await requireBranchAccess({ branchId: actingBranchId });
   } catch (error) {
@@ -150,6 +151,18 @@ export default async function PatientPage({
         listPatientAccount({ branchId: actingBranchId, patientId }),
         listPaymentMethods({ branchId: actingBranchId }),
       ]);
+    } catch (error) {
+      if (!(error instanceof BillingServiceError || error instanceof AuthorizationError)) throw error;
+      accountLoadFailed = true;
+    }
+  }
+
+  // The clinical progress timeline includes charge/payment rows only when the
+  // caller already has billing.read. Keep this read separate from clinical
+  // failures so an unavailable ledger cannot hide the odontogram itself.
+  if (section === "clinical" && canReadBilling) {
+    try {
+      accountRows = await listPatientAccount({ branchId: actingBranchId, patientId });
     } catch (error) {
       if (!(error instanceof BillingServiceError || error instanceof AuthorizationError)) throw error;
       accountLoadFailed = true;
@@ -248,6 +261,7 @@ export default async function PatientPage({
     <PatientWorkspace
       patient={patient}
       actingBranchId={actingBranchId}
+      actingBranchName={actingBranchName}
       canEdit={canEdit}
       section={section}
       initialEditingDemographics={query.edit === "1"}

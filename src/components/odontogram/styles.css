@@ -1,5 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* O12 print boundary: measured chart, legend, provider/date, planned  */
+/* Controlled fork print boundary: anatomical chart, legend, provider/date,
+ * current/planned projections. */
 /* No print button / no FHIR / no import-export is intentional.        */
 /* ------------------------------------------------------------------ */
 
@@ -146,6 +147,14 @@
 }
 
 @media print {
+  /* The patient page owns one live singleton fork chart. Its print-safe
+   * current/planned SVG clones live in ForkPrintChart below the chart, so do
+   * not print the interactive singleton a second time. Standalone print
+   * previews use a different class and remain visible. */
+  .dental-emr-fork {
+    display: none !important;
+  }
+
   .dental-emr-fork .dental-emr-fork-controls,
   .dental-emr-fork .chart-actions {
     display: none !important;
@@ -165,8 +174,33 @@
   overflow-x: auto;
 }
 
-.fork-print-root .dental-emr-fork-print-svg {
+.fork-print-root .fork-print-live-renderer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.fork-print-root .fork-print-projection {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.fork-print-root .fork-print-static-svg {
   min-width: 58rem;
+}
+
+.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] {
+  min-width: 0;
+}
+
+.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .upper-arch,
+.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .lower-arch {
+  grid-template-columns: repeat(16, minmax(0, 1fr));
+  width: 100%;
 }
 
 @media print {
@@ -180,8 +214,30 @@
   .fork-print-root .dental-emr-fork-print-svg .tooth-info,
   .fork-print-root .dental-emr-fork-print-svg .panel,
   .fork-print-root .dental-emr-fork-print-svg button,
-  .fork-print-root .dental-emr-fork-print-svg .chart-actions {
+  .fork-print-root .dental-emr-fork-print-svg .chart-actions,
+  .fork-print-root .chart-mode-toggle,
+  .fork-print-root .proposed-legend,
+  .dental-emr-fork .chart-mode-toggle,
+  .dental-emr-fork .proposed-legend {
     display: none !important;
+  }
+
+  .fork-print-root .fork-print-live-renderer {
+    display: none !important;
+  }
+
+  .fork-print-root .fork-print-projection {
+    overflow: visible;
+  }
+
+  .fork-print-root .fork-print-static-svg {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .tooth-svg svg {
+    max-width: 100%;
+    height: auto;
   }
 }
 

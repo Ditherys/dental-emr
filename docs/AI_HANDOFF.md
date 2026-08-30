@@ -21,6 +21,48 @@
   Cloud TEST, independent release review, and final owner acceptance remain
   pending.
 
+## Controlled odontogram fork replacement — local implementation checkpoint (2026-08-31)
+
+- Replaced the patient-page custom measured renderer with the pinned local
+  `vendor/react-advanced-odontogram` package built from the controlled
+  `Ditherys/React-Odontogram-Modul` source (`5e28d931feefe4c3382513dbb0f5a9db9cf9948c`).
+  The package keeps its MIT notice and source/patch record; the controlled
+  source removes whole-mouth, tooth, and touch reset controls.
+- `fork-adapter.ts` is the renderer-independent boundary. It maps canonical
+  FDI entries, missing/implant/root-canal/restoration/orthodontic/perio states,
+  bridge and implant relationships, current/planned notes, and supported
+  fork overlays into bounded payloads. Fork JSON is never persisted as the
+  clinical source of truth.
+- `ForkOdontogram` composes the fork provider/chart/info/control surfaces with
+  measured anatomy, FDI/Universal/Palmer notation, current/plan state, notes,
+  ICDAS, root caries, detailed radiographic depth, and read-only permission
+  handling. Classic view, import/reset controls, the old measured renderer,
+  and drawing authoring are absent from the patient composition.
+- `ForkSaveController` translates bounded chart edits into the existing audited
+  route-scoped clinical action. It derives the signed-in provider server-side,
+  confirms date/tooth/surfaces/finding/note, serializes retries with stable
+  idempotency keys, and preserves failed drafts. Charge-bearing procedure,
+  bridge, implant, treatment-plan completion, and payment actions remain their
+  existing separately authorized workflows; a chart-only draft has no charge
+  field and does not silently create a financial ledger entry.
+- `ForkPrintChart` captures static current and planned fork SVG projections from
+  the single live renderer, hides interactive chart controls in print, uses
+  Philippine-local dates, and appends a chronological treatment/relationship/
+  periodontal/treatment-execution record. Billing charge/payment rows are
+  projected only for callers with `billing.read`; opaque IDs are not displayed.
+  The patient clinical page continues to show records, account activity,
+  treatment plans, and the private clinical photo gallery below the chart.
+- Local evidence for this checkpoint: focused odontogram/patient/progress
+  tests 8 files / 53 tests passed; fork parity suite 3/3; typecheck, build,
+  migration privilege lint, targeted/full lint, and secret scan passed. The
+  repository-wide unit run was also exercised; several unrelated UI suites and
+  high-cost fork suites timed out only under the default parallel worker load,
+  while the affected files pass individually/serially.
+- Remaining release gates are unchanged: guarded Cloud TEST migration/RLS and
+  pgTAP verification, hosted E2E, responsive/accessibility/axe, advisor and
+  security review, and owner release acceptance. Local verification does not
+  authorize production or real patient/provider use.
+
 ## Sidebar and information alignment Tasks 1–6 — local review evidence (2026-08-30)
 
 - Checkpointed sequence: `1d9739e` adds the paired description-row primitive;

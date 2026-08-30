@@ -106,14 +106,79 @@ describe("ForkPrintChart", () => {
     expect(rows[1]).toHaveTextContent("2026-08-10");
 
     await waitFor(() => {
-      expect(screen.getByTestId("fork-print-svg").querySelector("#toothGrid svg")).toBeInTheDocument();
+      expect(screen.getByTestId("fork-print-svg")).toHaveAttribute("data-projection-ready", "true");
+      expect(screen.getByTestId("fork-print-current-svg").querySelector("svg")).toBeInTheDocument();
+      expect(screen.getByTestId("fork-print-planned-svg").querySelector("svg")).toBeInTheDocument();
     }, { timeout: 15000 });
-  }, 20000);
+  }, 30000);
+
+  it("uses Philippine local dates and treatment occurrence dates for chronology", () => {
+    const chronologyDto = {
+      ...dto,
+      entries: [
+        { ...dto.entries[0], recorded_at: "2026-08-10T04:00:00+00:00", effective_at: "2026-08-09T23:30:00+08:00", completed_at: null },
+        { ...dto.entries[1], recorded_at: "2026-08-09T16:30:00+00:00", effective_at: null, completed_at: "2026-08-10T00:30:00+08:00" },
+      ],
+    } as unknown as PatientOdontogramDTO;
+
+    render(<ForkPrintChart dto={chronologyDto} renderChart={false} />);
+
+    const rows = screen.getByTestId("fork-print-chronology").querySelectorAll("li");
+    expect(rows[0]).toHaveTextContent("2026-08-09");
+    expect(rows[1]).toHaveTextContent("2026-08-10");
+  });
+
+  it("includes treatment execution transitions and human-readable attribution", () => {
+    const executionDto = {
+      ...dto,
+      treatmentExecutions: [{
+        item_id: "00000000-0000-4000-a000-000000000040",
+        patient_id: dto.patientId,
+        plan_id: "00000000-0000-4000-a000-000000000041",
+        current_state: "COMPLETED",
+        version: 2,
+        current_event_id: "00000000-0000-4000-a000-000000000042",
+        completion_charge_id: null,
+        completion_clinical_entry_id: null,
+        completion_bridge_id: null,
+        completion_implant_component_id: null,
+        events: [{
+          id: "00000000-0000-4000-a000-000000000043",
+          predecessor_event_id: null,
+          from_state: "IN_PROGRESS",
+          to_state: "COMPLETED",
+          actor_user_id: "00000000-0000-4000-a000-000000000044",
+          reason: "Synthetic completion",
+          occurred_at: "2026-08-11T01:00:00+00:00",
+        }],
+      }],
+    } as unknown as PatientOdontogramDTO;
+
+    render(<ForkPrintChart dto={executionDto} renderChart={false} />);
+
+    const rows = screen.getByTestId("fork-print-chronology").querySelectorAll("li");
+    expect([...rows].some((row) => row.textContent?.includes("Treatment plan · COMPLETED"))).toBe(true);
+    expect([...rows].some((row) => row.textContent?.includes("Recorded clinician"))).toBe(true);
+  });
 
   it("can render print metadata without mounting a second singleton chart", () => {
     render(<ForkPrintChart dto={dto} renderChart={false} />);
     expect(screen.getByTestId("fork-print-chart")).toBeInTheDocument();
     expect(screen.queryByTestId("fork-print-svg")).not.toBeInTheDocument();
     expect(screen.getByText(/anatomical fork chart above/i)).toBeInTheDocument();
+  });
+
+  it("does not mount a standalone singleton inside the embedded patient chart", async () => {
+    render(
+      <>
+        <div className="dental-emr-fork" />
+        <ForkPrintChart dto={dto} />
+      </>,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("fork-print-live-renderer")).not.toBeInTheDocument();
+      expect(screen.getByTestId("fork-print-embedded-projection")).toBeInTheDocument();
+    });
   });
 });

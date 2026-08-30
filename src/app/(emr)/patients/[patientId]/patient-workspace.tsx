@@ -81,6 +81,7 @@ import {
 type Props = {
   patient: PatientDetail;
   actingBranchId: string;
+  actingBranchName?: string;
   canEdit: boolean;
   section: PatientSectionKey;
   initialEditingDemographics?: boolean;
@@ -128,6 +129,7 @@ function availableSections(canReadClinical: boolean, canManageIntake: boolean, c
 export function PatientWorkspace({
   patient,
   actingBranchId,
+  actingBranchName,
   canEdit,
   section,
   initialEditingDemographics = false,
@@ -489,7 +491,8 @@ export function PatientWorkspace({
               actingBranchId={actingBranchId}
               canWriteClinical={canWriteClinical}
               printPatientName={patientDisplayName(patient)}
-              printBranchName={patient.preferredBranch?.name ?? undefined}
+              printBranchName={actingBranchName}
+              printProviderName="Signed-in dentist"
               initialEncounters={initialClinicalEncounters}
               initialMedicalRecords={initialMedicalRecords}
               initialToothConditions={initialToothConditions}
@@ -500,6 +503,7 @@ export function PatientWorkspace({
               providersUnavailable={clinicalProvidersUnavailable}
               loadFailed={clinicalLoadFailed}
               canReadBilling={canReadBilling}
+              initialAccountRows={canReadBilling ? initialAccountRows : []}
               initialProcedureSummaries={initialProcedureSummaries}
             />
             <ClinicalPhotoGallery

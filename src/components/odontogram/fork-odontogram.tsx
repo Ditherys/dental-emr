@@ -25,6 +25,7 @@ import {
   type ForkClinicalDraft,
   type ForkRelationshipBaseline,
 } from "@/lib/odontogram/fork-adapter";
+import { ForkPrintProjectionBridge } from "./fork-print-chart";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 import "./styles.css";
 
@@ -193,6 +194,7 @@ export function ForkOdontogram({
           onDraftChange={onDraftChange}
           onError={onError}
         />
+        <ForkPrintProjectionBridge dto={dto} targetId={`fork-print-projection-${dto.patientId}`} />
         <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
           <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">
             Tooth notation

@@ -19,6 +19,19 @@ export type ProgressEventDTO = {
   caseBalanceCentavos: string | null;
 };
 
+/** Minimal read projection accepted from the billing ledger. The clinical
+ * timeline may include charge/payment rows only when the caller already has
+ * billing.read; no ledger identifiers or provider UUIDs are rendered. */
+export type PatientAccountRowDTO = {
+  event_type: string;
+  entity_id: string;
+  occurred_at: string;
+  amount_centavos: number;
+  procedure_id: string | null;
+  status: string;
+  note: string | null;
+};
+
 function entryEventType(entry: ToothClinicalEntryDTO): ProgressEventDTO["eventType"] {
   return entry.kind === "TREATMENT" ? "TREATMENT" : "FINDING";
 }
@@ -70,6 +83,28 @@ export function progressEventsFromOdontogram(dto: PatientOdontogramDTO): Progres
   }
 
   return sortProgressEvents(events);
+}
+
+export function progressEventsFromAccount(rows: readonly PatientAccountRowDTO[]): ProgressEventDTO[] {
+  return rows.flatMap((row) => {
+    if (row.event_type !== "CHARGE" && row.event_type !== "PAYMENT") return [];
+    const amount = String(row.amount_centavos);
+    return [{
+      eventId: `account:${row.entity_id}`,
+      eventType: row.event_type,
+      occurredAt: row.occurred_at,
+      recordedAt: row.occurred_at,
+      procedureCaseId: null,
+      toothCodes: [],
+      surfaces: [],
+      actorDisplay: "Account ledger",
+      procedureDisplay: row.procedure_id ? "Procedure account activity" : null,
+      note: row.note ? `${row.note}${row.status ? ` · ${row.status}` : ""}` : row.status || null,
+      chargeCentavos: row.event_type === "CHARGE" ? amount : null,
+      paymentCentavos: row.event_type === "PAYMENT" ? amount : null,
+      caseBalanceCentavos: null,
+    }];
+  });
 }
 
 export function sortProgressEvents(events: readonly ProgressEventDTO[]): ProgressEventDTO[] {
