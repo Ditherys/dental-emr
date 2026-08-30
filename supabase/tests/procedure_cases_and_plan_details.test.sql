@@ -55,6 +55,20 @@ select extensions.ok((select detail #>> '{items,0,priority}'='HIGH' and detail #
 select extensions.ok(exists(select 1 from public.update_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',((public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002')->'items'->0->>'itemId')::uuid),1,'f4050000-0000-0000-0000-000000000001','12','Clear note',2500,null,null,null,null,false,false,false,true)),'explicit null note update succeeds');
 select extensions.ok((select detail #> '{items,0,notes}'='null'::jsonb from (select public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002') detail) x),'explicit null clears note');
 reset role;
+update public.treatment_plans set status='PRESENTED',version=2 where id='f4060000-0000-0000-0000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f4010000-0000-0000-0000-000000000001',true);
+select extensions.throws_ok($$select * from public.update_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',((public.get_treatment_plan_detail('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002')->'items'->0->>'itemId')::uuid),2,'f4050000-0000-0000-0000-000000000001','12','Frozen',2500,null,null,null,null,false,false,false,false)$$,'P0001','invalid state','presented structured update is rejected through public RPC');
+reset role;
+update public.treatment_plans set status='ACKNOWLEDGED',version=3 where id='f4060000-0000-0000-0000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f4010000-0000-0000-0000-000000000001',true);
+select extensions.throws_ok($$select * from public.add_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',3,'f4050000-0000-0000-0000-000000000001','13','Frozen add',2500,'HIGH',8,array['O']::text[],'x',true,true,true,true)$$,'P0001','invalid state','acknowledged structured add is rejected through public RPC');
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+select extensions.throws_ok($$select * from public.add_treatment_plan_item_centavos('f4030000-0000-0000-0000-000000000001','f4060000-0000-0000-0000-000000000002',3,'f4050000-0000-0000-0000-000000000001','13','No auth',2500,'HIGH',8,array['O']::text[],'x',true,true,true,true)$$,'42501','not authorized','unauthenticated structured writer is denied');
 insert into public.procedure_cases(id,organization_id,patient_id,origin_branch_id,procedure_id,treatment_plan_item_id,opened_by) values
  ('f4080000-0000-0000-0000-000000000001','f4020000-0000-0000-0000-000000000001','f4040000-0000-0000-0000-000000000001','f4030000-0000-0000-0000-000000000001','f4050000-0000-0000-0000-000000000001','f4070000-0000-0000-0000-000000000001','f4010000-0000-0000-0000-000000000001');
 select extensions.ok(exists(select 1 from public.procedure_cases where id='f4080000-0000-0000-0000-000000000001'), 'same-tenant case accepts its plan item');

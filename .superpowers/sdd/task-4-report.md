@@ -54,3 +54,6 @@ registry. No reset, hosted command, or production write was used.
 - Focused service unit, strict typecheck, migration privilege lint, and diff
   hygiene passed. Authenticated focused pgTAP now proves add/update detail
   round-trip, omitted-field preservation, and explicit-null note clearing.
+- Generated database types now expose the 16-argument presence-aware overloads.
+  Focused pgTAP also proves PRESENTED/ACKNOWLEDGED public writes reject and an
+  unauthenticated public writer call is denied.
