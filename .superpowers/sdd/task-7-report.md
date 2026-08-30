@@ -1,11 +1,20 @@
-# Task 7 report — O8 dentist payments and installment expectations
+# Task 7 report — O8 follow-up repair
 
-Implemented a forward-only local migration for tenant-scoped procedure installment schedules and append-only ordered expectation items. These rows contain no collected amount or balance; allocation/charge ledger projections remain authoritative.
+This report supersedes the earlier pre-review completion claim.
 
-The application/service boundary accepts only decimal centavo strings and calls the narrow schedule RPC. `record_payment` is redefined forward-only so an actor holding DENTIST also needs clinical read access at the active receiving branch; `received_by` remains derived from `auth.uid()`.
+Forward-only local migrations `20260830010406` through `20260830010409` add durable, RLS-protected replay records for schedule and payment writes. They retain normalized JSON request fingerprints and canonical schedule results. A narrow request-key serialization wrapper makes exact same-key create/lifecycle retries wait and replay rather than reaching a duplicate-key or invalid-state path. Changed requests using the same key fail with `22023`. Payment retries use a parallel receipt-operation record; payment ledger rows remain append-only and `received_by` remains `auth.uid()`-derived.
 
-The dialog labels expectations separately from actual allocations and submits a centavo-string row for any procedure case. Terminal grants are registered in the privilege allowlist and the schedule pgTAP suite is registered with the local/remote guard.
+The lifecycle writer now validates raw amended row shapes, calendar dates, centavo bounds, and a trimmed bounded reason with `22023`. It writes bounded billing audit events for create and lifecycle actions. Schedule base tables and replay tables retain zero browser/service-role grants; only the three reviewed RPCs are restored to `authenticated` in registered grant-terminal migrations.
 
-Verification passed: focused billing/action/dialog Vitest (53 tests), guard registry Vitest (30 tests), TypeScript, lint, migration privilege lint, and `git diff --check`.
+The treatment-plan writer now supplies the trusted `procedureCaseId` rather than a plan item ID. The installment confirmation validates every row before formatting with `BigInt`.
 
-`npm run test:db:local` was attempted. It passed all suites through `treatment_plan_rpcs.test.sql` but stopped at the pre-existing `treatment_plans.test.sql` result check before reaching the newly registered schedule suite; this is a residual verification blocker, not a passing pgTAP claim.
+Fresh local evidence:
+
+- `npm run db:migrate:local` applied the forward-only chain through `20260830010409`.
+- `npm run db:types:local` regenerated `src/types/database.generated.ts`.
+- `npm run security:migrations` passed (247 migrations; 72 grant terminals; 367 approved final privileges).
+- Direct local pgTAP schedule suite passes after the new chain.
+- Focused Vitest: 7 files / 70 tests passed.
+- `npm run typecheck` passed.
+
+Residual: the focused pgTAP suite currently proves replay-boundary catalog/security invariants; an independent reviewer should expand synthetic actor/fixture execution and the external two-session concurrency probe before final release acceptance. Cloud TEST remains required and deferred under ADR-029.

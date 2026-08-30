@@ -8,7 +8,11 @@ export function InstallmentScheduleDialog({ branchId, patientId, procedureCaseId
   const [rows, setRows] = useState([{ dueDate: "", expectedCentavos: "" }]);
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const validRows = rows.length > 0 && rows.length <= 120 && rows.every((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.dueDate) && /^[1-9]\d*$/.test(row.expectedCentavos));
+  const validRows = rows.length > 0 && rows.length <= 120 && rows.every((row) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(row.dueDate) || !/^[1-9]\d*$/.test(row.expectedCentavos)) return false;
+    const date = new Date(`${row.dueDate}T00:00:00Z`);
+    return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === row.dueDate && BigInt(row.expectedCentavos) <= BigInt("99999999999");
+  });
   async function submit() {
     const result = await createProcedureInstallmentScheduleAction({ branchId, patientId, procedureCaseId, items: rows, idempotencyKey: crypto.randomUUID() });
     setMessage(result.ok ? "Installment expectations saved." : result.message);
@@ -19,6 +23,6 @@ export function InstallmentScheduleDialog({ branchId, patientId, procedureCaseId
     {rows.map((row,index)=><div key={index}><label>Due date {index+1}<input aria-label={`Due date ${index+1}`} type="date" value={row.dueDate} onChange={(e) => setRows(rows.map((item,i) => i === index ? ({ ...item, dueDate: e.target.value }) : item))} /></label><label>Expected centavos {index+1}<input aria-label={`Expected centavos ${index+1}`} inputMode="numeric" value={row.expectedCentavos} onChange={(e) => setRows(rows.map((item,i) => i === index ? ({ ...item, expectedCentavos: e.target.value }) : item))} /></label></div>)}
     <button type="button" onClick={()=>setRows([...rows,{dueDate:"",expectedCentavos:""}])}>Add installment</button>
     <button type="button" disabled={!validRows} onClick={()=>setConfirming(true)}>Review expectations</button>
-    {confirming && <div role="dialog" aria-label="Confirm installment expectations"><p>Procedure case {procedureCaseId}</p>{rows.map((row,index)=><p key={index}>{row.dueDate}: {row.expectedCentavos && formatPhpCentavos(BigInt(row.expectedCentavos))}</p>)}<button type="button" onClick={submit}>Confirm and save</button></div>}{message && <p role="status">{message}</p>}
+    {confirming && validRows && <div role="dialog" aria-label="Confirm installment expectations"><p>Procedure case {procedureCaseId}</p>{rows.map((row,index)=><p key={index}>{row.dueDate}: {formatPhpCentavos(BigInt(row.expectedCentavos))}</p>)}<button type="button" onClick={submit}>Confirm and save</button></div>}{message && <p role="status">{message}</p>}
   </section>;
 }

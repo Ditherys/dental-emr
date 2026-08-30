@@ -3643,6 +3643,51 @@ export type Database = {
           },
         ]
       }
+      payment_record_operations: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          payment_id: string
+          request_fingerprint: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          payment_id: string
+          request_fingerprint: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          payment_id?: string
+          request_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_record_operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_record_operations_organization_id_payment_id_fkey"
+            columns: ["organization_id", "payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       payment_refund_allocations: {
         Row: {
           allocation_id: string | null
@@ -4742,6 +4787,50 @@ export type Database = {
           },
         ]
       }
+      procedure_installment_schedule_events: {
+        Row: {
+          actor_id: string
+          event_type: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          organization_id: string
+          reason: string | null
+          schedule_id: string
+          version: number
+        }
+        Insert: {
+          actor_id: string
+          event_type: string
+          id?: string
+          idempotency_key: string
+          occurred_at?: string
+          organization_id: string
+          reason?: string | null
+          schedule_id: string
+          version: number
+        }
+        Update: {
+          actor_id?: string
+          event_type?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          organization_id?: string
+          reason?: string | null
+          schedule_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_installment_schedul_organization_id_schedule_id_fkey1"
+            columns: ["organization_id", "schedule_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_installment_schedules"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       procedure_installment_schedule_items: {
         Row: {
           due_date: string
@@ -4777,11 +4866,51 @@ export type Database = {
           },
         ]
       }
+      procedure_installment_schedule_operations: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          organization_id: string
+          request_fingerprint: string
+          result: Json
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          organization_id: string
+          request_fingerprint: string
+          result: Json
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          organization_id?: string
+          request_fingerprint?: string
+          result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_installment_schedule_operations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedure_installment_schedules: {
         Row: {
           created_at: string
           created_by: string
           id: string
+          idempotency_key: string
+          operation_actor_id: string | null
           organization_id: string
           procedure_case_id: string
           status: string
@@ -4791,6 +4920,8 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          idempotency_key?: string
+          operation_actor_id?: string | null
           organization_id: string
           procedure_case_id: string
           status?: string
@@ -4800,6 +4931,8 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          idempotency_key?: string
+          operation_actor_id?: string | null
           organization_id?: string
           procedure_case_id?: string
           status?: string
@@ -7391,6 +7524,28 @@ export type Database = {
           version: number
         }[]
       }
+      amend_procedure_installment_schedule: {
+        Args: {
+          p_acting_branch_id: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_items: Json
+          p_reason: string
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
+      amend_procedure_installment_schedule_unlocked: {
+        Args: {
+          p_acting_branch_id: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_items: Json
+          p_reason: string
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
       amend_tooth_clinical_entry: {
         Args: {
           p_acting_branch_id: string
@@ -7973,6 +8128,15 @@ export type Database = {
         }[]
       }
       create_procedure_installment_schedule: {
+        Args: {
+          p_acting_branch_id: string
+          p_idempotency_key: string
+          p_items: Json
+          p_procedure_case_id: string
+        }
+        Returns: Json
+      }
+      create_procedure_installment_schedule_unlocked: {
         Args: {
           p_acting_branch_id: string
           p_idempotency_key: string
@@ -9200,6 +9364,19 @@ export type Database = {
       }
       record_mfa_enrollment: { Args: { p_factor_id: string }; Returns: number }
       record_payment: {
+        Args: {
+          p_acting_branch_id: string
+          p_amount_centavos: number
+          p_idempotency_key: string
+          p_patient_id: string
+          p_payment_method_id: string
+          p_reference: string
+        }
+        Returns: {
+          payment_id: string
+        }[]
+      }
+      record_payment_unlocked: {
         Args: {
           p_acting_branch_id: string
           p_amount_centavos: number

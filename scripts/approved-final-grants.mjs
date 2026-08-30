@@ -520,6 +520,8 @@ const ODONTOGRAM_REVAMP_DIRECT_CHARGE_AND_BRIDGE_GRANTS_MIGRATION = "20260830010
 const PROCEDURE_INSTALLMENT_SCHEDULE_GRANTS_MIGRATION = "20260830010401_procedure_installment_schedules_grants.sql";
 const PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_GRANTS_MIGRATION = "20260830010403_procedure_installment_schedule_lifecycle_grants.sql";
 const PROCEDURE_INSTALLMENT_SCHEDULE_AMENDMENT_GRANTS_MIGRATION = "20260830010405_procedure_installment_schedule_amendments_grants.sql";
+const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_REPAIR_GRANTS_MIGRATION = "20260830010407_installment_schedule_idempotency_repair_grants.sql";
+const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_CONCURRENCY_GRANTS_MIGRATION = "20260830010409_installment_schedule_idempotency_concurrency_grants.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -1555,6 +1557,16 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Authenticated users reach the expectation-only schedule writer through its server-authorized action and narrow audited RPC." }, { grantee: "authenticated", objectClass: "function", object: "public.record_payment(uuid,uuid,uuid,bigint,text,text)", privilege: "execute", columns: [], reason: "Re-grants the existing narrow payment RPC after the dentist clinical-access guard replacement." }]) }),
   Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Restores the schedule writer only after its idempotency and lifecycle definition has been replaced." }]) }),
   Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_AMENDMENT_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)", privilege: "execute", columns: [], reason: "Authenticated users can append a bounded schedule lifecycle successor without mutating payment allocations." }]) }),
+  Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_REPAIR_GRANTS_MIGRATION, grants: Object.freeze([
+    { grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Restores the bounded expectation-only writer after durable request-fingerprint replay is added; tenant and actor derive inside the RPC." },
+    { grantee: "authenticated", objectClass: "function", object: "public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)", privilege: "execute", columns: [], reason: "Restores the bounded schedule lifecycle writer after canonical idempotent replay and input validation are added." },
+    { grantee: "authenticated", objectClass: "function", object: "public.record_payment(uuid,uuid,uuid,bigint,text,text)", privilege: "execute", columns: [], reason: "Restores the existing payment boundary after durable replay validation; receipt attribution remains server-derived from auth.uid()." },
+  ]) }),
+  Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_CONCURRENCY_GRANTS_MIGRATION, grants: Object.freeze([
+    { grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Restores the schedule writer after its request-key serialization wrapper prevents same-key concurrent create races." },
+    { grantee: "authenticated", objectClass: "function", object: "public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)", privilege: "execute", columns: [], reason: "Restores the schedule lifecycle writer after its request-key serialization wrapper prevents same-key concurrent lifecycle races." },
+    { grantee: "authenticated", objectClass: "function", object: "public.record_payment(uuid,uuid,uuid,bigint,text,text)", privilege: "execute", columns: [], reason: "Restores the payment writer after its request-key serialization wrapper makes exact retries safe without changing the immutable ledger." },
+  ]) }),
 ]);
 
 /**
