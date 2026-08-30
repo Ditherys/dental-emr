@@ -15,6 +15,7 @@ import {
   transitionPostdatedCheque, upsertPaymentMethod, voidCharge, voidPayment, setProcedureDefaultFee,
   createProcedureDirectCostDefault, updateProcedureDirectCostDefault, deactivateProcedureDirectCostDefault,
   listProcedureDirectCostDefaults,
+  createProcedureInstallmentSchedule,
 } from "./service";
 
 const branchId = "b6000000-0000-0000-0000-000000000001";
@@ -48,6 +49,12 @@ describe("billing service boundary", () => {
     rpc.mockResolvedValue({ data: [{ refund_id: allocationId }], error: null });
     await refundPayment({ branchId, paymentId, patientId, amountCentavos: "5000", reason: "Refund", components: [{ allocationId: null, amountCentavos: "5000" }], idempotencyKey: "refund-1" });
     expect(rpc).toHaveBeenLastCalledWith("refund_payment", { p_acting_branch_id: branchId, p_payment_id: paymentId, p_patient_id: patientId, p_amount_centavos: "5000", p_reason: "Refund", p_components: [{ allocationId: null, amountCentavos: "5000" }], p_idempotency_key: "refund-1" });
+  });
+
+  it("sends installment expectations to the narrow schedule RPC", async () => {
+    rpc.mockResolvedValueOnce({ data: { schedule_id: allocationId, procedure_case_id: chargeId, status: "ACTIVE", version: 1, items: [{ ordinal: 1, due_date: "2026-09-01", expected_centavos: "250000" }] }, error: null });
+    await expect(createProcedureInstallmentSchedule({ branchId, procedureCaseId: chargeId, items: [{ dueDate: "2026-09-01", expectedCentavos: "250000" }], idempotencyKey: "schedule-1" })).resolves.toMatchObject({ scheduleId: allocationId, status: "ACTIVE" });
+    expect(rpc).toHaveBeenLastCalledWith("create_procedure_installment_schedule", { p_acting_branch_id: branchId, p_procedure_case_id: chargeId, p_items: [{ dueDate: "2026-09-01", expectedCentavos: "250000" }], p_idempotency_key: "schedule-1" });
   });
 
   it("rejects invalid input and maps RPC failures", async () => {

@@ -12,6 +12,7 @@ import {
   setProcedureDefaultFeeInputSchema,
   createProcedureDirectCostDefaultInputSchema,
   upsertPaymentMethodInputSchema,
+  createProcedureInstallmentScheduleInputSchema,
 } from "./schema";
 
 const paymentInput = {
@@ -48,6 +49,17 @@ describe("recordPaymentInputSchema", () => {
   it("rejects unknown keys and malformed identifiers", () => {
     expect(recordPaymentInputSchema.safeParse({ ...paymentInput, forged: true }).success).toBe(false);
     expect(recordPaymentInputSchema.safeParse({ ...paymentInput, branchId: "not-a-uuid" }).success).toBe(false);
+  });
+});
+
+describe("createProcedureInstallmentScheduleInputSchema", () => {
+  it("accepts expectation rows as centavo strings", () => {
+    expect(createProcedureInstallmentScheduleInputSchema.parse({
+      branchId: paymentInput.branchId,
+      procedureCaseId: "b31c0000-0000-0000-0000-000000000009",
+      items: [{ dueDate: "2026-09-01", expectedCentavos: "250000" }],
+      idempotencyKey: "schedule-1",
+    }).items[0]?.expectedCentavos).toBe("250000");
   });
 });
 

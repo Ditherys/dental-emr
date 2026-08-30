@@ -37,6 +37,14 @@ export type ProcedurePaymentSummary = {
   paymentStatus: ProcedurePaymentStatus;
 };
 
+export type InstallmentScheduleDTO = {
+  scheduleId: string;
+  procedureCaseId: string;
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED";
+  version: number;
+  items: Array<{ ordinal: number; dueDate: string; expectedCentavos: string }>;
+};
+
 export type ProcedureConfigurationMutationResult = {
   id: string;
   version: number;

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/authorization";
 import {
   allocatePayment,
+  createProcedureInstallmentSchedule,
   postCharge,
   postChargeAdjustment,
   recordPayment,
@@ -38,6 +39,16 @@ export async function recordPaymentAction(input: unknown): Promise<Result> {
     const value = input as { branchId: string; patientId: string };
     await requirePermission({ permission: "payment.record", branchId: value.branchId });
     await recordPayment(input);
+    refresh(value.patientId);
+    return { ok: true };
+  } catch { return failed(); }
+}
+
+export async function createProcedureInstallmentScheduleAction(input: unknown): Promise<Result> {
+  try {
+    const value = input as { branchId: string; patientId: string };
+    await requirePermission({ permission: "payment.record", branchId: value.branchId });
+    await createProcedureInstallmentSchedule(input);
     refresh(value.patientId);
     return { ok: true };
   } catch { return failed(); }

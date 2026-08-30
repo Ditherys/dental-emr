@@ -8,9 +8,9 @@ import { createClient } from "@/lib/supabase/server";
 
 import { BillingServiceError, mapBillingRpcError } from "./errors";
 import {
-  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, createProcedureDirectCostDefaultInputSchema, deactivateProcedureDirectCostDefaultInputSchema, financialSummaryInputSchema, financialSummaryRowSchema, listPatientAccountInputSchema, listPaymentMethodsInputSchema, listPendingPdcInputSchema, listProcedureDirectCostDefaultsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, pendingPdcRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, procedureDirectCostDefaultRowSchema, procedurePaymentSummaryRowSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProcedureDefaultFeeInputSchema, setProviderCompensationAgreementInputSchema, summarizeProcedureChargesInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, updateProcedureDirectCostDefaultInputSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
+  allocatePaymentInputSchema, approveChargeDirectCostInputSchema, clearPostdatedChequeInputSchema, correctChargeAttributionInputSchema, createProcedureDirectCostDefaultInputSchema, createProcedureInstallmentScheduleInputSchema, deactivateProcedureDirectCostDefaultInputSchema, financialSummaryInputSchema, financialSummaryRowSchema, listPatientAccountInputSchema, listPaymentMethodsInputSchema, listPendingPdcInputSchema, listProcedureDirectCostDefaultsInputSchema, listProviderEarningsInputSchema, listUnresolvedChargeCompensationInputSchema, patientAccountRowSchema, paymentMethodRowSchema, pendingPdcRowSchema, postChargeAdjustmentInputSchema, postChargeInputSchema, postChargeWithAttributionOverrideInputSchema, procedureDirectCostDefaultRowSchema, procedurePaymentSummaryRowSchema, providerEarningRowSchema, recordPaymentInputSchema, recordPostdatedChequeInputSchema, refundPaymentInputSchema, resolveChargeCompensationInputSchema, reverseChargeAdjustmentInputSchema, reverseChargeDirectCostInputSchema, reversePaymentAllocationInputSchema, setProcedureDefaultFeeInputSchema, setProviderCompensationAgreementInputSchema, summarizeProcedureChargesInputSchema, transitionPostdatedChequeInputSchema, unresolvedChargeCompensationRowSchema, updateProcedureDirectCostDefaultInputSchema, upsertPaymentMethodInputSchema, voidChargeInputSchema, voidPaymentInputSchema,
 } from "./schema";
-import type { FinancialSummaryRow, PendingPdcRow, ProcedureConfigurationMutationResult, ProcedurePaymentSummary } from "./types";
+import type { FinancialSummaryRow, InstallmentScheduleDTO, PendingPdcRow, ProcedureConfigurationMutationResult, ProcedurePaymentSummary } from "./types";
 
 const procedurePaymentSummaryDomainSchema = z.object({
   procedureId: databaseUuid, patientId: databaseUuid, branchId: databaseUuid,
@@ -55,6 +55,13 @@ async function procedureConfigurationMutation(rpcName: string, args: Record<stri
 export async function recordPayment(input: unknown): Promise<string> {
   const value = recordPaymentInputSchema.parse(input);
   return billingMutation("record_payment", { p_acting_branch_id: value.branchId, p_patient_id: value.patientId, p_payment_method_id: value.paymentMethodId, p_amount_centavos: value.amountCentavos, p_reference: value.reference ?? null, p_idempotency_key: value.idempotencyKey }, "payment_id");
+}
+
+export async function createProcedureInstallmentSchedule(input: unknown): Promise<InstallmentScheduleDTO> {
+  const value = createProcedureInstallmentScheduleInputSchema.parse(input);
+  const data = await billingProjection("create_procedure_installment_schedule", { p_acting_branch_id: value.branchId, p_procedure_case_id: value.procedureCaseId, p_items: value.items, p_idempotency_key: value.idempotencyKey });
+  const row = z.object({ schedule_id: databaseUuid, procedure_case_id: databaseUuid, status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]), version: z.number().int().positive(), items: z.array(z.object({ ordinal: z.number().int().positive(), due_date: z.iso.date(), expected_centavos: z.string().regex(/^\d+$/) })) }).parse(data);
+  return { scheduleId: row.schedule_id, procedureCaseId: row.procedure_case_id, status: row.status, version: row.version, items: row.items.map((item) => ({ ordinal: item.ordinal, dueDate: item.due_date, expectedCentavos: item.expected_centavos })) };
 }
 
 export async function allocatePayment(input: unknown): Promise<string> {

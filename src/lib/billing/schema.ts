@@ -59,6 +59,13 @@ export const recordPaymentInputSchema = z
   })
   .strict();
 
+export const createProcedureInstallmentScheduleInputSchema = z.object({
+  branchId: databaseUuid,
+  procedureCaseId: databaseUuid,
+  items: z.array(z.object({ dueDate: z.iso.date(), expectedCentavos: positiveMoneyCentavoStringSchema }).strict()).min(1).max(120),
+  idempotencyKey: idempotencyKeySchema,
+}).strict();
+
 export const allocatePaymentInputSchema = z
   .object({
     branchId: databaseUuid,
