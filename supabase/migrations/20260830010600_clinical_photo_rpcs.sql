@@ -27,7 +27,6 @@ begin
  if exists(select 1 from unnest(coalesce(p_surfaces,'{}')) as x(surface) where surface not in ('O','B','L','M','D','I','F','FULL')) then raise invalid_parameter_value using message='invalid input'; end if;
  insert into public.clinical_photographs(organization_id,patient_id,source_file_id,procedure_case_id,category,display_filename,original_client_filename,capture_at,tooth_codes,surfaces,note,created_by)
  values(v_org,p_patient_id,p_source_file_id,p_procedure_case_id,p_category,p_display_filename,p_original_client_filename,p_capture_at,coalesce(p_tooth_codes,'{}'),coalesce(p_surfaces,'{}'),p_note,v_actor) returning id into v_id;
- insert into public.audit_events(organization_id,branch_id,actor_user_id,actor_type,category,action,entity_type,entity_id,patient_id,result,metadata) values(v_org,p_acting_branch_id,v_actor,'USER','CLINICAL','clinical.photo.created','clinical_photograph',v_id,p_patient_id,'SUCCESS','{}'::jsonb);
  return query select v_id,p_patient_id,p_procedure_case_id,p_category,p_display_filename,p_capture_at,coalesce(p_tooth_codes,'{}'),coalesce(p_surfaces,'{}'),p_note,'PENDING',null::uuid,1;
 end; $$;
 revoke all on function public.create_clinical_photo(uuid,uuid,uuid,uuid,text,text,text,timestamptz,text[],text[],text) from public,anon,authenticated,service_role;
@@ -64,7 +63,7 @@ begin
  if not found then raise insufficient_privilege using message='not authorized'; end if;
  if v_photo.version<>p_expected_version then raise exception using errcode='P0001',message='stale version'; end if;
  select file_object.mime_type into v_source_mime from public.file_objects as file_object where file_object.organization_id=v_org and file_object.id=v_photo.source_file_id and file_object.patient_id=v_photo.patient_id;
- if v_source_mime is null or v_source_mime not in ('image/jpeg','image/png','image/webp') or (v_source_mime='image/jpeg' and p_display_filename !~* '\.(jpe?g)$') or (v_source_mime='image/png' and p_display_filename !~* '\.png$') or (v_source_mime='image/webp' and p_display_filename !~* '\.webp$') then raise invalid_parameter_value using message='invalid input'; end if;
+ if v_source_mime is null or (v_source_mime='image/jpeg' and p_display_filename !~* '\.(jpe?g)$') or (v_source_mime='image/png' and p_display_filename !~* '\.png$') or (v_source_mime='image/webp' and p_display_filename !~* '\.webp$') then raise invalid_parameter_value using message='invalid input'; end if;
  update public.clinical_photographs set display_filename=p_display_filename,version=version+1 where organization_id=v_org and id=p_photo_id returning version into v_version;
  insert into public.audit_events(organization_id,branch_id,actor_user_id,actor_type,category,action,entity_type,entity_id,patient_id,result,metadata) values(v_org,p_acting_branch_id,v_actor,'USER','CLINICAL','clinical.photo.renamed','clinical_photograph',p_photo_id,v_photo.patient_id,'SUCCESS','{}'::jsonb);
  return query select p.id,p.patient_id,p.procedure_case_id,p.category,p.display_filename,p.capture_at,p.tooth_codes,p.surfaces,p.note,p.processing_status,coalesce(pb.after_photo_id,pa.before_photo_id),p.version from public.clinical_photographs p left join public.clinical_photo_pairings pb on pb.organization_id=p.organization_id and pb.before_photo_id=p.id left join public.clinical_photo_pairings pa on pa.organization_id=p.organization_id and pa.after_photo_id=p.id where p.organization_id=v_org and p.id=p_photo_id;
@@ -81,7 +80,6 @@ begin
  select * into v_after from public.clinical_photographs where organization_id=v_org and id=p_after_photo_id for key share;
  if v_before.id is null or v_after.id is null or v_before.patient_id is distinct from v_after.patient_id or v_before.category<>'BEFORE' or v_after.category<>'AFTER' or p_before_photo_id=p_after_photo_id then raise invalid_parameter_value using message='invalid input'; end if;
  insert into public.clinical_photo_pairings(organization_id,patient_id,before_photo_id,after_photo_id,created_by) values(v_org,v_before.patient_id,p_before_photo_id,p_after_photo_id,v_actor);
- insert into public.audit_events(organization_id,branch_id,actor_user_id,actor_type,category,action,entity_type,entity_id,patient_id,result,metadata) values(v_org,p_acting_branch_id,v_actor,'USER','CLINICAL','clinical.photo.paired','clinical_photograph',p_before_photo_id,v_before.patient_id,'SUCCESS','{}'::jsonb);
  return true;
 end; $$;
 revoke all on function public.pair_clinical_photos(uuid,uuid,uuid) from public,anon,authenticated,service_role;
@@ -97,7 +95,7 @@ begin
  if not found then raise insufficient_privilege using message='not authorized'; end if;
  if v_photo.processing_status='READY' then return true; end if;
  select checksum_sha256,size_bytes into v_source_checksum,v_source_size from public.file_objects where organization_id=v_org and id=v_photo.source_file_id and patient_id=v_photo.patient_id and status='available';
- if v_source_size is null or v_source_size<>p_source_size_bytes or (v_source_checksum is not null and v_source_checksum<>p_source_checksum_sha256) then raise invalid_parameter_value using message='invalid input'; end if;
+ if v_source_checksum is null or v_source_size is null or v_source_checksum<>p_source_checksum_sha256 or v_source_size<>p_source_size_bytes then raise invalid_parameter_value using message='invalid input'; end if;
  for r in select * from jsonb_array_elements(p_derivatives) loop
    if r->>'variant' not in ('thumbnail','preview','display') or (r->>'object_key') !~ ('^org/'||v_org::text||'/patients/'||v_photo.patient_id::text||'/clinical-photos/'||p_photo_id::text||'/(thumbnail|preview|display)\.jpg$') or r->>'mime_type'<>'image/jpeg' or coalesce((r->>'width')::integer,0)<=0 or coalesce((r->>'height')::integer,0)<=0 or coalesce((r->>'size_bytes')::bigint,0)<=0 or r->>'checksum_sha256' !~ '^[0-9a-f]{64}$' then raise invalid_parameter_value using message='invalid input'; end if;
    insert into public.clinical_photo_derivatives(organization_id,photo_id,variant,object_key,mime_type,width,height,size_bytes,checksum_sha256,processing_attempts) values(v_org,p_photo_id,r->>'variant',r->>'object_key',r->>'mime_type',(r->>'width')::integer,(r->>'height')::integer,(r->>'size_bytes')::bigint,r->>'checksum_sha256',1) on conflict(organization_id,photo_id,variant) do update set object_key=excluded.object_key,mime_type=excluded.mime_type,width=excluded.width,height=excluded.height,size_bytes=excluded.size_bytes,checksum_sha256=excluded.checksum_sha256,processing_attempts=clinical_photo_derivatives.processing_attempts+1;
