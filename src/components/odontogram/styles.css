@@ -319,6 +319,125 @@
   border-left: 3px solid rgb(16 185 129 / 0.7);
 }
 
+/* Controlled fork host. The vendored renderer owns anatomical geometry and
+ * control behavior; this layer only maps it into the EMR's tokens and layout. */
+.dental-emr-fork {
+  --odon-bg: var(--background);
+  --odon-panel: var(--card);
+  --odon-card: var(--card);
+  --odon-muted: var(--muted-foreground);
+  --odon-text: var(--foreground);
+  --odon-line: var(--border);
+  --odon-accent: var(--primary);
+  --odon-accent2: var(--success);
+  max-width: 100%;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+.dental-emr-fork :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+.dental-emr-fork .odontogram-root {
+  max-width: 100%;
+  color: var(--foreground);
+  font-family: inherit;
+}
+
+.dental-emr-fork-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.dental-emr-fork-chart-column {
+  min-width: 0;
+}
+
+.dental-emr-fork .chart,
+.dental-emr-fork .panel,
+.dental-emr-fork .card {
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.dental-emr-fork .chart {
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--card);
+}
+
+.dental-emr-fork .chart-header {
+  position: sticky;
+  left: 0;
+  min-width: min(58rem, 100%);
+  padding: 0.625rem 0.75rem;
+  background: var(--card);
+}
+
+.dental-emr-fork #toothGrid[data-anatomy="measured"] {
+  min-width: 58rem;
+  overscroll-behavior-x: contain;
+}
+
+.dental-emr-fork .dental-emr-fork-controls.panel {
+  grid-column: auto;
+  width: auto;
+  max-width: 100%;
+  background: var(--card);
+}
+
+.dental-emr-fork .panel-body {
+  max-height: min(70vh, 48rem);
+  padding: 0.625rem;
+  gap: 0.625rem;
+}
+
+.dental-emr-fork .card {
+  padding: 0.625rem;
+}
+
+.dental-emr-fork .btn,
+.dental-emr-fork .chart-mode-btn,
+.dental-emr-fork .icon-btn {
+  border-radius: var(--radius);
+}
+
+.dental-emr-fork .tooth-info {
+  margin-top: 0.75rem;
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+@media (max-width: 1279px) {
+  .dental-emr-fork-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dental-emr-fork .dental-emr-fork-controls.panel {
+    grid-column: 1;
+  }
+
+  .dental-emr-fork .panel-body {
+    max-height: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .dental-emr-fork :where(button, select, input:not([type="checkbox"]):not([type="radio"])) {
+    min-height: 2.75rem;
+  }
+}
+
+@media print {
+  .dental-emr-fork .dental-emr-fork-controls,
+  .dental-emr-fork .chart-actions {
+    display: none !important;
+  }
+}
+
 .odontogram-print-history li[data-voided="1"] {
   opacity: 0.65;
   text-decoration: line-through;

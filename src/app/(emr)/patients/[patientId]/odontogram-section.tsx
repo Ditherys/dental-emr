@@ -6,16 +6,14 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { MeasuredChart } from "@/components/odontogram/measured-chart";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
-import { OdontogramToolbar, type ChartViewFilter, type DentitionFilter } from "@/components/odontogram/odontogram-toolbar";
+import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
 import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
 import { OdontogramPrintHistory } from "@/components/odontogram/print-history";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { ToothInspector } from "@/components/odontogram/tooth-inspector";
-import type { NumberingSystem } from "@/lib/odontogram/dentition";
-import { isPrimaryFdi, isPermanentFdi } from "@/lib/odontogram/dentition";
+import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
@@ -56,9 +54,7 @@ export function OdontogramSection({
   const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedFdi, setSelectedFdi] = React.useState<number | null>(null);
-  const [notation, setNotation] = React.useState<NumberingSystem>("FDI");
-  const [dentition, setDentition] = React.useState<DentitionFilter>("permanent");
-  const [view, setView] = React.useState<ChartViewFilter>("all");
+  const [, setForkDrafts] = React.useState<readonly ForkClinicalDraft[]>([]);
   const [perioOpen, setPerioOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
@@ -79,6 +75,7 @@ export function OdontogramSection({
     setPerioOpen(false);
     setFollowupOpen(false);
     setDirectTreatmentRequested(false);
+    setForkDrafts([]);
   }, [patientId]);
 
   const handleSelect = React.useCallback(
@@ -133,27 +130,6 @@ export function OdontogramSection({
     setLoading(true);
     void refetch();
   }, [hasMismatchedInitialDto, initialDto, loadFailed, patientId, refetch]);
-
-  const filteredDto = React.useMemo(() => {
-    if (!dto) return dto;
-    let entries = dto.entries ?? [];
-    if (dentition !== "all") {
-      entries = entries.filter((e) => {
-        const fdi = Number(e.tooth_code);
-        if (!Number.isFinite(fdi)) return false;
-        if (dentition === "permanent") return isPermanentFdi(fdi);
-        return isPrimaryFdi(fdi);
-      });
-    }
-    if (view !== "all") {
-      entries = entries.filter((e) => {
-        const status = String(e.status);
-        const isPlanned = status === "PLANNED";
-        return view === "planned" ? isPlanned : !isPlanned;
-      });
-    }
-    return { ...dto, entries };
-  }, [dto, dentition, view]);
 
   const selectedPeriodontalExam = React.useMemo(() => {
     const examinations = dto?.periodontalExaminations ?? [];
@@ -244,31 +220,33 @@ export function OdontogramSection({
         </p>
       )}
 
-      <OdontogramToolbar
-        notation={notation}
-        dentition={dentition}
-        view={view}
-        canWriteClinical={canWriteClinical}
-        onNotationChange={setNotation}
-        onDentitionChange={setDentition}
-        onViewChange={setView}
-        onPerioEntry={() => setPerioOpen(true)}
-      />
+      <div className="flex justify-end print:hidden">
+        <Button type="button" variant="outline" size="sm" onClick={() => setPerioOpen(true)}>
+          Open periodontal entry
+        </Button>
+      </div>
 
-      {!isCurrentPatientSnapshot || loading || !filteredDto ? (
+      {!isCurrentPatientSnapshot || loading || !dto ? (
         <div className="rounded-md border p-6 text-sm text-muted-foreground">Loading odontogram…</div>
       ) : (
         <div className="flex gap-4">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <MeasuredChart dto={filteredDto} selectedFdi={selectedFdiForCurrentPatient} onSelect={handleSelect} notation={notation} dentition={dentition} />
+            <ForkOdontogram
+              patientKey={patientId}
+              dto={dto}
+              canWriteClinical={canWriteClinical}
+              onSelect={handleSelect}
+              onDraftChange={setForkDrafts}
+              onError={setError}
+            />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>{canWriteClinical ? "Select a tooth to review or record findings. Use inspector for amend/void." : "Read-only access. Selection shows current clinical record."}</span>
+              <span>{canWriteClinical ? "Use the chart controls to prepare a finding or treatment. Use inspector for amend/void." : "Read-only access. Selection shows the current clinical record."}</span>
               <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
                 Open inspector
               </Button>
             </div>
             <div className="mt-4">
-              <OdontogramPrintHistory dto={dto ?? filteredDto} />
+              <OdontogramPrintHistory dto={dto} />
             </div>
           </div>
 
@@ -286,7 +264,7 @@ export function OdontogramSection({
                   actingBranchId={actingBranchId}
                   fdi={selectedFdiForCurrentPatient}
                   dto={dto}
-                  notation={notation}
+                  notation="FDI"
                   canWriteClinical={canWriteClinical}
                   onClose={closeInspector}
                   onMutated={refetch}
@@ -323,7 +301,7 @@ export function OdontogramSection({
               actingBranchId={actingBranchId}
               fdi={selectedFdiForCurrentPatient}
               dto={dto}
-              notation={notation}
+              notation="FDI"
               canWriteClinical={canWriteClinical}
               onClose={closeInspector}
               onMutated={refetch}

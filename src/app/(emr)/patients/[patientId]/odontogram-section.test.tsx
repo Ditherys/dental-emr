@@ -18,6 +18,26 @@ vi.mock("./odontogram-actions", async (importOriginal) => ({
   getPatientOdontogramAction: actionMocks.getPatientOdontogramAction,
 }));
 
+vi.mock("@/components/odontogram/fork-odontogram", () => ({
+  ForkOdontogram: ({
+    patientKey,
+    canWriteClinical,
+    onSelect,
+  }: {
+    patientKey: string;
+    canWriteClinical: boolean;
+    onSelect: (fdi: number) => void;
+  }) => (
+    <div data-testid="fork-odontogram" data-patient-key={patientKey} data-read-only={String(!canWriteClinical)}>
+      {[11, 16, 24].map((fdi) => (
+        <button key={fdi} type="button" aria-label={`Tooth ${fdi}`} data-tooth={fdi} onClick={() => onSelect(fdi)}>
+          Tooth {fdi}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
 const mockDto: PatientOdontogramDTO = {
   patientId: "00000000-0000-4000-a000-000000000020",
   entries: [
@@ -78,7 +98,7 @@ describe("OdontogramSection O7", () => {
     document.body.innerHTML = "";
   });
 
-  it("loads and renders measured chart with bounded DTO", async () => {
+  it("loads and renders the controlled fork chart with bounded DTO", async () => {
     render(
       <OdontogramSection
         patientId="00000000-0000-4000-a000-000000000020"
@@ -89,8 +109,9 @@ describe("OdontogramSection O7", () => {
     );
 
     expect(screen.getByTestId("odontogram-section")).toBeInTheDocument();
-    expect(screen.getByTestId("measured-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("odontogram-toolbar")).toBeInTheDocument();
+    expect(screen.getByTestId("fork-odontogram")).toHaveAttribute("data-patient-key", mockDto.patientId);
+    expect(screen.queryByTestId("measured-chart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("odontogram-toolbar")).not.toBeInTheDocument();
     // tooth 11 should be rendered
     expect(screen.getByRole("button", { name: /Tooth 11/i })).toBeInTheDocument();
     // legacy flag visible after selecting that tooth
@@ -252,8 +273,7 @@ describe("OdontogramSection O7", () => {
     expect(screen.queryByRole("button", { name: /Amend/i })).not.toBeInTheDocument();
   });
 
-  it("switches the central renderer to primary dentition without changing the patient DTO", async () => {
-    const user = userEvent.setup();
+  it("does not expose the removed classic/dentition renderer controls", () => {
     render(
       <OdontogramSection
         patientId="00000000-0000-4000-a000-000000000020"
@@ -263,10 +283,9 @@ describe("OdontogramSection O7", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "primary" }));
-
-    expect(screen.getByRole("button", { name: /Tooth 51/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Tooth 11/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("fork-odontogram")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "primary" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/classic/i)).not.toBeInTheDocument();
   });
 
   it("opens the bounded periodontal workspace for a relational draft examination", async () => {
