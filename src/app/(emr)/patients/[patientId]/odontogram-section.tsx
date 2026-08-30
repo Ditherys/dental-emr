@@ -32,7 +32,7 @@ type Props = {
   /** @deprecated O13 read cutover — use initialOdontogram (get_patient_odontogram DTO). */
   initialConditions?: unknown;
   initialOdontogram?: PatientOdontogramDTO | null;
-  initialProgressEvents?: ProgressEventDTO[];
+  initialProgressEvents?: { patientId: string; events: ProgressEventDTO[] };
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
   loadFailed?: boolean;
@@ -67,6 +67,9 @@ export function OdontogramSection({
   // the old state afterwards, but this synchronous gate prevents a one-frame
   // cross-patient clinical disclosure during a deferred fetch.
   const selectedFdiForCurrentPatient = isCurrentPatientSnapshot ? selectedFdi : null;
+  const suppliedProgressEvents = initialProgressEvents?.patientId === patientId && Array.isArray(initialProgressEvents.events)
+    ? initialProgressEvents.events
+    : null;
 
   // Transient state is keyed by patientId — clear selection on patient change.
   React.useEffect(() => {
@@ -171,8 +174,8 @@ export function OdontogramSection({
   }, [selectedPeriodontalExam]);
 
   const progressEvents = React.useMemo(
-    () => isCurrentPatientSnapshot ? (initialProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
-    [dto, initialProgressEvents, isCurrentPatientSnapshot],
+    () => isCurrentPatientSnapshot ? (suppliedProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
+    [dto, isCurrentPatientSnapshot, suppliedProgressEvents],
   );
   const procedureCases = React.useMemo<ProcedureCaseChoice[]>(() => {
     if (suppliedProcedureCases) return [...suppliedProcedureCases];
@@ -238,7 +241,7 @@ export function OdontogramSection({
             <MeasuredChart dto={filteredDto} selectedFdi={selectedFdiForCurrentPatient} onSelect={handleSelect} notation={notation} dentition={dentition} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>{canWriteClinical ? "Select a tooth to review or record findings. Use inspector for amend/void." : "Read-only access. Selection shows current clinical record."}</span>
-              <Button type="button" variant="outline" size="sm" className="min-h-8 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
+              <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
                 Open inspector
               </Button>
             </div>

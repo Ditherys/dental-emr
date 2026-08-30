@@ -149,7 +149,7 @@ describe("OdontogramSection O7", () => {
     expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
   });
 
-  it("does not render patient A state while patient B's deferred chart fetch is unresolved", async () => {
+  it("does not render retained patient A events after patient B's deferred fetch effects flush", async () => {
     const patientA = {
       ...mockDto,
       entries: [{ ...mockDto.entries[0]!, notes: "Synthetic patient A clinical note" }],
@@ -161,9 +161,9 @@ describe("OdontogramSection O7", () => {
         actingBranchId="00000000-0000-4000-a000-0000000000aa"
         canWriteClinical
         initialOdontogram={patientA}
-        initialProgressEvents={[{
+        initialProgressEvents={{ patientId: patientA.patientId, events: [{
           eventId: "00000000-0000-4000-a000-000000000090", eventType: "FINDING", occurredAt: "2026-08-15T09:00:00+08:00", recordedAt: "2026-08-15T09:00:00+08:00", procedureCaseId: null, toothCodes: ["11"], surfaces: ["O"], actorDisplay: "Recorded clinician", procedureDisplay: "Caries", note: "Synthetic patient A progress note", chargeCentavos: null, paymentCentavos: null, caseBalanceCentavos: null,
-        }]}
+        }]}}
       />,
     );
 
@@ -172,13 +172,18 @@ describe("OdontogramSection O7", () => {
         patientId="00000000-0000-4000-a000-000000000099"
         actingBranchId="00000000-0000-4000-a000-0000000000aa"
         canWriteClinical
+        initialProgressEvents={{ patientId: patientA.patientId, events: [{
+          eventId: "00000000-0000-4000-a000-000000000090", eventType: "FINDING", occurredAt: "2026-08-15T09:00:00+08:00", recordedAt: "2026-08-15T09:00:00+08:00", procedureCaseId: null, toothCodes: ["11"], surfaces: ["O"], actorDisplay: "Recorded clinician", procedureDisplay: "Caries", note: "Synthetic patient A progress note", chargeCentavos: null, paymentCentavos: null, caseBalanceCentavos: null,
+        }]}}
       />,
     );
 
-    expect(screen.queryByText("Synthetic patient A clinical note")).not.toBeInTheDocument();
-    expect(screen.queryByText("Synthetic patient A progress note")).not.toBeInTheDocument();
-    expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Synthetic patient A clinical note")).not.toBeInTheDocument();
+      expect(screen.queryByText("Synthetic patient A progress note")).not.toBeInTheDocument();
+      expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
+    });
   });
 
   it("rejects a mismatched initial DTO before it can replace a same-patient workspace", () => {
@@ -219,6 +224,8 @@ describe("OdontogramSection O7", () => {
     render(
       <OdontogramSection patientId={mockDto.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
     );
+
+    expect(screen.getByRole("button", { name: "Open inspector" })).toHaveClass("min-h-11");
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
     await user.click(screen.getByRole("button", { name: /record direct treatment/i }));

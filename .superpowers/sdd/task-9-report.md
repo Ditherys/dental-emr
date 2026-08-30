@@ -42,6 +42,16 @@ Status: locally implemented and verified; Cloud TEST and final release acceptanc
   invalid same-route initial DTO rejection, rejected mismatched fetch DTOs,
   and phone-list/table responsive composition and chronology order.
 
+## Final review follow-up — supplied progress ownership
+
+- `initialProgressEvents` now carries its owning `patientId` with its event
+  array. The workspace accepts that projection only when it matches the route;
+  otherwise it falls back to the matching DTO projection or an empty record.
+  This prevents retained patient-A progress rows from reappearing after
+  patient-B route effects flush.
+- The mobile-only Open inspector control now uses the required 44px minimum
+  target (`min-h-11`), with a component integration assertion.
+
 ## Verification
 
 | Command | Result |
