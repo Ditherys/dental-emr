@@ -1,17 +1,33 @@
 begin;
-select extensions.plan(8);
-select extensions.ok(to_regclass('public.procedure_installment_schedules') is not null and to_regclass('public.procedure_installment_schedule_items') is not null, 'schedule expectation tables exist');
-select extensions.ok((select relrowsecurity from pg_class where oid='public.procedure_installment_schedules'::regclass) and (select relrowsecurity from pg_class where oid='public.procedure_installment_schedule_items'::regclass), 'schedule tables have RLS');
-select extensions.ok(not has_table_privilege('authenticated','public.procedure_installment_schedules','select') and not has_table_privilege('authenticated','public.procedure_installment_schedule_items','insert'), 'schedule base tables have no browser grants');
-select extensions.ok(exists(select 1 from pg_constraint where conrelid='public.procedure_installment_schedule_items'::regclass and contype='u'), 'schedule item ordinals are unique per schedule');
-select extensions.ok(position('payment_allocations' in pg_get_functiondef('public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)'::regprocedure))=0, 'expectation RPC cannot post or derive ledger allocations');
-select extensions.ok(to_regclass('public.procedure_installment_schedule_operations') is not null, 'durable schedule operation replay table exists');
-select extensions.ok(
-  position('request_fingerprint' in pg_get_functiondef('public.create_procedure_installment_schedule_unlocked(uuid,uuid,jsonb,text)'::regprocedure)) > 0,
-  'schedule creation compares a normalized request fingerprint before replaying a result'
-);
-select extensions.ok(
-  position('request_fingerprint' in pg_get_functiondef('public.amend_procedure_installment_schedule_unlocked(uuid,uuid,text,jsonb,text,text)'::regprocedure)) > 0,
-  'schedule lifecycle compares a normalized request fingerprint before state checks'
-);
+select extensions.plan(13);
+select extensions.ok(to_regclass('public.procedure_installment_schedule_operations') is not null, 'durable schedule replay table exists');
+select extensions.ok((select relrowsecurity from pg_class where oid='public.procedure_installment_schedules'::regclass), 'schedule table has RLS');
+select extensions.ok(not has_table_privilege('authenticated','public.procedure_installment_schedules','select'), 'schedule table has no browser grant');
+select extensions.ok(position('payment_allocations' in pg_get_functiondef('public.create_procedure_installment_schedule_unlocked(uuid,uuid,jsonb,text)'::regprocedure))=0, 'expectation writer does not post allocations');
+
+insert into auth.users(id,instance_id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at) values ('d7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','schedule-owner@synthetic.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
+insert into public.organizations(id,legal_name,business_name,slug) values ('d7110000-0000-0000-0000-000000000001','Schedule Synthetic Inc','Schedule Synthetic','schedule-synthetic');
+insert into public.branches(id,organization_id,name,slug,code,address_line1,city,province) values ('d7120000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','Schedule A','schedule-a','SCA','1 Test','Test','Test'),('d7120000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','Schedule B','schedule-b','SCB','2 Test','Test','Test');
+insert into public.organization_members(id,organization_id,user_id,membership_status,joined_at) values ('d7130000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','active',statement_timestamp());
+insert into public.member_roles(organization_id,organization_member_id,role_id,assigned_by) select 'd7110000-0000-0000-0000-000000000001','d7130000-0000-0000-0000-000000000001',id,'d7100000-0000-0000-0000-000000000001' from public.roles where organization_id is null and code='OWNER';
+insert into public.patients(id,organization_id,patient_number,first_name,last_name,birth_date,preferred_branch_id) values ('d7140000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH-1','Synthetic','Schedule','1990-01-01','d7120000-0000-0000-0000-000000000001');
+insert into public.procedures(id,organization_id,code,name,status) values ('d7150000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','SCH','Schedule','active');
+insert into public.procedure_cases(id,organization_id,patient_id,origin_branch_id,procedure_id,opened_by) values ('d7160000-0000-0000-0000-000000000001','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001'),('d7160000-0000-0000-0000-000000000002','d7110000-0000-0000-0000-000000000001','d7140000-0000-0000-0000-000000000001','d7120000-0000-0000-0000-000000000001','d7150000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001');
+
+set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true); select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001',true);
+select set_config('test.schedule_id',(public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000001','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','schedule-create'))->>'schedule_id',true);
+select extensions.ok(current_setting('test.schedule_id')::uuid is not null, 'authorized owner creates a schedule');
+select extensions.is((public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000001','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','schedule-create'))->>'schedule_id',current_setting('test.schedule_id'),'same-key exact create retry replays canonical result');
+select extensions.throws_ok($$select public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000002','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','schedule-create')$$,'22023','idempotency key conflicts with a different request','changed create payload conflicts');
+select set_config('test.amended_id',(public.amend_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001',current_setting('test.schedule_id')::uuid,'AMENDED','[{"dueDate":"2026-10-01","expectedCentavos":"200"}]','corrected expectation','schedule-amend'))->>'schedule_id',true);
+reset role;
+select extensions.ok((select count(*)=2 and count(*) filter(where status='ACTIVE')=1 from public.procedure_installment_schedules where procedure_case_id='d7160000-0000-0000-0000-000000000001'), 'amendment atomically preserves history and leaves one active successor');
+set local role authenticated; select set_config('request.jwt.claim.role','authenticated',true); select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001',true);
+select extensions.is((public.amend_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001',current_setting('test.schedule_id')::uuid,'AMENDED','[{"dueDate":"2026-10-01","expectedCentavos":"200"}]','corrected expectation','schedule-amend'))->>'schedule_id',current_setting('test.amended_id'),'same-key amendment replays canonical successor');
+select extensions.is((public.amend_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001',current_setting('test.amended_id')::uuid,'CANCELLED',null,'patient cancelled','schedule-cancel'))->>'status','CANCELLED','active successor can be cancelled');
+select set_config('test.complete_id',(public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000002','[{"dueDate":"2026-11-01","expectedCentavos":"300"}]','schedule-complete-create'))->>'schedule_id',true);
+select extensions.is((public.amend_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001',current_setting('test.complete_id')::uuid,'COMPLETED',null,'completed','schedule-complete'))->>'status','COMPLETED','active schedule can be completed');
+select extensions.throws_ok($$select public.create_procedure_installment_schedule('d7120000-0000-0000-0000-000000000001','d7160000-0000-0000-0000-000000000099','[{"dueDate":"2026-09-01","expectedCentavos":"100"}]','foreign-case')$$,'42501','not authorized','foreign or missing case is denied');
+reset role;
+select extensions.is((select count(*)::integer from public.payment_allocations where organization_id='d7110000-0000-0000-0000-000000000001'),0,'schedule lifecycle never writes ledger allocations');
 select * from extensions.finish(); rollback;

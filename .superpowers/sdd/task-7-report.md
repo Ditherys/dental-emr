@@ -18,3 +18,5 @@ Fresh local evidence:
 - `npm run typecheck` passed.
 
 Residual: the focused pgTAP suite currently proves replay-boundary catalog/security invariants; an independent reviewer should expand synthetic actor/fixture execution and the external two-session concurrency probe before final release acceptance. Cloud TEST remains required and deferred under ADR-029.
+
+Follow-up evidence: migrations `20260830010410`–`20260830010414` correct amendment ordering (predecessor cancellation precedes successor insert), use organization+actor+key serialization, repair the emitted regex/audit metadata, and remove the mistakenly retained historical one-to-one constraint. The focused synthetic pgTAP fixture now exercises create replay/conflict, amend history/replay, cancel, complete, cross-tenant denial, and allocation non-mutation (13/13 passing locally). The generated relationship metadata marks schedules-to-procedure-cases as many-to-one.
