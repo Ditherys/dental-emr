@@ -519,6 +519,7 @@ const ODONTOGRAM_REVAMP_IMPLANT_CHARGE_GRANTS_MIGRATION = "20260830010305_odonto
 const ODONTOGRAM_REVAMP_DIRECT_CHARGE_AND_BRIDGE_GRANTS_MIGRATION = "20260830010307_odontogram_direct_charge_and_bridge_grants.sql";
 const PROCEDURE_INSTALLMENT_SCHEDULE_GRANTS_MIGRATION = "20260830010401_procedure_installment_schedules_grants.sql";
 const PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_GRANTS_MIGRATION = "20260830010403_procedure_installment_schedule_lifecycle_grants.sql";
+const PROCEDURE_INSTALLMENT_SCHEDULE_AMENDMENT_GRANTS_MIGRATION = "20260830010405_procedure_installment_schedule_amendments_grants.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -1553,6 +1554,7 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({ file: ODONTOGRAM_REVAMP_DIRECT_CHARGE_AND_BRIDGE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)", privilege: "execute", columns: [], reason: "Provider-free current bridge writer retains a validated same-patient charge link while deriving provider server-side." }]) }),
   Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Authenticated users reach the expectation-only schedule writer through its server-authorized action and narrow audited RPC." }, { grantee: "authenticated", objectClass: "function", object: "public.record_payment(uuid,uuid,uuid,bigint,text,text)", privilege: "execute", columns: [], reason: "Re-grants the existing narrow payment RPC after the dentist clinical-access guard replacement." }]) }),
   Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)", privilege: "execute", columns: [], reason: "Restores the schedule writer only after its idempotency and lifecycle definition has been replaced." }]) }),
+  Object.freeze({ file: PROCEDURE_INSTALLMENT_SCHEDULE_AMENDMENT_GRANTS_MIGRATION, grants: Object.freeze([{ grantee: "authenticated", objectClass: "function", object: "public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)", privilege: "execute", columns: [], reason: "Authenticated users can append a bounded schedule lifecycle successor without mutating payment allocations." }]) }),
 ]);
 
 /**
