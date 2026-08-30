@@ -48,6 +48,42 @@ function defaultDetail(entry: ClinicalEntry): ClinicalFeatureDetail {
   }
 }
 
+const TOOTH_STATE_CODES = new Set([
+  "PRESENT",
+  "MISSING",
+  "EXTRACTION_WOUND",
+  "SUBGINGIVAL",
+  "RADIX",
+  "BROKEN",
+  "CROWN_PREPARATION",
+]);
+
+function isCompatibleDetail(entry: ClinicalEntry, detail: ClinicalFeatureDetail): boolean {
+  if (TOOTH_STATE_CODES.has(entry.clinicalCode)) {
+    return detail.code === "TOOTH_STATE" && detail.state === entry.clinicalCode;
+  }
+  if (entry.clinicalCode === "CARIES") return detail.code === "CARIES";
+  if (entry.clinicalCode === "RESTORATION") return detail.code === "RESTORATION";
+  if (entry.clinicalCode === "ROOT_CANAL") return detail.code === "ROOT_CANAL";
+  if (entry.clinicalCode === "ORTHODONTIC") return detail.code === "ORTHODONTIC";
+  return detail.code === "OTHER" && detail.controlledCode === entry.clinicalCode;
+}
+
+/**
+ * Pure DTO-boundary normalization. It keeps clinical code and detail
+ * semantically aligned before any renderer-facing state is calculated.
+ */
+export function normalizeClinicalEntry(entry: ClinicalEntry): ClinicalFeatureDetail {
+  if (entry.clinicalCode === "IMPLANT" || entry.clinicalCode === "BRIDGE") {
+    throw new Error(`${entry.clinicalCode} is relationship-owned and must not be projected from a clinical entry`);
+  }
+  const detail = entry.detail ?? defaultDetail(entry);
+  if (!isCompatibleDetail(entry, detail)) {
+    throw new Error(`clinicalCode ${entry.clinicalCode} does not match detail ${detail.code}`);
+  }
+  return detail;
+}
+
 function rootTreatmentFor(detail: ClinicalFeatureDetail): ToothRenderState["rootTreatment"] {
   if (detail.code !== "ROOT_CANAL") return "NONE";
   if (detail.state === "endo-medical-filling") return "MEDICAMENT";
@@ -92,9 +128,12 @@ export function projectPatientChart(dto: PatientChartDTO): PatientChartProjectio
   for (const entry of dto.entries) {
     if (!isEntryCurrentlyActive(entry)) continue;
     const target = tooth(entry.toothFdi);
-    const detail = entry.detail ?? defaultDetail(entry);
-    if (entry.status === "PLANNED") target.planned.push(detail);
-    else target.current.push(detail);
+    const detail = normalizeClinicalEntry(entry);
+    if (entry.status === "PLANNED") {
+      target.planned.push(detail);
+      continue;
+    }
+    target.current.push(detail);
     target.layers.push(...FEATURE_CONTRACT[entry.clinicalCode].rendererLayers);
     const treatment = rootTreatmentFor(detail);
     if (treatment !== "NONE") {
