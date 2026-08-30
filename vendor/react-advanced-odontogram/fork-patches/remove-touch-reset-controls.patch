@@ -23,7 +23,7 @@ index fa30abf..6a51dc0 100644
    actions.appendChild(closeActionBtn);
  
    popover.appendChild(header);
-@@ -5589,13 +5582,7 @@ function showContextMenu(toothNo: number, touch: Touch){
+@@ -5589,13 +5582,6 @@ function showContextMenu(toothNo: number, touch: Touch){
  
    menu.appendChild(el("div", { class: "odon-ctx-divider" }));
  
