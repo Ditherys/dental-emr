@@ -538,6 +538,10 @@ const odontogramO5O8TerminalGrants = Object.freeze([
   object,
   privilege: "execute",
   columns: [],
+  ...(object === "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)" ? {
+    supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
+    supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+  } : {}),
   reason:
     "Final O5/O8 browser boundary after explicit forward replacement. Each SECURITY DEFINER function derives tenant and patient from trusted rows, checks live branch permission, preserves append-only history, bounds returned aggregates, and keeps all tenant tables RLS-locked with zero browser table grants.",
 })));
@@ -591,7 +595,12 @@ const odontogramO5Grants = Object.freeze([
         supersededFrom:
           "20260828020516_odontogram_resolution_and_lineage_serialization.sql",
       }
-    : {}),
+    : object === "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)"
+      ? {
+          supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
+          supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+        }
+      : {}),
   reason:
     "O5 odontogram clinical boundary (ADR-028). Derives organization_id from an active acting branch (status='active'), binds actor via auth.uid(), gates on patient.clinical permissions (read/write plus elevated patient.clinical.correct for legacy resolution, bridge/implant/perio correction and nonterminal execution correction), validates patient membership via FOR KEY SHARE, uses optimistic versions, caps projections at 200 rows / bounded batches, and emits one atomic CLINICAL audit event per mutation. Base tables remain RLS-locked with zero policies.",
 })));

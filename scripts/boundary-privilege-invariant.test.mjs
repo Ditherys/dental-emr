@@ -207,7 +207,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.create_prescription(uuid, uuid, jsonb)",
     "public.finalize_prescription(uuid, uuid, integer)",
     "public.get_patient_odontogram(uuid,uuid)",
-    "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)",
+    "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
     "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
     "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
     "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
