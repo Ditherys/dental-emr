@@ -11,6 +11,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
+const actionMocks = vi.hoisted(() => ({ getPatientOdontogramAction: vi.fn() }));
+
+vi.mock("./odontogram-actions", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./odontogram-actions")>(),
+  getPatientOdontogramAction: actionMocks.getPatientOdontogramAction,
+}));
+
 const mockDto: PatientOdontogramDTO = {
   patientId: "00000000-0000-4000-a000-000000000020",
   entries: [
@@ -98,7 +105,7 @@ describe("OdontogramSection O7", () => {
     const user = userEvent.setup();
     const { rerender } = render(
       <OdontogramSection
-        patientId="00000000-0000-4000-a000-000000000021"
+        patientId={mockDto.patientId}
         actingBranchId="00000000-0000-4000-a000-0000000000aa"
         canWriteClinical
         initialOdontogram={mockDto}
@@ -115,7 +122,7 @@ describe("OdontogramSection O7", () => {
         patientId="00000000-0000-4000-a000-000000000022"
         actingBranchId="00000000-0000-4000-a000-0000000000aa"
         canWriteClinical
-        initialOdontogram={mockDto}
+        initialOdontogram={{ ...mockDto, patientId: "00000000-0000-4000-a000-000000000022" }}
       />,
     );
 
@@ -129,7 +136,7 @@ describe("OdontogramSection O7", () => {
   it("clears the selected tooth's current-status state when the patient changes", async () => {
     const user = userEvent.setup();
     const { rerender } = render(
-      <OdontogramSection patientId="00000000-0000-4000-a000-000000000021" actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
+      <OdontogramSection patientId={mockDto.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
@@ -140,6 +147,71 @@ describe("OdontogramSection O7", () => {
     );
 
     expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+  });
+
+  it("does not render patient A state while patient B's deferred chart fetch is unresolved", async () => {
+    const patientA = {
+      ...mockDto,
+      entries: [{ ...mockDto.entries[0]!, notes: "Synthetic patient A clinical note" }],
+    };
+    actionMocks.getPatientOdontogramAction.mockReturnValue(new Promise(() => {}));
+    const { rerender } = render(
+      <OdontogramSection
+        patientId={patientA.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={patientA}
+        initialProgressEvents={[{
+          eventId: "00000000-0000-4000-a000-000000000090", eventType: "FINDING", occurredAt: "2026-08-15T09:00:00+08:00", recordedAt: "2026-08-15T09:00:00+08:00", procedureCaseId: null, toothCodes: ["11"], surfaces: ["O"], actorDisplay: "Recorded clinician", procedureDisplay: "Caries", note: "Synthetic patient A progress note", chargeCentavos: null, paymentCentavos: null, caseBalanceCentavos: null,
+        }]}
+      />,
+    );
+
+    rerender(
+      <OdontogramSection
+        patientId="00000000-0000-4000-a000-000000000099"
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+      />,
+    );
+
+    expect(screen.queryByText("Synthetic patient A clinical note")).not.toBeInTheDocument();
+    expect(screen.queryByText("Synthetic patient A progress note")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
+  });
+
+  it("rejects a mismatched initial DTO before it can replace a same-patient workspace", () => {
+    const patientA = {
+      ...mockDto,
+      entries: [{ ...mockDto.entries[0]!, notes: "Synthetic patient A retained note" }],
+    };
+    const { rerender } = render(
+      <OdontogramSection patientId={patientA.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={patientA} />,
+    );
+
+    rerender(
+      <OdontogramSection
+        patientId={patientA.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={{ ...patientA, patientId: "00000000-0000-4000-a000-000000000099" }}
+        loadFailed
+      />,
+    );
+
+    expect(screen.queryByText("Synthetic patient A retained note")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
+  });
+
+  it("discards a mismatched DTO returned by the patient fetch action", async () => {
+    actionMocks.getPatientOdontogramAction.mockResolvedValue({ ok: true, odontogram: mockDto });
+    render(
+      <OdontogramSection patientId="00000000-0000-4000-a000-000000000099" actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical />,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/odontogram could not be loaded/i);
+    expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
   });
 
   it("opens the approved tooth-entry workflow for an explicit direct treatment", async () => {

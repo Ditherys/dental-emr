@@ -36,7 +36,8 @@ export function ProgressRecordTable({ events }: { events: readonly ProgressEvent
       {chronologicalEvents.length === 0 ? (
         <p className="px-3 py-6 text-sm text-muted-foreground">No progress records yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div data-testid="progress-record-table" className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead className="bg-muted/30 text-xs text-muted-foreground">
               <tr>
@@ -64,6 +65,22 @@ export function ProgressRecordTable({ events }: { events: readonly ProgressEvent
             </tbody>
           </table>
         </div>
+        <ol data-testid="progress-record-phone-list" aria-label="Progress record on phone" className="divide-y md:hidden">
+          {chronologicalEvents.map((event) => (
+            <li key={event.eventId} className="px-3 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-medium">{eventLabel(event)}{event.procedureDisplay ? ` · ${event.procedureDisplay}` : ""}</p>
+                <time dateTime={event.occurredAt} className="shrink-0 text-xs tabular-nums text-muted-foreground">{dateLabel(event.occurredAt)}</time>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{event.toothCodes.length ? `Tooth ${event.toothCodes.join(", ")}` : "No tooth"}{event.surfaces.length ? ` · ${event.surfaces.join(", ")}` : ""} · {event.actorDisplay}</p>
+              {event.note && <p className="mt-1 text-sm text-muted-foreground">{event.note}</p>}
+              {(event.chargeCentavos !== null || event.paymentCentavos !== null || event.caseBalanceCentavos !== null) && (
+                <p className="mt-1 text-xs tabular-nums text-muted-foreground">{event.chargeCentavos !== null && `Charge ${amountLabel(event.chargeCentavos)}`}{event.paymentCentavos !== null && `${event.chargeCentavos !== null ? " · " : ""}Payment ${amountLabel(event.paymentCentavos)}`}{event.caseBalanceCentavos !== null && `${event.chargeCentavos !== null || event.paymentCentavos !== null ? " · " : ""}Case balance ${amountLabel(event.caseBalanceCentavos)}`}</p>
+              )}
+            </li>
+          ))}
+        </ol>
+        </>
       )}
     </section>
   );

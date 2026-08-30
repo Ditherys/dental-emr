@@ -48,8 +48,12 @@ export function OdontogramSection({
   recordFollowup,
   loadFailed,
 }: Props): React.ReactElement {
-  const [dto, setDto] = React.useState<PatientOdontogramDTO | null>(() => initialOdontogram ?? null);
-  const [loading, setLoading] = React.useState(() => !initialOdontogram && !loadFailed);
+  const hasMismatchedInitialDto = Boolean(initialOdontogram && initialOdontogram.patientId !== patientId);
+  const initialDto = initialOdontogram?.patientId === patientId ? initialOdontogram : null;
+  const [dtoSnapshot, setDtoSnapshot] = React.useState(() => ({ patientId, dto: initialDto }));
+  const isCurrentPatientSnapshot = dtoSnapshot.patientId === patientId && !hasMismatchedInitialDto;
+  const dto = isCurrentPatientSnapshot ? dtoSnapshot.dto : null;
+  const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
   const [selectedFdi, setSelectedFdi] = React.useState<number | null>(null);
   const [notation, setNotation] = React.useState<NumberingSystem>("FDI");
@@ -59,6 +63,10 @@ export function OdontogramSection({
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
   const [directTreatmentRequested, setDirectTreatmentRequested] = React.useState(false);
+  // Render only state whose owner matches the route parameter. Effects clear
+  // the old state afterwards, but this synchronous gate prevents a one-frame
+  // cross-patient clinical disclosure during a deferred fetch.
+  const selectedFdiForCurrentPatient = isCurrentPatientSnapshot ? selectedFdi : null;
 
   // Transient state is keyed by patientId — clear selection on patient change.
   React.useEffect(() => {
@@ -89,7 +97,12 @@ export function OdontogramSection({
         setError(result.code === "NOT_AUTHORIZED" ? "Your access or selected branch changed. Refresh the chart and try again." : "The odontogram could not be loaded. Refresh to try again.");
         return;
       }
-      setDto(result.odontogram);
+      if (result.odontogram.patientId !== patientId) {
+        setDtoSnapshot({ patientId, dto: null });
+        setError("The odontogram could not be loaded. Refresh to try again.");
+        return;
+      }
+      setDtoSnapshot({ patientId, dto: result.odontogram });
     } catch {
       setError("The odontogram could not be loaded. Refresh to try again.");
     } finally {
@@ -98,17 +111,25 @@ export function OdontogramSection({
   }, [actingBranchId, patientId]);
 
   React.useEffect(() => {
-    if (initialOdontogram) {
-      setDto(initialOdontogram);
+    if (hasMismatchedInitialDto) {
+      setDtoSnapshot({ patientId, dto: null });
+      setError("The odontogram could not be loaded. Refresh to try again.");
       setLoading(false);
       return;
     }
+    if (initialDto) {
+      setDtoSnapshot({ patientId, dto: initialDto });
+      setLoading(false);
+      return;
+    }
+    setDtoSnapshot({ patientId, dto: null });
     if (loadFailed) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     void refetch();
-  }, [initialOdontogram, loadFailed, refetch]);
+  }, [hasMismatchedInitialDto, initialDto, loadFailed, patientId, refetch]);
 
   const filteredDto = React.useMemo(() => {
     if (!dto) return dto;
@@ -150,8 +171,8 @@ export function OdontogramSection({
   }, [selectedPeriodontalExam]);
 
   const progressEvents = React.useMemo(
-    () => initialProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : []),
-    [dto, initialProgressEvents],
+    () => isCurrentPatientSnapshot ? (initialProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
+    [dto, initialProgressEvents, isCurrentPatientSnapshot],
   );
   const procedureCases = React.useMemo<ProcedureCaseChoice[]>(() => {
     if (suppliedProcedureCases) return [...suppliedProcedureCases];
@@ -209,15 +230,15 @@ export function OdontogramSection({
         onPerioEntry={() => setPerioOpen(true)}
       />
 
-      {loading || !filteredDto ? (
+      {!isCurrentPatientSnapshot || loading || !filteredDto ? (
         <div className="rounded-md border p-6 text-sm text-muted-foreground">Loading odontogram…</div>
       ) : (
         <div className="flex gap-4">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <MeasuredChart dto={filteredDto} selectedFdi={selectedFdi} onSelect={handleSelect} notation={notation} dentition={dentition} />
+            <MeasuredChart dto={filteredDto} selectedFdi={selectedFdiForCurrentPatient} onSelect={handleSelect} notation={notation} dentition={dentition} />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               <span>{canWriteClinical ? "Select a tooth to review or record findings. Use inspector for amend/void." : "Read-only access. Selection shows current clinical record."}</span>
-              <Button type="button" variant="outline" size="sm" className="min-h-8 text-xs lg:hidden" disabled={!selectedFdi} onClick={() => setSheetOpen(true)}>
+              <Button type="button" variant="outline" size="sm" className="min-h-8 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
                 Open inspector
               </Button>
             </div>
@@ -230,15 +251,15 @@ export function OdontogramSection({
             aria-label="Tooth inspector"
             className="hidden w-[340px] shrink-0 overflow-hidden rounded-md border bg-card lg:flex lg:flex-col"
           >
-            {selectedFdi === null ? (
+            {selectedFdiForCurrentPatient === null ? (
               <div className="p-6 text-sm text-muted-foreground">Select a tooth on the chart to view details and actions.</div>
             ) : (
               <div className="flex min-h-0 flex-1 flex-col overflow-auto">
                 <ToothInspector
-                  key={`desktop-${selectedFdi}-${directTreatmentRequested ? "direct" : "inspect"}`}
+                  key={`desktop-${selectedFdiForCurrentPatient}-${directTreatmentRequested ? "direct" : "inspect"}`}
                   patientId={patientId}
                   actingBranchId={actingBranchId}
-                  fdi={selectedFdi}
+                  fdi={selectedFdiForCurrentPatient}
                   dto={dto}
                   notation={notation}
                   canWriteClinical={canWriteClinical}
@@ -253,7 +274,7 @@ export function OdontogramSection({
       )}
 
       <CurrentStatusPanel
-        selectedTooth={selectedFdi}
+        selectedTooth={selectedFdiForCurrentPatient}
         canWriteClinical={canWriteClinical}
         procedureCases={procedureCases}
         followupAvailable={followupAvailable}
@@ -266,16 +287,16 @@ export function OdontogramSection({
 
       <ProgressRecordTable events={progressEvents} />
 
-      <Sheet open={sheetOpen && selectedFdi !== null} onOpenChange={(open) => { if (!open) closeInspector(); else setSheetOpen(true); }}>
+      <Sheet open={sheetOpen && selectedFdiForCurrentPatient !== null} onOpenChange={(open) => { if (!open) closeInspector(); else setSheetOpen(true); }}>
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-auto p-0 sm:max-h-[80dvh] sm:max-w-none" onEscapeKeyDown={closeInspector} onInteractOutside={closeInspector}>
           <SheetHeader className="sr-only">
             <SheetTitle>Tooth details</SheetTitle>
           </SheetHeader>
-          {selectedFdi !== null && dto && (
+          {selectedFdiForCurrentPatient !== null && dto && (
             <ToothInspector
               patientId={patientId}
               actingBranchId={actingBranchId}
-              fdi={selectedFdi}
+              fdi={selectedFdiForCurrentPatient}
               dto={dto}
               notation={notation}
               canWriteClinical={canWriteClinical}

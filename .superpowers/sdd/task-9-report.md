@@ -27,11 +27,26 @@ Status: locally implemented and verified; Cloud TEST and final release acceptanc
   transient state. No Reset, Classic renderer, drawing path, provider picker,
   or grouped case accordion was added.
 
+## Review follow-up — patient isolation and phone chronology
+
+- The workspace now scopes its in-memory DTO snapshot, selected tooth, and
+  progress projection to the route `patientId` synchronously during render.
+  A route change therefore renders no prior patient data while the replacement
+  fetch is pending. Initial DTOs and fetch responses must match the requested
+  patient ID; mismatches are discarded and surface a generic load error.
+- The chronological table is retained from the `md` breakpoint upward. Below
+  that breakpoint, the same oldest-to-newest events render as an accessible
+  stacked ordered list with date, event/procedure, tooth/surface, actor, note,
+  and only the financial values that are present.
+- Regression coverage includes a deferred patient-B fetch after patient-A,
+  invalid same-route initial DTO rejection, rejected mismatched fetch DTOs,
+  and phone-list/table responsive composition and chronology order.
+
 ## Verification
 
 | Command | Result |
 | --- | --- |
-| `npm run test:unit -- 'src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx' src/components/odontogram` | PASS — 12 files, 37 tests |
+| `npm run test:unit -- 'src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx' src/components/odontogram` | PASS — 12 files, 41 tests |
 | `npm run lint` | PASS — no errors or warnings |
 | `npm run typecheck` | PASS — strict TypeScript clean |
 | `git diff --check` | PASS — no whitespace errors (Git emitted expected Windows LF/CRLF notices) |
@@ -44,6 +59,8 @@ opened a sheet. Both now pass in the focused suite above.
 ## Commit
 
 Implementation commit: `a54644554c9fd03aaa4929b58a8617013213c841` — `feat: add patient odontogram status workspace`.
+
+Follow-up commit: pending local checkpoint creation.
 
 ## Residual gates
 
