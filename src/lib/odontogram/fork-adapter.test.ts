@@ -164,12 +164,12 @@ describe("fork adapter", () => {
     expect(status.teeth).toMatchObject({
       "11": { caries: ["caries-occlusal"], cariesSeverity: { occlusal: 4 } },
       "12": { endo: "endo-glass-pin" },
-      "13": { toothSelection: "no-tooth-after-extraction" },
+      "13": { toothSelection: "none" },
       "14": { restorationType: "crown", restorationMaterial: "zircon" },
       "17": { fillingSurfaceMaterials: { buccal: "composite" } },
       "15": { orthoAppliance: "bracket", orthoVertical: "intrusion" },
       "21": { bridgePillar: true },
-      "22": { toothSelection: "none" },
+      "22": { toothSelection: "none", restorationType: "bridge" },
       "23": { bridgePillar: true },
       "24": { toothSelection: "implant" },
     });
@@ -201,7 +201,7 @@ describe("fork adapter", () => {
           patient_id: PATIENT_ID,
           organization_id: "forged-org",
         },
-        "12": { toothSelection: "no-tooth-after-extraction", note: "Missing" },
+        "12": { toothSelection: "none", note: "Missing" },
         "99": { caries: ["caries-occlusal"] },
       },
     });
@@ -218,6 +218,78 @@ describe("fork adapter", () => {
     expect(drafts).toHaveLength(7);
     expect(JSON.stringify(drafts)).not.toContain(PATIENT_ID);
     expect(JSON.stringify(drafts)).not.toContain("forged-org");
+  });
+
+  it("maps every supported tooth state through explicit fork axes without importing default presence", () => {
+    const result = buildForkPayload(dto({
+      entries: [
+        entry({ tooth_code: "11", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "PRESENT" } }),
+        entry({ tooth_code: "12", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "MISSING" } }),
+        entry({ tooth_code: "13", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "EXTRACTION_WOUND" } }),
+        entry({ tooth_code: "14", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "SUBGINGIVAL" } }),
+        entry({ tooth_code: "15", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "RADIX" } }),
+        entry({ tooth_code: "16", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "BROKEN" } }),
+        entry({ tooth_code: "17", clinical_code: "TOOTH_STATE", detail: { code: "TOOTH_STATE", state: "CROWN_PREPARATION" } }),
+      ],
+    }));
+    const status = result.status as { version: string; teeth: Record<string, unknown> };
+
+    expect(status.teeth).toMatchObject({
+      "11": { toothSelection: "tooth-base" },
+      "12": { toothSelection: "none" },
+      "13": { toothSelection: "none", extractionWound: true },
+      "14": { toothSelection: "tooth-under-gum" },
+      "15": { toothSubstrate: "radix" },
+      "16": { toothSubstrate: "broken" },
+      "17": { toothSubstrate: "crownprep" },
+    });
+
+    expect(forkPayloadToClinicalDraft(status)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ toothCode: "12", detail: { code: "TOOTH_STATE", state: "MISSING" } }),
+      expect.objectContaining({ toothCode: "13", detail: { code: "TOOTH_STATE", state: "EXTRACTION_WOUND" } }),
+      expect.objectContaining({ toothCode: "14", detail: { code: "TOOTH_STATE", state: "SUBGINGIVAL" } }),
+      expect.objectContaining({ toothCode: "15", detail: { code: "TOOTH_STATE", state: "RADIX" } }),
+      expect.objectContaining({ toothCode: "16", detail: { code: "TOOTH_STATE", state: "BROKEN" } }),
+      expect.objectContaining({ toothCode: "17", detail: { code: "TOOTH_STATE", state: "CROWN_PREPARATION" } }),
+    ]));
+  });
+
+  it("does not turn untouched fork defaults into duplicate PRESENT clinical drafts", () => {
+    const defaultChart = buildForkPayload(dto()).status;
+    expect(forkPayloadToClinicalDraft(defaultChart)).toEqual([]);
+    expect(forkPayloadToClinicalDraft({
+      version: "2.20",
+      teeth: { "11": { toothSelection: "none" } },
+    })).toEqual([
+      expect.objectContaining({ toothCode: "11", detail: { code: "TOOTH_STATE", state: "MISSING" } }),
+    ]);
+  });
+
+  it("preserves crown leakage only for valid crown or bridge restorations", () => {
+    const result = buildForkPayload(dto({
+      entries: [
+        entry({ tooth_code: "11", clinical_code: "RESTORATION", detail: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: true } }),
+        entry({ tooth_code: "12", clinical_code: "RESTORATION", detail: { code: "RESTORATION", restorationType: "onlay", material: "metal", marginalLeakage: true } }),
+        entry({ tooth_code: "13", clinical_code: "RESTORATION", detail: { code: "RESTORATION", restorationType: "bridge", material: "zircon", marginalLeakage: true } }),
+      ],
+    }));
+    const status = result.status as { teeth: Record<string, Record<string, unknown>> };
+
+    expect(status.teeth["11"]).toMatchObject({ restorationType: "crown", restorationMaterial: "zircon", crownLeakage: true });
+    expect(status.teeth["12"]).toMatchObject({ toothSelection: "tooth-base" });
+    expect(status.teeth["12"]).not.toHaveProperty("restorationType");
+    expect(status.teeth["13"]).toMatchObject({ restorationType: "bridge", restorationMaterial: "zircon", crownLeakage: true });
+    expect(forkPayloadToClinicalDraft({
+      version: "2.20",
+      teeth: {
+        "11": { restorationType: "crown", restorationMaterial: "zircon", crownLeakage: true },
+        "12": { restorationType: "onlay", restorationMaterial: "metal", crownLeakage: true },
+        "13": { restorationType: "bridge", restorationMaterial: "zircon", crownLeakage: true },
+      },
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ toothCode: "11", detail: { code: "RESTORATION", restorationType: "crown", material: "zircon", marginalLeakage: true } }),
+      expect.objectContaining({ toothCode: "13", detail: { code: "RESTORATION", restorationType: "bridge", material: "zircon", marginalLeakage: true } }),
+    ]));
   });
 
   it("does not project superseded relationship records into the fork display state", () => {

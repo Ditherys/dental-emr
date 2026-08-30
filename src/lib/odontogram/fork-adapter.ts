@@ -8,6 +8,13 @@
 
 import type { ClinicalFeatureDetail } from "./types";
 import type { PatientOdontogramDTO, ToothClinicalSurface } from "./types";
+import {
+  isMaterialValidForRestoration,
+  isValidRestorationMaterial,
+  isValidRestorationType,
+  type RestorationMaterial,
+  type RestorationType,
+} from "./clinical-codes";
 
 const FDI_TEETH = [
   "18", "17", "16", "15", "14", "13", "12", "11",
@@ -39,17 +46,6 @@ const ENDO_STATES = new Set([
   "endo-metal-pin",
 ]);
 const FILLING_MATERIALS = new Set(["amalgam", "composite", "gic", "temporary"]);
-const RESTORATION_TYPES = new Set(["crown", "inlay", "onlay", "veneer", "bridge"]);
-const RESTORATION_MATERIALS = new Set([
-  "emax",
-  "gold",
-  "gradia",
-  "zircon",
-  "metal",
-  "metal-ceramic",
-  "telescope",
-  "temporary",
-]);
 const ROOT_CARIES = new Set(["active", "arrested", "active-cavitated"]);
 
 type ForkTooth = Record<string, unknown>;
@@ -88,6 +84,11 @@ function forkCariesSeverity(detail: Extract<ClinicalFeatureDetail, { code: "CARI
   return detail.depth === "ENAMEL" ? 1 : detail.depth === "DENTIN" ? 3 : 5;
 }
 
+function isValidFixedRestoration(type: unknown, material: unknown): type is Exclude<RestorationType, "none"> {
+  return isValidRestorationType(type) && type !== "none" &&
+    isValidRestorationMaterial(material) && isMaterialValidForRestoration(type, material);
+}
+
 function mapEntry(chart: ForkChart, entry: PatientOdontogramDTO["entries"][number]) {
   if (!isCurrentEntry(entry)) return;
   const target = put(chart, entry.tooth_code);
@@ -113,18 +114,27 @@ function mapEntry(chart: ForkChart, entry: PatientOdontogramDTO["entries"][numbe
       return;
     case "TOOTH_STATE":
       if (entry.detail.state === "MISSING" || entry.detail.state === "EXTRACTION_WOUND") {
-        target.toothSelection = "no-tooth-after-extraction";
+        target.toothSelection = "none";
         if (entry.detail.state === "EXTRACTION_WOUND") target.extractionWound = true;
       } else if (entry.detail.state === "SUBGINGIVAL") {
         target.toothSelection = "tooth-under-gum";
       } else if (entry.detail.state === "PRESENT") {
         target.toothSelection = "tooth-base";
+      } else if (entry.detail.state === "RADIX") {
+        target.toothSubstrate = "radix";
+      } else if (entry.detail.state === "BROKEN") {
+        target.toothSubstrate = "broken";
+      } else if (entry.detail.state === "CROWN_PREPARATION") {
+        target.toothSubstrate = "crownprep";
       }
       return;
     case "RESTORATION": {
-      if (entry.detail.restorationType !== "none" && RESTORATION_MATERIALS.has(entry.detail.material)) {
+      if (isValidFixedRestoration(entry.detail.restorationType, entry.detail.material)) {
         target.restorationType = entry.detail.restorationType;
         target.restorationMaterial = entry.detail.material;
+        if (entry.detail.restorationType === "crown" || entry.detail.restorationType === "bridge") {
+          target.crownLeakage = entry.detail.marginalLeakage;
+        }
         return;
       }
       if (entry.detail.restorationType === "none" && FILLING_MATERIALS.has(entry.detail.material)) {
@@ -161,7 +171,12 @@ function mapRelationships(chart: ForkChart, dto: PatientOdontogramDTO, recordKin
       const target = put(chart, unit.tooth_fdi);
       if (!target) continue;
       if (unit.role === "ABUTMENT") target.bridgePillar = true;
-      if (unit.role === "PONTIC") target.toothSelection = "none";
+      if (unit.role === "PONTIC") {
+        target.toothSelection = "none";
+        // The fork recognizes a pontic only with both fields. Material remains
+        // absent because the canonical bridge DTO intentionally has none.
+        target.restorationType = "bridge";
+      }
     }
   }
 
@@ -259,14 +274,25 @@ function extractChart(value: unknown, status: ForkClinicalDraft["status"]): Fork
       drafts.push(draft(toothCode, ["O"], "TREATMENT", status, { code: "ROOT_CANAL", state: tooth.endo as "endo-medical-filling" | "endo-filling" | "endo-filling-incomplete" | "endo-glass-pin" | "endo-metal-pin" }, note));
     }
 
-    if (tooth.toothSelection === "no-tooth-after-extraction") {
-      drafts.push(draft(toothCode, ["O"], "FINDING", status, { code: "TOOTH_STATE", state: "MISSING" }, note));
+    const substrateState = tooth.toothSubstrate === "radix" ? "RADIX" :
+      tooth.toothSubstrate === "broken" ? "BROKEN" :
+      tooth.toothSubstrate === "crownprep" ? "CROWN_PREPARATION" : null;
+    // `tooth-base` is the fork's untouched display default, not a clinical
+    // delta. Importing it would fabricate 32 PRESENT entries on every save.
+    if (tooth.toothSelection === "none") {
+      drafts.push(draft(toothCode, ["O"], "FINDING", status, {
+        code: "TOOTH_STATE", state: tooth.extractionWound === true ? "EXTRACTION_WOUND" : "MISSING",
+      }, note));
+    } else if (tooth.toothSelection === "tooth-under-gum") {
+      drafts.push(draft(toothCode, ["O"], "FINDING", status, { code: "TOOTH_STATE", state: "SUBGINGIVAL" }, note));
+    }
+    if (substrateState !== null) {
+      drafts.push(draft(toothCode, ["O"], "FINDING", status, { code: "TOOTH_STATE", state: substrateState }, note));
     }
 
-    if (typeof tooth.restorationType === "string" && RESTORATION_TYPES.has(tooth.restorationType) &&
-        typeof tooth.restorationMaterial === "string" && RESTORATION_MATERIALS.has(tooth.restorationMaterial)) {
+    if (isValidFixedRestoration(tooth.restorationType, tooth.restorationMaterial)) {
       drafts.push(draft(toothCode, ["O"], "FINDING", status, {
-        code: "RESTORATION", restorationType: tooth.restorationType as "crown" | "inlay" | "onlay" | "veneer" | "bridge", material: tooth.restorationMaterial as "emax" | "gold" | "gradia" | "zircon" | "metal" | "metal-ceramic" | "telescope" | "temporary", marginalLeakage: false,
+        code: "RESTORATION", restorationType: tooth.restorationType, material: tooth.restorationMaterial as RestorationMaterial, marginalLeakage: (tooth.restorationType === "crown" || tooth.restorationType === "bridge") && tooth.crownLeakage === true,
       }, note));
     }
 
