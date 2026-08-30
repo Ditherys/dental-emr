@@ -272,6 +272,7 @@ export const recordCurrentImplantComponentInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   components: implantChainSchema,
+  chargeId: databaseUuid,
   occurredAt: isoTimestamp.optional(),
   idempotencyKey: boundedText(1, 128),
 }).strict();

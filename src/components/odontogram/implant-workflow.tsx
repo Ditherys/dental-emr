@@ -15,7 +15,7 @@ import {
 } from "@/app/(emr)/patients/[patientId]/odontogram-actions";
 import type { DentalImplantComponentDTO, ImplantComponentPayloadDTO } from "@/lib/odontogram/types";
 
-type Provenance = "PLAN_DESIGN" | "CURRENT_INTERNAL" | "CURRENT_EXTERNAL";
+type Provenance = "PLAN_DESIGN" | "CURRENT_INTERNAL";
 
 export interface ImplantWorkflowProps {
   patientId: string;
@@ -56,9 +56,9 @@ export function ImplantWorkflow({
     existingComponent ? "CURRENT_INTERNAL" : parentPlanItemId ? "PLAN_DESIGN" : "CURRENT_INTERNAL",
   );
   const [planItemIdInput, setPlanItemIdInput] = React.useState(parentPlanItemId ?? "");
-  const [providerId, setProviderId] = React.useState("");
-  const [executedAt, setExecutedAt] = React.useState(() => new Date().toISOString());
+  const [occurredAt, setOccurredAt] = React.useState(() => new Date().toISOString());
   const [chargeId, setChargeId] = React.useState("");
+  const idempotencyKeyRef = React.useRef(`implant-${crypto.randomUUID()}`);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [voidConfirmOpen, setVoidConfirmOpen] = React.useState(false);
@@ -92,7 +92,7 @@ export function ImplantWorkflow({
         component_kind: kind,
         attachment_value: null,
         depends_on_component_id,
-        provenance: provenance === "CURRENT_EXTERNAL" ? "PREEXISTING_EXTERNAL" : undefined,
+        provenance: undefined,
       };
     });
   }
@@ -114,15 +114,10 @@ export function ImplantWorkflow({
       setError("Chain must begin with fixture.");
       return;
     }
-    const hasFixtureOnly = chain.length === 1 && chain[0]!.kind === "FIXTURE";
-    if (hasFixtureOnly && provenance === "CURRENT_EXTERNAL") {
-      // external placeholder fixture has null dependency — valid
-    } else {
-      for (const c of chain) {
-        if ((c.kind === "ABUTMENT" || c.kind === "CROWN" || c.kind === "ATTACHMENT") && !(fixtureId.trim() || c.dependsOn.trim() || abutmentId.trim())) {
-          setError(`${c.kind} requires depends_on fixture/abutment.`);
-          return;
-        }
+    for (const c of chain) {
+      if ((c.kind === "ABUTMENT" || c.kind === "CROWN" || c.kind === "ATTACHMENT") && !(fixtureId.trim() || c.dependsOn.trim() || abutmentId.trim())) {
+        setError(`${c.kind} requires depends_on fixture/abutment.`);
+        return;
       }
     }
 
@@ -168,14 +163,13 @@ export function ImplantWorkflow({
             return;
           }
         } else {
-          const isExternal = provenance === "CURRENT_EXTERNAL";
           const res = await recordCurrentImplantComponentAction({
             actingBranchId,
             patientId,
             components,
-            treatingProviderId: isExternal ? null : providerId.trim() || null,
-            executedAt: isExternal ? null : executedAt.trim() || null,
-            chargeId: isExternal ? null : chargeId.trim() || null,
+            chargeId: chargeId.trim(),
+            occurredAt: occurredAt.trim() || undefined,
+            idempotencyKey: idempotencyKeyRef.current,
           });
           if (!res.ok) {
             setError(message(res.code));
@@ -315,7 +309,6 @@ export function ImplantWorkflow({
                 <Select data-testid="implant-provenance" value={provenance} onChange={(e) => setProvenance(e.target.value as Provenance)}>
                   <option value="PLAN_DESIGN">Plan design (DRAFT only)</option>
                   <option value="CURRENT_INTERNAL">Current — internal</option>
-                  <option value="CURRENT_EXTERNAL">Current — pre-existing external (placeholder fixture)</option>
                 </Select>
               </label>
               {provenance === "PLAN_DESIGN" && (
@@ -327,12 +320,8 @@ export function ImplantWorkflow({
               {provenance === "CURRENT_INTERNAL" && (
                 <div className="grid gap-2">
                   <label className="grid gap-1 text-xs font-medium">
-                    Treating provider id
-                    <input data-testid="implant-provider" value={providerId} onChange={(e) => setProviderId(e.target.value)} placeholder="provider uuid" className="h-9 rounded-md border bg-background px-2 text-sm" />
-                  </label>
-                  <label className="grid gap-1 text-xs font-medium">
-                    Executed at (ISO)
-                    <input data-testid="implant-executed-at" value={executedAt} onChange={(e) => setExecutedAt(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm" />
+                    Occurred at (ISO)
+                    <input data-testid="implant-occurred-at" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} className="h-9 rounded-md border bg-background px-2 text-sm" />
                   </label>
                   <label className="grid gap-1 text-xs font-medium">
                     Charge id
@@ -340,12 +329,7 @@ export function ImplantWorkflow({
                   </label>
                 </div>
               )}
-              {provenance === "CURRENT_EXTERNAL" && (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-900">
-                  Pre-existing external placeholder: CURRENT fixture with UNKNOWN details, no provider/charge, null dependency. Amendment later can add crown via successor.
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">{provenance === "PLAN_DESIGN" ? "DRAFT designs update in place; frozen after PRESENTED." : provenance === "CURRENT_EXTERNAL" ? "External placeholder preserves history without prior chain." : "CURRENT is sealed; edits use successor/void only."}</p>
+              <p className="text-xs text-muted-foreground">{provenance === "PLAN_DESIGN" ? "DRAFT designs update in place; frozen after PRESENTED." : "CURRENT is sealed, charge-linked, and attributed to your linked provider; edits use successor/void only."}</p>
             </div>
           )}
 
@@ -354,7 +338,7 @@ export function ImplantWorkflow({
               <p className="text-xs font-medium">Confirmation</p>
               <div className="rounded border bg-muted/30 px-2.5 py-2 text-xs">
                 <p>Tooth {toothFdi} · {payloadsPreview.map((p) => p.component_kind).join(" → ")}</p>
-                <p className="mt-1">Provenance: {provenance} {provenance === "CURRENT_EXTERNAL" ? "(fixture placeholder, PREEXISTING_EXTERNAL)" : ""}</p>
+                <p className="mt-1">Provenance: {provenance}</p>
                 {payloadsPreview.some((p) => p.depends_on_component_id) && <p className="mt-1">Dependencies: {payloadsPreview.filter((p) => p.depends_on_component_id).map((p) => `${p.component_kind}→${String(p.depends_on_component_id).slice(0, 8)}`).join(", ")}</p>}
               </div>
               {isEditingCurrent && <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs text-amber-900">Amend creates a successor CURRENT component; void requires confirmation.</div>}

@@ -324,6 +324,25 @@ describe("odontogram service RPC contract", () => {
     });
   });
 
+  it("binds the provider-free charge-linked implant v3 contract exactly", async () => {
+    const components = [{ tooth_fdi: "16", ordinal: 1, component_kind: "FIXTURE" as const }];
+    rpc.mockResolvedValueOnce({ data: [{ component_id: componentId, version: 1 }], error: null });
+    rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });
+
+    await expect(recordCurrentImplantComponent({
+      actingBranchId: branchId, patientId, components, chargeId, occurredAt: recordedAt, idempotencyKey: "implant-v3-contract",
+    })).resolves.toEqual({ componentId, patientId, version: 1 });
+
+    expect(rpc).toHaveBeenCalledWith("record_current_implant_component_v3", {
+      p_acting_branch_id: branchId,
+      p_patient_id: patientId,
+      p_components: components,
+      p_occurred_at: recordedAt,
+      p_charge_id: chargeId,
+      p_idempotency_key: "implant-v3-contract",
+    });
+  });
+
   it("binds O5 clinical entry mutations to their exact contracts", async () => {
     rpc.mockResolvedValueOnce({ data: [{ entry_id: entryId, patient_id: patientId, version: 1 }], error: null });
     rpc.mockResolvedValueOnce({ data: [{ patient_id: patientId }], error: null });

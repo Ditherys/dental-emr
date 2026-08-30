@@ -328,11 +328,12 @@ export async function updateDraftPlanImplantDesign(input: unknown) {
 
 export async function recordCurrentImplantComponent(input: unknown) {
   const value = recordCurrentImplantComponentInputSchema.parse(input);
-  const row = implantMutationRowSchema.parse(firstRow(await callRpc("record_current_implant_component_v3" as FunctionName, {
+  const row = implantMutationRowSchema.parse(firstRow(await callRpc("record_current_implant_component_v3", {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_components: value.components,
     p_occurred_at: value.occurredAt ?? null,
+    p_charge_id: value.chargeId,
     p_idempotency_key: value.idempotencyKey,
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "IMPLANT_COMPONENT", row.component_id);

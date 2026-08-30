@@ -9024,20 +9024,34 @@ export type Database = {
           version: number
         }[]
       }
-      record_current_bridge_v3: {
-        Args: {
-          p_acting_branch_id: string
-          p_idempotency_key: string
-          p_occurred_at: string
-          p_charge_id: string
-          p_patient_id: string
-          p_units: Json
-        }
-        Returns: {
-          bridge_id: string
-          version: number
-        }[]
-      }
+      record_current_bridge_v3:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_charge_id: string
+              p_idempotency_key: string
+              p_occurred_at: string
+              p_patient_id: string
+              p_units: Json
+            }
+            Returns: {
+              bridge_id: string
+              version: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_idempotency_key: string
+              p_occurred_at: string
+              p_patient_id: string
+              p_units: Json
+            }
+            Returns: {
+              bridge_id: string
+              version: number
+            }[]
+          }
       record_current_implant_component: {
         Args: {
           p_acting_branch_id: string
@@ -9053,19 +9067,34 @@ export type Database = {
           version: number
         }[]
       }
-      record_current_implant_component_v3: {
-        Args: {
-          p_acting_branch_id: string
-          p_components: Json
-          p_idempotency_key: string
-          p_occurred_at: string
-          p_patient_id: string
-        }
-        Returns: {
-          component_id: string
-          version: number
-        }[]
-      }
+      record_current_implant_component_v3:
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_charge_id: string
+              p_components: Json
+              p_idempotency_key: string
+              p_occurred_at: string
+              p_patient_id: string
+            }
+            Returns: {
+              component_id: string
+              version: number
+            }[]
+          }
+        | {
+            Args: {
+              p_acting_branch_id: string
+              p_components: Json
+              p_idempotency_key: string
+              p_occurred_at: string
+              p_patient_id: string
+            }
+            Returns: {
+              component_id: string
+              version: number
+            }[]
+          }
       record_direct_treatment_with_charge: {
         Args: {
           p_acting_branch_id: string

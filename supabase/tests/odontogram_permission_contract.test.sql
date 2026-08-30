@@ -49,7 +49,7 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.void_current_bridge(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_implant_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)','execute')
+  and has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_implant_component(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_implant_component(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_periodontal_examination(uuid,uuid,uuid,text)','execute')
@@ -60,6 +60,11 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)','execute')
   and has_function_privilege('authenticated','public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)','execute'),
   'authenticated receives every reviewed O5/O8 signature'
+);
+
+select extensions.ok(
+  not has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)','execute'),
+  'authenticated is denied the retired five-argument implant v3 overload'
 );
 
 select extensions.ok(

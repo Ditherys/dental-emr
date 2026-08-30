@@ -264,7 +264,7 @@ select extensions.is(
   (select component_id is not null from public.record_current_implant_component_v3(
     'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
     '[{"tooth_fdi":"37","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"37","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"37","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":2}]'::jsonb,
-    statement_timestamp(),(select charge_id from o5_completion_charge),'o5-current-implant-v3'
+    '2026-08-30T00:00:00+00'::timestamptz,(select charge_id from o5_completion_charge),'o5-current-implant-v3'
   )),
   true,
   'standalone current implant RPC persists and returns the scoped patient'
@@ -286,6 +286,23 @@ grant select on o5_current_fixture to authenticated;
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
+select extensions.is(
+  (select component_id from public.record_current_implant_component_v3(
+    'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
+    '[{"tooth_fdi":"37","ordinal":1,"component_kind":"FIXTURE"},{"tooth_fdi":"37","ordinal":2,"component_kind":"ABUTMENT","depends_on_ordinal":1},{"tooth_fdi":"37","ordinal":3,"component_kind":"CROWN","depends_on_ordinal":2}]'::jsonb,
+    '2026-08-30T00:00:00+00'::timestamptz,(select charge_id from o5_completion_charge),'o5-current-implant-v3'
+  )),
+  (select component_id from o5_current_fixture),
+  'same implant idempotency key returns the canonical component identity'
+);
+select extensions.throws_ok(
+  $$select public.record_current_implant_component_v3(
+    'e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001',
+    '[{"tooth_fdi":"36","ordinal":1,"component_kind":"FIXTURE"}]'::jsonb,
+    statement_timestamp(),(select charge_id from o5_completion_charge),'o5-current-implant-v3'
+  )$$,
+  'P0001','idempotency conflict','changed implant request fingerprint conflicts without a second graph'
+);
 select extensions.is(
   (select version from public.amend_current_implant_component(
     'e5030000-0000-0000-0000-000000000001',
