@@ -186,8 +186,12 @@ describe("fork adapter", () => {
       { toothCode: "24", kind: "IMPLANT", status: "ACTIVE" },
     ]);
     expect(forkRelationshipContextFromDto(input)).toEqual({
-      bridgeToothCodes: ["21", "22", "23"],
-      implantToothCodes: ["24"],
+      relationshipBaselines: [
+        { toothCode: "21", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+        { toothCode: "22", kind: "BRIDGE", status: "ACTIVE", role: "PONTIC" },
+        { toothCode: "23", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+        { toothCode: "24", kind: "IMPLANT", status: "ACTIVE" },
+      ],
       periodontalToothCodes: [],
     });
   });
@@ -295,7 +299,25 @@ describe("fork adapter", () => {
     };
 
     expect(forkPayloadToClinicalDraft(payload)).toEqual([]);
-    expect(forkPayloadToClinicalDraft(payload, { relationshipToothCodes: ["11", "12", "13", "15"] })).toEqual([]);
+    expect(forkPayloadToClinicalDraft(payload, { relationshipBaselines: [
+      { toothCode: "11", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+      { toothCode: "12", kind: "BRIDGE", status: "ACTIVE", role: "PONTIC" },
+      { toothCode: "13", kind: "BRIDGE", status: "ACTIVE", role: "ABUTMENT" },
+      { toothCode: "15", kind: "IMPLANT", status: "ACTIVE" },
+    ] })).toEqual([]);
+  });
+
+  it("keeps current and planned relationship baselines isolated", () => {
+    const payload = {
+      version: "2.20",
+      teeth: { "11": { toothSelection: "none" } },
+      plan: { version: "2.20", teeth: { "11": { toothSelection: "none" } } },
+    };
+    const baselines = [{ toothCode: "11", kind: "BRIDGE" as const, status: "ACTIVE" as const, role: "PONTIC" as const }];
+    const drafts = forkPayloadToClinicalDraft(payload, { relationshipBaselines: baselines });
+    expect(drafts).toEqual([
+      expect.objectContaining({ toothCode: "11", status: "PLANNED", detail: { code: "TOOTH_STATE", state: "MISSING" } }),
+    ]);
   });
 
   it("preserves crown leakage only for valid crown or bridge restorations", () => {

@@ -67,9 +67,17 @@ export type ForkClinicalDraft = {
  * Callers use this context to route confirmed structural changes through the
  * existing bridge/implant actions with the canonical DTO as the authority.
  */
+/** Canonical relationship overlay baseline. IDs intentionally stay out of the
+ * renderer payload; the save boundary resolves them from the server DTO. */
+export type ForkRelationshipBaseline = {
+  toothCode: string;
+  kind: "BRIDGE" | "IMPLANT";
+  status: "ACTIVE" | "PLANNED";
+  role?: "ABUTMENT" | "PONTIC";
+};
+
 export type ForkRelationshipContext = {
-  bridgeToothCodes: readonly string[];
-  implantToothCodes: readonly string[];
+  relationshipBaselines: readonly ForkRelationshipBaseline[];
   periodontalToothCodes: readonly string[];
 };
 
@@ -87,42 +95,21 @@ export type ForkPeriodontalDraft = {
 };
 
 export function forkRelationshipContextFromDto(dto: PatientOdontogramDTO): ForkRelationshipContext {
-  const bridgeToothCodes = new Set<string>();
-  for (const bridge of dto.bridges) {
-    if (bridge.voided_at !== null || bridge.event_state === "VOIDED" || bridge.event_state === "SUPERSEDED") continue;
-    for (const unit of bridge.units) bridgeToothCodes.add(unit.tooth_fdi);
-  }
-  const implantToothCodes = new Set<string>();
-  for (const chain of dto.implantChains) {
-    if (chain.event_state === "VOIDED" || chain.event_state === "SUPERSEDED") continue;
-    implantToothCodes.add(chain.tooth_fdi);
-  }
   const periodontalToothCodes = new Set<string>();
   for (const examination of dto.periodontalExaminations) {
     for (const site of examination.sites) periodontalToothCodes.add(site.tooth_fdi);
     for (const tooth of examination.tooth) periodontalToothCodes.add(tooth.tooth_fdi);
   }
   return {
-    bridgeToothCodes: [...bridgeToothCodes],
-    implantToothCodes: [...implantToothCodes],
+    relationshipBaselines: buildForkRelationshipBaselines(dto),
     periodontalToothCodes: [...periodontalToothCodes],
   };
 }
 
-/**
- * Canonical relationship context that a later audited action may use to decide
- * whether a fork overlay is a baseline rather than a clinical condition. It
- * intentionally contains no relationship, component, patient, or tenant IDs.
- */
-export type ForkRelationshipBaseline = {
-  toothCode: string;
-  kind: "BRIDGE" | "IMPLANT";
-  status: "ACTIVE" | "PLANNED";
-  role?: "ABUTMENT" | "PONTIC";
-};
-
 export type ForkClinicalDraftOptions = {
-  /** Canonical relationship overlay teeth; never derived from untrusted JSON. */
+  /** Status-qualified canonical relationship baselines. */
+  relationshipBaselines?: readonly ForkRelationshipBaseline[];
+  /** @deprecated Use relationshipBaselines so ACTIVE/PLANNED cannot cross. */
   relationshipToothCodes?: readonly string[];
 };
 
@@ -426,11 +413,16 @@ export function forkPayloadToClinicalDraft(
   options: ForkClinicalDraftOptions = {},
 ): readonly ForkClinicalDraft[] {
   if (!isRecord(payload)) return [];
-  const relationshipToothCodes = new Set(
-    (options.relationshipToothCodes ?? []).filter((toothCode) => FDI_TOOTH_SET.has(toothCode)),
+  const relationshipCodesFor = (status: ForkClinicalDraft["status"]) => new Set(
+    (options.relationshipBaselines
+      ? options.relationshipBaselines
+        .filter((baseline) => baseline.status === status)
+        .map((baseline) => baseline.toothCode)
+      : (options.relationshipToothCodes ?? []))
+      .filter((toothCode) => FDI_TOOTH_SET.has(toothCode)),
   );
   const statusPayload = isRecord(payload.status) ? payload.status : payload;
-  const drafts = extractChart(statusPayload, "ACTIVE", relationshipToothCodes);
-  if (isRecord(payload.plan)) drafts.push(...extractChart(payload.plan, "PLANNED", relationshipToothCodes));
+  const drafts = extractChart(statusPayload, "ACTIVE", relationshipCodesFor("ACTIVE"));
+  if (isRecord(payload.plan)) drafts.push(...extractChart(payload.plan, "PLANNED", relationshipCodesFor("PLANNED")));
   return drafts;
 }
