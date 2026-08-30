@@ -24,6 +24,22 @@ describe("implant domain", () => {
     expect(validateImplantChain([{ ...internalChain[0]!, recordKind: "PLAN_DESIGN" }, internalChain[1]!]).ok).toBe(false);
   });
 
+  it("rejects a second fixture root or a disconnected component chain", () => {
+    expect(
+      validateImplantChain([
+        ...internalChain,
+        { ...internalChain[0]!, id: "second-fixture", ordinal: 4 },
+      ]),
+    ).toMatchObject({ ok: false });
+
+    expect(
+      validateImplantChain([
+        internalChain[0]!,
+        { ...internalChain[1]!, dependsOnComponentId: "missing-fixture" },
+      ]),
+    ).toMatchObject({ ok: false });
+  });
+
   it("allows an explicit pre-existing external CURRENT fixture placeholder", () => {
     const placeholder: ImplantComponentRecord = {
       ...internalChain[0]!,

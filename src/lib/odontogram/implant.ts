@@ -28,14 +28,21 @@ export function validateImplantChain(
   if (components.length === 0) return invalid("implant chain requires a component");
   const byId = new Map<string, ImplantComponentRecord>();
   const ordinals = new Set<number>();
+  let fixtureCount = 0;
+  const root = [...components].sort((a, b) => a.ordinal - b.ordinal)[0]!;
 
   for (const component of [...components].sort((a, b) => a.ordinal - b.ordinal)) {
     if (byId.has(component.id)) return invalid("implant component ids must be unique");
     if (ordinals.has(component.ordinal) || component.ordinal < 1) return invalid("implant ordinals must be positive and unique");
+    if (component.patientId !== root.patientId || component.toothFdi !== root.toothFdi) {
+      return invalid("implant chain components must remain at the same patient and tooth position");
+    }
     ordinals.add(component.ordinal);
 
     if (component.componentKind === "FIXTURE") {
       if (component.dependsOnComponentId !== null) return invalid("fixture cannot depend on another component");
+      fixtureCount += 1;
+      if (fixtureCount > 1) return invalid("implant chain must contain exactly one fixture root");
       byId.set(component.id, component);
       continue;
     }
@@ -57,6 +64,7 @@ export function validateImplantChain(
     byId.set(component.id, component);
   }
 
+  if (fixtureCount !== 1) return invalid("implant chain must contain exactly one fixture root");
   return { ok: true, errors: [], value: components };
 }
 
