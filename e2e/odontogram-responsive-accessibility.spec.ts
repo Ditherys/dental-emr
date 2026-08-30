@@ -27,13 +27,13 @@ test("@responsive odontogram remains touch-safe and non-color-dependent", async 
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
   await expect(page.locator("body")).not.toHaveCSS("overflow-x", "auto");
 
-  const tooth11 = page.getByRole("button", { name: /tooth 11/i }).first();
+  const tooth11 = page.locator('.tooth-tile.side-view[data-tooth="11"]');
   await expect(tooth11).toBeVisible();
-  await expect(tooth11).toHaveAttribute("data-fdi", "11");
+  await expect(tooth11).toHaveAttribute("data-tooth", "11");
 
   await tooth11.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("button", { name: /tooth 21/i }).first()).toBeFocused();
+  await expect(page.locator('.tooth-tile.side-view[data-tooth="21"]')).toBeFocused();
   await page.keyboard.press("ArrowLeft");
   await expect(tooth11).toBeFocused();
 });

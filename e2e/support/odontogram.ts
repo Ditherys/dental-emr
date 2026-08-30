@@ -79,5 +79,5 @@ export async function openOdontogram(
 ) {
   await page.goto(odontogramClinicalHref(patientId, environment));
   await page.getByRole("button", { name: "Odontogram", exact: true }).click();
-  await expect(page.getByTestId("measured-chart")).toBeVisible();
+  await expect(page.getByTestId("fork-odontogram")).toBeVisible();
 }

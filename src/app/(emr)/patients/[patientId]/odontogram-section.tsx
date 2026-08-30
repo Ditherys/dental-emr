@@ -88,7 +88,7 @@ export function OdontogramSection({
   const handleSelect = React.useCallback(
     (fdi: number) => {
       const active = document.activeElement as HTMLElement | null;
-      if (active?.matches?.('[data-fdi]')) lastFocusedRef.current = active;
+      if (active?.matches?.('.tooth-tile.side-view[data-tooth]')) lastFocusedRef.current = active;
       setSelectedFdi(fdi);
       setSheetOpen(window.matchMedia?.("(max-width: 1023px)")?.matches ?? false);
     },
@@ -200,12 +200,12 @@ export function OdontogramSection({
     setSheetOpen(false);
     setDirectTreatmentRequested(false);
     // Return focus to the previously selected tooth for keyboard continuity.
-    const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`[data-fdi="${selectedFdi}"]`);
+    const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`.tooth-tile.side-view[data-tooth="${selectedFdi}"]`);
     // Defer to next frame so sheet/dialog unmount does not steal focus.
     requestAnimationFrame(() => {
       if (el && document.contains(el)) el.focus();
       else {
-        const first = document.querySelector<HTMLElement>(`[data-fdi]`);
+        const first = document.querySelector<HTMLElement>('.tooth-tile.side-view[data-tooth]');
         first?.focus();
       }
     });

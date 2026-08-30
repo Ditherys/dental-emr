@@ -9,6 +9,7 @@ import {
   OdontogramChartSurface,
   OdontogramProvider,
   onStateChange,
+  setNumberingSystem as setForkNumberingSystem,
   setPlanChart,
   setToothAnatomy,
   ToothControlsSurface,
@@ -50,6 +51,8 @@ const FIXED_FDI_TEETH = new Set([
   48, 47, 46, 45, 44, 43, 42, 41,
   31, 32, 33, 34, 35, 36, 37, 38,
 ]);
+
+type ForkNumberingSystem = "FDI" | "UNIVERSAL" | "PALMER";
 
 function RuntimeBridge({ status, plan, relationshipBaselines, onDraftChange, onError }: RuntimeBridgeProps) {
   const baselineKeys = React.useRef<ReadonlySet<string>>(new Set());
@@ -149,6 +152,13 @@ export function ForkOdontogram({
   const payload = React.useMemo(() => buildForkPayload(dto), [dto]);
   const relationshipBaselines = React.useMemo(() => buildForkRelationshipBaselines(dto), [dto]);
 
+  const [numberingSystem, setNumberingSystem] = React.useState<ForkNumberingSystem>("FDI");
+
+  const handleNumberingChange = React.useCallback((next: ForkNumberingSystem) => {
+    setNumberingSystem(next);
+    setForkNumberingSystem(next);
+  }, []);
+
   const handleChartSelection = React.useCallback((event: React.SyntheticEvent) => {
     const fdi = selectedFdiFromEvent(event.target);
     if (fdi !== null) onSelect(fdi);
@@ -164,7 +174,8 @@ export function ForkOdontogram({
       <OdontogramProvider
         key={patientKey}
         language="en"
-        numberingSystem="FDI"
+        numberingSystem={numberingSystem}
+        onNumberingChange={handleNumberingChange}
         readOnly={!canWriteClinical}
         enableNotes
         enableIcdas
@@ -182,6 +193,22 @@ export function ForkOdontogram({
           onDraftChange={onDraftChange}
           onError={onError}
         />
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+          <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">
+            Tooth notation
+          </label>
+          <select
+            id={`fork-numbering-${patientKey}`}
+            data-testid="fork-numbering"
+            value={numberingSystem}
+            onChange={(event) => handleNumberingChange(event.target.value as ForkNumberingSystem)}
+            className="min-h-11 rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="FDI">FDI</option>
+            <option value="UNIVERSAL">Universal</option>
+            <option value="PALMER">Palmer</option>
+          </select>
+        </div>
         <div className="dental-emr-fork-layout">
           <main className="dental-emr-fork-chart-column">
             <OdontogramChartSurface />

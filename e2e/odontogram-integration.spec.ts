@@ -21,10 +21,10 @@ test("@odontogram a dentist records a clinical finding and it survives a reload"
   await signInDentistWithTotp(page, environment);
   await openOdontogram(page, patientId, environment);
 
-  const tooth16 = page.locator('button[data-fdi="16"]');
+  const tooth16 = page.locator('.tooth-tile.side-view[data-tooth="16"]');
   await tooth16.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('button[data-fdi="15"]')).toBeFocused();
+  await expect(page.locator('.tooth-tile.side-view[data-tooth="15"]')).toBeFocused();
   await page.keyboard.press("ArrowLeft");
   await page.keyboard.press("Enter");
 
@@ -44,8 +44,8 @@ test("@odontogram a dentist records a clinical finding and it survives a reload"
   await expect(inspector).toContainText("CARIES · ACTIVE");
   await page.reload();
   await page.getByRole("button", { name: "Odontogram", exact: true }).click();
-  await expect(page.getByTestId("measured-chart")).toBeVisible();
-  await expect(tooth16).toHaveAttribute("aria-label", /CARIES ACTIVE FINDING surfaces O,M/);
+  await expect(page.getByTestId("fork-odontogram")).toBeVisible();
+  await expect(page.locator('.tooth-tile.side-view[data-tooth="16"] svg [id="caries-occlusal"]')).toHaveAttribute("data-active", "1");
 });
 
 test("@odontogram a receptionist cannot open the clinical odontogram route", async ({
@@ -67,5 +67,5 @@ test("@odontogram a receptionist cannot open the clinical odontogram route", asy
   await expect(
     page.getByText("Your current access does not include the clinical record."),
   ).toBeVisible();
-  await expect(page.getByTestId("measured-chart")).toHaveCount(0);
+  await expect(page.getByTestId("fork-odontogram")).toHaveCount(0);
 });

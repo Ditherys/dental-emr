@@ -541,11 +541,11 @@ test("@responsive the odontogram is keyboard and touch safe", async ({ page }, t
   await expectNoAxeViolations(page, "odontogram");
   await expectNoHorizontalOverflow(page, "odontogram");
   await expectUsableTargets(page, "odontogram");
-  await expectCoarsePointerTargets(page, "odontogram", 'button[data-fdi]');
+  await expectCoarsePointerTargets(page, "odontogram", '.tooth-tile.side-view[data-tooth]');
 
-  await page.locator('button[data-fdi="16"]').focus();
+  await page.locator('.tooth-tile.side-view[data-tooth="16"]').focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('button[data-fdi="15"]')).toBeFocused();
+  await expect(page.locator('.tooth-tile.side-view[data-tooth="15"]')).toBeFocused();
   await page.keyboard.press("Enter");
   const inspectorDialog = page
     .getByRole("dialog")
@@ -553,5 +553,5 @@ test("@responsive the odontogram is keyboard and touch safe", async ({ page }, t
   await expect(inspectorDialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(inspectorDialog).toBeHidden();
-  await expect(page.locator('button[data-fdi="15"]')).toBeFocused();
+  await expect(page.locator('.tooth-tile.side-view[data-tooth="15"]')).toBeFocused();
 });
