@@ -165,3 +165,16 @@ describe("state current projection (renderer-independent chart)", () => {
     expect(keys).toEqual(["clinicalCode", "kind", "recordedAt", "status", "surfaces"]);
   });
 });
+
+describe("state feature detail boundary", () => {
+  it("carries an optional renderer-independent detail without changing current-entry projection", () => {
+    const current = buildCurrentProjection([
+      entry({
+        clinicalCode: "ROOT_CANAL",
+        detail: { code: "ROOT_CANAL", state: "endo-filling" },
+      }),
+    ]);
+
+    expect(current.get(16)?.get("O")?.clinicalCode).toBe("ROOT_CANAL");
+  });
+});

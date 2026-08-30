@@ -11,7 +11,12 @@
  * module. The output is plain JSON-serializable data.
  */
 
-import { FIVE_ANATOMIC_SURFACES, type Surface } from "./clinical-codes";
+import {
+  FIVE_ANATOMIC_SURFACES,
+  type ClinicalFeatureCode,
+  type Surface,
+} from "./clinical-codes";
+import type { ClinicalFeatureDetail } from "./feature-contract";
 
 export type ClinicalEntryKind = "FINDING" | "TREATMENT" | "LEGACY_MARKER";
 export type ClinicalStatus = "ACTIVE" | "PLANNED" | "COMPLETED" | "REFERRED";
@@ -21,12 +26,14 @@ export interface ClinicalEntry {
   patientId: string;
   toothFdi: number;
   kind: ClinicalEntryKind;
-  clinicalCode: string;
+  clinicalCode: ClinicalFeatureCode;
   surfaces: readonly Surface[];
   status: ClinicalStatus;
   recordedAt: string;
   voidedAt: string | null;
   supersededByEntryId: string | null;
+  /** O1 in-memory detail; O2 supplies the persisted representation. */
+  detail?: ClinicalFeatureDetail;
 }
 
 export interface CurrentEntryCell {

@@ -36,6 +36,53 @@ export type Finding =
   | "FRACTURE"
   | "OTHER";
 
+/**
+ * The renderer-independent feature vocabulary reviewed for the measured
+ * odontogram. This is intentionally broader than the legacy Phase 15 finding
+ * vocabulary: O2 persists the additional feature details without making a
+ * renderer representation canonical.
+ */
+export type ClinicalFeatureCode =
+  | "PRESENT"
+  | "MISSING"
+  | "EXTRACTION_WOUND"
+  | "SUBGINGIVAL"
+  | "RADIX"
+  | "BROKEN"
+  | "CROWN_PREPARATION"
+  | "IMPLANT"
+  | "ROOT_CANAL"
+  | "CARIES"
+  | "RESTORATION"
+  | "CROWN"
+  | "BRIDGE"
+  | "SEALANT"
+  | "FRACTURE"
+  | "OTHER"
+  | "ORTHODONTIC"
+  | "PERIAPICAL_LESION";
+
+export const CLINICAL_FEATURE_CODES: readonly ClinicalFeatureCode[] = [
+  "PRESENT",
+  "MISSING",
+  "EXTRACTION_WOUND",
+  "SUBGINGIVAL",
+  "RADIX",
+  "BROKEN",
+  "CROWN_PREPARATION",
+  "IMPLANT",
+  "ROOT_CANAL",
+  "CARIES",
+  "RESTORATION",
+  "CROWN",
+  "BRIDGE",
+  "SEALANT",
+  "FRACTURE",
+  "OTHER",
+  "ORTHODONTIC",
+  "PERIAPICAL_LESION",
+];
+
 export const FINDINGS: readonly Finding[] = [
   "CARIES",
   "RESTORATION",
