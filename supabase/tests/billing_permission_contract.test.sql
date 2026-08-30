@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(3);
+select extensions.plan(4);
 
 select extensions.is(
   (select count(*)::integer from public.permissions where code in (
@@ -10,6 +10,11 @@ select extensions.is(
   )),
   8,
   'each granular billing permission exists exactly once'
+);
+
+select extensions.ok(
+  exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='create_procedure_installment_schedule' and p.prosecdef and p.proconfig=array['search_path=""']::text[]),
+  'installment expectation RPC is a hardened security-definer boundary'
 );
 
 select extensions.set_eq(

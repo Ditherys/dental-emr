@@ -26,7 +26,6 @@ begin
  return jsonb_build_object('schedule_id',v_schedule,'procedure_case_id',p_procedure_case_id,'status','ACTIVE','version',1,'items',(select jsonb_agg(jsonb_build_object('ordinal',ordinal,'due_date',due_date,'expected_centavos',expected_centavos::text) order by ordinal) from public.procedure_installment_schedule_items where organization_id=v_org and schedule_id=v_schedule));
 end $$;
 revoke all on function public.create_procedure_installment_schedule(uuid,uuid,jsonb,text) from public,anon,authenticated,service_role;
-grant execute on function public.create_procedure_installment_schedule(uuid,uuid,jsonb,text) to authenticated;
 
 -- Dentists may record money only for a patient they can clinically access at
 -- the active receiving branch. The actor is always auth.uid(), never a payload.
@@ -45,4 +44,3 @@ begin
  return query select v_payment;
 end $$;
 revoke all on function public.record_payment(uuid,uuid,uuid,bigint,text,text) from public,anon,authenticated,service_role;
-grant execute on function public.record_payment(uuid,uuid,uuid,bigint,text,text) to authenticated;

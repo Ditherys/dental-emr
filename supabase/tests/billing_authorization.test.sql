@@ -23,7 +23,7 @@ select extensions.is(
       and not has_function_privilege('service_role', proc.oid, 'execute')
   ),
   23,
-  'only authenticated has execute on all twenty-three public billing RPCs'
+  'legacy billing RPC grant surface remains authenticated-only'
 );
 
 select extensions.is(
@@ -46,8 +46,10 @@ select extensions.is(
       and proc.proconfig = array['search_path=""']::text[]
   ),
   23,
-  'every public billing RPC is a SECURITY DEFINER with an empty search path'
+  'every legacy public billing RPC is a SECURITY DEFINER with an empty search path'
 );
+
+select extensions.ok(has_function_privilege('authenticated','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute') and not has_function_privilege('anon','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute') and not has_function_privilege('service_role','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute'), 'schedule RPC is browser-authenticated only');
 
 select extensions.ok(
   not exists (
