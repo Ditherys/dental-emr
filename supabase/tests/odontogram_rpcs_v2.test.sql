@@ -157,6 +157,14 @@ select extensions.ok((select data ?& array['entries','bridges','implantChains','
 
 select extensions.is((select version from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),1,'owner records a scoped clinical entry');
 reset role;
+create temp table o5_initial(entry_id uuid);
+insert into o5_initial select entry_id from private.tooth_clinical_entry_record_idempotency where idempotency_key='o5-clinical-entry-0001';
+grant select on o5_initial to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
+select extensions.is((select entry_id from public.record_tooth_clinical_entry('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),(select entry_id from o5_initial),'same idempotency key returns the existing non-null clinical entry');
+reset role;
 create temp table o5_clinical(entry_id uuid);
 insert into o5_clinical select id from public.tooth_clinical_entries where organization_id='e5020000-0000-0000-0000-000000000001' and tooth_code='16' and supersedes_entry_id is null;
 grant select on o5_clinical to authenticated;
