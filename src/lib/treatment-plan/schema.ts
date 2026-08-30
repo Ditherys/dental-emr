@@ -3,13 +3,20 @@ import "server-only";
 import { z } from "zod";
 
 import { moneyCentavoStringSchema } from "@/lib/billing/schema";
-import { toothCodeSchema } from "@/lib/odontogram/schema";
+import { toothClinicalSurfaceSchema, toothCodeSchema } from "@/lib/odontogram/schema";
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
 const isoTimestamp = z.iso.datetime({ offset: true });
 const boundedNullableText = (maximum: number) => z.string().trim().max(maximum).nullable().optional();
 
 export const treatmentPlanStatusSchema = z.enum(["DRAFT", "PRESENTED", "ACKNOWLEDGED"]);
+export const treatmentPrioritySchema = z.enum(["URGENT", "HIGH", "ROUTINE", "ELECTIVE"]);
+export const planItemDetailFields = {
+  priority: treatmentPrioritySchema.optional(),
+  sequenceNo: z.number().int().min(1).max(999).optional(),
+  surfaces: z.array(toothClinicalSurfaceSchema).max(7).optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+};
 
 const titleSchema = () => z.string().trim().min(1).max(200);
 const expectedVersionSchema = z.number().int().positive();
@@ -49,6 +56,7 @@ export const addTreatmentPlanItemInputSchema = z.object({
   toothCode: toothCodeSchema.nullable().optional(),
   description: z.string().trim().min(1).max(2000),
   estimatedFeeCentavos: estimatedFeeCentavosSchema,
+  ...planItemDetailFields,
 }).strict();
 
 export const updateTreatmentPlanItemInputSchema = z.object({
@@ -60,6 +68,7 @@ export const updateTreatmentPlanItemInputSchema = z.object({
   toothCode: toothCodeSchema.nullable().optional(),
   description: z.string().trim().min(1).max(2000),
   estimatedFeeCentavos: estimatedFeeCentavosSchema,
+  ...planItemDetailFields,
 }).strict();
 
 export const removeTreatmentPlanItemInputSchema = z.object({
@@ -174,6 +183,11 @@ export const treatmentPlanItemJsonSchema = z.object({
   toothCode: toothCodeSchema.nullable(),
   description: z.string().max(2000),
   estimatedFeeCentavos: moneyCentavoStringSchema.nullable(),
+  priority: treatmentPrioritySchema,
+  sequenceNo: z.number().int().min(1).max(999),
+  surfaces: z.array(toothClinicalSurfaceSchema).max(7),
+  notes: z.string().max(4000).nullable(),
+  procedureCaseId: databaseUuid.nullable(),
   createdAt: isoTimestamp,
 }).strict();
 

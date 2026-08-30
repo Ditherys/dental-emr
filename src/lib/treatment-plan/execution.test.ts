@@ -3,11 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   canCorrectExecution,
   isExecutionTerminal,
+  isProcedureCaseTerminal,
+  validateProcedureCaseEvent,
   validateExecutionTransition,
   validateTreatmentCompletion,
 } from "./execution";
 
 describe("treatment-plan execution rules", () => {
+  it("allows only append-only procedure-case event kinds with required correction rationale", () => {
+    expect(validateProcedureCaseEvent({ eventType: "TREATMENT", reason: null })).toEqual({ ok: true });
+    expect(validateProcedureCaseEvent({ eventType: "FOLLOW_UP", reason: null })).toEqual({ ok: true });
+    expect(validateProcedureCaseEvent({ eventType: "CORRECTION", reason: "Synthetic correction" })).toEqual({ ok: true });
+    expect(validateProcedureCaseEvent({ eventType: "CORRECTION", reason: " " }).ok).toBe(false);
+  });
+
+  it("treats completed and cancelled procedure cases as terminal", () => {
+    expect(isProcedureCaseTerminal("COMPLETED")).toBe(true);
+    expect(isProcedureCaseTerminal("CANCELLED")).toBe(true);
+    expect(isProcedureCaseTerminal("OPEN")).toBe(false);
+  });
   it.each([
     ["PROPOSED", "ACCEPTED"],
     ["PROPOSED", "CANCELLED"],

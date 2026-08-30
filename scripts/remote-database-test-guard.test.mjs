@@ -310,6 +310,7 @@ describe("registered database suites", () => {
       "patient_referral_rpcs.test.sql",
       "patient_referrals_foundation.test.sql",
       "periodontal_charting.test.sql",
+      "procedure_cases_and_plan_details.test.sql",
       "postdated_cheques.test.sql",
       "procedure_foundation.test.sql",
       "provider_availability.test.sql",

@@ -89,7 +89,7 @@ const acknowledgedPlan: TreatmentPlan = { planId: acknowledgedPlanId, title: "Im
 
 const detailDraft: TreatmentPlanDetail = {
   plan: { planId, patientId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", updatedAt: "2026-08-27T09:00:00+00:00", createdBy: "d7100000-0000-0000-0000-000000000002" },
-  items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", createdAt: "2026-08-27T09:00:00+00:00" }],
+  items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", priority: "ROUTINE", sequenceNo: 1, surfaces: [], notes: null, procedureCaseId: null, createdAt: "2026-08-27T09:00:00+00:00" }],
   alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt: "2026-08-27T09:00:00+00:00" }],
   discussions: [{ discussionId, discussedBy: "d7100000-0000-0000-0000-000000000002", treatingProviderId: providerId, discussedAt: "2026-08-27T09:30:00+00:00", context: "Case discussion", notes: null, createdAt: "2026-08-27T09:30:00+00:00" }],
   drawing: null,
@@ -97,7 +97,7 @@ const detailDraft: TreatmentPlanDetail = {
 
 const detailAcknowledged: TreatmentPlanDetail = {
   plan: { planId: acknowledgedPlanId, patientId, title: "Implants and crowns", status: "ACKNOWLEDGED", version: 3, createdAt: "2026-08-27T10:00:00+00:00", updatedAt: "2026-08-27T11:00:00+00:00", createdBy: "d7100000-0000-0000-0000-000000000002" },
-  items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "16", description: "Implant crown on 16.", estimatedFeeCentavos: "4500000", createdAt: "2026-08-27T10:00:00+00:00" }],
+  items: [{ itemId, lineNo: 1, procedureId: null, toothCode: "16", description: "Implant crown on 16.", estimatedFeeCentavos: "4500000", priority: "ROUTINE", sequenceNo: 1, surfaces: [], notes: null, procedureCaseId: null, createdAt: "2026-08-27T10:00:00+00:00" }],
   alternatives: [],
   discussions: [{ discussionId, discussedBy: "d7100000-0000-0000-0000-000000000002", treatingProviderId: null, discussedAt: "2026-08-27T10:30:00+00:00", context: "Consent discussion", notes: null, createdAt: "2026-08-27T10:30:00+00:00" }],
   drawing: { drawingId: "d7a00000-0000-0000-0000-000000000013", drawing: { strokes: [{ points: [{ x: 1, y: 2 }, { x: 30, y: 40 }] }], width: 320, height: 200 }, updatedBy: "d7100000-0000-0000-0000-000000000002", updatedAt: "2026-08-27T10:45:00+00:00", version: 1 },

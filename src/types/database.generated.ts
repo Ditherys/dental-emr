@@ -4493,6 +4493,152 @@ export type Database = {
           },
         ]
       }
+      procedure_case_events: {
+        Row: {
+          correction_of_event_id: string | null
+          event_type: string
+          id: string
+          notes: string | null
+          occurred_at: string
+          organization_id: string
+          procedure_case_id: string
+          reason: string | null
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          correction_of_event_id?: string | null
+          event_type: string
+          id?: string
+          notes?: string | null
+          occurred_at: string
+          organization_id: string
+          procedure_case_id: string
+          reason?: string | null
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          correction_of_event_id?: string | null
+          event_type?: string
+          id?: string
+          notes?: string | null
+          occurred_at?: string
+          organization_id?: string
+          procedure_case_id?: string
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_case_events_case_fk"
+            columns: ["organization_id", "procedure_case_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_cases"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_events_correction_fk"
+            columns: ["organization_id", "correction_of_event_id"]
+            isOneToOne: false
+            referencedRelation: "procedure_case_events"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_case_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedure_cases: {
+        Row: {
+          charge_id: string | null
+          id: string
+          opened_at: string
+          opened_by: string
+          organization_id: string
+          origin_branch_id: string
+          patient_id: string
+          procedure_id: string
+          status: string
+          treatment_plan_item_id: string | null
+          version: number
+        }
+        Insert: {
+          charge_id?: string | null
+          id?: string
+          opened_at?: string
+          opened_by: string
+          organization_id: string
+          origin_branch_id: string
+          patient_id: string
+          procedure_id: string
+          status?: string
+          treatment_plan_item_id?: string | null
+          version?: number
+        }
+        Update: {
+          charge_id?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string
+          organization_id?: string
+          origin_branch_id?: string
+          patient_id?: string
+          procedure_id?: string
+          status?: string
+          treatment_plan_item_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_cases_branch_fk"
+            columns: ["organization_id", "origin_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_cases_charge_fk"
+            columns: ["organization_id", "charge_id"]
+            isOneToOne: true
+            referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_cases_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_cases_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_cases_plan_item_fk"
+            columns: ["organization_id", "treatment_plan_item_id"]
+            isOneToOne: true
+            referencedRelation: "treatment_plan_items"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "procedure_cases_procedure_fk"
+            columns: ["organization_id", "procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       procedure_direct_cost_defaults: {
         Row: {
           active: boolean
@@ -6831,9 +6977,13 @@ export type Database = {
           estimated_fee_centavos: number | null
           id: string
           line_no: number
+          notes: string | null
           organization_id: string
           plan_id: string
+          priority: string
           procedure_id: string | null
+          sequence_no: number
+          surfaces: string[]
           tooth_code: string | null
         }
         Insert: {
@@ -6842,9 +6992,13 @@ export type Database = {
           estimated_fee_centavos?: number | null
           id?: string
           line_no: number
+          notes?: string | null
           organization_id: string
           plan_id: string
+          priority?: string
           procedure_id?: string | null
+          sequence_no: number
+          surfaces?: string[]
           tooth_code?: string | null
         }
         Update: {
@@ -6853,9 +7007,13 @@ export type Database = {
           estimated_fee_centavos?: number | null
           id?: string
           line_no?: number
+          notes?: string | null
           organization_id?: string
           plan_id?: string
+          priority?: string
           procedure_id?: string | null
+          sequence_no?: number
+          surfaces?: string[]
           tooth_code?: string | null
         }
         Relationships: [

@@ -74,6 +74,10 @@ describe("treatment-plan service input validation boundary", () => {
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", toothCode: "49" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFeeCentavos: "100000000000" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", estimatedFeeCentavos: "-1" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", priority: "NOW" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", sequenceNo: 0 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", surfaces: ["X"] })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanItem({ actingBranchId: branchId, planId, expectedVersion: 1, description: "Item", notes: "N".repeat(4001) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(updateTreatmentPlanItem({ actingBranchId: branchId, planId, itemId, expectedVersion: 1, description: "" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(removeTreatmentPlanItem({ actingBranchId: branchId, planId, itemId: "nope", expectedVersion: 1 })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanAlternative({ actingBranchId: branchId, planId, expectedVersion: 1, summary: "" })).rejects.toBeInstanceOf(z.ZodError);
@@ -188,7 +192,7 @@ describe("treatment-plan service RPC contract", () => {
   it("returns the detail jsonb in the bounded DTO shape", async () => {
     const detail = {
       plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt, updatedAt: createdAt, createdBy },
-      items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", createdAt }],
+      items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", priority: "HIGH", sequenceNo: 1, surfaces: ["O"], notes: "Synthetic detail", procedureCaseId: null, createdAt }],
       alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt }],
       discussions: [{ discussionId, discussedBy: createdBy, treatingProviderId: providerId, discussedAt: createdAt, context: "Case discussion", notes: "Patient prefers conservative care.", createdAt }],
       drawing: { drawingId, drawing: { strokes: [{ points: [{ x: 1, y: 2 }] }] }, updatedBy: createdBy, updatedAt: createdAt, version: 1 },

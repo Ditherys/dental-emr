@@ -508,6 +508,8 @@ const ODONTOGRAM_O5_O8_SERIALIZED_FINAL_GRANTS_MIGRATION =
   "20260828020541_odontogram_o5_o8_serialized_final_grants.sql";
 const ODONTOGRAM_FEATURE_DETAILS_RPC_GRANTS_MIGRATION =
   "20260830010003_odontogram_feature_details_rpc_grants.sql";
+const PROCEDURE_CASE_PLAN_DETAIL_GRANTS_MIGRATION =
+  "20260830010102_procedure_case_plan_detail_grants.sql";
 
 const odontogramO5O8TerminalGrants = Object.freeze([
   "public.get_patient_odontogram(uuid,uuid)",
@@ -1490,6 +1492,17 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
       privilege: "execute",
       columns: [],
       reason: "O2 narrow audited clinical-entry write boundary; derives tenant from an authorized active branch, atomically persists constrained detail/history, and provides actor-scoped idempotency without base-table grants.",
+    }]),
+  }),
+  Object.freeze({
+    file: PROCEDURE_CASE_PLAN_DETAIL_GRANTS_MIGRATION,
+    grants: Object.freeze([{
+      grantee: "authenticated",
+      objectClass: "function",
+      object: "public.get_treatment_plan_detail(uuid,uuid)",
+      privilege: "execute",
+      columns: [],
+      reason: "Restores the existing bounded treatment-plan detail read after its projection gains renderer-independent structured item details and an optional same-tenant procedure-case link; authorization remains clinical.read at the active acting branch and no base-table grant is introduced.",
     }]),
   }),
 ]);

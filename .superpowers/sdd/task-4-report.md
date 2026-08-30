@@ -1,0 +1,33 @@
+# Task 4 — Procedure Cases and Structured Plan Details
+
+## RED/GREEN evidence
+
+- RED: added treatment-plan service/execution tests, then observed four expected failures: missing procedure-case execution helpers, unrecognized structured item fields, and the strict detail DTO rejecting the new fields.
+- GREEN: `npm run test:unit -- src/lib/treatment-plan` passed 30/30 after the canonical schema/types/execution boundary was extended.
+- RED: the initial local migration run exposed legacy writers omitting `sequence_no`; a forward-only `20260830010101` compatibility trigger derives it from immutable `line_no`.
+- RED: the existing bounded treatment-plan detail contract exposed that the first projection rewrite flattened its item source. Forward repairs `20260830010103`–`10105` restore the pre-aggregation derived-table source cap, include the organization key required for the case join, and retain the static cap contract.
+
+## Local migration/history note
+
+`20260830010100` was applied locally before its Git checkpoint. Local
+`supabase_migrations.schema_migrations` records version/statements but no source
+hash. Before committing, its source was corrected to put the required adjacent
+top-level revoke after `get_treatment_plan_detail`; `20260830010102` restores
+the existing authenticated execute grant through the approved grant-terminal
+registry. No reset, hosted command, or production write was used.
+
+## Verification
+
+- Focused Task 4 pgTAP: `P1_TEST_PASS`.
+- Existing affected estimate-contract pgTAP: `P1_TEST_PASS` after forward repair.
+- `npm run test:unit -- src/lib/treatment-plan`: 2 files, 30 tests passed.
+- `npm run typecheck`: passed.
+- `npm run security:migrations`: passed (223 migrations; strict grant-last invariant intact).
+- `git diff --check`: passed.
+
+## Self-review / concerns
+
+- Cases/events are renderer-independent, tenant-qualified through composite FKs, RLS-enabled, have no browser base grants, and events are append-only.
+- Procedure-case plan-item and charge links are additionally checked to the same patient, not only the same organization.
+- Structured plan details freeze under the existing PRESENTED/ACKNOWLEDGED trigger. No drawing, payment, media, UI, or new write RPC was introduced.
+- The forward projection repairs are intentionally narrow and guard their expected prior definition before dynamic replacement; Cloud TEST remains a required deferred gate.

@@ -1,5 +1,9 @@
 export const EXECUTION_STATES = ["PROPOSED", "ACCEPTED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 export type ExecutionState = (typeof EXECUTION_STATES)[number];
+export const PROCEDURE_CASE_STATUSES = ["OPEN", "COMPLETED", "CANCELLED"] as const;
+export type ProcedureCaseStatus = (typeof PROCEDURE_CASE_STATUSES)[number];
+export const PROCEDURE_CASE_EVENT_TYPES = ["TREATMENT", "FOLLOW_UP", "COMPLETION", "CANCELLATION", "CORRECTION"] as const;
+export type ProcedureCaseEventType = (typeof PROCEDURE_CASE_EVENT_TYPES)[number];
 
 type RuleResult = { ok: true } | { ok: false; reason: string };
 
@@ -18,6 +22,17 @@ function boundedReason(reason: string | null | undefined): boolean {
 
 export function isExecutionTerminal(state: ExecutionState): boolean {
   return state === "COMPLETED" || state === "CANCELLED";
+}
+
+export function isProcedureCaseTerminal(status: ProcedureCaseStatus): boolean {
+  return status === "COMPLETED" || status === "CANCELLED";
+}
+
+export function validateProcedureCaseEvent(input: { eventType: ProcedureCaseEventType; reason?: string | null }): RuleResult {
+  if (input.eventType === "CORRECTION" && !boundedReason(input.reason)) {
+    return { ok: false, reason: "correction-reason-required" };
+  }
+  return { ok: true };
 }
 
 export function validateExecutionTransition(input: {
