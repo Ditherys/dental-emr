@@ -60,7 +60,7 @@ opened a sheet. Both now pass in the focused suite above.
 
 Implementation commit: `a54644554c9fd03aaa4929b58a8617013213c841` — `feat: add patient odontogram status workspace`.
 
-Follow-up commit: pending local checkpoint creation.
+Follow-up commit: `f4e5f67e888a6ebc223fe26bbd954566d25a5b64` — `fix: isolate odontogram workspace patient data`.
 
 ## Residual gates
 
