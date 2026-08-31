@@ -81,7 +81,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, initialTreatmentPlans = [], canGenerateDocuments = false, providersUnavailable, loadFailed, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -119,10 +119,10 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   }
 
   async function openEncounter(data: FormData) {
-    const treatingProviderId = requiredString(data, "treatingProviderId");
+    void data;
     setSaving(true);
     try {
-      const result = await createClinicalEncounterAction({ actingBranchId, patientId, treatingProviderId });
+      const result = await createClinicalEncounterAction({ actingBranchId, patientId });
       if (!result.ok) { setError(message(result)); return; }
       setError(null); setOpenEncounterDialog(false); router.refresh();
     } catch { setError("The clinical record could not be saved. Review the fields and try again."); }
@@ -228,12 +228,12 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   const dialogOpen = Boolean(openEncounterDialog || noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
 
   return <section id="clinical" className="border-t py-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, dental chart, and medical history.</p></div>{canWriteClinical && !providersUnavailable && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, dental chart, and medical history.</p></div>{canWriteClinical && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
     <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button><button type="button" onClick={() => setTab("treatment-plans")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "treatment-plans" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Treatment plan</button></nav>
     {error && !dialogOpen && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
     {tab === "odontogram" ? <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} initialProgressEvents={{ patientId, events: [...(initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : []), ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : [])] }} loadFailed={loadFailed} />
       : tab === "treatment-plans" ? <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />
-      : <>{providersUnavailable && canWriteClinical && <p className="mt-3 text-sm text-muted-foreground">The provider directory is unavailable, so new encounters cannot be opened here.</p>}
+      : <>
     {loadFailed ? <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
       <h3 className="mt-5 text-sm font-medium text-muted-foreground">Treatment history</h3>
       {initialEncounters.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No encounters recorded.</p> : <>
@@ -248,7 +248,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
       </div>
     </>}
     </>}
-    {openEncounterDialog && <OpenEncounterDialog providers={initialProviders} saving={saving} error={error} close={() => setOpenEncounterDialog(false)} save={openEncounter} />}
+    {openEncounterDialog && <OpenEncounterDialog saving={saving} error={error} close={() => setOpenEncounterDialog(false)} save={openEncounter} />}
     {noteDialog && <NoteDialog state={noteDialog} saving={saving} error={error} close={() => setNoteDialog(null)} save={saveNote} />}
     {amendNote && <AmendDialog note={amendNote.note} saving={saving} error={error} close={() => setAmendNote(null)} save={saveAmend} />}
     {prescriptionEncounterId && <PrescriptionDialog saving={saving} error={error} close={() => setPrescriptionEncounterId(null)} save={savePrescription} />}
@@ -321,9 +321,8 @@ function NoteItem({ note, canWrite, saving, edit, amend, finalize }: { note: Cli
   </li>;
 }
 
-function OpenEncounterDialog({ providers, saving, error, close, save }: { providers: ProviderListItem[]; saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {
-  const canOpen = providers.length > 0;
-  return <Dialog open onOpenChange={(next) => !next && !saving && close()}><DialogContent><DialogHeader><DialogTitle>Open encounter</DialogTitle><DialogDescription>Records a new treatment encounter for this patient under the selected treating provider.</DialogDescription></DialogHeader><form action={save} className="grid gap-4">{error && <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p>}<label className="grid gap-1.5 text-sm font-medium">Treating provider{canOpen ? <select name="treatingProviderId" required defaultValue="" className={inputClass}><option value="" disabled>Select a provider</option>{providers.map((provider) => <option key={provider.providerId} value={provider.providerId}>{provider.displayName}</option>)}</select> : <span className="text-muted-foreground">No providers are active at this branch.</span>}</label><DialogFooter><Button type="button" variant="outline" onClick={close} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving || !canOpen}>{saving && <LoaderCircle className="animate-spin" aria-hidden="true" />}Open encounter</Button></DialogFooter></form></DialogContent></Dialog>;
+function OpenEncounterDialog({ saving, error, close, save }: { saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {
+  return <Dialog open onOpenChange={(next) => !next && !saving && close()}><DialogContent><DialogHeader><DialogTitle>Open encounter</DialogTitle><DialogDescription>Records a new treatment encounter under the signed-in dentist’s provider profile.</DialogDescription></DialogHeader><form action={save} className="grid gap-4">{error && <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p>}<p className="text-sm text-muted-foreground">The treating dentist is recorded automatically from your signed-in account.</p><DialogFooter><Button type="button" variant="outline" onClick={close} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <LoaderCircle className="animate-spin" aria-hidden="true" />}Open encounter</Button></DialogFooter></form></DialogContent></Dialog>;
 }
 
 function NoteDialog({ state, saving, error, close, save }: { state: NonNullable<NoteDialogState>; saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {

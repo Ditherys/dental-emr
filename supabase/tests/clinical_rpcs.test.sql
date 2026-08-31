@@ -46,11 +46,11 @@ join public.roles as role on role.organization_id is null and role.code = assign
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('b7500000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','P1403-A-1','Patient','A',date '1990-01-01','b7300000-0000-0000-0000-000000000001'),
   ('b7500000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000002','P1403-B-1','Patient','B',date '1991-01-01',null);
-insert into public.providers (id, organization_id, first_name, last_name, provider_type, status) values
-  ('c9100000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
-  ('c9100000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000001','Dentist','A2','REGULAR','active'),
-  ('c9100000-0000-0000-0000-000000000003','b7200000-0000-0000-0000-000000000001','Dentist','A3','REGULAR','inactive'),
-  ('c9100000-0000-0000-0000-000000000004','b7200000-0000-0000-0000-000000000002','Dentist','B1','REGULAR','active');
+insert into public.providers (id, organization_id, linked_user_id, first_name, last_name, provider_type, status) values
+  ('c9100000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','b7100000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
+  ('c9100000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000001',null,'Dentist','A2','REGULAR','active'),
+  ('c9100000-0000-0000-0000-000000000003','b7200000-0000-0000-0000-000000000001',null,'Dentist','A3','REGULAR','inactive'),
+  ('c9100000-0000-0000-0000-000000000004','b7200000-0000-0000-0000-000000000002',null,'Dentist','B1','REGULAR','active');
 insert into public.provider_branches (organization_id, provider_id, branch_id, is_active) values
   ('b7200000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001',true),
   ('b7200000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000002','b7300000-0000-0000-0000-000000000002',true),
@@ -69,7 +69,7 @@ grant select on p1403_medical to authenticated;
 grant select on p1403_prescriptions to authenticated;
 
 select extensions.ok(
-  has_function_privilege('authenticated','public.create_clinical_encounter(uuid,uuid,uuid,uuid)','execute')
+  has_function_privilege('authenticated','public.create_clinical_encounter_v2(uuid,uuid,uuid)','execute')
   and has_function_privilege('authenticated','public.create_clinical_note(uuid,uuid,text,text)','execute')
   and has_function_privilege('authenticated','public.update_clinical_note(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.finalize_clinical_note(uuid,uuid,integer)','execute')
@@ -82,11 +82,14 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.list_patient_medical_records(uuid,uuid,text)','execute')
   and has_function_privilege('authenticated','public.create_prescription(uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.finalize_prescription(uuid,uuid,integer)','execute')
+  and not has_function_privilege('authenticated','public.create_clinical_encounter(uuid,uuid,uuid,uuid)','execute')
+  and not has_function_privilege('anon','public.create_clinical_encounter_v2(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('service_role','public.create_clinical_encounter_v2(uuid,uuid,uuid)','execute')
   and not has_function_privilege('anon','public.create_clinical_encounter(uuid,uuid,uuid,uuid)','execute')
   and not has_function_privilege('service_role','public.create_clinical_encounter(uuid,uuid,uuid,uuid)','execute'),
-  'only authenticated has the thirteen exact P14-03 RPC grants'
+  'only authenticated has the thirteen exact P14-03 RPC grants and provider selection is not browser-callable'
 );
-select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_clinical_encounter(uuid,uuid,uuid,uuid)'::regprocedure,'public.create_clinical_note(uuid,uuid,text,text)'::regprocedure,'public.update_clinical_note(uuid,uuid,integer,text)'::regprocedure,'public.finalize_clinical_note(uuid,uuid,integer)'::regprocedure,'public.amend_clinical_note(uuid,uuid,integer,text)'::regprocedure,'public.finalize_clinical_encounter(uuid,uuid,integer)'::regprocedure,'public.create_patient_medical_record(uuid,uuid,text,jsonb)'::regprocedure,'public.void_patient_medical_record(uuid,uuid,integer)'::regprocedure,'public.list_clinical_encounters(uuid,uuid)'::regprocedure,'public.get_clinical_encounter_detail(uuid,uuid)'::regprocedure,'public.list_patient_medical_records(uuid,uuid,text)'::regprocedure,'public.create_prescription(uuid,uuid,jsonb)'::regprocedure,'public.finalize_prescription(uuid,uuid,integer)'::regprocedure,'private.has_clinical_permission_at_branch(uuid,text)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),14,'the fourteen P14-03 definers pin an empty search path');
+select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_clinical_encounter_v2(uuid,uuid,uuid)'::regprocedure,'public.create_clinical_note(uuid,uuid,text,text)'::regprocedure,'public.update_clinical_note(uuid,uuid,integer,text)'::regprocedure,'public.finalize_clinical_note(uuid,uuid,integer)'::regprocedure,'public.amend_clinical_note(uuid,uuid,integer,text)'::regprocedure,'public.finalize_clinical_encounter(uuid,uuid,integer)'::regprocedure,'public.create_patient_medical_record(uuid,uuid,text,jsonb)'::regprocedure,'public.void_patient_medical_record(uuid,uuid,integer)'::regprocedure,'public.list_clinical_encounters(uuid,uuid)'::regprocedure,'public.get_clinical_encounter_detail(uuid,uuid)'::regprocedure,'public.list_patient_medical_records(uuid,uuid,text)'::regprocedure,'public.create_prescription(uuid,uuid,jsonb)'::regprocedure,'public.finalize_prescription(uuid,uuid,integer)'::regprocedure,'private.has_clinical_permission_at_branch(uuid,text)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),14,'the actor-derived encounter RPC and thirteen P14-03 definers pin an empty search path');
 select extensions.ok(not exists (
   select 1 from pg_proc as proc
   where proc.oid = 'private.has_clinical_permission_at_branch(uuid,text)'::regprocedure
@@ -107,11 +110,11 @@ select extensions.ok(
   'the audit metadata allow-list extends to the bounded clinical parent_note_id/record_type keys and still rejects unknown keys'
 );
 
--- Encounter 1: positive creation with an appointment and provider link.
+-- Encounter 1: positive creation with an appointment and actor-derived provider link.
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.is((select version from public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000001')),1,'dentist A opens an encounter linking the appointment and an active treating provider at version one');
+select extensions.is((select version from public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000001')),1,'dentist A opens an encounter linking the appointment and the signed-in dentist provider at version one');
 reset role;
 insert into p1403_encounters (seq, id)
 select 1, encounter.id
@@ -124,23 +127,28 @@ select extensions.is((select count(*)::integer from public.audit_events where or
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000002','b7600000-0000-0000-0000-000000000002','c9100000-0000-0000-0000-000000000001')$$,'42501','not authorized','create safely denies a foreign patient');
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000002','c9100000-0000-0000-0000-000000000001')$$,'22023','invalid input','create rejects a foreign appointment');
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000001','c9100000-0000-0000-0000-000000000004')$$,'22023','invalid input','create rejects a foreign treating provider');
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000002')$$,'22023','invalid input','create rejects a provider not assigned to the acting branch');
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000003')$$,'22023','invalid input','create rejects an inactive provider');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000002','b7600000-0000-0000-0000-000000000002')$$,'42501','not authorized','create safely denies a foreign patient');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000002')$$,'22023','invalid input','create rejects a foreign appointment');
+reset role;
+update public.providers set linked_user_id = null where id = 'c9100000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','create requires the signed-in dentist to have an active linked provider');
+reset role;
+update public.providers set linked_user_id = 'b7100000-0000-0000-0000-000000000001' where id = 'c9100000-0000-0000-0000-000000000001';
 reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000003',true);
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000001')$$,'42501','not authorized','receptionist without clinical.write cannot open encounters');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','receptionist without clinical.write cannot open encounters');
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000004',true);
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000001')$$,'42501','not authorized','billing without clinical.write cannot open encounters');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','billing without clinical.write cannot open encounters');
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000002',true);
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000001')$$,'42501','not authorized','dental assistant with only clinical.read cannot open encounters');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','dental assistant with only clinical.read cannot open encounters');
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000005',true);
-select extensions.throws_ok($$select public.create_clinical_encounter('b7300000-0000-0000-0000-000000000003','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000004')$$,'42501','not authorized','a foreign branch acting user cannot open encounters for another tenant');
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000003','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','a foreign branch acting user cannot open encounters for another tenant');
 reset role;
 
 -- Note lifecycle on encounter 1: create DRAFT, update, finalize, immutable, amend.
@@ -282,7 +290,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.is((select version from public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000001')),1,'a second OPEN encounter is created for the prescription flow');
+select extensions.is((select version from public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)),1,'a second OPEN encounter is created for the prescription flow');
 reset role;
 insert into p1403_encounters (seq, id)
 select 2, encounter.id
@@ -372,7 +380,7 @@ select extensions.is((select count(*)::integer from public.audit_events where or
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.is((select version from public.create_clinical_encounter('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null,'c9100000-0000-0000-0000-000000000001')),1,'a third OPEN encounter is created for the audit-rollback probe');
+select extensions.is((select version from public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)),1,'a third OPEN encounter is created for the audit-rollback probe');
 reset role;
 insert into p1403_encounters (seq, id)
 select 3, encounter.id

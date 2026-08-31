@@ -142,15 +142,15 @@ const amendButton = screen.getAllByRole("button", { name: "Amend" })[1];
     expect(screen.getByText(/AMENDMENT/)).toBeVisible();
   });
 
-  it("opens an encounter through the provider dialog", async () => {
+  it("opens an encounter under the signed-in dentist without a provider selector", async () => {
     renderSection({ canWriteClinical: true, encounters: [] });
 
     fireEvent.click(screen.getByRole("button", { name: "Open encounter" }));
     const dialog = await screen.findByRole("dialog", { name: "Open encounter" });
-    fireEvent.change(within(dialog).getByLabelText("Treating provider"), { target: { value: providerId } });
+    expect(within(dialog).queryByLabelText("Treating provider")).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Open encounter" }));
 
-    await waitFor(() => expect(actions.createClinicalEncounterAction).toHaveBeenCalledWith({ actingBranchId: branchId, patientId, treatingProviderId: providerId }));
+    await waitFor(() => expect(actions.createClinicalEncounterAction).toHaveBeenCalledWith({ actingBranchId: branchId, patientId }));
     expect(router.refresh).toHaveBeenCalled();
   });
 

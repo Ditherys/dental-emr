@@ -40,7 +40,6 @@ export const createClinicalEncounterInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   appointmentId: databaseUuid.nullable().optional(),
-  treatingProviderId: databaseUuid,
 }).strict();
 
 export const createClinicalNoteInputSchema = z.object({

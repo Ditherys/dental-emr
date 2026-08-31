@@ -1,5 +1,31 @@
 # AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
+## Authenticated provider encounter attribution — local implementation (2026-09-01)
+
+- Removed `treatingProviderId` from the encounter input schema, server action,
+  service RPC payload, and patient open-encounter dialog. The dialog now states
+  that the signed-in dentist is recorded automatically; historical encounter
+  rows still display their attributed provider.
+- Added forward-only `create_clinical_encounter_v2(uuid,uuid,uuid)`, which
+  derives the treating provider through
+  `private.require_active_actor_provider` after same-tenant clinical-write and
+  patient checks. The legacy provider-selectable RPC remains only as a
+  compatibility definition and is no longer executable by `authenticated`.
+- Updated the grant registry and pgTAP fixture/coverage to prove the exact
+  authenticated-only v2 grant, legacy browser denial, active linked-provider
+  requirement, tenant checks, audit behavior, and role denials. Provider A in
+  local development was not reassigned; an OWNER who treats must have their own
+  explicit linked provider profile.
+- Fresh evidence: local migration applied both new files; migration privilege
+  lint passed; focused clinical Vitest passed 3 files / 41 tests; strict
+  typecheck, lint, production build, and boundary/grant-registry tests (109/109)
+  passed; local generated database types are current; clinical pgTAP passed in
+  the broader local run. The broader suite
+  later stopped at the unrelated existing
+  `treatment_plans.test.sql` completion-marker residual, and the repository-wide
+  Vitest run was stopped after unrelated high-cost photo/odontogram/provider
+  suites timed out.
+
 ## ADR-030 authority checkpoint — odontogram longitudinal record revamp (2026-08-30)
 
 - Added ADR-030 before schema or application work. It amends O12 for staged

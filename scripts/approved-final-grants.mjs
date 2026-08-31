@@ -472,6 +472,8 @@ const specialistRequestRpcGrants = Object.freeze([
 
 const CLINICAL_RPCS_GRANTS_MIGRATION =
   "20260827013001_clinical_rpcs_grants.sql";
+const CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION =
+  "20260901010001_clinical_encounter_actor_provider_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -789,7 +791,31 @@ const clinicalRpcGrants = Object.freeze([
   "public.list_patient_medical_records(uuid,uuid,text)",
   "public.create_prescription(uuid,uuid,jsonb)",
   "public.finalize_prescription(uuid,uuid,integer)",
-].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none." })));
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  ...(object === "public.create_clinical_encounter(uuid,uuid,uuid,uuid)"
+    ? {
+        supersededFrom: CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION,
+        supersededBy: "public.create_clinical_encounter_v2(uuid,uuid,uuid)",
+      }
+    : {}),
+  reason: "The only clinical data boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Encounter/note/prescription rows carry an immutable FINALIZED state guarded by database triggers; finalized notes and prescriptions are only ever amended or recreated, never silently overwritten. Every mutation appends one atomic bounded-metadata audit event while the read projections write none.",
+})));
+
+const clinicalEncounterActorProviderGrants = Object.freeze([
+  "public.create_clinical_encounter_v2(uuid,uuid,uuid)",
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  reason: "The encounter creation boundary derives the treating provider from the authenticated user's active same-tenant provider profile at the acting branch. The provider ID is never accepted from the browser, while tenant, branch, clinical.write, appointment, audit, and clinical record invariants remain enforced in the SECURITY DEFINER body.",
+})));
 
 const clinicalPhotoRpcGrants = Object.freeze([
   "public.create_clinical_photo(uuid,uuid,uuid,uuid,text,text,text,timestamptz,text[],text[],text)",
@@ -1685,6 +1711,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
       reason:
         "The narrow clinical-photo action boundary derives tenant and patient association inside SECURITY DEFINER RPCs, requires the appropriate live clinical permission (and AAL2 for archival), preserves private opaque objects, and returns no base-table access or original client filename.",
     }))),
+  }),
+  Object.freeze({
+    file: CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION,
+    grants: clinicalEncounterActorProviderGrants,
   }),
 ]);
 

@@ -193,7 +193,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "private.has_booking_review_permission_at_branch(uuid, text)",
     "public.list_booking_requests(uuid, text)",
     "public.review_booking_request(uuid, uuid, integer, text, text)",
-    "public.create_clinical_encounter(uuid, uuid, uuid, uuid)",
+    "public.create_clinical_encounter_v2(uuid, uuid, uuid)",
     "public.create_clinical_note(uuid, uuid, text, text)",
     "public.update_clinical_note(uuid, uuid, integer, text)",
     "public.finalize_clinical_note(uuid, uuid, integer)",

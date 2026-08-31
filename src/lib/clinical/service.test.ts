@@ -38,7 +38,6 @@ const createdAt = "2026-08-27T09:00:00+00:00";
 const encounterInput = {
   actingBranchId: branchId,
   patientId,
-  treatingProviderId: providerId,
 };
 
 const noteInput = {
@@ -73,7 +72,7 @@ describe("clinical service input validation boundary", () => {
 
   it("rejects invalid identifiers, versions, and note inputs", async () => {
     await expect(createClinicalEncounter({ ...encounterInput, patientId: "not-a-uuid" })).rejects.toBeInstanceOf(z.ZodError);
-    await expect(createClinicalEncounter({ ...encounterInput, treatingProviderId: undefined })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(createClinicalEncounter({ ...encounterInput, treatingProviderId: providerId })).rejects.toBeInstanceOf(z.ZodError);
     await expect(createClinicalNote({ ...noteInput, noteType: "AMENDMENT" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(createClinicalNote({ ...noteInput, noteType: "SOAP" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(createClinicalNote({ ...noteInput, content: "" })).rejects.toBeInstanceOf(z.ZodError);
@@ -160,20 +159,18 @@ describe("clinical service RPC contract", () => {
   it("binds encounter create to its exact contract and defaults the nullable appointment", async () => {
     rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, version: 1 }], error: null });
     await expect(createClinicalEncounter(encounterInput)).resolves.toEqual({ encounterId, version: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter", {
+    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter_v2", {
       p_acting_branch_id: branchId,
       p_patient_id: patientId,
       p_appointment_id: null,
-      p_treating_provider_id: providerId,
     });
 
     rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, version: 1 }], error: null });
     await createClinicalEncounter({ ...encounterInput, appointmentId });
-    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter", {
+    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter_v2", {
       p_acting_branch_id: branchId,
       p_patient_id: patientId,
       p_appointment_id: appointmentId,
-      p_treating_provider_id: providerId,
     });
   });
 

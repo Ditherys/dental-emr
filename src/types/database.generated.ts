@@ -8245,6 +8245,17 @@ export type Database = {
           version: number
         }[]
       }
+      create_clinical_encounter_v2: {
+        Args: {
+          p_acting_branch_id: string
+          p_appointment_id?: string
+          p_patient_id: string
+        }
+        Returns: {
+          encounter_id: string
+          version: number
+        }[]
+      }
       create_clinical_note: {
         Args: {
           p_acting_branch_id: string

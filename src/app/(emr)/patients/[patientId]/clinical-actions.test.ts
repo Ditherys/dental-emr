@@ -55,7 +55,7 @@ const recordId = "c5000000-0000-0000-0000-000000000005";
 const prescriptionId = "c6000000-0000-0000-0000-000000000006";
 const providerId = "c7000000-0000-0000-0000-000000000007";
 
-const encounterInput = { actingBranchId: branchId, patientId, treatingProviderId: providerId };
+const encounterInput = { actingBranchId: branchId, patientId };
 const noteInput = { actingBranchId: branchId, encounterId, noteType: "PROGRESS", content: "Synthetic progress note." };
 const detail = {
   encounter: { encounterId, branchId, patientId, appointmentId: null, treatingProviderId: providerId, status: "OPEN", createdAt: "2026-08-27T09:00:00+00:00", finalizedAt: null, version: 1 },

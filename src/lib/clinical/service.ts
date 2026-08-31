@@ -53,11 +53,10 @@ function firstRow(data: unknown) {
 
 export async function createClinicalEncounter(input: unknown): Promise<ClinicalEncounterMutationResult> {
   const value = createClinicalEncounterInputSchema.parse(input);
-  const row = clinicalEncounterMutationRowSchema.parse(firstRow(await callRpc("create_clinical_encounter", {
+  const row = clinicalEncounterMutationRowSchema.parse(firstRow(await callRpc("create_clinical_encounter_v2", {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_appointment_id: value.appointmentId ?? null,
-    p_treating_provider_id: value.treatingProviderId,
   })));
   return { encounterId: row.encounter_id, version: row.version };
 }
