@@ -102,7 +102,7 @@ export interface ToothInspectorProps {
   canWriteClinical: boolean;
   initialRecordOpen?: boolean;
   onClose(): void;
-  onMutated?(): void;
+  onMutated?(): void | Promise<void>;
 }
 
 export function ToothInspector({
@@ -177,7 +177,7 @@ export function ToothInspector({
       }
       setRecordOpen(false);
       setError(null);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } catch {
       setError("The chart could not be saved. Review the fields and try again.");
@@ -203,7 +203,7 @@ export function ToothInspector({
       }
       setAmendTarget(null);
       setError(null);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } catch {
       setError("The chart could not be saved. Review the fields and try again.");
@@ -230,7 +230,7 @@ export function ToothInspector({
       }
       setVoidTarget(null);
       setError(null);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } catch {
       setError("The chart could not be saved. Review the fields and try again.");
@@ -261,7 +261,7 @@ export function ToothInspector({
       }
       setLegacyReason("");
       setError(null);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } catch {
       setError("The resolution could not be saved. Review the fields and try again.");

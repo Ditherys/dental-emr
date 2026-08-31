@@ -3026,3 +3026,18 @@ Verification: odontogram inspector/fork/save-controller/section suites pass
 confirmation boundary for unconfirmed fork drafts or the relational implant /
 bridge workflows. Cloud TEST, hosted E2E/axe, advisor/security gates, and final
 release acceptance remain pending under ADR-029.
+
+### Codex odontogram refresh-race repair (2026-09-01)
+
+Follow-up reproduction found a second reset path after a successful inspector,
+bridge, or implant mutation: the parent `get_patient_odontogram_v3` refetch
+was started but not awaited before `router.refresh()`. The concurrent route
+refresh could merge an older server snapshot over the freshly refetched DTO.
+Mutation callbacks now support promises and are awaited before the route
+refresh in all three inspector/workflow components. A regression test proves
+the inspector does not refresh the route until its parent database refetch has
+resolved.
+
+The local environment also currently has an unrelated service occupying port
+3000 (Fortitude site); the Dental EMR server is therefore on port 3001. This is
+an environment routing issue, not a chart-data source change.

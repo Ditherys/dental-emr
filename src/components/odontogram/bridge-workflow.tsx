@@ -25,7 +25,7 @@ export interface BridgeWorkflowProps {
   parentPlanItemId?: string;
   existingBridge?: DentalBridgeDTO;
   currentBridges?: DentalBridgeDTO[];
-  onMutated?: () => void;
+  onMutated?: () => void | Promise<void>;
 }
 
 function parseSpan(input: string): string[] {
@@ -207,7 +207,7 @@ export function BridgeWorkflow({
         return;
       }
       setOpen(false);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } finally {
       setSaving(false);
@@ -236,7 +236,7 @@ export function BridgeWorkflow({
       setVoidConfirmOpen(false);
       setVoidReason("");
       setOpen(false);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } finally {
       setSaving(false);

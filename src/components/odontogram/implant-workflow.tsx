@@ -23,7 +23,7 @@ export interface ImplantWorkflowProps {
   canWriteClinical: boolean;
   parentPlanItemId?: string;
   existingComponent?: DentalImplantComponentDTO;
-  onMutated?: () => void;
+  onMutated?: () => void | Promise<void>;
 }
 
 export function ImplantWorkflow({
@@ -178,7 +178,7 @@ export function ImplantWorkflow({
         }
       }
       setOpen(false);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } finally {
       setSaving(false);
@@ -207,7 +207,7 @@ export function ImplantWorkflow({
       setVoidConfirmOpen(false);
       setVoidReason("");
       setOpen(false);
-      onMutated?.();
+      await onMutated?.();
       router.refresh();
     } finally {
       setSaving(false);
