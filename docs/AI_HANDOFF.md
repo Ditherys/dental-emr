@@ -3003,3 +3003,26 @@ with only the three pre-existing treatment-plan warnings. A browser probe at
 1920px reports the expected 240px sidebar and 1680px content column after a
 clean dev-server restart. Cloud TEST, hosted E2E/axe, advisor/security gates,
 and final release acceptance remain pending under ADR-029.
+
+### Codex odontogram persistence repair (2026-09-01)
+
+The canonical source remains the server-loaded `get_patient_odontogram_v3`
+DTO, not the controlled fork's in-memory chart. A persistence gap was found in
+the selected-tooth inspector: it still submitted the retired `{ clinicalCode }`
+payload, while `recordToothClinicalEntryAction` requires a discriminated
+`detail`, occurrence timestamp, and idempotency key. The server therefore
+rejected those saves, leaving only a transient renderer state that disappeared
+on refresh.
+
+The inspector now submits allowlisted CARIES, RESTORATION, ROOT_CANAL,
+TOOTH_STATE, ORTHODONTIC, and OTHER detail contracts, an explicit occurrence
+date, and a generated idempotency key. Successful writes continue through the
+audited RPC and trigger the section refetch plus router refresh. A focused
+regression test covers the complete caries payload and mutation callback.
+
+Verification: odontogram inspector/fork/save-controller/section suites pass
+(4 files, 23 tests); typecheck, targeted ESLint, production build, and
+`git diff --check` pass. This local repair does not change the intentional
+confirmation boundary for unconfirmed fork drafts or the relational implant /
+bridge workflows. Cloud TEST, hosted E2E/axe, advisor/security gates, and final
+release acceptance remain pending under ADR-029.

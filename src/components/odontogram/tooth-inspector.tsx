@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BridgeWorkflow } from "@/components/odontogram/bridge-workflow";
 import { ImplantWorkflow } from "@/components/odontogram/implant-workflow";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
-import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
+import type { ClinicalFeatureDetail, PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 import {
   amendToothClinicalEntryAction,
   recordToothClinicalEntryAction,
@@ -29,6 +29,68 @@ function isLegacyEntry(entry: ToothClinicalEntryDTO): boolean {
     code === "LEGACY_TERMINAL_UNCLASSIFIED" ||
     code === "LEGACY_REFERRED"
   );
+}
+
+function occurrenceTimestamp(date: string): string {
+  return `${date}T12:00:00+08:00`;
+}
+
+function localDateValue(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function idempotencyKey(): string {
+  const randomUuid = globalThis.crypto?.randomUUID?.();
+  return randomUuid ? `tooth-entry-${randomUuid}` : `tooth-entry-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function clinicalDetailFromForm(data: FormData): ClinicalFeatureDetail {
+  const requestedCode = String(data.get("clinicalCode") ?? "CARIES");
+  switch (requestedCode) {
+    case "CARIES":
+      return {
+        code: "CARIES",
+        depth: (String(data.get("cariesDepth") ?? "DENTIN") as "ENAMEL" | "DENTIN" | "PULPAL"),
+        icdas: (() => {
+          const value = String(data.get("icdas") ?? "").trim();
+          return value === "" ? null : Number(value) as 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        })(),
+        cars: String(data.get("cars") ?? "").trim() || null,
+        radiographicDepth: String(data.get("radiographicDepth") ?? "").trim() || null,
+      };
+    case "RESTORATION":
+      return {
+        code: "RESTORATION",
+        restorationType: (String(data.get("restorationType") ?? "none") as "none" | "crown" | "inlay" | "onlay" | "veneer" | "bridge"),
+        material: (String(data.get("restorationMaterial") ?? "composite") as "none" | "emax" | "gold" | "gradia" | "zircon" | "metal" | "metal-ceramic" | "telescope" | "temporary" | "amalgam" | "composite" | "gic"),
+        marginalLeakage: data.get("marginalLeakage") === "true",
+      };
+    case "ROOT_CANAL":
+      return {
+        code: "ROOT_CANAL",
+        state: String(data.get("rootCanalState") ?? "endo-filling") as "endo-medical-filling" | "endo-filling" | "endo-filling-incomplete" | "endo-glass-pin" | "endo-metal-pin",
+      };
+    case "TOOTH_STATE":
+      return {
+        code: "TOOTH_STATE",
+        state: String(data.get("toothState") ?? "PRESENT") as "PRESENT" | "MISSING" | "EXTRACTION_WOUND" | "SUBGINGIVAL" | "RADIX" | "BROKEN" | "CROWN_PREPARATION",
+      };
+    case "ORTHODONTIC":
+      return {
+        code: "ORTHODONTIC",
+        appliance: String(data.get("orthoAppliance") ?? "BRACKET") as "BRACKET" | "BAND",
+        movement: (String(data.get("orthoMovement") ?? "").trim() || null) as "DRIFT" | "INTRUSION" | "EXTRUSION" | "ROTATION" | null,
+      };
+    default:
+      return { code: "OTHER", controlledCode: String(data.get("controlledCode") ?? "MANUAL_OTHER").trim() || "MANUAL_OTHER" };
+  }
 }
 
 export interface ToothInspectorProps {
@@ -91,15 +153,23 @@ export function ToothInspector({
     try {
       const surfacesValue = String(data.get("surfaces") ?? "O").trim();
       const surfaces = surfacesValue ? surfacesValue.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) : ["O"];
+      const occurredDate = String(data.get("occurredDate") ?? "").trim();
+      if (!occurredDate) {
+        setError("Occurrence date is required.");
+        return;
+      }
+      const detail = clinicalDetailFromForm(data);
       const result = await recordToothClinicalEntryAction({
         actingBranchId,
         patientId,
         toothCode: String(fdi),
         surfaces: surfaces as unknown as never,
         kind: String(data.get("kind") ?? "FINDING") as never,
-        clinicalCode: String(data.get("clinicalCode") ?? "OTHER") as never,
+        detail,
         status: String(data.get("status") ?? "ACTIVE") as never,
         notes: String(data.get("notes") ?? "").trim() || null,
+        occurredAt: occurrenceTimestamp(occurredDate),
+        idempotencyKey: idempotencyKey(),
       });
       if (!result.ok) {
         setError(message(result.code));
@@ -397,13 +467,12 @@ export function ToothInspector({
               </label>
               <label className="grid gap-1 text-xs font-medium">
                 Clinical code
-                <select name="clinicalCode" defaultValue="OTHER" className="h-9 rounded-md border bg-background px-2 text-sm">
+                <select name="clinicalCode" defaultValue="CARIES" className="h-9 rounded-md border bg-background px-2 text-sm">
                   <option value="CARIES">Caries</option>
-                  <option value="RESTORATION">Restoration</option>
-                  <option value="CROWN">Crown</option>
-                  <option value="MISSING">Missing</option>
-                  <option value="SEALANT">Sealant</option>
-                  <option value="FRACTURE">Fracture</option>
+                  <option value="RESTORATION">Restoration / crown</option>
+                  <option value="ROOT_CANAL">Root canal</option>
+                  <option value="TOOTH_STATE">Tooth state</option>
+                  <option value="ORTHODONTIC">Orthodontic</option>
                   <option value="OTHER">Other</option>
                 </select>
               </label>
@@ -422,6 +491,91 @@ export function ToothInspector({
               <label className="grid gap-1 text-xs font-medium">
                 Surfaces (comma)
                 <input name="surfaces" defaultValue="O" placeholder="O or M,D" maxLength={20} className="h-9 rounded-md border bg-background px-2 text-sm" />
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1 text-xs font-medium">
+                Caries depth
+                <select name="cariesDepth" defaultValue="DENTIN" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="ENAMEL">Enamel</option>
+                  <option value="DENTIN">Dentin</option>
+                  <option value="PULPAL">Pulpal</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                ICDAS (optional)
+                <select name="icdas" defaultValue="" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="">Not specified</option>
+                  {[0, 1, 2, 3, 4, 5, 6].map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Restoration type
+                <select name="restorationType" defaultValue="none" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="none">Filling</option>
+                  <option value="crown">Crown</option>
+                  <option value="inlay">Inlay</option>
+                  <option value="onlay">Onlay</option>
+                  <option value="veneer">Veneer</option>
+                  <option value="bridge">Bridge</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Restoration material
+                <select name="restorationMaterial" defaultValue="composite" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="composite">Composite</option>
+                  <option value="amalgam">Amalgam</option>
+                  <option value="gic">GIC</option>
+                  <option value="temporary">Temporary</option>
+                  <option value="zircon">Zircon</option>
+                  <option value="metal">Metal</option>
+                  <option value="metal-ceramic">Metal-ceramic</option>
+                  <option value="emax">E.max</option>
+                  <option value="gold">Gold</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Root canal state
+                <select name="rootCanalState" defaultValue="endo-filling" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="endo-medical-filling">Medical filling</option>
+                  <option value="endo-filling">Filling</option>
+                  <option value="endo-filling-incomplete">Incomplete filling</option>
+                  <option value="endo-glass-pin">Glass pin</option>
+                  <option value="endo-metal-pin">Metal pin</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Tooth state
+                <select name="toothState" defaultValue="PRESENT" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="PRESENT">Present</option>
+                  <option value="MISSING">Missing</option>
+                  <option value="EXTRACTION_WOUND">Extraction wound</option>
+                  <option value="SUBGINGIVAL">Subgingival</option>
+                  <option value="RADIX">Radix</option>
+                  <option value="BROKEN">Broken</option>
+                  <option value="CROWN_PREPARATION">Crown preparation</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Orthodontic appliance
+                <select name="orthoAppliance" defaultValue="BRACKET" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="BRACKET">Bracket</option>
+                  <option value="BAND">Band</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Orthodontic movement
+                <select name="orthoMovement" defaultValue="" className="h-9 rounded-md border bg-background px-2 text-sm">
+                  <option value="">None</option>
+                  <option value="DRIFT">Drift</option>
+                  <option value="INTRUSION">Intrusion</option>
+                  <option value="EXTRUSION">Extrusion</option>
+                  <option value="ROTATION">Rotation</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium">
+                Occurrence date
+                <input name="occurredDate" type="date" defaultValue={localDateValue()} required className="h-9 rounded-md border bg-background px-2 text-sm" />
               </label>
             </div>
             <label className="grid gap-1 text-xs font-medium">
