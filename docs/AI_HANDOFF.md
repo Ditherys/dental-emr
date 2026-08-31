@@ -1,5 +1,38 @@
 # AI Handoff - Phases 23-24 complete, all 24 phases checkpointed
 
+## Unified Clinical Chart workspace implementation-plan checkpoint (2026-09-01)
+
+- Added the detailed, TDD-ordered implementation plan at
+  `docs/superpowers/plans/2026-09-01-unified-clinical-chart-workspace.md`.
+  It decomposes the approved design into 17 independently reviewable Claude
+  Opus checkpoints: managed visit lifecycle; full-width shell; EMR-owned
+  anatomical renderer; responsive chart; shared record composer; atomic
+  treatment/charge/payment; bridge/implant; treatment planning; complete
+  periodontal model, calculations, RPCs, and UI; canonical chronology;
+  private gallery; staged interchange; print/help/runtime-package cutover; and
+  final local gates.
+- The plan resolves the current runtime-package conflict in favor of accepted
+  ADR-028. Claude must use only committed controlled-fork source at
+  `5e28d931feefe4c3382513dbb0f5a9db9cf9948c`, port the approved anatomy/layer
+  and pure periodontal behavior into EMR-owned modules, generate reviewed
+  React node trees from the pinned SVG assets without runtime markup parsing or
+  injection, preserve MIT/source provenance, and remove
+  `react-advanced-odontogram`/`jspdf` only after parity and canonical reload
+  tests pass. The neighboring fork checkout is dirty and is explicitly not an
+  approved copy source.
+- The plan includes forward-only migration names, RLS/grant/authorization and
+  concurrency coverage, immutable provider-derived clinical/financial writes,
+  fail-closed synthetic drawing retirement, staged FHIR/JSON import,
+  canonical exports, and the full local verification sequence. It prohibits
+  `db:reset:local`, hosted writes, real data, production claims, provider
+  selection, renderer persistence, reset/Classic/drawing behavior, and
+  destructive historical encounter reconciliation.
+- This checkpoint is documentation only. It changes no application code,
+  schema, dependency, runtime state, or clinical data. Per the repository gate,
+  the plan still requires independent review and explicit owner approval before
+  Claude begins Task 1. Claude must execute one task per checkpoint, update this
+  handoff, commit, and stop for independent review.
+
 ## Authenticated provider encounter attribution — local implementation (2026-09-01)
 
 - Removed `treatingProviderId` from the encounter input schema, server action,
