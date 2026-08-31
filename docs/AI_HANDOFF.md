@@ -3067,3 +3067,34 @@ resolved.
 The local environment also currently has an unrelated service occupying port
 3000 (Fortitude site); the Dental EMR server is therefore on port 3001. This is
 an environment routing issue, not a chart-data source change.
+
+## Unified Clinical Chart workspace design checkpoint (2026-09-01)
+
+The project owner approved Approach 1: replace the fragmented inner
+`Records` / `Odontogram` / `Treatment plan` navigation with one full-width
+Clinical Chart workspace. The approved written design is recorded in
+`docs/superpowers/specs/2026-09-01-unified-clinical-chart-workspace-design.md`.
+
+The design keeps the controlled fork as the anatomical/overlay renderer while
+the EMR owns native controls, workflows, authorization, and canonical data. It
+defines Current status, Treatment plan, and full Periodontal modes; a
+temporary tooth drawer; server-derived signed-in treating dentist; race-safe
+visit auto-start/resume; one oldest-first chronological progress record;
+procedure-specific ledger balances; and toolbar access to the private clinical
+gallery. It explicitly excludes Classic view, reset controls, freehand drawing,
+drawing history, demo/localStorage persistence, and duplicated fork workflow
+panels.
+
+Read-only browser inspection supporting the design found a roughly 560-pixel
+chart inside competing desktop columns and a roughly 928-pixel desktop tooth
+grid overflowing a roughly 343-pixel phone container. The design therefore
+lets only the Clinical chart break out of the normal patient content cap,
+removes permanent controls/inspector columns, uses arch-focused tablet
+navigation, and defines a quadrant/tooth phone workflow.
+
+This checkpoint changes documentation only. It adds no application code,
+migration, dependency, clinical data, or runtime state. The next gate is owner
+review of the written specification, followed by a separate detailed
+implementation plan. ADR-029's Cloud TEST, hosted E2E/accessibility, advisor,
+security, independent review, and final release-acceptance gates remain
+pending.
