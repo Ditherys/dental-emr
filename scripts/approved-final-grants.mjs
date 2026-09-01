@@ -486,6 +486,14 @@ const UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION =
   "20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql";
 const CURRENT_MANAGED_VISIT_PROJECTION_GRANTS_MIGRATION =
   "20260901010113_current_managed_visit_projection_grants.sql";
+// The object migration that creates the composer RPCs and, beside that
+// creation, REVOKEs browser execute on the superseded direct entry path. This
+// is the file that revokes, so it is the supersede pivot below — never the
+// grants file that only adds the replacement grants.
+const CLINICAL_RECORD_COMPOSER_RPCS_MIGRATION =
+  "20260901010102_clinical_record_composer_rpcs.sql";
+const CLINICAL_RECORD_COMPOSER_RPCS_GRANTS_MIGRATION =
+  "20260901010103_clinical_record_composer_rpcs_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -560,6 +568,15 @@ const odontogramRevampRpcGrants = Object.freeze([
   "public.record_procedure_followup(uuid,uuid,text,timestamptz,text)",
 ].map((object) => ({
   grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [],
+  // The direct entry path can record a finding with neither an encounter nor a
+  // treating provider. The composer replaces it, and the pivot below must name
+  // the OBJECT migration that issues the REVOKE, not the grants file beside it.
+  ...(object === "public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)"
+    ? {
+        supersededFrom: CLINICAL_RECORD_COMPOSER_RPCS_MIGRATION,
+        supersededBy: "public.record_visit_tooth_findings(uuid,uuid,text[],text,text[],text,date,text,uuid)",
+      }
+    : {}),
   reason: "O5 revamp browser boundary: SECURITY DEFINER derives tenant, signed-in active provider, and branch authorization; writes are bounded, audited, idempotent, and expose no base-table grant.",
 })));
 
@@ -861,6 +878,28 @@ const unifiedClinicalVisitLifecycleLockSeedGrants = Object.freeze([
     privilege: "execute",
     columns: [],
     reason: `${CLINICAL_VISIT_LIFECYCLE_GRANT_REASON} Re-granted unchanged after the request-key advisory lock was moved to its own key space (seed 1) so that lock ordering, and therefore deadlock freedom, is structural rather than incidental.`,
+  },
+]);
+
+const clinicalRecordComposerGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object:
+      "public.record_visit_tooth_findings(uuid,uuid,text[],text,text[],text,date,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only browser-callable tooth-finding write. It derives organization, actor and treating provider inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, validates the patient against the derived tenant, and obtains its encounter from public.start_or_resume_clinical_visit so no finding can exist without a managed visit or an attributable provider. Tooth codes, surface anatomy, whole-tooth versus surface code compatibility, the bounded note and the Philippine clinical-date bound are revalidated inside the same transaction; a replayed request key returns the original result under a transaction-scoped lock ordered ahead of the visit locks. Every entry appends one bounded audit event, and no organization, provider, actor, encounter or visit date may be supplied by a client.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.record_visit_clinical_note(uuid,uuid,text,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only browser-callable visit-note write in the clinical chart workspace. It derives organization, actor and treating provider server-side under an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, validates the patient against the derived tenant, obtains its encounter from public.start_or_resume_clinical_visit, and authors a bounded DRAFT through the existing public.create_clinical_note boundary so finalized-note immutability and the amendment path are untouched. AMENDMENT is refused, a replayed request key returns the original note, and no encounter, organization, provider or actor may be supplied by a client.",
   },
 ]);
 
@@ -1778,6 +1817,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: UNIFIED_CLINICAL_VISIT_LIFECYCLE_GRANTS_MIGRATION,
     grants: unifiedClinicalVisitLifecycleGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_RECORD_COMPOSER_RPCS_GRANTS_MIGRATION,
+    grants: clinicalRecordComposerGrants,
   }),
   Object.freeze({
     file: UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION,

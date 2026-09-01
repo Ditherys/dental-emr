@@ -210,7 +210,11 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.get_patient_odontogram(uuid,uuid)",
     "public.get_patient_odontogram_v3(uuid,uuid)",
     "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
-    "public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+    // `record_tooth_clinical_entry_v3` is deliberately absent: the visit-bound
+    // composer superseded it and its browser grant was revoked adjacent to the
+    // composer's creation.
+    "public.record_visit_tooth_findings(uuid,uuid,text[],text,text[],text,date,text,uuid)",
+    "public.record_visit_clinical_note(uuid,uuid,text,text,uuid)",
     "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
     "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
     "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
@@ -1450,7 +1454,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(262);
+    expect(approved.size).toBe(263);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

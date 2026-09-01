@@ -17,6 +17,7 @@ function renderWorkspace(overrides: Partial<Parameters<typeof ClinicalChartWorks
   const onRetry = vi.fn();
   const utils = render(
     <ClinicalChartWorkspace
+      patientId="c2000000-0000-0000-0000-000000000002"
       visitHeader={<p data-testid="visit-header-slot">Visit state</p>}
       medicalSafety={<MedicalSafetySummary records={[allergy]} />}
       chart={{
@@ -212,5 +213,81 @@ describe("ClinicalChartWorkspace load failures", () => {
     expect(failure).toHaveTextContent("photographs could not be loaded");
     fireEvent.click(within(failure).getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ClinicalChartWorkspace patient scoping", () => {
+  const patientA = "c2000000-0000-0000-0000-00000000000a";
+  const patientB = "c2000000-0000-0000-0000-00000000000b";
+
+  function SelectionProbe() {
+    const view = useClinicalChartView();
+    return (
+      <div>
+        <p data-testid="selection-probe">{view.selectedFdi.join(",")}</p>
+        <button type="button" onClick={() => view.setView({ selectedFdi: [16, 17] })}>
+          Select teeth
+        </button>
+      </div>
+    );
+  }
+
+  function renderScoped(patientId: string, defaultMode: "CURRENT_STATUS" | "TREATMENT_PLAN" | "PERIODONTAL") {
+    return (
+      <ClinicalChartWorkspace
+        patientId={patientId}
+        defaultMode={defaultMode}
+        visitHeader={<p data-testid="visit-header-slot">Visit state</p>}
+        medicalSafety={<MedicalSafetySummary records={[allergy]} />}
+        chart={{
+          CURRENT_STATUS: <SelectionProbe />,
+          TREATMENT_PLAN: <SelectionProbe />,
+          PERIODONTAL: <SelectionProbe />,
+        }}
+        record={<p data-testid="record-panel">Progress record</p>}
+      />
+    );
+  }
+
+  it.each(["CURRENT_STATUS", "TREATMENT_PLAN", "PERIODONTAL"] as const)(
+    "clears the workspace tooth selection when the patient changes in %s mode",
+    (mode) => {
+      const { rerender } = render(renderScoped(patientA, mode));
+
+      fireEvent.click(screen.getByRole("button", { name: "Select teeth" }));
+      expect(screen.getByTestId("selection-probe")).toHaveTextContent("16,17");
+      expect(screen.getByTestId("chart-selection-summary")).toHaveTextContent("Teeth 16, 17 selected");
+
+      rerender(renderScoped(patientB, mode));
+
+      // A tooth selected on one patient must never survive into another patient's
+      // chart, in any chart mode.
+      expect(screen.getByTestId("selection-probe")).toHaveTextContent("");
+      expect(screen.getByTestId("chart-selection-summary")).toHaveTextContent("No tooth selected");
+    },
+  );
+
+  it("resets the whole chart view, not only the selection, on a patient change", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(renderScoped(patientA, "TREATMENT_PLAN"));
+
+    await user.selectOptions(screen.getByLabelText("Dentition"), "PRIMARY");
+    await user.click(screen.getByRole("button", { name: "Upper arch" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select teeth" }));
+
+    rerender(renderScoped(patientB, "TREATMENT_PLAN"));
+
+    expect(screen.getByLabelText("Dentition")).toHaveValue("AUTO");
+    expect(screen.getByRole("button", { name: "Fit to screen" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("selection-probe")).toHaveTextContent("");
+  });
+
+  it("keeps the selection across a chart mode change for the same patient", () => {
+    render(renderScoped(patientA, "CURRENT_STATUS"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Select teeth" }));
+    fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
+
+    expect(screen.getByTestId("selection-probe")).toHaveTextContent("16,17");
   });
 });

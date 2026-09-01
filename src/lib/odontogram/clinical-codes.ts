@@ -352,3 +352,75 @@ export function isValidFurcationEntrance(value: unknown): value is FurcationEntr
 export function isValidImplantAttachmentValue(value: unknown): value is ImplantAttachmentValue {
   return typeof value === "string" && IMPLANT_ATTACHMENT_SET.has(value);
 }
+
+// ---------------------------------------------------------------------------
+// Clinical record composer vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * The bounded finding vocabulary the tooth record composer may author.
+ *
+ * Relationship-owned records (BRIDGE, IMPLANT), planned treatment, treatment
+ * events and periodontal examinations are deliberately absent: each has its own
+ * authorized workflow. Every code here resolves to a canonical renderer detail
+ * without the composer inventing a clinical measurement it did not observe.
+ */
+export type ClinicalFindingCode =
+  | "CARIES"
+  | "RESTORATION"
+  | "CROWN"
+  | "MISSING"
+  | "SEALANT"
+  | "FRACTURE"
+  | "OTHER";
+
+export const CLINICAL_FINDING_CODES: readonly ClinicalFindingCode[] = [
+  "CARIES",
+  "RESTORATION",
+  "CROWN",
+  "MISSING",
+  "SEALANT",
+  "FRACTURE",
+  "OTHER",
+];
+
+/** Findings that describe the whole tooth and therefore claim no surface. */
+export const WHOLE_TOOTH_FINDING_CODES: readonly ClinicalFindingCode[] = ["CROWN", "MISSING"];
+
+const WHOLE_TOOTH_FINDING_SET = new Set<string>(WHOLE_TOOTH_FINDING_CODES);
+
+export function isWholeToothFindingCode(value: unknown): boolean {
+  return typeof value === "string" && WHOLE_TOOTH_FINDING_SET.has(value);
+}
+
+export type ToothSurfaceCode = Exclude<Surface, "FULL">;
+
+const ANTERIOR_TOOTH_SURFACES: readonly ToothSurfaceCode[] = ["I", "B", "L", "M", "D", "F"];
+const POSTERIOR_TOOTH_SURFACES: readonly ToothSurfaceCode[] = ["O", "B", "L", "M", "D", "F"];
+
+/**
+ * True for an incisor or canine in any quadrant, permanent or primary. The
+ * second FDI digit is the position in the arch, so positions 1-3 are anterior
+ * and 4-8 are posterior. Derived from the code rather than imported from the
+ * dentition module so this vocabulary stays dependency-free.
+ */
+export function isAnteriorToothCode(toothCode: string): boolean {
+  return toothCode.length === 2 && toothCode[1] >= "1" && toothCode[1] <= "3";
+}
+
+/**
+ * The surfaces a given tooth actually owns. An occlusal table belongs to a
+ * posterior tooth and an incisal edge to an anterior one; the composer must
+ * never offer, and the database must never accept, the other combination.
+ */
+export function allowedSurfacesForToothCode(toothCode: string): readonly ToothSurfaceCode[] {
+  return isAnteriorToothCode(toothCode) ? ANTERIOR_TOOTH_SURFACES : POSTERIOR_TOOTH_SURFACES;
+}
+
+/** The surfaces every tooth in a multi-tooth selection owns. */
+export function allowedSurfacesForToothCodes(toothCodes: readonly string[]): readonly ToothSurfaceCode[] {
+  if (toothCodes.length === 0) return [];
+  return FULL_TOOTH_SURFACES.filter((surface) =>
+    toothCodes.every((toothCode) => allowedSurfacesForToothCode(toothCode).includes(surface)),
+  );
+}

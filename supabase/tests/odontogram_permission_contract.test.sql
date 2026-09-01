@@ -38,7 +38,6 @@ select extensions.ok(
 
 select extensions.ok(
   has_function_privilege('authenticated','public.get_patient_odontogram(uuid,uuid)','execute')
-  and has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute')
   and has_function_privilege('authenticated','public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)','execute')
   and has_function_privilege('authenticated','public.void_tooth_clinical_entry(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)','execute')
@@ -60,6 +59,23 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)','execute')
   and has_function_privilege('authenticated','public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)','execute'),
   'authenticated receives every reviewed O5/O8 signature'
+);
+
+-- The O5 direct entry path could record a finding with neither an encounter nor
+-- a treating provider. The visit-bound composer replaced it, so browser execute
+-- moved from one to the other rather than being held by both.
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)',
+    'execute'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.record_visit_tooth_findings(uuid,uuid,text[],text,text[],text,date,text,uuid)',
+    'execute'
+  ),
+  'the superseded provider-free entry path is revoked and the visit-bound composer replaces it'
 );
 
 select extensions.ok(

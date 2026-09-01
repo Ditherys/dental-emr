@@ -34,6 +34,7 @@ function RegionFailure({ message, onRetry }: { message: string; onRetry?: () => 
  * to a bounded retry rather than to stale content.
  */
 export function ClinicalChartWorkspace({
+  patientId,
   visitHeader,
   medicalSafety,
   chart,
@@ -45,6 +46,8 @@ export function ClinicalChartWorkspace({
   onRetry,
   defaultMode = "CURRENT_STATUS",
 }: {
+  /** Route patient. Every scrap of chart view state is scoped to it. */
+  patientId: string;
   visitHeader: ReactNode;
   medicalSafety: ReactNode;
   chart: Record<ClinicalChartMode, ReactNode>;
@@ -61,6 +64,18 @@ export function ClinicalChartWorkspace({
   // survives a mode change and a responsive reflow.
   const [view, setView] = useState<ClinicalChartView>(DEFAULT_CLINICAL_CHART_VIEW);
   const galleryRef = useRef<HTMLDivElement | null>(null);
+
+  // The chart view is patient-scoped clinical context, not a durable
+  // preference. A tooth selected on one patient must never survive into
+  // another patient's chart, and the reset must not depend on which chart mode
+  // happens to be mounted — the modes come and go, this owner does not. The
+  // adjustment runs during render rather than in an effect so no frame can ever
+  // paint the previous patient's selection against the new patient.
+  const [viewPatientId, setViewPatientId] = useState(patientId);
+  if (viewPatientId !== patientId) {
+    setViewPatientId(patientId);
+    setView(DEFAULT_CLINICAL_CHART_VIEW);
+  }
 
   const updateView = useCallback(
     (next: Partial<ClinicalChartView>) => setView((current) => ({ ...current, ...next })),

@@ -5,18 +5,17 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
 import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
-import { ForkSaveController } from "@/components/odontogram/fork-save-controller";
 import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
 import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
-import { ToothInspector } from "@/components/odontogram/tooth-inspector";
+import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
 import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
+
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
 import {
@@ -24,6 +23,13 @@ import {
   finalizePeriodontalExaminationAction,
   savePeriodontalMeasurementsAction,
 } from "./perio-actions";
+
+/**
+ * The projection-only renderer never emits fork drafts. The prop stays until
+ * Task 17 removes the wrapper; a stable no-op keeps it from allocating a new
+ * closure on every render.
+ */
+const NO_FORK_DRAFTS: (drafts: readonly ForkClinicalDraft[]) => void = () => {};
 
 type Props = {
   patientId: string;
@@ -64,11 +70,9 @@ export function OdontogramSection({
   const dto = isCurrentPatientSnapshot ? dtoSnapshot.dto : null;
   const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
-  const [forkDrafts, setForkDrafts] = React.useState<readonly ForkClinicalDraft[]>([]);
   const [perioOpen, setPerioOpen] = React.useState(false);
-  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
-  const [directTreatmentRequested, setDirectTreatmentRequested] = React.useState(false);
 
   // One selection owner. The chart publishes selection into the workspace chart
   // view; this section reads the tooth the inspector should show from that same
@@ -90,12 +94,10 @@ export function OdontogramSection({
   // Transient local state is keyed by patientId. It also runs when the chart
   // mode remounts this section, which is harmless for overlay state.
   React.useEffect(() => {
-    setSheetOpen(false);
+    setDrawerOpen(false);
     setError(null);
     setPerioOpen(false);
     setFollowupOpen(false);
-    setDirectTreatmentRequested(false);
-    setForkDrafts([]);
   }, [patientId]);
 
   // The chart view outlives this section, so selection must be cleared on a
@@ -118,10 +120,10 @@ export function OdontogramSection({
       // chart — a compatibility mount with no workspace above it — needs this
       // section to record the selection on its behalf.
       if (!managed) setView({ selectedFdi: [fdi] });
-      // Selection stays on the chart. The inspector is a temporary overlay
-      // opened explicitly, at every width, so selecting a tooth never covers
-      // the chart-level actions. Task 5 replaces this overlay with the record
-      // drawer.
+      // Selecting a tooth opens the temporary record drawer. It is a bounded
+      // side panel rather than the removed permanent inspector column, so the
+      // chart keeps the whole workspace row when nothing is selected.
+      setDrawerOpen(true);
     },
     [managed, setView],
   );
@@ -226,13 +228,10 @@ export function OdontogramSection({
 
   const lastFocusedRef = React.useRef<HTMLElement | null>(null);
 
-  // Closing the inspector closes the overlay only. The tooth stays selected, so
-  // the chart, the toolbar summary and `Open inspector` continue to agree and
-  // the clinical write path can be reopened without re-selecting.
-  const closeInspector = React.useCallback(() => {
-    setSheetOpen(false);
-    setDirectTreatmentRequested(false);
-    // Return focus to the previously selected tooth for keyboard continuity.
+  // Closing an overlay closes the overlay only. The tooth stays selected, so
+  // the chart, the toolbar summary and the reopen affordances continue to agree
+  // and the clinical write path can be reopened without re-selecting.
+  const returnFocusToChart = React.useCallback(() => {
     const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`[data-fdi="${selectedFdi}"]`);
     // Defer to next frame so sheet/dialog unmount does not steal focus.
     requestAnimationFrame(() => {
@@ -271,19 +270,7 @@ export function OdontogramSection({
             dto={dto}
             canWriteClinical={canWriteClinical}
             onSelect={handleSelect}
-            onDraftChange={setForkDrafts}
-            onError={setError}
-          />
-          <ForkSaveController
-            key={`${patientId}:${actingBranchId}`}
-            patientId={patientId}
-            actingBranchId={actingBranchId}
-            canWriteClinical={canWriteClinical}
-            drafts={forkDrafts}
-            onSaved={async () => {
-              setForkDrafts([]);
-              await refetch();
-            }}
+            onDraftChange={NO_FORK_DRAFTS}
             onError={setError}
           />
           <ForkPrintChart
@@ -298,10 +285,10 @@ export function OdontogramSection({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground print:hidden">
-        <span>{canWriteClinical ? "Record, amend or void from the tooth inspector once a tooth is selected." : "Read-only access. Selection shows the current clinical record."}</span>
+        <span>{canWriteClinical ? "Select a tooth to open its record drawer and add a clinical record." : "Read-only access. Selection shows the current clinical record."}</span>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
-            Open inspector
+          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setDrawerOpen(true)}>
+            Open tooth record
           </Button>
           <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setPerioOpen(true)}>
             Open periodontal entry
@@ -314,35 +301,26 @@ export function OdontogramSection({
         canWriteClinical={canWriteClinical}
         procedureCases={procedureCases}
         followupAvailable={followupAvailable}
-        onRecordDirectTreatment={() => {
-          setDirectTreatmentRequested(true);
-          setSheetOpen(true);
-        }}
+        onRecordDirectTreatment={() => setDrawerOpen(true)}
         onOpenFollowup={() => setFollowupOpen(true)}
       />
 
       {renderProgressRecord && <ProgressRecordTable events={progressEvents} />}
 
-      <Sheet open={sheetOpen && selectedFdiForCurrentPatient !== null} onOpenChange={(open) => { if (!open) closeInspector(); else setSheetOpen(true); }}>
-        <SheetContent side="bottom" className="max-h-[85dvh] overflow-auto p-0 sm:max-h-[80dvh] sm:max-w-none" onEscapeKeyDown={closeInspector} onInteractOutside={closeInspector}>
-          <SheetHeader className="sr-only">
-            <SheetTitle>Tooth details</SheetTitle>
-          </SheetHeader>
-          {selectedFdiForCurrentPatient !== null && dto && (
-            <ToothInspector
-              patientId={patientId}
-              actingBranchId={actingBranchId}
-              fdi={selectedFdiForCurrentPatient}
-              dto={dto}
-              notation="FDI"
-              canWriteClinical={canWriteClinical}
-              onClose={closeInspector}
-              onMutated={refetch}
-              initialRecordOpen={directTreatmentRequested}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <ToothRecordDrawer
+        open={drawerOpen && selectedFdiForCurrentPatient !== null}
+        onOpenChange={(open) => {
+          setDrawerOpen(open);
+          if (!open) returnFocusToChart();
+        }}
+        patientId={patientId}
+        branchId={actingBranchId}
+        selectedFdi={isCurrentPatientSnapshot ? viewSelection : []}
+        notation={view.notation}
+        dto={dto}
+        canWriteClinical={canWriteClinical}
+        onRecorded={refetch}
+      />
 
       <Dialog open={perioOpen} onOpenChange={(open) => !open && setPerioOpen(false)}>
         <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-auto sm:w-[min(96vw,72rem)]" onEscapeKeyDown={() => setPerioOpen(false)}>

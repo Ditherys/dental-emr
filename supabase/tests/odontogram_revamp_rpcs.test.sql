@@ -1,7 +1,10 @@
 begin;
 select extensions.plan(13);
 select extensions.ok(has_function_privilege('authenticated','public.get_patient_odontogram_v3(uuid,uuid)','execute'),'v3 odontogram read is callable');
-select extensions.ok(has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'v3 clinical entry is callable');
+-- Superseded by the visit-bound composer, which cannot record a finding without
+-- an encounter or a treating provider. The v3 direct path stays defined so
+-- historical entries remain explainable, but the browser may not call it.
+select extensions.ok(not has_function_privilege('authenticated','public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'v3 clinical entry is no longer browser callable');
 select extensions.ok(has_function_privilege('authenticated','public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)','execute'),'direct treatment boundary is callable');
 select extensions.ok(has_function_privilege('authenticated','public.record_procedure_followup(uuid,uuid,text,timestamptz,text)','execute'),'follow-up boundary is callable');
 select extensions.ok(not has_function_privilege('service_role','public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)','execute'),'service role cannot bypass direct treatment boundary');

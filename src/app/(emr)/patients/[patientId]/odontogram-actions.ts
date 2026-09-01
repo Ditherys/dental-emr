@@ -14,7 +14,9 @@ import {
   createPlanBridgeDesignInputSchema,
   createPlanImplantDesignInputSchema,
   finalizePeriodontalExaminationInputSchema,
+  findingInputSchema,
   getPatientOdontogramInputSchema,
+  visitClinicalNoteInputSchema,
   recordCurrentBridgeInputSchema,
   recordCurrentImplantComponentInputSchema,
   recordToothClinicalEntryInputSchema,
@@ -43,6 +45,8 @@ import {
   recordCurrentBridge,
   recordCurrentImplantComponent,
   recordToothClinicalEntry,
+  recordVisitClinicalNote,
+  recordVisitToothFindings,
   resolveLegacyOdontogramEntry,
   savePeriodontalMeasurements,
   transitionTreatmentPlanItemExecution,
@@ -93,6 +97,43 @@ export async function getPatientOdontogramAction(input: unknown): Promise<Odonto
   }
 }
 
+// ---------------------------------------------------------------------------
+// Clinical record composer actions
+//
+// The public boundary accepts route context and clinical facts only. The RPC
+// behind each action starts or resumes the managed visit, re-derives the
+// organization, branch authority and treating provider, and revalidates every
+// relationship inside the same transaction; the patient revalidated here is the
+// one the server resolved, never the one the browser claimed.
+// ---------------------------------------------------------------------------
+
+export async function recordVisitToothFindingsAction(input: unknown): Promise<OdontogramMutationResult> {
+  const invalidResult = invalid(findingInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = findingInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
+    const mutation = await recordVisitToothFindings(value);
+    revalidateAuthoritativePatient(mutation.patientId);
+    return { ok: true };
+  } catch (error) { return result(error); }
+}
+
+export async function recordVisitClinicalNoteAction(input: unknown): Promise<OdontogramMutationResult> {
+  const invalidResult = invalid(visitClinicalNoteInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = visitClinicalNoteInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
+    const mutation = await recordVisitClinicalNote(value);
+    revalidateAuthoritativePatient(mutation.patientId);
+    return { ok: true };
+  } catch (error) { return result(error); }
+}
+
+/**
+ * Superseded by `recordVisitToothFindingsAction`. The RPC behind it no longer
+ * grants execute to `authenticated`, so this action fails closed. It is
+ * retained only while the superseded odontogram write paths are removed.
+ */
 export async function recordToothClinicalEntryAction(input: unknown): Promise<OdontogramMutationResult> {
   const invalidResult = invalid(recordToothClinicalEntryInputSchema, input); if (invalidResult) return invalidResult;
   try {

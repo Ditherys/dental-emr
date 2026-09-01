@@ -49,6 +49,20 @@ export type StartOrResumeClinicalVisitInput = z.infer<typeof startOrResumeClinic
 export type ClinicalChartMode = "CURRENT_STATUS" | "TREATMENT_PLAN" | "PERIODONTAL";
 
 /**
+ * The kinds of clinical record the tooth record composer can present. Each kind
+ * is written by its own authorized workflow; the composer only chooses which
+ * one the clinician is composing.
+ */
+export type ClinicalRecordKind =
+  | "FINDING"
+  | "PLANNED_TREATMENT"
+  | "TREATMENT_EVENT"
+  | "BRIDGE"
+  | "IMPLANT"
+  | "NOTE"
+  | "PHOTO";
+
+/**
  * The bounded region of the dentition a chart renders. Like the mode, this is a
  * presentation concern: it narrows what is drawn, never what is authorized.
  */

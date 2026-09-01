@@ -9974,6 +9974,40 @@ export type Database = {
           version: number
         }[]
       }
+      record_visit_clinical_note: {
+        Args: {
+          p_branch_id: string
+          p_content: string
+          p_idempotency_key: string
+          p_note_type: string
+          p_patient_id: string
+        }
+        Returns: {
+          encounter_id: string
+          note_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
+      record_visit_tooth_findings: {
+        Args: {
+          p_branch_id: string
+          p_clinical_date: string
+          p_finding_code: string
+          p_idempotency_key: string
+          p_note: string
+          p_patient_id: string
+          p_status: string
+          p_surfaces: string[]
+          p_tooth_codes: string[]
+        }
+        Returns: {
+          clinical_date: string
+          encounter_id: string
+          patient_id: string
+          recorded_count: number
+        }[]
+      }
       refund_payment: {
         Args: {
           p_acting_branch_id: string

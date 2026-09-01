@@ -40,6 +40,10 @@ import {
   treatmentExecutionTransitionRowSchema,
   updateDraftPlanBridgeDesignInputSchema,
   updateDraftPlanImplantDesignInputSchema,
+  findingInputSchema,
+  visitClinicalNoteInputSchema,
+  visitClinicalNoteRowSchema,
+  visitToothFindingsRowSchema,
   voidCurrentBridgeInputSchema,
   voidCurrentImplantComponentInputSchema,
   voidToothClinicalEntryInputSchema,
@@ -172,6 +176,62 @@ export async function getPatientOdontogram(input: unknown): Promise<PatientOdont
   };
 }
 
+// ---------------------------------------------------------------------------
+// Clinical record composer
+//
+// One database transaction per submission: the RPC starts or resumes the
+// managed visit, binds the write to that encounter and to the server-derived
+// treating provider, revalidates every relationship, and appends the audit
+// event. Nothing here forwards an organization, provider, actor, encounter or
+// visit date, because the contract schemas refuse to parse one.
+// ---------------------------------------------------------------------------
+
+export async function recordVisitToothFindings(input: unknown) {
+  const value = findingInputSchema.parse(input);
+  const row = visitToothFindingsRowSchema.parse(firstRow(await callRpc("record_visit_tooth_findings" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_tooth_codes: value.toothCodes,
+    p_finding_code: value.findingCode,
+    p_surfaces: value.surfaces,
+    p_status: value.status,
+    p_clinical_date: value.clinicalDate,
+    p_note: value.note ?? null,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    patientId: row.patient_id,
+    encounterId: row.encounter_id,
+    clinicalDate: row.clinical_date,
+    recordedCount: row.recorded_count,
+  };
+}
+
+export async function recordVisitClinicalNote(input: unknown) {
+  const value = visitClinicalNoteInputSchema.parse(input);
+  const row = visitClinicalNoteRowSchema.parse(firstRow(await callRpc("record_visit_clinical_note" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_note_type: value.noteType,
+    p_content: value.content,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    patientId: row.patient_id,
+    encounterId: row.encounter_id,
+    noteId: row.note_id,
+    version: row.version,
+  };
+}
+
+/**
+ * Superseded by `recordVisitToothFindings`. `record_tooth_clinical_entry_v3`
+ * could record a finding with neither an encounter nor a treating provider, so
+ * browser execute on it was withdrawn in
+ * `20260901010102_clinical_record_composer_rpcs.sql`; this binding now fails
+ * closed with NOT_AUTHORIZED. Retained only until the superseded odontogram
+ * paths are removed. Do not wire new callers to it.
+ */
 export async function recordToothClinicalEntry(input: unknown) {
   const value = recordToothClinicalEntryInputSchema.parse(input);
   const row = toothClinicalEntryMutationRowSchema.parse(firstRow(await callRpc("record_tooth_clinical_entry_v3" as FunctionName, {

@@ -23,6 +23,8 @@ import {
   recordCurrentBridge,
   recordCurrentImplantComponent,
   recordToothClinicalEntry,
+  recordVisitClinicalNote,
+  recordVisitToothFindings,
   resolveLegacyOdontogramEntry,
   savePeriodontalMeasurements,
   transitionTreatmentPlanItemExecution,
@@ -641,5 +643,118 @@ describe("odontogram service RPC contract", () => {
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "invalid state" } });
     await expect(voidCurrentBridge({ actingBranchId: branchId, bridgeId, expectedVersion: 1, reason: "r" })).rejects.toEqual(new OdontogramServiceError("INVALID_STATE"));
+  });
+});
+
+describe("clinical record composer service boundary", () => {
+  beforeEach(() => {
+    rpc.mockReset();
+  });
+
+  it("binds the finding write to the visit-bound RPC and returns the server-resolved patient", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ patient_id: patientId, encounter_id: encounterId, clinical_date: "2026-09-01", recorded_count: 2 }],
+      error: null,
+    });
+
+    await expect(recordVisitToothFindings({
+      patientId,
+      branchId,
+      toothCodes: ["16", "17"],
+      findingCode: "CARIES",
+      surfaces: ["O", "M"],
+      status: "ACTIVE",
+      clinicalDate: "2026-09-01",
+      note: "Synthetic occlusal caries",
+      idempotencyKey: "c3000000-0000-0000-0000-000000000003",
+    })).resolves.toEqual({
+      patientId,
+      encounterId,
+      clinicalDate: "2026-09-01",
+      recordedCount: 2,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("record_visit_tooth_findings", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+      p_tooth_codes: ["16", "17"],
+      p_finding_code: "CARIES",
+      p_surfaces: ["O", "M"],
+      p_status: "ACTIVE",
+      p_clinical_date: "2026-09-01",
+      p_note: "Synthetic occlusal caries",
+      p_idempotency_key: "c3000000-0000-0000-0000-000000000003",
+    });
+    // Exactly one RPC: the visit is started inside the same database transaction.
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("binds the note write to the visit-bound note RPC", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ patient_id: patientId, encounter_id: encounterId, note_id: entryId, version: 1 }],
+      error: null,
+    });
+
+    await expect(recordVisitClinicalNote({
+      patientId,
+      branchId,
+      noteType: "PROGRESS",
+      content: "Synthetic visit note",
+      idempotencyKey: "c3000000-0000-0000-0000-000000000003",
+    })).resolves.toEqual({ patientId, encounterId, noteId: entryId, version: 1 });
+
+    expect(rpc).toHaveBeenCalledWith("record_visit_clinical_note", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+      p_note_type: "PROGRESS",
+      p_content: "Synthetic visit note",
+      p_idempotency_key: "c3000000-0000-0000-0000-000000000003",
+    });
+  });
+
+  it("never forwards a browser-supplied organization, provider, encounter, or actor", async () => {
+    for (const forged of [
+      { organizationId: patientId },
+      { treatingProviderId: providerId },
+      { createdBy: recordedBy },
+      { encounterId },
+      { actingBranchId: branchId },
+    ]) {
+      await expect(recordVisitToothFindings({
+        patientId,
+        branchId,
+        toothCodes: ["16"],
+        findingCode: "CARIES",
+        surfaces: ["O"],
+        status: "ACTIVE",
+        clinicalDate: "2026-09-01",
+        idempotencyKey: "c3000000-0000-0000-0000-000000000003",
+        ...forged,
+      })).rejects.toBeInstanceOf(z.ZodError);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps composer RPC failures to safe codes", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(recordVisitToothFindings({
+      patientId,
+      branchId,
+      toothCodes: ["16"],
+      findingCode: "CARIES",
+      surfaces: ["O"],
+      status: "ACTIVE",
+      clinicalDate: "2026-09-01",
+      idempotencyKey: "c3000000-0000-0000-0000-000000000003",
+    })).rejects.toEqual(new OdontogramServiceError("NOT_AUTHORIZED"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "22023", message: "invalid input" } });
+    await expect(recordVisitClinicalNote({
+      patientId,
+      branchId,
+      noteType: "PROGRESS",
+      content: "Synthetic visit note",
+      idempotencyKey: "c3000000-0000-0000-0000-000000000003",
+    })).rejects.toEqual(new OdontogramServiceError("INVALID_INPUT"));
   });
 });

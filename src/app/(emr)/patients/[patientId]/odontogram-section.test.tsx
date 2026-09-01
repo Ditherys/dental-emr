@@ -116,8 +116,11 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByRole("button", { name: /Tooth 11/i })).toBeInTheDocument();
     // legacy flag visible after selecting that tooth
     const user = userEvent.setup();
+    // Selecting a tooth opens the temporary record drawer; the legacy facts now
+    // live in the drawer's bounded correction body.
     await user.click(screen.getByRole("button", { name: /Tooth 16/i }));
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Corrections" }));
     expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Legacy reconciliation needed/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Original legacy facts/i).length).toBeGreaterThan(0);
@@ -135,9 +138,8 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
-    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
-    // the inspector overlay should show the selected tooth
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    // the drawer should show the selected tooth
     expect(screen.getAllByText(/Tooth 11\b/).length).toBeGreaterThan(0);
 
     rerender(
@@ -150,7 +152,8 @@ describe("OdontogramSection O7", () => {
     );
 
     await waitFor(() => {
-      // after patient change the inspector closes and the new patient's chart owns the row
+      // after patient change the drawer closes and the new patient's chart owns the row
+      expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
       expect(screen.getByTestId("fork-odontogram")).toHaveAttribute(
         "data-patient-key",
@@ -208,6 +211,7 @@ describe("OdontogramSection O7", () => {
       expect(screen.queryByText("Synthetic patient A clinical note")).not.toBeInTheDocument();
       expect(screen.queryByText("Synthetic patient A progress note")).not.toBeInTheDocument();
       expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
     });
   });
@@ -232,6 +236,7 @@ describe("OdontogramSection O7", () => {
     );
 
     expect(screen.queryByText("Synthetic patient A retained note")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument();
     expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
   });
 
@@ -242,6 +247,7 @@ describe("OdontogramSection O7", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/odontogram could not be loaded/i);
+    expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument();
     expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
   });
 
@@ -251,12 +257,16 @@ describe("OdontogramSection O7", () => {
       <OdontogramSection patientId={mockDto.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
     );
 
-    expect(screen.getByRole("button", { name: "Open inspector" })).toHaveClass("min-h-11");
+    expect(screen.getByRole("button", { name: "Open tooth record" })).toHaveClass("min-h-11");
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
     await user.click(screen.getByRole("button", { name: /record direct treatment/i }));
 
-    expect(await screen.findByRole("dialog", { name: /record finding or treatment/i })).toBeInTheDocument();
+    // The approved workflow is now the record drawer and its composer, not the
+    // removed fork-era record dialog.
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+    expect(screen.getByRole("group", { name: "Record kind" })).toBeVisible();
   });
 
   it("hides write affordances in read-only state", async () => {
@@ -272,9 +282,9 @@ describe("OdontogramSection O7", () => {
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
     expect(screen.getAllByText(/Read-only access/i).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
-    const inspectors = await screen.findAllByTestId("tooth-inspector");
-    expect(inspectors.length).toBeGreaterThan(0);
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add clinical record" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Corrections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Record finding/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Amend/i })).not.toBeInTheDocument();
   });
@@ -331,17 +341,16 @@ describe("OdontogramSection O7", () => {
     // No viewport branching: the same explicit affordance opens the inspector
     // at every width.
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    const open = screen.getByRole("button", { name: "Open inspector" });
+    const open = screen.getByRole("button", { name: "Open tooth record" });
     expect(open).toBeEnabled();
     expect(open.className).not.toContain("lg:hidden");
-    await user.click(open);
 
-    const inspectors = await screen.findAllByTestId("tooth-inspector");
-    expect(inspectors.length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("button", { name: /Record finding/i }).length).toBeGreaterThan(0);
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+    expect(screen.getByRole("button", { name: "Record finding" })).toBeVisible();
   });
 
-  it("keeps the tooth selected after the inspector is closed, so the write path can be reopened", async () => {
+  it("keeps the tooth selected after the drawer is closed, so the write path can be reopened", async () => {
     const user = userEvent.setup();
     render(
       <OdontogramSection
@@ -353,20 +362,19 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
-    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Close" })[0]!);
-    await waitFor(() => expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument());
 
-    // Closing the overlay must not desynchronise the chart from the section:
+    // Closing the drawer must not desynchronise the chart from the section:
     // the tooth is still selected, so the only clinical write path is still
     // reachable without re-selecting a tooth that already looks selected.
-    expect(screen.getByRole("button", { name: "Open inspector" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Open tooth record" })).toBeEnabled();
     expect(screen.getByText("Tooth 11 selected")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
-    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Open tooth record" }));
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
   });
 
   it("opens the bounded periodontal workspace for a relational draft examination", async () => {
@@ -422,7 +430,7 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByText(/anatomical clinical chart/i)).toBeInTheDocument();
   });
 
-  it("makes the relationship workflows reachable from the selected-tooth inspector", async () => {
+  it("presents the relationship record kinds from the selected tooth without offering an unbuilt write", async () => {
     const user = userEvent.setup();
     render(
       <OdontogramSection
@@ -434,9 +442,15 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 24/i }));
-    await user.click(screen.getByRole("button", { name: "Open inspector" }));
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
 
-    expect((await screen.findAllByText("Bridge workflow")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Implant workflow").length).toBeGreaterThan(0);
+    // Bridge and implant relationship writes are not this task's to build, so
+    // the composer names them and names their owning workflow instead of
+    // offering a write it cannot honour.
+    await user.click(screen.getByRole("button", { name: "Bridge" }));
+    expect(screen.getByTestId("composer-unavailable")).toHaveTextContent(/bridge relationship workflow/i);
+    await user.click(screen.getByRole("button", { name: "Implant" }));
+    expect(screen.getByTestId("composer-unavailable")).toHaveTextContent(/implant relationship workflow/i);
   });
 });

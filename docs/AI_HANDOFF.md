@@ -1,341 +1,315 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 4 (review fixes)
+# AI Handoff - Unified Clinical Chart workspace, Task 5
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the second commit of Task 4. It applies the review findings
-from round 1 on top of `7394851`; the sections below describe the task as it now
-stands, with a dedicated review-fix section at the end.
-
-## Task 4 - Chart toolbar and intentional responsive compositions (2026-09-01)
+## Task 5 - Tooth record drawer and canonical finding composer (2026-09-01)
 
 ### Bounded slice implemented
 
-Task 4 of the accepted plan, plus two inherited requirements the controller
+Task 5 of the accepted plan, plus one inherited requirement the controller
 attached to it:
 
-- one compact `ClinicalChartToolbar` carries chart mode, region, tooth notation,
-  dentition, the selection summary, and a single `More` menu holding chart help,
-  print and clinical photographs;
-- `ChartViewportControls` gives explicit arch and quadrant regions with 44px
-  touch targets;
-- `MeasuredChart` reflows an arch into quadrant blocks with CSS container
-  queries instead of squeezing 32 teeth into one row or hiding them behind a
-  scroll container;
-- the permanent controls column and the 340px inspector column are removed from
-  `odontogram-section.tsx`; the chart owns the whole workspace row;
-- **inherited (A)** the reviewed anatomy loads through a code-splitting
-  boundary, cutting the eager patient-chart chunk from 8,868,036 to 5,182,873
-  bytes;
-- **inherited (B)** the paediatric first-visit dead end is fixed by the toolbar
-  dentition control.
-
-No database work is in this checkpoint. No migration, RLS policy, grant, RPC or
-server action changed.
+- one temporary `ToothRecordDrawer` replaces the permanent inspector surface:
+  tooth identity, current state, oldest-first history, and one
+  `Add clinical record` primary action;
+- one `ClinicalRecordComposer` shell presents all seven record kinds and mounts
+  only the selected form; the selected teeth and the explicit clinical date
+  survive a kind switch, an authored draft never does;
+- `FindingForm` and `ClinicalNoteForm` are the two forms this task builds;
+- two narrow provider-free RPCs, `record_visit_tooth_findings` and
+  `record_visit_clinical_note`, obtain their encounter from
+  `start_or_resume_clinical_visit` and bind every write to it;
+- browser execute on the superseded `record_tooth_clinical_entry_v3` is
+  revoked - it could record a finding with neither an encounter nor a treating
+  provider;
+- the fork-originated clinical write path is deleted;
+- **inherited** the workspace chart view is scoped to `patientId`, so a tooth
+  selected on one patient cannot survive into another in any chart mode.
 
 ### Why
 
-The chart had no control surface of its own: notation lived in a fork-era select
-above the chart, there was no way to narrow the rendered region, and a permanent
-340px inspector column stole width from the chart at exactly the sizes where the
-chart needs it. `MeasuredChart` also inferred the dentition purely from the
-canonical record, so a mixed-dentition child with no primary finding rendered no
-primary tooth - and therefore no tooth to click to record the first one.
+Before this checkpoint the only clinical write path was the fork-era tooth
+inspector: a permanent `Details`/`History` stack with a `Record finding or
+treatment` dialog, a `Done` button and a relationship-card column. It wrote
+through `record_tooth_clinical_entry_v3`, which sets neither `encounter_id` nor
+`treating_provider_id`, so a recorded finding was not attributable to a visit or
+to the dentist who made it. `ForkSaveController` was a second, already-dead
+write path receiving an always-empty draft list.
+
+The Task 4 review also found that the workspace's chart view had no `patientId`
+awareness: the only cross-patient selection clear lived in `OdontogramSection`,
+which mounts only in `CURRENT_STATUS`. A clinician in `TREATMENT_PLAN` or
+`PERIODONTAL` mode could carry one patient's selected tooth into another
+patient's chart.
 
 ### Specifications relied on
 
-- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-4-brief.md`
-  and `global-constraints.md`, plus the controller's inherited requirements (A)
-  bundle size and (B) paediatric dentition.
-- `CLAUDE.md` / `AGENTS.md` frontend rules: no generic dashboard composition, no
-  card grid, compact and information-forward, restrained radii, Tailwind only,
-  no inline styles, no JS simulation of CSS, no hover-only or drag-only critical
-  interaction, deliberate phone composition, desktop density without unsafe
-  touch targets.
-- `node_modules/next/dist/docs/01-app/02-guides/lazy-loading.md` for the App
-  Router lazy-loading contract.
-- ADR-028 (odontogram renderer domain boundary), ADR-029, ADR-030.
+- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-5-brief.md`
+  and `global-constraints.md`, plus the controller's inherited patient-scoping
+  requirement.
+- `CLAUDE.md` / `AGENTS.md`: no client-supplied organization, provider, actor or
+  encounter; provider derived with `private.require_active_actor_provider`;
+  receptionists may not create clinical records; owners may treat only with an
+  active provider link at the acting branch; `security definer set search_path =
+  ''`; narrow grants; negative authorization tests in the same checkpoint;
+  guarded forward-only migrations; no inline styles; no JS hover/focus handlers;
+  no `window.innerWidth` branching; 44px touch targets.
+- Task 1's `start_or_resume_clinical_visit` contract and its seed-1/seed-0
+  advisory lock ordering (`20260901010110`).
+- ADR-025 (owner full access), ADR-028, ADR-029, ADR-030.
 
 ### Files added
 
-- `src/components/odontogram/clinical-chart-toolbar.tsx` (+ test) - the single
-  chart control row, and the workspace-owned chart view context
-  (`ClinicalChartView`, `ClinicalChartViewProvider`, `useClinicalChartView`,
-  `DEFAULT_CLINICAL_CHART_VIEW`).
-- `src/components/odontogram/chart-viewport-controls.tsx` (+ test) - explicit
-  arch and quadrant region controls.
+- `supabase/migrations/20260901010102_clinical_record_composer_rpcs.sql`
+- `supabase/migrations/20260901010103_clinical_record_composer_rpcs_grants.sql`
+- `supabase/tests/clinical_record_composer.test.sql` (42 assertions)
+- `src/components/odontogram/tooth-record-drawer.tsx` (+ test)
+- `src/components/odontogram/clinical-record-composer.tsx` (+ test)
+- `src/components/odontogram/finding-form.tsx` (+ test)
+- `src/components/odontogram/clinical-note-form.tsx` (+ test)
+- `src/lib/odontogram/schema.test.ts`
 
 ### Files changed
 
-- `src/components/clinical/clinical-chart-workspace.tsx` - renders the toolbar
-  in place of its own mode strip, owns the chart view state, publishes it to the
-  mounted chart, and exposes print and gallery actions.
-- `src/components/clinical/clinical-chart-workspace.test.tsx` - adds toolbar,
-  view-publication and gallery-action coverage. No assertion removed.
-- `src/components/odontogram/measured-chart.tsx` - adds the optional
-  `dentition` prop (`AUTO` | `PERMANENT` | `MIXED` | `PRIMARY`), the
-  `ChartViewportChoice` region type (`AUTO` on top of the plan's stable
-  `ClinicalChartViewport`), the container-query quadrant-block grid, the
-  CSS-only `AUTO` region default, and `@container` on its own root.
-- `playwright.config.ts` - adds the `desktop-1920` responsive project.
-- `src/components/odontogram/measured-chart.test.tsx` - adds desktop,
-  permanent, primary, mixed and edentulous composition coverage.
-- `src/components/odontogram/fork-odontogram.tsx` - consumes the workspace chart
-  view (notation, dentition, region, selection); its own notation select now
-  renders only when no workspace owns the view; clears selection on a patient
-  change.
-- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` (+ test) - removes
-  the `aside` inspector column and the separate controls row, keeps the
-  inspector reachable through the always-visible `Open inspector` affordance and
-  the existing overlay, and replaces two `window.matchMedia` width branches and
-  two stale `.tooth-tile.side-view` selectors.
-- `src/components/odontogram/measured-tooth.tsx` - the anatomy now arrives
-  through `React.lazy(() => import("./measured-svg-asset"))` inside a
-  `Suspense` boundary whose fallback is the tooth's FDI number.
-- `src/components/odontogram/measured-svg-asset.tsx` - gains
-  `MeasuredToothAsset`, which resolves template, orientation and active layers.
-  This module is now the only eager importer of the generated node tree.
-- `src/components/odontogram/measured-tooth.test.tsx`,
-  `measured-feature-parity.test.tsx`, `fork-odontogram.test.tsx`,
-  `fork-feature-parity.test.tsx` - each resolves the split anatomy once in a
-  `beforeAll`; every existing assertion is unchanged.
-- `e2e/odontogram-responsive-accessibility.spec.ts` - retargeted at the
-  EMR-owned chart. Pending: not run.
+- `src/lib/odontogram/clinical-codes.ts` - adds the bounded composer finding
+  vocabulary, the whole-tooth codes, and the anterior/posterior surface rules.
+- `src/lib/odontogram/schema.ts` - adds `fdiToothCodeSchema`, `isoDateSchema`,
+  `boundedClinicalNoteSchema`, `clinicalFindingCodeSchema`, `findingInputSchema`,
+  `visitClinicalNoteInputSchema` and the two RPC row schemas.
+- `src/lib/odontogram/service.ts` (+ test) - `recordVisitToothFindings`,
+  `recordVisitClinicalNote`; `recordToothClinicalEntry` marked fail-closed.
+- `src/app/(emr)/patients/[patientId]/odontogram-actions.ts` (+ test) - the two
+  new actions; `recordToothClinicalEntryAction` marked fail-closed.
+- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` (+ test) - mounts
+  the drawer, opens it on tooth selection, drops `ForkSaveController` and the
+  fork draft state, renames the reopen affordance to `Open tooth record`.
+- `src/components/odontogram/tooth-inspector.tsx` (+ test) - reduced to the
+  bounded correction surface (amend, void, legacy reconciliation), reached from
+  inside the drawer.
+- `src/components/clinical/clinical-chart-workspace.tsx` (+ test) - takes
+  `patientId` and resets the whole chart view when it changes.
+- `src/app/(emr)/patients/[patientId]/clinical-section.tsx` - passes `patientId`.
+- `src/components/ui/sheet.tsx` - optional `showOverlay` so a non-modal sheet can
+  omit its scrim; default behaviour unchanged.
+- `src/lib/clinical/types.ts` - adds the plan's `ClinicalRecordKind`.
+- `src/types/database.generated.ts` - regenerated (`npm run db:types:local`).
+- `scripts/approved-final-grants.mjs`, `scripts/remote-database-test-guard.mjs`
+  and the three script test files - registry, suite registration and inventory
+  counts.
+- `supabase/tests/odontogram_permission_contract.test.sql`,
+  `odontogram_revamp_rpcs.test.sql`, `odontogram_rpcs_v2.test.sql` - see
+  "Existing test assertions changed" below.
 
-No file was deleted.
+### Files deleted
 
-### Inherited (A): anatomy code-splitting
+- `src/components/odontogram/fork-save-controller.tsx` and its test. Nothing
+  imported it except `odontogram-section.tsx`, and the projection-only renderer
+  never emitted a draft for it, so no compatibility file was retained. There is
+  no remaining `fork-save-controller` import for Task 16 to remove.
 
-`measured-tooth.tsx` no longer imports `measured-assets.ts` (and through it the
-3,753,920-byte `generated/measured-svg-nodes.ts`). Template resolution, layer
-activation and rendering all moved behind one `import()` in
-`measured-svg-asset.tsx`.
+### Security and tenancy decisions
 
-The security boundary is unchanged. The payload is still the checked-in inert
-node tree consumed through `React.createElement`; nothing fetches or parses
-markup at runtime. The guard test in `measured-svg-asset.test.tsx` still reads
-every file in `RUNTIME_RENDERER_FILES` from disk and asserts no
-`dangerouslySetInnerHTML`, `innerHTML`, `outerHTML`, `insertAdjacentHTML`,
-`DOMParser`, `XMLSerializer`, `createContextualFragment`, `XMLHttpRequest`,
-`eval(`, `new Function`, `fetch(` or `document.write`. No new runtime renderer
-file was created, so that list did not need to change. The generator was not
-run and no asset hash changed; `measured-assets.test.ts` still passes.
+- **Public action boundary.** `findingInputSchema` and
+  `visitClinicalNoteInputSchema` are `.strict()` and accept only `patientId`,
+  `branchId`, the clinical facts, and a UUID `idempotencyKey`. An
+  `organizationId`, `treatingProviderId`, `createdBy`, `providerDisplay`,
+  `encounterId` or `actingBranchId` field is a parse failure, proved for both
+  schemas, both services, and both actions.
+- **Visit binding.** Both RPCs call `public.start_or_resume_clinical_visit` and
+  write under the encounter it returns. No new function inserts into
+  `public.clinical_encounters`, so Task 1 remains the only encounter-creating
+  path. pgTAP asserts exactly one browser-reachable function both inserts a
+  tooth entry and calls the visit lifecycle.
+- **Provider derivation.** `private.require_active_actor_provider` supplies
+  `treating_provider_id`; there is no provider selector and no provider
+  parameter.
+- **Lock ordering.** The composer takes a transaction advisory lock in its own
+  key space (seed 2) before the visit's request-key lock (seed 1) and identity
+  lock (seed 0). The order is the same for every caller, so duplicate
+  submissions serialize and no cycle is possible.
+- **Idempotency.** `private.clinical_record_composer_idempotency` is keyed by
+  (organization, actor, operation, request key) and revoked from every browser
+  role. A replay returns the stored result and records nothing further.
+- **Validation inside the transaction.** Tenant-scoped patient, tooth-code
+  pattern, duplicate teeth, duplicate surfaces, occlusal-on-anterior and
+  incisal-on-posterior anatomy, whole-tooth versus surface code compatibility,
+  the bounded note, `ACTIVE`-only status, and a clinical date at or before the
+  server-derived Philippine date.
+- **Revocation.** `record_tooth_clinical_entry_v3` loses browser execute in the
+  object migration `20260901010102`. Its registry entry carries
+  `supersededFrom: 20260901010102_clinical_record_composer_rpcs.sql` - the file
+  that REVOKES, not the grants file beside it.
+- **Notes.** `record_visit_clinical_note` authors through the existing
+  `public.create_clinical_note`, so DRAFT lifecycle, finalized-note immutability
+  and the amendment path are untouched. `AMENDMENT` is refused outright.
 
-Measurement, same command before and after:
+### Negative authorization cases covered (pgTAP, all `throws_ok`)
 
-```
-npm run build
-ls -S .next/static/chunks/*.js | head -3 | while read f; do echo "$(wc -c < "$f") $f"; done
-```
+Receptionist finding, receptionist note, owner-without-provider-link finding,
+owner-without-provider-link note, cross-tenant patient, dentist whose provider is
+not active at the acting branch, foreign-tenant dentist at another organization's
+branch, plus refused domain input: occlusal on an anterior tooth, incisal on a
+posterior tooth, surface on a whole-tooth code, no surface on a surface code,
+future clinical date, relationship-owned code, non-`ACTIVE` status, duplicated
+tooth, `AMENDMENT` note type, empty note. Three closing assertions prove no
+refused submission left an entry, an encounter, or a foreign-tenant row behind.
 
-- before: one chunk of **8,868,036** bytes;
-- after: **5,182,873** bytes eager, plus a deferred **3,661,704**-byte anatomy
-  chunk.
+### Inherited requirement: patient-scoped chart view
 
-Eager patient-chart JavaScript is down 3,685,163 bytes (41.6%). Roughly 5.2 MB
-of what remains is the fork runtime still imported by `fork-print-chart.tsx`,
-which Task 17 removes.
-
-### Inherited (B): the paediatric first-visit dead end
-
-`MeasuredChart` still defaults to `AUTO`, which follows the canonical record, so
-a recorded primary finding can never be hidden by a control nobody touched. The
-toolbar adds an explicit choice: `From record`, `Permanent`, `Mixed`, `Primary`.
-Choosing `Mixed` or `Primary` renders the primary sites for a child who has no
-primary record yet, so the first finding has a tooth to click.
-
-This is a view concern only. `viewportFdiTeeth` produces the display list; the
-canonical projection is not written to. `measured-chart.test.tsx` proves it: for
-a projection holding only tooth 11, `dentition="MIXED"` renders and selects
-tooth 51 while `[...projection.teeth.keys()]` stays `[11]`.
-
-### Review fixes applied in this commit
-
-Round 1 returned three Important and four Minor findings. All seven are fixed.
-
-1. **Selection desynchronisation (Important).** `closeInspector` cleared the
-   section's own `selectedFdi` while the chart's selection lived in the shared
-   workspace view, so after one close the chart still painted the tooth as
-   selected but `Open inspector` was disabled and the only clinical write path
-   was unreachable. There is now **one selection owner**: the section derives
-   the inspector's tooth from `useClinicalChartView().selectedFdi`, and
-   `closeInspector` closes the overlay without touching selection.
-2. **Missing tablet and phone region defaults (Important).** The brief's
-   per-device defaults were previously dropped because the obvious
-   implementation is `window.innerWidth` branching, which the frontend rules
-   forbid. That conflict should have been escalated rather than resolved
-   silently. Per the controller's ruling it is now implemented **CSS-only**: the
-   region default is `AUTO`, the chart renders the whole dentition, and its own
-   container queries display one quadrant below `@md` and the upper arch below
-   `@4xl`. An explicit region choice drops those classes entirely. The generated
-   stylesheet was inspected to confirm the rules exist, not just the class
-   strings.
-3. **Responsive claims were class-string assertions only (Important).** The
-   class assertions are kept but are now explicitly labelled in each test as
-   proving only that the contract was authored. The load-bearing unit evidence
-   is rendered structure - the region narrowing 32 -> 16 -> 8 teeth. Real
-   geometry is verified only by the Playwright spec, which now also covers 1920
-   through a new `desktop-1920` project.
-4. **Vacuous hover/drag test (Minor).** React never emits `onmouse*` DOM
-   attributes, so the old attribute walk could not fail. Replaced with a source
-   assertion plus a behavioural one: `mouseOver` / `mouseEnter` / `dragStart` on
-   a region button change nothing, and only a click does.
-5. **Primary arch under the touch minimum (Minor).** A 10-tooth primary arch was
-   `@md:grid-cols-10`, about 41px per tooth in a 28rem container. It is now
-   `grid-cols-5 @2xl:grid-cols-10`.
-6. **Selection wiped on chart-mode change (Minor).** `ForkOdontogram` cleared
-   selection in a mount effect, so a mode round trip discarded it. The clear now
-   lives in the section, guarded by a previous-patient ref, so it fires on a
-   real patient change only.
-7. **E2E tautology (Minor).** `focus()` then `toBeFocused()` replaced a real
-   colour-independence assertion. The spec now asserts that selection and
-   clinical state are exposed through `data-selected`, `aria-pressed`,
-   `data-current` / `data-planned` and the accessible name, so nothing clinical
-   is conveyed by colour alone.
+`ClinicalChartWorkspace` now takes `patientId` and, when it changes, resets the
+whole `ClinicalChartView` to `DEFAULT_CLINICAL_CHART_VIEW` during render (the
+documented React "adjust state when a prop changes" pattern, using state rather
+than a ref so `react-hooks/refs` stays satisfied). The reset lives with the view
+owner, not with a chart mode, so it fires in `TREATMENT_PLAN` and `PERIODONTAL`
+too. `ToothRecordDrawer` separately resets its body and draft when
+`patientId:selection` changes. Tests: the workspace reset is asserted in all
+three chart modes; `odontogram-section.test.tsx` keeps its `data-patient-key`
+guard and now also asserts the drawer is gone after a patient change.
 
 ### Composition decisions
 
-- One toolbar, not a control wall: three modes, seven region buttons, two
-  selects, a selection readout and one `More` trigger. A test asserts exactly 11
-  buttons and that print, help and photographs are not top-level buttons.
-- The chart grid picks its column count from the row's own tooth count, never
-  from a measured window width: 4 per row on a phone, one quadrant per row on a
-  tablet, the whole arch on a desktop, with every break on a quadrant boundary.
-  All 32 teeth stay rendered and in clinical order at every width.
-- No `overflow-x-auto` anywhere in the chart path; tests assert it, because a
-  scroll container masking a squeezed composition is not a passing responsive
-  result.
-- No inline `style={{}}`, no JS hover/focus handlers, no `window.innerWidth` or
-  `matchMedia` branching. Two pre-existing `matchMedia` branches were removed.
-
-### Security and clinical-integrity decisions
-
-- The chart view (mode, notation, dentition, region, selection) is presentation
-  state. It narrows what is drawn, never what the server authorizes, and no
-  identifier leaves canonical FDI.
-- Selection resets when `patientKey` changes, so one patient's tooth is never
-  summarised in the toolbar for another.
-- The tooth inspector remains the live clinical write path and is reachable at
-  every width through `Open inspector` (previously `lg:hidden`) and through
-  `Record direct treatment`. A test asserts the inspector opens and offers
-  `Record finding or treatment`.
-- No authorization, tenancy, RLS or server boundary changed.
+- The drawer is a `Sheet`: full width below `sm`, roughly 400px from `sm` up,
+  expressed purely as `data-[side=right]:w-full` and
+  `data-[side=right]:sm:max-w-[400px]`. No JS measures a width.
+- It is **non-modal** with no scrim, so the chart, toolbar and region controls
+  stay usable beside it and selecting another tooth updates it in place. Close
+  and Escape dismiss it; an outside interaction does not.
+- One body at a time: summary, composer, or corrections. No nested overlay and
+  no stacked panel.
+- No inline `style={{}}`, no JS hover/focus/drag handler, no `overflow-x`
+  container, 44px minimums on every control the drawer and forms add.
 
 ### Existing test assertions changed, and why
 
-- `odontogram-section.test.tsx`, "clears transient selection when patientId
-  changes": the assertion on the removed inspector column's placeholder text
-  became an assertion that the new patient's chart owns the row. The
-  `queryByTestId("tooth-inspector")` absence assertion is unchanged.
-- `odontogram-section.test.tsx`, three tests that clicked a tooth and expected
-  the inspector: each now also clicks `Open inspector`, because selecting a
-  tooth no longer auto-opens an overlay over the chart-level actions. Nothing
-  was weakened; the same inspector content is asserted.
-- `measured-tooth.test.tsx`, `measured-feature-parity.test.tsx`,
-  `fork-odontogram.test.tsx`, `fork-feature-parity.test.tsx`: a `beforeAll`
-  resolves the split anatomy once. No assertion was changed or removed.
-- `e2e/odontogram-responsive-accessibility.spec.ts`: rewritten. Its
-  `.tooth-tile.side-view` selectors and arrow-key roving-tabindex assertions
-  addressed the fork runtime that Task 3 removed; the file asserted behaviour
-  that no longer exists. It now asserts the 32-tooth composition, page overflow,
-  44px region targets, region narrowing, touch multi-select and the selection
-  summary.
+- `odontogram_permission_contract.test.sql`: `record_tooth_clinical_entry_v3`
+  removed from "authenticated receives every reviewed O5/O8 signature" and
+  replaced by a **stronger** adjacent assertion that it is revoked and that
+  `record_visit_tooth_findings` is granted.
+- `odontogram_revamp_rpcs.test.sql`: "v3 clinical entry is callable" inverted to
+  "v3 clinical entry is no longer browser callable".
+- `odontogram_rpcs_v2.test.sql`: two seed calls still exercise v3 entry,
+  idempotency and lineage mechanics. Execute is re-granted for the duration of
+  that rolled-back test transaction and revoked again immediately after, so the
+  rest of the suite still observes the revoked boundary. No assertion removed.
+- `odontogram-section.test.tsx`: ten tests retargeted or extended from the
+  removed inspector overlay to the drawer. Four cross-patient safety tests keep
+  their `tooth-inspector` absence assertion and gain the same assertion for the
+  drawer. "Open inspector" became "Open tooth record";
+  legacy reconciliation is now reached through the drawer's `Corrections`;
+  "Record direct treatment" now asserts the drawer plus the composer instead of
+  the deleted `Record finding or treatment` dialog; the relationship-workflow
+  test now asserts the composer names Bridge and Implant and names their owning
+  workflow rather than offering a write this task does not build.
+- `tooth-inspector.test.tsx`: rewritten for the reduced correction surface. Both
+  of the file's previous tests exercised the deleted `Record finding or
+  treatment` dialog, so both were replaced; five tests now cover the removal of
+  the four named affordances, amend, void, read-only state, and touch targets.
+  Equivalent coverage of the removed record path lives in `finding-form.test.tsx`
+  and `clinical_record_composer.test.sql`.
+- `clinical-chart-workspace.test.tsx`: `renderWorkspace` passes the new required
+  `patientId`. No existing assertion changed.
+- `migration-privilege-lint.test.mjs`: inventory counts 302 -> 304 files,
+  125 -> 126 tables, 472 -> 474 functions, 353 -> 355 security-definer.
+- `boundary-privilege-invariant.test.mjs`: the effective-final fixture drops the
+  superseded v3 signature, adds the two composer signatures, and the
+  browser-reachable approved-key count moves 262 -> 263.
+- `remote-database-test-guard.test.mjs`: the new suite added to the expected
+  registry list.
 
 ### Commands run and observed results
 
 All local only.
 
 - RED gate, before any implementation:
-  `npx vitest run src/components/odontogram/clinical-chart-toolbar.test.tsx src/components/odontogram/chart-viewport-controls.test.tsx src/components/clinical/clinical-chart-workspace.test.tsx "src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx" src/components/odontogram/measured-chart.test.tsx`
-  - **5 files failed, 7 failed / 32 passed.** Three files failed to resolve
-    (`./clinical-chart-toolbar`, `./chart-viewport-controls`), and the chart and
-    section tests failed on the missing dentition prop, the missing grid
-    contract and the still-present `aside` inspector column.
-- Step 5 gate:
-  `npm run test:unit -- src/components/odontogram/clinical-chart-toolbar.test.tsx src/components/odontogram/chart-viewport-controls.test.tsx src/components/clinical/clinical-chart-workspace.test.tsx "src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx"`
-  - **4 files, 43/43 passed.** With `measured-chart.test.tsx` added: 5 files,
-    68/68 passed.
-- `node --test scripts/remote-database-test-guard.test.mjs`
-  - **fails to start, for a pre-existing reason unrelated to this change.** That
-    file is a Vitest suite (`import { describe, expect, it } from "vitest"`), so
-    the Node test runner throws
-    `TypeError: Cannot read properties of undefined (reading 'config')` inside
-    `@vitest/runner`. It is covered by `npm run test:unit` through the
-    `scripts/**/*.test.{mjs,ts}` include. Run correctly:
-    `npx vitest run scripts/remote-database-test-guard.test.mjs` - **30/30
-    passed.** This checkpoint changes no SQL.
-- `npm run typecheck` - passed, no output.
-- `npm run lint` - 0 errors, the same 3 pre-existing warnings in
+  `npx vitest run` over the eight target unit files - **8 files failed, 22
+  failed / 43 passed.** Four files failed to resolve (`./tooth-record-drawer`,
+  `./clinical-record-composer`, `./finding-form`, `./clinical-note-form`);
+  `schema.test.ts` failed 8/8 on the missing contracts; `service.test.ts` and
+  `odontogram-actions.test.ts` failed on missing exports; the workspace failed
+  on the missing `patientId` scoping.
+  pgTAP RED: `psql < supabase/tests/clinical_record_composer.test.sql` -
+  **`ERROR: function "public.record_visit_tooth_findings(...)" does not exist`.**
+- `npm run db:migrate:local` - first attempt **refused**:
+  `LegacyDbPushMissingRemoteError`, because 010102/010103 sort before the already
+  applied 010110-010113. Applied with the CLI's own suggested flag,
+  `npx supabase db push --local --include-all` - both migrations applied. A
+  `pg_catalog.coalesce`/`pg_catalog.nullif` error (both are SQL constructs, not
+  schema-resolved functions) was then found by the pgTAP run; the two migrations
+  were dropped from the local dev database together with their history rows and
+  re-applied from the corrected files. `npm run db:migrate:local` afterwards -
+  **`Local database is up to date.`**
+- `npm run db:types:local` - **`Updated src/types/database.generated.ts.`**
+- `npm run security:migrations` - **passed**; 304 files, 2965 statements, 1296
+  privilege statements, 85 grant-terminals, 392 approved final privileges.
+- `npm run test:unit -- <the seven brief files> src/components/odontogram/tooth-inspector.test.tsx`
+  - **8 files, 86/86 passed.**
+- `npm run test:db:local` - **halts at `treatment_plans.test.sql`**, the first of
+  three verified pre-existing failures. Everything before it passed, including
+  the new `clinical_record_composer.test.sql`.
+- New and modified suites run directly against the local container:
+  `clinical_record_composer.test.sql` **42/42, P1_TEST_PASS**;
+  `odontogram_permission_contract` **P1_TEST_PASS**; `odontogram_revamp_rpcs`
+  **P1_TEST_PASS**; `odontogram_rpcs_v2` **P1_TEST_PASS**;
+  `odontogram_revamp_permission_contract`, `clinical_permission_contract`,
+  `clinical_rpcs`, `unified_clinical_visit`, `current_managed_visit` - all
+  **P1_TEST_PASS**.
+- Every suite from `treatment_plans.test.sql` to the end of the registry run
+  directly - **24 pass, 3 fail**, and the three are exactly the verified
+  pre-existing ones: `treatment_plans` assertion 7,
+  `seed_security_fixtures` assertion 27, and `procedure_installment_schedules`.
+- Concurrency tests run directly (the registry never reaches them):
+  `clinical_visit_resume_concurrency`, `odontogram_lineage_concurrency`,
+  `odontogram_implant_idempotency_concurrency` - **all PASS.**
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings in
   `treatment-plan-section.tsx` and `lib/treatment-plan/schema.ts`.
-- All 11 affected test files together - **152/152 passed.**
-- `npm run build` - succeeded, before and after, and produced the chunk
-  measurements above.
-- `npm run test:unit` (whole suite) - 15 failures, all `Test timed out in
-  5000ms`, spread across files this task does not touch (queue board, billing
-  section, specialty list, photo dialogs, perio workspace, fork package). The
-  same suite on `HEAD` with this work stashed fails 10 tests in the same way.
-  Re-run in smaller batches the suspects pass: the six app-route files together
-  40/40, the four odontogram files 35/36.
-
-  **This diff contributes to the rise from 10 to 15, and the mechanism is
-  known.** Before the split, the 3.75 MB generated node tree was transformed by
-  Vite once at module-import time. It is now behind a dynamic `import()`, so
-  that transform happens *during* test execution, while five test files sit in
-  `waitFor` polls waiting for it. That adds real CPU contention inside the
-  5000ms windows of unrelated files running in parallel. The failure class
-  pre-exists and no failing test is caused by a behavioural regression, but the
-  honest description is "pre-existing flake, made more likely by this diff's
-  load profile", not simply "pre-existing". A shared `testTimeout` increase in
-  `vitest.config.ts` is the likely fix and is deferred to the final review.
+- `npm run test:unit` (whole suite) - **1845/1849 passed, 4 failed**, all
+  `Test timed out`, in `fork-package`, `fork-print-chart` and
+  `perio-workspace`. Re-run alone those three files pass **14/14**. This is the
+  parallel-load flake Task 4's handoff documented; the count is lower than Task
+  4's 15.
+- `git diff --check` - clean.
 
 ### Not run, and why
 
 - Playwright E2E, responsive and accessibility device verification, Cloud TEST,
   hosted database tests and advisors: hosted access is not authorized for this
-  work. `e2e/odontogram-responsive-accessibility.spec.ts` and the new
-  `desktop-1920` Playwright project were written but not discovered or executed.
-  This may be described only as locally implemented and locally verified.
-- `node --test scripts/remote-database-test-guard.test.mjs`: that file is a
-  Vitest suite, so the Node test runner cannot execute it. Run through the
-  project runner instead - 30/30 passed.
-- No database command was run: this checkpoint contains no migration, policy,
-  grant or RPC change.
+  work. This checkpoint may be described only as locally implemented and locally
+  verified.
+- `npm run build`: not required by the task gate and not run.
+- No new `.local.mjs` concurrency test was added, so none was registered; the
+  three existing ones most affected by the visit lifecycle were run directly.
 
 ### Known residual risks and open questions
 
-- **SSR payload.** The split cuts the client chunk. `React.lazy` was used rather
-  than `next/dynamic` with `ssr: false`, because `next/dynamic` never resolved
-  under Vitest/jsdom in this repository, so the server render may still stream
-  the anatomy into the initial HTML. The controller may want to rule on a
-  client-only gate for the artwork.
-- Selecting a tooth no longer opens the inspector automatically; the clinician
-  clicks `Open inspector`. This is deliberately transitional - Task 5 owns the
-  record drawer, and auto-opening the current modal overlay would cover the
-  chart-level actions.
-- **Geometry is unverified until the hosted gate.** jsdom applies no Tailwind
-  and resolves no container query. The unit suite proves rendered structure
-  (which teeth exist, their order, how many a region renders, that the class
-  contract was authored). It does **not** prove 44px targets, the `AUTO` region
-  bands, or the absence of page overflow. Those live only in
-  `e2e/odontogram-responsive-accessibility.spec.ts`, which is written and not
-  run. The generated stylesheet was inspected at build time to confirm the
-  container-query rules are emitted, which is stronger than a class-name check
-  but still not a rendered measurement.
-- In the `AUTO` region the narrowed-away teeth are `display:none`, so they are
-  not announced either. They remain mounted and one explicit region click brings
-  them back; nothing leaves the canonical record. This is the composition the
-  brief specifies.
-- `fork-odontogram.tsx` keeps its own notation select when mounted outside the
-  workspace. That branch exists only for the print preview and focused tests;
-  Task 17 deletes the wrapper.
-- Task 3's handoff said the record composer lands in Task 4. It does not; Task 5
-  owns it. `ForkSaveController` still receives an empty draft list and the tooth
-  inspector remains the live clinical write path.
-- The full unit suite is flaky under parallel load on this machine, before and
-  after this change. A reviewer re-running it should compare against `HEAD`
-  rather than assume a regression.
+- **Geometry is unverified until the hosted gate.** jsdom applies no Tailwind, so
+  the drawer's 400px rail, the full-width phone panel and the 44px targets are
+  proved only as an authored class contract plus rendered structure.
+- **Corrections reachability.** Amend, void and legacy reconciliation now live
+  one explicit step inside the drawer rather than in a permanent column. The
+  controller may prefer them re-homed elsewhere before Task 17 deletes
+  `tooth-inspector.tsx`.
+- **`recordToothClinicalEntry` / `recordToothClinicalEntryAction` are retained
+  but fail closed.** Their RPC no longer grants execute to `authenticated`, so
+  they can only return NOT_AUTHORIZED. They are kept because
+  `service.test.ts` still covers the binding; a later task should delete them.
+- **The composer writes no `tooth_clinical_entry_details` row.** The finding code
+  fully determines the renderer detail through
+  `chart-projection.defaultDetail`, and inventing a caries depth or a
+  restoration material the clinician did not state would be a fabricated
+  clinical measurement. A richer detail belongs to a later, explicit form.
+- **The brief's contract names `toothSurfaceSchema`**, which in this repository
+  includes the legacy `FULL` token that `tooth_clinical_entry_surfaces` rejects.
+  `findingInputSchema` binds the existing `toothClinicalSurfaceSchema` instead,
+  so an impossible surface fails at the boundary rather than in the database.
+- Migration numbers 010102/010103 sort before the already-applied 010110-010113.
+  A fresh database applies them in filename order with no issue; an existing
+  database needs `--include-all` once.
+- The full unit suite remains flaky under parallel load on this machine, before
+  and after this change.
 
 ### Next bounded task
 
-Task 5 of the plan. Do not start it until Task 4 is independently reviewed and
+Task 6 of the plan. Do not start it until Task 5 is independently reviewed and
 accepted.

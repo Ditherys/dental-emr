@@ -152,6 +152,13 @@ select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000004'
 select extensions.throws_ok($$select public.get_patient_odontogram('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001')$$,'42501','not authorized','admin without acting-branch patient access is denied');
 reset role;
 
+-- The v3 direct entry path is no longer browser-callable: see
+-- odontogram_permission_contract.test.sql, which asserts the revoke, and
+-- clinical_record_composer.test.sql for the visit-bound replacement. The two
+-- calls below still exercise entry, idempotency and lineage mechanics that the
+-- retained definition implements, so execute is restored for the duration of
+-- this rolled-back transaction only and withdrawn again immediately after.
+grant execute on function public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text) to authenticated;
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
@@ -169,6 +176,7 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e5010000-0000-0000-0000-000000000001',true);
 select extensions.is((select entry_id from public.record_tooth_clinical_entry_v3('e5030000-0000-0000-0000-000000000001','e5050000-0000-0000-0000-000000000001','16',array['O'],'FINDING','CARIES','EXISTING','{"code":"CARIES","depth":"DENTIN","icdas":null,"cars":null,"radiographicDepth":null}','Synthetic',null,'o5-clinical-entry-0001')),(select entry_id from o5_initial),'same idempotency key returns the existing non-null clinical entry');
 reset role;
+revoke execute on function public.record_tooth_clinical_entry_v3(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text) from authenticated;
 create temp table o5_clinical(entry_id uuid);
 insert into o5_clinical select id from public.tooth_clinical_entries where organization_id='e5020000-0000-0000-0000-000000000001' and tooth_code='16' and supersedes_entry_id is null;
 grant select on o5_clinical to authenticated;

@@ -4,6 +4,12 @@ import { z } from "zod";
 
 import { databaseUuid } from "@/lib/validation/database-uuid";
 
+import {
+  CLINICAL_FINDING_CODES,
+  allowedSurfacesForToothCode,
+  isWholeToothFindingCode,
+} from "./clinical-codes";
+
 const isoTimestamp = z.iso.datetime({ offset: true });
 const nullableIsoTimestamp = isoTimestamp.nullable();
 
@@ -668,3 +674,98 @@ export const patientOdontogramRowSchema = z.object({
   entry_id: databaseUuid.nullable(),
   data: patientOdontogramDataSchema,
 }).strict();
+
+// ---------------------------------------------------------------------------
+// Clinical record composer contracts
+//
+// The public action boundary accepts route context only: patient, branch, the
+// clinical facts themselves, and a request key. Organization, treating
+// provider, actor, encounter and the visit's own clinical date are derived
+// inside `record_visit_tooth_findings` / `record_visit_clinical_note`, which
+// obtain their encounter from `start_or_resume_clinical_visit`. `.strict()`
+// makes any forged attribution field a parse failure rather than an ignored
+// extra property.
+// ---------------------------------------------------------------------------
+
+/** Alias of the canonical FDI tooth-code pattern, named for the composer contract. */
+export const fdiToothCodeSchema = toothCodeSchema;
+export const isoDateSchema = z.iso.date();
+export const boundedClinicalNoteSchema = z.string().trim().min(1).max(2000);
+export const boundedVisitNoteContentSchema = z.string().trim().min(1).max(4000);
+export const clinicalFindingCodeSchema = z.enum(
+  CLINICAL_FINDING_CODES as unknown as [string, ...string[]],
+);
+
+export const findingInputSchema = z
+  .object({
+    patientId: databaseUuid,
+    branchId: databaseUuid,
+    toothCodes: z.array(fdiToothCodeSchema).min(1).max(32),
+    findingCode: clinicalFindingCodeSchema,
+    surfaces: z.array(toothClinicalSurfaceSchema),
+    status: z.literal("ACTIVE"),
+    clinicalDate: isoDateSchema,
+    note: boundedClinicalNoteSchema.optional(),
+    idempotencyKey: databaseUuid,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (new Set(value.toothCodes).size !== value.toothCodes.length) {
+      ctx.addIssue({ code: "custom", path: ["toothCodes"], message: "duplicate tooth code" });
+    }
+    if (new Set(value.surfaces).size !== value.surfaces.length) {
+      ctx.addIssue({ code: "custom", path: ["surfaces"], message: "duplicate surface" });
+    }
+    if (isWholeToothFindingCode(value.findingCode)) {
+      if (value.surfaces.length > 0) {
+        ctx.addIssue({ code: "custom", path: ["surfaces"], message: "whole-tooth finding claims no surface" });
+      }
+      return;
+    }
+    if (value.surfaces.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["surfaces"], message: "at least one surface is required" });
+      return;
+    }
+    for (const toothCode of value.toothCodes) {
+      const allowed = allowedSurfacesForToothCode(toothCode);
+      for (const surface of value.surfaces) {
+        if (!allowed.includes(surface)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["surfaces"],
+            message: `surface ${surface} does not exist on tooth ${toothCode}`,
+          });
+        }
+      }
+    }
+  });
+
+export const visitClinicalNoteInputSchema = z
+  .object({
+    patientId: databaseUuid,
+    branchId: databaseUuid,
+    // AMENDMENT is deliberately absent: amending a finalized note stays with the
+    // existing correction path, which the composer never replaces.
+    noteType: z.enum(["PROGRESS", "CONSULTATION", "PROCEDURE", "POST_OP", "REFERRAL", "FREE_FORM"]),
+    content: boundedVisitNoteContentSchema,
+    idempotencyKey: databaseUuid,
+  })
+  .strict();
+
+export const visitToothFindingsRowSchema = z
+  .object({
+    patient_id: databaseUuid,
+    encounter_id: databaseUuid,
+    clinical_date: isoDateSchema,
+    recorded_count: z.number().int().min(0),
+  })
+  .strict();
+
+export const visitClinicalNoteRowSchema = z
+  .object({
+    patient_id: databaseUuid,
+    encounter_id: databaseUuid,
+    note_id: databaseUuid,
+    version: z.number().int().positive(),
+  })
+  .strict();

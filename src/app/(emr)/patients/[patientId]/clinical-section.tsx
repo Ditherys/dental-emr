@@ -258,6 +258,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   return <section id="clinical" className="border-t py-6">
     {error && !dialogOpen && <p role="alert" className="mb-4 border-y py-3 text-sm text-destructive">{error}</p>}
     <ClinicalChartWorkspace
+      patientId={patientId}
       visitHeader={<ClinicalVisitHeader
         visit={visit}
         canWriteClinical={canWriteClinical}
