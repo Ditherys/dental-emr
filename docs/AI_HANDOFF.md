@@ -1,11 +1,12 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 1)
+# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 2)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the second commit of Task 9. It applies the round-1 review
-findings on top of `5dce284`; the sections below describe the task as it now
-stands, with the review-fix sections at the end.
+This checkpoint is the third commit of Task 9. It applies the round-2 review
+outcome on top of `372f1e0`, which applied round 1 on top of `5dce284`. The
+sections below describe the task as it now stands, with the review-fix sections
+at the end.
 
 ## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
@@ -51,11 +52,15 @@ The five existing periodontal tables were **extended**, never duplicated:
 - **Fingerprint provenance that cannot be forged.**
   `private.periodontal_measurement_digest(uuid,uuid)` is the single definition of
   "the measurements of this examination" - a SHA-256 hex digest over the four
-  child tables, nulls rendered as `~` so `(3, null, 2)` and `(3, 2)` cannot
-  collide, aggregate order pinned to the `C` collation. An AFTER constraint
-  trigger refuses any `derived_`/`confirmed_measurement_fingerprint` that is not
-  the true digest at write time. It runs only when a fingerprint column changes,
-  so an ordinary later edit costs nothing.
+  child tables **and the examination-level staging and grading risk inputs**
+  (round 1, finding 2), nulls rendered as `~` so `(3, null, 2)` and `(3, 2)`
+  cannot collide, aggregate order pinned to the `C` collation. An AFTER
+  constraint trigger refuses any
+  `derived_`/`confirmed_measurement_fingerprint` that is not the true digest. It
+  runs when a fingerprint column changes **and, unconditionally, on the
+  DRAFT -> FINAL transition** (round 1, finding 1), and any change to the
+  measurements it covers withdraws the whole classification block, so a stored
+  fingerprint can never outlive its evidence.
 - **Amendment lineage.** `amendment_reason` is bounded, non-empty, accepted only
   with a predecessor, and **mandatory once the amendment is FINAL**. A DRAFT
   amendment may still be autosaved without one; the authoritative record that
@@ -99,7 +104,7 @@ unchanged.
 
 - `supabase/migrations/20260901010200_full_periodontal_model.sql`
 - `supabase/migrations/20260901010201_full_periodontal_model_grants.sql`
-- `supabase/tests/periodontal_full_chart.test.sql` (111 assertions)
+- `supabase/tests/periodontal_full_chart.test.sql` (118 assertions after round 1)
 
 ### Files changed
 
@@ -110,7 +115,7 @@ unchanged.
 - `scripts/remote-database-test-guard.mjs` - the new suite registered.
 - `scripts/remote-database-test-guard.test.mjs`,
   `scripts/migration-privilege-lint.test.mjs` - inventory expectations
-  (109 suites; 321 migration files; 486 created functions).
+  (109 suites; 325 migration files; 491 created functions after rounds 1 and 2).
 - `src/lib/odontogram/perio.ts` (+`perio.test.ts`) - canonical bounds, value
   domains, `deriveCal`, and validators for surface indices, tooth/implant
   properties, risk inputs and classification.
@@ -315,12 +320,36 @@ mechanical.
   ordering. It is a per-database provenance value and is never compared across
   databases.
 
+### Requirements Task 11 MUST honour
+
+Both of these fail closed, but neither failure explains itself. They are stated
+here, in the migration headers, in the relevant `comment on function`, and - for
+the first - pinned by a pgTAP assertion that will still be there when Task 11
+arrives.
+
+1. **`amend_periodontal_examination_v2` must be able to ADOPT or DISCARD a
+   pre-existing reason-less DRAFT successor, not merely insert a new row.**
+   `periodontal_examinations_one_amendment_idx` keys on
+   `(organization_id, predecessor_examination_id)` **regardless of status**, and
+   there is no delete path for a DRAFT examination. Any predecessor someone
+   amended through the old three-argument RPC before it was revoked already has
+   a DRAFT sitting in its only successor slot; an unconditional insert returns
+   `23505` for it, forever.
+2. **Never write the examination-level risk inputs and a measurement fingerprint
+   in the same `UPDATE`.** A `SET` expression is evaluated against the
+   **pre-update** row while the AFTER verification trigger recomputes the digest
+   against the **post-update** row, and the digest now covers the risk inputs.
+   A mixed statement therefore raises
+   `23514 derived measurement fingerprint does not match the examination measurements`
+   even though the caller did nothing obviously wrong. Write the risk inputs in
+   one statement, then derive and fingerprint in the next.
+
 ### Next bounded task
 
 Task 10 of the plan - port the pure periodontal calculation and classification
 logic onto this model. Do not start it until this review round is accepted.
 `20260901010202`-`20260901010205` are reserved by Task 11's brief;
-`20260901010212` onward are free.
+`20260901010222` onward are free.
 
 ## Review fixes applied in this commit (round 1)
 
@@ -413,6 +442,8 @@ test, and the rest of the clinical stack, use
 every charge posted after 00:00 Manila is dated to the previous day in the
 ledger. `post_charge` is untouched by Task 9 and no periodontal object is on that
 path. Flagged for the controller; it belongs to the billing domain (ADR-026).
+**Round 2: the controller confirmed this and authorized the fix. See the round-2
+section below.**
 
 ### Round-1 commands and observed results
 
@@ -448,3 +479,123 @@ path. Flagged for the controller; it belongs to the billing domain (ADR-026).
   `clinical_treatment_events_v2`). Re-run serially, `foundation_rls` passes and
   the calendar suite passes. That first run is not evidence and is recorded here
   only so the discarded output is not mistaken for a result.
+
+## Review fixes applied in this commit (round 2)
+
+Round 2 accepted every round-1 fix and added one authorization: correct the
+charge posting-date derivation reported as a concern in round 1. Nothing else
+was changed.
+
+### The defect, confirmed by the controller and fixed here
+
+`public.post_charge` derived the posting date it writes onto a charge as
+`statement_timestamp()::date`. The database runs in UTC; the whole clinical stack
+derives its date as `timezone('Asia/Manila', statement_timestamp())::date`. The
+two disagree between 16:00 and 24:00 UTC, which for a Philippine clinic is
+**00:00 to 08:00 Manila - the entire morning session**. Every charge posted in
+that window was dated to the previous day in the ledger while the clinical record
+it belongs to carried the correct day.
+
+Observed directly on the live database while writing the fix:
+
+```
+tz  | ts_raw                        | utc_date   | manila_date
+UTC | 2026-09-01 16:23:06.161414+00 | 2026-09-01 | 2026-09-02
+```
+
+The service-date / posting-date split itself is untouched: it is ordinary
+double-entry practice and was accepted in Task 6. What changed is only the
+timezone the posting date is derived in.
+
+### Scope of the correction
+
+`20260901010220` is a guarded forward replacement of one expression. Amounts,
+allocation, attribution, permissions, grants and the append-only posture are
+untouched; `CREATE OR REPLACE` preserves the ACL, `SECURITY DEFINER` and the
+empty search path. The appointment-linked branch
+(`v_service_date := v_appointment_starts::date`) is preserved and the migration
+fails closed if it has gone missing. `20260901010221` asserts the boundary did
+not move.
+
+The controller identified two call sites, `20260828010500:630` and
+`20260828010502:81`. Both are the same statement: `20260828010502` recreated
+`public.post_charge` and carried the defect forward, so **only one survives in
+the live catalog**. The migration guard asserts exactly one occurrence and
+refuses to apply otherwise.
+
+### Three further occurrences deliberately NOT changed
+
+The same UTC expression appears in three other billing functions. Each changes
+what the system **accepts or reports** rather than what it records, which is a
+billing behaviour decision reserved to the controller, and none of them blocks
+the database gate. They are named here so the ruling is cheap:
+
+- `public.post_charge_with_attribution_override` -
+  `if p_service_date > statement_timestamp()::date` - between 00:00 and 08:00
+  Manila this **rejects a valid same-day service date** as being in the future.
+- `public.correct_charge_attribution` -
+  `if p_corrected_service_date > statement_timestamp()::date` - same rejection on
+  the correction path.
+- `public.list_pending_pdc` -
+  `(cheque.date_due - statement_timestamp()::date)::integer` - days-until-due is
+  off by one in the same window.
+
+Also **not** changed, and further from this task: seven patient-domain
+`p_birth_date > current_date` guards (`create_patient` x2,
+`find_duplicate_candidates`, `private.validate_patient_birth_date`,
+`public_submit_booking_request`, `search_patients`, `update_patient`), which
+reject a Manila-today birth date in the same window, and
+`public.get_treatment_plan_completion_context`, which offers
+`current_date::text` as a default service date to the completion surface.
+
+### Files added this round
+
+- `supabase/migrations/20260901010220_charge_posting_date_philippine_clinical_date.sql`
+- `supabase/migrations/20260901010221_charge_posting_date_philippine_clinical_date_grants.sql`
+
+### Files changed this round
+
+- `scripts/migration-privilege-lint.test.mjs` - migration file count 323 -> 325.
+- `docs/AI_HANDOFF.md` - this section, plus an explicit
+  "Requirements Task 11 MUST honour" section.
+
+No test assertion was changed, weakened or deleted this round. No periodontal
+object was touched.
+
+### Round-2 commands and observed results
+
+- **RED, before the fix**: `clinical_treatment_events_v2.test.sql`
+  `not ok 80 - the ledger keeps the posting date, which is deliberately not the service date`,
+  `have: 2026-09-01 / want: 2026-09-02`.
+- **Pre-fix billing baseline**, so a green suite afterwards could not be mistaken
+  for a suite that had encoded the bug: `billing_charge_ledger`,
+  `billing_authorization`, `postdated_cheques` and `financial_analytics` all
+  **P1_TEST_PASS**; `procedure_installment_schedules` emitted no sentinel (the
+  documented pre-existing failure). **No billing suite encoded the UTC behaviour
+  as expected**, so nothing had to be weakened to make the fix pass.
+- `npm run db:migrate:local` - applied `20260901010220` and `20260901010221`.
+  Verified in the catalog: line 65 still
+  `v_service_date := v_appointment_starts::date;`, line 67 now
+  `v_service_date := (pg_catalog.timezone('Asia/Manila', pg_catalog.statement_timestamp()))::date;`.
+- **After the fix**: `clinical_treatment_events_v2` **P1_TEST_PASS**;
+  `billing_charge_ledger`, `billing_authorization`, `postdated_cheques`,
+  `financial_analytics` all still **P1_TEST_PASS**;
+  `procedure_installment_schedules` unchanged (still no sentinel, same as before
+  the fix).
+- `npm run test:db:local` - **82 suites pass, then halts at
+  `treatment_plans.test.sql`.** The gate is back to the documented
+  pre-existing halt point; round 1's halt on `clinical_treatment_events_v2` is
+  gone.
+- **Every one of the 109 pgTAP suites run directly, serially**: **106 pass**;
+  the only failures are the three documented pre-existing ones -
+  `treatment_plans`, `seed_security_fixtures`, `procedure_installment_schedules`.
+- `npm run security:migrations` - **passed**; 325 files, 3138 statements, 1324
+  privilege statements, 90 grant-terminals, **398 approved final privileges,
+  unchanged**.
+- `npm run db:types:local` - regenerated, **no diff** (a function body changed,
+  no schema did).
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npx vitest run scripts/` - **13 files, 287/287 passed** after the file-count
+  update.
+- `git diff --check` - clean.
