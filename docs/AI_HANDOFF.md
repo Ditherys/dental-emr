@@ -1,12 +1,12 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 2)
+# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 3)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the third commit of Task 9. It applies the round-2 review
-outcome on top of `372f1e0`, which applied round 1 on top of `5dce284`. The
+This checkpoint is the fourth commit of Task 9. Rounds 1, 2 and 3 of the review
+were applied on top of `5dce284` as `372f1e0`, `6b5eaa2` and this commit. The
 sections below describe the task as it now stands, with the review-fix sections
-at the end.
+at the end, in order.
 
 ## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
@@ -349,7 +349,7 @@ arrives.
 Task 10 of the plan - port the pure periodontal calculation and classification
 logic onto this model. Do not start it until this review round is accepted.
 `20260901010202`-`20260901010205` are reserved by Task 11's brief;
-`20260901010222` onward are free.
+`20260901010232` onward are free.
 
 ## Review fixes applied in this commit (round 1)
 
@@ -523,12 +523,14 @@ The controller identified two call sites, `20260828010500:630` and
 the live catalog**. The migration guard asserts exactly one occurrence and
 refuses to apply otherwise.
 
-### Three further occurrences deliberately NOT changed
+### Three further occurrences escalated rather than fixed in round 2
 
-The same UTC expression appears in three other billing functions. Each changes
+The same UTC expression appeared in three other billing functions. Each changes
 what the system **accepts or reports** rather than what it records, which is a
-billing behaviour decision reserved to the controller, and none of them blocks
-the database gate. They are named here so the ruling is cheap:
+billing behaviour decision reserved to the controller, and none of them blocked
+the database gate. They were named for a ruling rather than guessed at.
+**The controller ruled in round 3 that all three be fixed; they are, in
+`20260901010230`. Listed here as they stood at the time of the escalation:**
 
 - `public.post_charge_with_attribution_override` -
   `if p_service_date > statement_timestamp()::date` - between 00:00 and 08:00
@@ -594,6 +596,136 @@ object was touched.
   unchanged**.
 - `npm run db:types:local` - regenerated, **no diff** (a function body changed,
   no schema did).
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npx vitest run scripts/` - **13 files, 287/287 passed** after the file-count
+  update.
+- `git diff --check` - clean.
+
+## Review fixes applied in this commit (round 3)
+
+Round 3 ruled on the two items round 2 escalated. One was authorized and is
+fixed; the other was deliberately declined, and the reasoning matters more than
+the decision.
+
+### Ruling accepted: the three remaining billing date guards are fixed
+
+`20260901010230` repairs the same UTC-date expression in the three functions
+round 2 named. Guarded replace per function, each target verified to occur
+exactly once, each step failing closed on `55000`, and a post-condition refusing
+to apply if any `statement_timestamp()::date` or `current_date` survives in the
+repaired body.
+
+Measured on the live database before the fix, which is the whole defect in one
+row:
+
+```
+manila_today | utc_today  | manila_today_rejected_as_future | pdc_days_utc | pdc_days_manila
+2026-09-02   | 2026-09-01 | t                               |            9 |               8
+```
+
+- `public.post_charge_with_attribution_override` -
+  `if p_service_date > statement_timestamp()::date` refused **today's own date**
+  during the 00:00-08:00 Manila window, telling the clinician it was in the
+  future. Worse than the posting-date bug fixed in round 2: a wrongly recorded
+  date can be corrected afterwards; a false rejection blocks the work and gives a
+  reason that is not true.
+- `public.correct_charge_attribution` - the same false rejection on the
+  correction path, so the route out of a mis-dated charge was itself shut during
+  those eight hours.
+- `public.list_pending_pdc` - read-only, off by one: a cheque due in eight days
+  reported as nine.
+
+The bounds themselves are unchanged - a genuinely future service date is still
+refused, the mandatory bounded correction reason is still mandatory, and the PDC
+countdown still counts down. Only the definition of "today" moved, from the
+server's timezone to the clinic's. `20260901010231` asserts that all **four**
+repaired billing functions now agree, because a partial repair is the failure
+mode worth catching: it would leave the ledger internally inconsistent.
+
+### Ruling accepted: the repository-wide sweep is NOT done here
+
+The controller declined the seven patient-domain `p_birth_date > current_date`
+guards (`create_patient` x2, `find_duplicate_candidates`,
+`private.validate_patient_birth_date`, `public_submit_booking_request`,
+`search_patients`, `update_patient`) and
+`public.get_treatment_plan_completion_context`'s `current_date` default service
+date. Their breadth is the point: this is a **repository-wide timezone
+convention defect**, not a set of individual bugs, and the right response is one
+deliberate sweep with its own review rather than incremental patching discovered
+task by task by whichever agent happens to be nearby.
+
+**Recommended shape of that sweep, recorded here as the controller asked:**
+
+1. Add a shared helper - `private.clinic_today()` or equivalent - returning
+   `timezone('Asia/Manila', statement_timestamp())::date`, so the convention has
+   one definition instead of being retyped at every call site. It should be
+   `stable`, `set search_path = ''`, and revoked from every browser and service
+   role like the other private helpers.
+2. Replace every remaining bare `statement_timestamp()::date` / `current_date` in
+   a clinical or financial path with it, in one reviewed migration.
+3. **Add a lint or test that fails on any NEW bare occurrence** in those paths.
+   Without step 3 the convention will be retyped by the next person who needs a
+   date, and the sweep will have bought one clean moment rather than a property.
+   `scripts/migration-privilege-lint.mjs` already parses every migration into
+   statements and is the natural place to host it.
+
+Until that sweep runs, the eight declined sites still misbehave between 16:00 and
+24:00 UTC. All fail closed - they reject rather than corrupt - which is why they
+can wait; none of them blocks the database gate.
+
+### Files added this round
+
+- `supabase/migrations/20260901010230_billing_date_guards_philippine_clinical_date.sql`
+- `supabase/migrations/20260901010231_billing_date_guards_philippine_clinical_date_grants.sql`
+
+### Files changed this round
+
+- `scripts/migration-privilege-lint.test.mjs` - migration file count 325 -> 327.
+- `docs/AI_HANDOFF.md` - this section, plus three round-2 statements the ruling
+  falsified.
+
+No test assertion was changed, weakened or deleted this round. No periodontal
+object was touched.
+
+### Round-3 commands and observed results
+
+- **RED, arithmetic rather than anecdotal.** The guard predicate evaluated with
+  `p_service_date = ` Manila today returned **`t`** - that is the RPC raising
+  `invalid input` on a valid same-day date - and the PDC countdown differed by
+  one day (9 UTC vs 8 Manila). Both shown in the table above.
+- **Before/after billing and PDC suites**, run before touching anything so a
+  green run afterwards could not be mistaken for a suite that had encoded the
+  bug:
+
+  | Suite | Before | After |
+  | --- | --- | --- |
+  | `billing_charge_ledger` | `P1_TEST_PASS` | `P1_TEST_PASS` |
+  | `billing_authorization` | `P1_TEST_PASS` | `P1_TEST_PASS` |
+  | `postdated_cheques` | `P1_TEST_PASS` | `P1_TEST_PASS` |
+  | `financial_analytics` | `P1_TEST_PASS` | `P1_TEST_PASS` |
+  | `clinical_treatment_events_v2` | `P1_TEST_PASS` | `P1_TEST_PASS` |
+  | `procedure_installment_schedules` | no sentinel | no sentinel (unchanged) |
+
+  **No billing or PDC assertion encoded the UTC behaviour**, so nothing had to be
+  weakened and nothing was. I also read the two suites that reference the three
+  repaired functions first: `billing_authorization` and `financial_analytics`
+  assert only their grants and definer posture, never a date value or a
+  future-date rejection.
+- `npm run db:migrate:local` - applied `20260901010230` and `20260901010231`.
+  Verified in the catalog: all three expressions now read
+  `(pg_catalog.timezone('Asia/Manila', pg_catalog.statement_timestamp()))::date`.
+- `npm run test:db:local` - **82 suites pass, then halts at
+  `treatment_plans.test.sql`** - the documented pre-existing point, unchanged
+  from round 2.
+- **All 109 pgTAP suites run directly and serially: 106 pass**, only the three
+  documented pre-existing failures (`treatment_plans`,
+  `seed_security_fixtures`, `procedure_installment_schedules`).
+- `npm run security:migrations` - **passed**; 327 files, 3143 statements, 1324
+  privilege statements, 90 grant-terminals, **398 approved final privileges,
+  unchanged**.
+- `npm run db:types:local` - regenerated, **no diff** (three function bodies
+  changed, no schema did).
 - `npm run typecheck` - **passed, no output.**
 - `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
 - `npx vitest run scripts/` - **13 files, 287/287 passed** after the file-count
