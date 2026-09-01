@@ -1,4 +1,10 @@
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 import { TERMINAL_MIGRATIONS, assertSupersedeReferencesResolve } from "./approved-final-grants.mjs";
 import {
@@ -1457,6 +1463,41 @@ describe("the grant-terminal boundary", () => {
 
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain("does not grant it effectively");
+  });
+
+  // Task 9 review round 5. assertSupersedeReferencesResolve() validates markers
+  // that EXIST; it never asks whether an entry carrying NO marker still names a
+  // function that does. Three dead entries survived in the registry that way.
+  // The live half of that property needs a database, so it lives in
+  // supabase/tests/approved_grant_registry_integrity.test.sql; this assertion is
+  // the half that keeps the two from drifting, and it needs no database.
+  it("keeps the database registry-integrity suite in step with the registry", () => {
+    const suite = readFileSync(
+      join(repositoryRoot, "supabase", "tests", "approved_grant_registry_integrity.test.sql"),
+      "utf8",
+    );
+
+    const projected = [...suite.matchAll(/^ {2}\('(.+?)'\)[,;]?$/gm)].map((match) =>
+      match[1].replaceAll("''", "'"),
+    );
+
+    const supersededByObject = new Map();
+    for (const terminal of TERMINAL_MIGRATIONS) {
+      for (const grant of terminal.grants) {
+        if (grant.objectClass !== "function") continue;
+        supersededByObject.set(
+          grant.object,
+          (supersededByObject.get(grant.object) ?? false) || Boolean(grant.supersededFrom),
+        );
+      }
+    }
+    const expected = [...supersededByObject.entries()]
+      .filter(([, superseded]) => !superseded)
+      .map(([object]) => object)
+      .sort();
+
+    expect(projected).toEqual(expected);
+    expect(suite).toContain(`  ${expected.length},`);
   });
 
   it("does not expect server-only service_role grants from a browser-role probe", () => {

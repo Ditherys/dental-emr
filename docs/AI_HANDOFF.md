@@ -1,12 +1,12 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 4)
+# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 5)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the fifth commit of Task 9. Rounds 1-4 of the review were
-applied on top of `5dce284` as `372f1e0`, `6b5eaa2`, `4c8e3c5` and this commit.
-The sections below describe the task as it now stands, with the review-fix
-sections at the end, in order.
+This checkpoint is the sixth and final commit of Task 9. Rounds 1-5 of the
+review were applied on top of `5dce284` as `372f1e0`, `6b5eaa2`, `4c8e3c5`,
+`f79f61d` and this commit. The sections below describe the task as it now
+stands, with the review-fix sections at the end, in order.
 
 ## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
@@ -115,7 +115,7 @@ unchanged.
 - `scripts/remote-database-test-guard.mjs` - the new suite registered.
 - `scripts/remote-database-test-guard.test.mjs`,
   `scripts/migration-privilege-lint.test.mjs` - inventory expectations
-  (109 suites; 325 migration files; 491 created functions after rounds 1 and 2).
+  (110 suites; 327 migration files; 491 created functions after rounds 1-5).
 - `src/lib/odontogram/perio.ts` (+`perio.test.ts`) - canonical bounds, value
   domains, `deriveCal`, and validators for surface indices, tooth/implant
   properties, risk inputs and classification.
@@ -881,4 +881,123 @@ target. No test assertion was weakened, deleted or inverted.
 - `npm run typecheck` - **passed, no output.**
 - `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
 - `npx vitest run scripts/` - **13 files, 287/287 passed.**
+- `git diff --check` - clean.
+
+## Review fixes applied in this commit (round 5)
+
+Round 5 closed the gap that let three dead registry entries survive. Additive
+only: one new database suite, one new assertion in an existing test file, and two
+registrations. No existing lint behaviour was modified,
+`assertSupersedeReferencesResolve` was not touched, and the 398-privilege gate is
+unchanged.
+
+### The property, not a snapshot
+
+`scripts/approved-final-grants.mjs` is the security ledger, and
+`assertSupersedeReferencesResolve()` validates supersede markers that **exist** -
+that they name a real migration file and a registered replacement. It never asks
+whether an entry carrying **no** marker still names a function that exists. That
+is exactly how three dead entries sat in the approved-grant registry unnoticed,
+and nothing in the gate would have caught a fourth.
+
+`supabase/tests/approved_grant_registry_integrity.test.sql` now asserts:
+
+> every registered function grant must resolve to a live object, **or** carry a
+> supersede marker explaining why it does not.
+
+The second clause is what makes it a property rather than a snapshot: a
+deliberately retired entry stays legal by carrying its marker, and drops out of
+the checked list automatically.
+
+The suite carries the registry's 251 **unmarked** function grants (271 total, 20
+marked) and fails with the offending signatures **named**, not counted:
+
+```
+ not ok 2 - every approved grant without a supersede marker resolves to a live function
+ #         have: public.a_function_that_was_dropped(uuid,integer)
+ #         want:
+```
+
+### Where it runs, and why there
+
+**It is the third suite the gate executes**, immediately after `schema` and
+`foundation_rls`:
+
+```
+PASS supabase/tests/schema.test.sql
+PASS supabase/tests/foundation_rls.test.sql
+PASS supabase/tests/approved_grant_registry_integrity.test.sql
+```
+
+That placement is deliberate and was checked rather than assumed. The local
+runner executes the whole `DATABASE_TEST_SUITES` pgTAP loop first and only then
+the `*.local.mjs` tests - so **every `.local.mjs` test is unreachable** while the
+gate halts at `treatment_plans.test.sql`, and a check registered there would
+never have run. The remote runner executes `DATABASE_TEST_SUITES` **only**, so a
+`.local.mjs` check would never reach Cloud TEST at all. As a pgTAP suite near the
+head of the list it runs in both runners, 80 suites before the halt.
+
+### Keeping the two halves in step
+
+The live half needs a database; the marker half is pure JavaScript. The suite
+therefore embeds the projected list, and
+`scripts/boundary-privilege-invariant.test.mjs` gains one assertion that the
+embedded list still equals the registry's unmarked set, so the two cannot drift.
+That guard runs in `npx vitest run scripts/` and needs no database.
+
+Both halves were proved to fail when they should:
+
+- injecting a dangling signature into the suite - `not ok 2`, offender named;
+- deleting one entry from the suite - the drift guard fails with
+  `expected [ …(250) ] to deeply equal [ …(251) ]` and names the missing object.
+
+### Surfaced but NOT fixed, per the controller's instruction
+
+The new check turned up one thing beyond the three entries already repaired, and
+it is reported rather than fixed:
+
+- **`public.get_patient_detail` is registered under two spellings** -
+  `(uuid, uuid)` and `(uuid,uuid)` - so the registry counts it as two distinct
+  objects. Both resolve to the same live function, so the integrity check passes
+  and nothing is broken. It is a cosmetic inconsistency in the ledger:
+  `assertSupersedeReferencesResolve` already normalises whitespace when matching
+  `supersededBy`, so the registry is internally inconsistent about whether
+  spacing is significant. 251 unmarked entries normalise to 250 distinct
+  functions. **Awaiting a ruling; not touched.**
+
+### Files added this round
+
+- `supabase/tests/approved_grant_registry_integrity.test.sql`
+
+### Files changed this round
+
+- `scripts/remote-database-test-guard.mjs` - the suite registered third in
+  `DATABASE_TEST_SUITES`, with a comment recording why it must run before the
+  halt.
+- `scripts/remote-database-test-guard.test.mjs` - the suite added to the expected
+  on-disk list.
+- `scripts/boundary-privilege-invariant.test.mjs` - one additive drift assertion
+  plus the three node imports it needs.
+- `docs/AI_HANDOFF.md` - this section.
+
+**No migration was added this round.** No existing assertion was weakened,
+deleted or inverted; no existing lint behaviour was modified.
+
+### Round-5 commands and observed results
+
+- `npm run test:db:local` - **83 suites pass** (82 before, plus the new one),
+  then halts at `treatment_plans.test.sql`, the documented pre-existing point.
+  The new suite is the **third** executed.
+- The new suite run directly - **P1_TEST_PASS**, 2 assertions.
+- **Negative proof of both halves** - see above; each fails and names the
+  offender.
+- **All 110 pgTAP suites run directly and serially: 107 pass**, only the three
+  documented pre-existing failures (`treatment_plans`,
+  `seed_security_fixtures`, `procedure_installment_schedules`).
+- `npm run security:migrations` - **passed**; 327 files, **398 approved final
+  privileges, unchanged** - the gate did not move.
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npx vitest run scripts/` - **13 files, 288/288 passed** (287 before, plus the
+  new drift assertion).
 - `git diff --check` - clean.

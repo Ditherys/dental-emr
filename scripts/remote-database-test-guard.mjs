@@ -82,6 +82,10 @@ const PROVISIONING_SENTINEL_COMMAND = Object.freeze([
 export const DATABASE_TEST_SUITES = Object.freeze([
   "schema.test.sql",
   "foundation_rls.test.sql",
+  // Runs early on purpose: the local gate halts at treatment_plans.test.sql and
+  // every *.local.mjs test runs only after the whole pgTAP loop, so a registry
+  // integrity check placed later would never execute.
+  "approved_grant_registry_integrity.test.sql",
   "audit_metadata_contract.test.sql",
   "odontogram_domain_expansion.test.sql",
   "odontogram_feature_details.test.sql",

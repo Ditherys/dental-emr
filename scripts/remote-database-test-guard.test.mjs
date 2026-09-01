@@ -250,6 +250,7 @@ describe("registered database suites", () => {
       "appointment_foundation.test.sql",
       "appointment_permission_contract.test.sql",
       "appointment_rpcs.test.sql",
+      "approved_grant_registry_integrity.test.sql",
       "audit_foundation.test.sql",
       "audit_metadata_contract.test.sql",
       "billing_attribution.test.sql",
