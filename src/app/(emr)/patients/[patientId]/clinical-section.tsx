@@ -133,9 +133,9 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   }
 
   async function startVisit() {
-    if (!visitKeyRef.current) visitKeyRef.current = crypto.randomUUID();
     setVisitBusy(true);
     try {
+      if (!visitKeyRef.current) visitKeyRef.current = crypto.randomUUID();
       const result = await startClinicalVisitAction({ branchId: actingBranchId, patientId, idempotencyKey: visitKeyRef.current });
       if (!result.ok) { setError(message(result)); return; }
       setError(null); router.refresh();
@@ -239,7 +239,12 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   }
 
   const expandedDetail = expandedEncounterId ? details[expandedEncounterId] : undefined;
-  const dialogOpen = Boolean(treatmentHistoryOpen || medicalHistoryOpen || noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
+  // The history dialogs are work surfaces, not a single form: a failed detail
+  // load, finalize, or void leaves them open, so each renders the error itself.
+  // Only a child dialog stacked on top owns the message instead.
+  const childDialogOpen = Boolean(noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
+  const dialogOpen = Boolean(treatmentHistoryOpen || medicalHistoryOpen || childDialogOpen);
+  const historyError = error && !childDialogOpen ? <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p> : null;
   const progressEvents = [
     ...(initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : []),
     ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : []),
@@ -279,6 +284,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
     <Dialog open={medicalHistoryOpen} onOpenChange={(next) => !next && !saving && setMedicalHistoryOpen(false)}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
         <DialogHeader><DialogTitle>Medical history</DialogTitle><DialogDescription>Conditions, allergies, and medications recorded for this patient.</DialogDescription></DialogHeader>
+        {historyError}
         <div className="grid gap-6 md:grid-cols-3">
           {RECORD_TYPES.map(({ value, label }) => <MedicalRecordList key={value} label={label} records={initialMedicalRecords.filter((record) => record.recordType === value)} canWrite={canWriteClinical} onAdd={() => setMedicalRecordDialog(value)} onVoid={setVoidRecord} />)}
         </div>
@@ -287,6 +293,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
     <Dialog open={treatmentHistoryOpen} onOpenChange={(next) => !next && !saving && setTreatmentHistoryOpen(false)}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
         <DialogHeader><DialogTitle>Treatment history</DialogTitle><DialogDescription>Earlier encounters with their notes and prescriptions.</DialogDescription></DialogHeader>
+        {historyError}
         {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
           {initialEncounters.length === 0 ? <p className="text-sm text-muted-foreground">No encounters recorded.</p> : <>
             <div className="hidden overflow-x-auto border md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/30 text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Opened</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Treating provider</th><th className="px-3 py-2 font-medium">Action</th></tr></thead><tbody>{initialEncounters.map((encounter) => <tr key={encounter.encounterId} className="border-b last:border-0"><td className="px-3 py-3 tabular-nums">{encounter.createdAt.slice(0, 10)}</td><td className="px-3 py-3">{encounter.status}</td><td className="px-3 py-3">{providerName(encounter.treatingProviderId)}</td><td className="px-3 py-3"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></td></tr>)}</tbody></table></div>

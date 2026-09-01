@@ -327,6 +327,46 @@ describe("ClinicalSection medical history", () => {
     await waitFor(() => expect(actions.voidPatientMedicalRecordAction).toHaveBeenCalledWith({ actingBranchId: branchId, recordId: conditionId, expectedVersion: 1 }));
   });
 
+  it("surfaces a stale finalize inside the treatment history dialog rather than swallowing it", async () => {
+    actions.finalizeClinicalEncounterAction.mockResolvedValue({ ok: false, code: "STALE_VERSION" });
+    renderSection({ canWriteClinical: true });
+
+    const history = await openMoreClinicalAction("Treatment history");
+    fireEvent.click(within(history).getAllByRole("button", { name: "View notes" })[0]);
+    await screen.findByText("Original finalized note.");
+    fireEvent.click(screen.getByRole("button", { name: "Finalize encounter" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Finalize this encounter?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Finalize encounter" }));
+
+    await waitFor(() => expect(actions.finalizeClinicalEncounterAction).toHaveBeenCalled());
+    expect(await within(history).findByRole("alert")).toHaveTextContent("changed while you were viewing it");
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a failed encounter detail load inside the treatment history dialog", async () => {
+    actions.getClinicalEncounterDetailAction.mockResolvedValue({ ok: false, code: "NOT_AUTHORIZED" });
+    renderSection({ canWriteClinical: true });
+
+    const history = await openMoreClinicalAction("Treatment history");
+    fireEvent.click(within(history).getAllByRole("button", { name: "View notes" })[0]);
+
+    expect(await within(history).findByRole("alert")).toHaveTextContent("access or selected branch changed");
+  });
+
+  it("surfaces a stale void inside the medical history dialog rather than swallowing it", async () => {
+    actions.voidPatientMedicalRecordAction.mockResolvedValue({ ok: false, code: "STALE_VERSION" });
+    renderSection({ canWriteClinical: true });
+
+    const history = await openMoreClinicalAction("Medical history");
+    fireEvent.click(within(history).getByRole("button", { name: "Void" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Void this record?" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Void record" }));
+
+    await waitFor(() => expect(actions.voidPatientMedicalRecordAction).toHaveBeenCalled());
+    expect(await within(history).findByRole("alert")).toHaveTextContent("changed while you were viewing it");
+    expect(router.refresh).not.toHaveBeenCalled();
+  });
+
   it("surfaces a safe message when a clinical mutation is stale", async () => {
     actions.createClinicalNoteAction.mockResolvedValue({ ok: false, code: "STALE_VERSION" });
     actions.getClinicalEncounterDetailAction.mockResolvedValueOnce({ ok: true, detail: detailWith([originalNote]) });

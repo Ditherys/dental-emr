@@ -42,9 +42,47 @@ describe("MedicalSafetySummary", () => {
     const longAllergen = "Amoxicillin-clavulanate and every related beta-lactam antibiotic recorded during the 2026 intake review";
     render(<MedicalSafetySummary records={[{ ...allergy, allergen: longAllergen }]} />);
 
-    const value = within(group("allergies")).getByText(new RegExp(longAllergen));
+    const value = within(group("allergies")).getByText(new RegExp(longAllergen), { selector: "span" });
     expect(value.className).toContain("break-words");
     expect(value.className).not.toContain("truncate");
     expect(value.className).not.toContain("whitespace-nowrap");
+  });
+});
+
+// Conservative safe-direction defaults pending clinical-owner confirmation:
+// a stopped medication or a resolved condition must never read as current, and
+// an allergy is never silently dropped.
+describe("MedicalSafetySummary resolved records", () => {
+  it("never presents a stopped medication as current", () => {
+    render(<MedicalSafetySummary records={[{ ...medication, status: "resolved" }]} />);
+
+    expect(group("medications")).toHaveTextContent("None recorded");
+    expect(within(group("medications")).queryByText(/Amlodipine/)).not.toBeInTheDocument();
+  });
+
+  it("never presents a resolved condition as current", () => {
+    render(<MedicalSafetySummary records={[{ ...condition, status: "resolved" }]} />);
+
+    expect(group("conditions")).toHaveTextContent("None recorded");
+    expect(within(group("conditions")).queryByText(/Hypertension/)).not.toBeInTheDocument();
+  });
+
+  it("keeps a resolved allergy visible, qualified, and de-emphasised", () => {
+    render(<MedicalSafetySummary records={[{ ...allergy, status: "resolved" }]} />);
+
+    const value = within(group("allergies")).getByText(/Penicillin/, { selector: "span" });
+    expect(value).toHaveTextContent("resolved");
+    expect(value.className).toContain("text-muted-foreground");
+    expect(group("allergies")).not.toHaveTextContent("None recorded");
+  });
+
+  it("keeps an active allergy emphasised alongside a resolved one", () => {
+    render(<MedicalSafetySummary records={[allergy, { ...allergy, recordId: "c5000000-0000-0000-0000-000000000009", allergen: "Latex", severity: null, status: "resolved" }]} />);
+
+    const active = within(group("allergies")).getByText(/Penicillin/, { selector: "span" });
+    const resolved = within(group("allergies")).getByText(/Latex/, { selector: "span" });
+    expect(active).not.toHaveTextContent("resolved");
+    expect(active.className).not.toContain("text-muted-foreground");
+    expect(resolved.className).toContain("text-muted-foreground");
   });
 });

@@ -15,9 +15,9 @@ visit state, an always-visible medical-safety strip, three `aria-pressed` chart
 modes, a full-width chart breakout, and a chronological progress record. It is
 the first consumer of Task 1's `ClinicalVisitState` and `resumed` flag.
 
-No renderer, tooth drawer, record composer, periodontal mount, chronology
-rebuild, migration or RPC work is in this checkpoint. Those are Tasks 4, 5, 12
-and 13.
+The only database work here is the additive read-only projection described below.
+No renderer, tooth drawer, record composer, periodontal mount or chronology
+rebuild is in this checkpoint. Those are Tasks 4, 5, 12 and 13.
 
 ### Why
 
@@ -37,9 +37,11 @@ consumer and left `Start visit` without the idempotency key the RPC accepts.
 - Task 1's managed visit contract in
   `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`.
 
-This handoff covers commit `48d792d` plus the two review corrections committed
-on top of it: the read-only current-managed-visit projection, and `Start visit`
-being available after a same-day visit is finalized.
+This handoff covers three commits: `48d792d` (the workspace shell), `bae046f`
+(the two controller corrections — the read-only current-managed-visit projection
+replacing the `created_at` approximation, and `Start visit` after a same-day
+visit is finalized), and the review fix round on top of them (errors surfaced
+inside the two history dialogs, and the per-group medical-safety rule).
 
 ### Files added
 
@@ -121,7 +123,18 @@ being available after a same-day visit is finalized.
 - When the clinical read failed, the derived visit is `null` and the header says
   `Visit status unavailable` with no start action, rather than rendering a false
   `NOT_STARTED`.
-- No migration, RPC, grant or RLS change in this checkpoint.
+- The medical-safety strip applies a per-group, direction-of-harm rule rather
+  than one blanket filter: medications and conditions show `active` only, so a
+  stopped medication or resolved condition can never read as current; allergies
+  show every non-voided record with a `resolved` one explicitly qualified and
+  de-emphasised, so an allergy is never silently dropped. This is a conservative
+  safe-direction default pending clinical-owner confirmation, not a clinical
+  sign-off; it is on the clinical-owner validation gate.
+- Failed detail loads, finalizes and voids raised inside the `Treatment history`
+  and `Medical history` dialogs render their error inside that dialog, so an
+  optimistic-concurrency `STALE_VERSION` is never swallowed.
+- The two new migrations are additive and forward-only. No existing function
+  signature, grant, policy, column or RLS rule changed.
 
 ### Negative authorization cases covered (database)
 
@@ -139,10 +152,15 @@ reopened, and that every read left the encounter set and the audit log unchanged
 
 Clinical reader (no `patient.clinical.write`) sees no `Start visit`, no `Add`,
 no `Void`, no `Add note`, no `Finalize`, no `Amend`, and no provider selector
-anywhere. A finalized visit offers no start, resume or finalize action. Chart,
+anywhere — including on a finalized visit. A finalized visit offers a writer
+`Start visit` but never `Resume visit` or `Finalize visit`. A `null` visit
+reports `Visit status unavailable` and offers no start action. Chart,
 progress-record and photograph load failures each render a bounded `Retry`
 region that keeps the medical-safety strip visible and removes the failed
-region's content instead of showing stale data as current.
+region's content instead of showing stale data as current. A failed detail load,
+finalize or void inside either history dialog renders its message inside that
+dialog. A resolved condition and a stopped medication are absent from the safety
+strip; a resolved allergy stays present, qualified and de-emphasised.
 
 ### Existing test assertions changed, and why
 
@@ -160,6 +178,15 @@ region's content instead of showing stale data as current.
 - `patient-workspace.test.tsx`: the `ClinicalSection` mock now renders its
   `gallery` child, because the gallery moved inside the workspace. The
   `0 photos · write` assertion is unchanged.
+- `clinical-visit-header.test.tsx` (correction round): the finalized-visit test
+  asserted no start action; it now asserts `Start visit` present with
+  `Resume visit` and `Finalize visit` absent, per the controller ruling. A new
+  test keeps the read-only case (a clinical reader still gets no `Start visit`
+  on a finalized visit), so no coverage was lost.
+- `medical-safety-summary.test.tsx` (fix round): the long-value assertion now
+  targets `{ selector: "span" }`, because each value is its own element so a
+  resolved allergy can be de-emphasised independently. The assertion itself —
+  wraps, is not truncated, is not `whitespace-nowrap` — is unchanged.
 
 ### Commands run and observed results
 
@@ -169,14 +196,16 @@ All local only.
   — RED gate before implementation: 3 files failed, 17 failed / 1 passed, the two
   new component files unresolvable and the legacy `Clinical tabs` nav still
   present.
-- `npm run test:unit -- src/components/clinical "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx" "src/app/(emr)/patients/[patientId]/patient-workspace.test.tsx" "src/app/(emr)/patients/[patientId]/clinical-actions.test.ts"`
-  — 6 files, 59/59 passed, no warnings.
+- `npm run test:unit -- src/components/clinical "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx" "src/app/(emr)/patients/[patientId]/patient-workspace.test.tsx"`
+  (the brief's Step 5 command, re-run after the review fix round) — 5 files,
+  **52/52 passed**, no warnings.
 - `npm run typecheck` — passed, no output.
 - `npm run lint` — 0 errors, 3 pre-existing warnings in
   `treatment-plan-section.tsx` and `lib/treatment-plan/schema.ts`.
-- `npm run test:unit` (whole suite), four runs — 1602/1607/1609/1610 of 1612
-  passed. Every failure in every run was `Error: Test timed out` in heavy
-  odontogram fork suites this task does not touch. The same folder run alone,
+- `npm run test:unit` (whole suite), four runs before the fix round —
+  1602/1607/1609/1610 of 1612 passed, rising to 1617/1619 after the corrections.
+  Every failure in every run was `Error: Test timed out` in heavy odontogram fork
+  suites this task does not touch. The same folder run alone,
   `npm run test:unit -- src/components/odontogram`, passes 45/45; run while
   another suite was active it failed 10/45. The failures are machine
   contention, not regressions.
@@ -204,6 +233,15 @@ Review corrections, all local:
   (5 failed before the implementation, as required by TDD).
 - `npm run test:unit -- scripts src/lib/clinical "…/clinical-actions.test.ts"` —
   19 files, 349/349 passed.
+
+Review fix round, all local, no database change:
+
+- `npm run test:unit -- src/components/clinical/medical-safety-summary.test.tsx "…/clinical-section.test.tsx"`
+  — RED first: 8 failed / 21 passed, including three `Unable to find role="alert"`
+  reproducing the swallowed-error regression exactly. After the fix, **29/29
+  passed**.
+- Step 5 command, `npm run typecheck` and `npm run lint` re-run as recorded
+  above.
 
 ### Not run, and why
 
