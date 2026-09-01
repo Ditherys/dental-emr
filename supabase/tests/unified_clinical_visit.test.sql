@@ -55,6 +55,7 @@ join public.roles as role on role.organization_id is null and role.code = assign
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('e1500000-0000-0000-0000-000000000001','e1200000-0000-0000-0000-000000000001','UCV-A-1','Patient','A1',date '1990-01-01','e1300000-0000-0000-0000-000000000001'),
   ('e1500000-0000-0000-0000-000000000002','e1200000-0000-0000-0000-000000000001','UCV-A-2','Patient','A2',date '1992-02-02','e1300000-0000-0000-0000-000000000001'),
+  ('e1500000-0000-0000-0000-000000000004','e1200000-0000-0000-0000-000000000001','UCV-A-3','Patient','A3',date '1993-03-03','e1300000-0000-0000-0000-000000000001'),
   ('e1500000-0000-0000-0000-000000000003','e1200000-0000-0000-0000-000000000002','UCV-B-1','Patient','B1',date '1991-01-01',null);
 insert into public.providers (id, organization_id, linked_user_id, first_name, last_name, provider_type, status) values
   ('e1600000-0000-0000-0000-000000000001','e1200000-0000-0000-0000-000000000001','e1100000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
@@ -83,6 +84,12 @@ insert into public.charges (id, organization_id, patient_id, branch_id, provider
 -- managed lifecycle must never resume, finalize, delete, or rewrite.
 insert into public.clinical_encounters (id, organization_id, branch_id, patient_id, treating_provider_id, status, created_by) values
   ('e1b00000-0000-0000-0000-000000000001','e1200000-0000-0000-0000-000000000001','e1300000-0000-0000-0000-000000000001','e1500000-0000-0000-0000-000000000001','e1600000-0000-0000-0000-000000000001','OPEN','e1100000-0000-0000-0000-000000000001');
+
+-- A managed OPEN visit for patient A3 dated yesterday. It matches this tenant,
+-- branch, patient, and provider on every dimension except the clinical date, so it
+-- pins date scoping: today's call must open a new visit rather than resume it.
+insert into public.clinical_encounters (id, organization_id, branch_id, patient_id, treating_provider_id, status, created_by, clinical_date, managed_visit) values
+  ('e1b00000-0000-0000-0000-000000000002','e1200000-0000-0000-0000-000000000001','e1300000-0000-0000-0000-000000000001','e1500000-0000-0000-0000-000000000004','e1600000-0000-0000-0000-000000000001','OPEN','e1100000-0000-0000-0000-000000000001',(timezone('Asia/Manila', statement_timestamp()))::date - 1, true);
 
 create temp table ucv_visits (
   seq integer primary key,
@@ -244,7 +251,8 @@ select extensions.is(
 );
 select extensions.is(
   (select count(*)::integer from public.clinical_encounters
-   where organization_id = 'e1200000-0000-0000-0000-000000000001' and managed_visit),
+   where organization_id = 'e1200000-0000-0000-0000-000000000001' and managed_visit
+     and clinical_date = (timezone('Asia/Manila', statement_timestamp()))::date),
   1,
   'three same-day calls produce exactly one managed encounter row'
 );
@@ -333,7 +341,8 @@ select extensions.throws_ok(
 reset role;
 select extensions.is(
   (select count(*)::integer from public.clinical_encounters
-   where organization_id = 'e1200000-0000-0000-0000-000000000001' and managed_visit),
+   where organization_id = 'e1200000-0000-0000-0000-000000000001' and managed_visit
+     and clinical_date = (timezone('Asia/Manila', statement_timestamp()))::date),
   3,
   'every denied call leaves the managed encounter set unchanged'
 );
@@ -378,6 +387,31 @@ select extensions.ok(
   'the pre-workspace encounter is still OPEN, unversioned, and unrewritten'
 );
 
+-- A managed OPEN visit from a previous clinical date is never resumed today.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','e1100000-0000-0000-0000-000000000001',true);
+insert into ucv_visits (seq, encounter_id, clinical_date, status, version, resumed)
+select 7, visit.encounter_id, visit.clinical_date, visit.status, visit.version, visit.resumed
+from public.start_or_resume_clinical_visit(
+  'e1300000-0000-0000-0000-000000000001','e1500000-0000-0000-0000-000000000004',null,null
+) as visit;
+reset role;
+select extensions.ok(
+  (select resumed = false and status = 'OPEN' and version = 1
+     and clinical_date = (timezone('Asia/Manila', statement_timestamp()))::date
+   from ucv_visits where seq = 7)
+  and (select encounter_id from ucv_visits where seq = 7) <> 'e1b00000-0000-0000-0000-000000000002',
+  'a managed OPEN visit dated yesterday is not resumed today; a new visit is opened for the current clinical date'
+);
+select extensions.ok(
+  (select status = 'OPEN' and version = 1 and managed_visit
+     and appointment_id is null and finalized_at is null
+     and clinical_date = (timezone('Asia/Manila', statement_timestamp()))::date - 1
+   from public.clinical_encounters where id = 'e1b00000-0000-0000-0000-000000000002'),
+  'the yesterday visit is left OPEN and unmodified'
+);
+
 -- Payment recording and allocation never touch the clinical visit lifecycle.
 select extensions.ok(
   not exists (
@@ -416,14 +450,14 @@ reset role;
 select extensions.is(
   (select count(*)::integer from public.clinical_encounters
    where organization_id = 'e1200000-0000-0000-0000-000000000001'),
-  5,
+  7,
   'payment recording and allocation created no clinical encounter'
 );
 select extensions.is(
   (select count(*)::integer from public.audit_events
    where organization_id = 'e1200000-0000-0000-0000-000000000001'
      and action = 'clinical.encounter.opened'),
-  4,
+  5,
   'payment recording and allocation wrote no encounter-opened audit event'
 );
 

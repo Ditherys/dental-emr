@@ -232,22 +232,13 @@ describe("managed clinical visit lifecycle boundary", () => {
 describe("clinical service RPC contract", () => {
   beforeEach(() => rpc.mockReset());
 
-  it("binds encounter create to its exact contract and defaults the nullable appointment", async () => {
-    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, version: 1 }], error: null });
-    await expect(createClinicalEncounter(encounterInput)).resolves.toEqual({ encounterId, version: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter_v2", {
-      p_acting_branch_id: branchId,
-      p_patient_id: patientId,
-      p_appointment_id: null,
-    });
-
-    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, version: 1 }], error: null });
-    await createClinicalEncounter({ ...encounterInput, appointmentId });
-    expect(rpc).toHaveBeenLastCalledWith("create_clinical_encounter_v2", {
-      p_acting_branch_id: branchId,
-      p_patient_id: patientId,
-      p_appointment_id: appointmentId,
-    });
+  // The superseded manual encounter path is retained only until the superseded-paths
+  // sweep. `authenticated` no longer holds execute on `create_clinical_encounter_v2`,
+  // so its argument shape is deliberately no longer pinned here; the only contract
+  // that still matters is that it fails closed.
+  it("keeps the superseded encounter-create path fail-closed", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "permission denied for function create_clinical_encounter_v2" } });
+    await expect(createClinicalEncounter(encounterInput)).rejects.toEqual(new ClinicalServiceError("NOT_AUTHORIZED"));
   });
 
   it("binds note create, update, finalize, and amend to their exact contracts", async () => {

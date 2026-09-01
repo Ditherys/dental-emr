@@ -41,7 +41,15 @@ charting tasks cannot proceed without a managed, idempotent visit.
   projection.
 - `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`
 - `supabase/migrations/20260901010101_unified_clinical_visit_lifecycle_grants.sql`
-- `supabase/tests/unified_clinical_visit.test.sql` (40 pgTAP assertions)
+- `supabase/migrations/20260901010110_unified_clinical_visit_lifecycle_lock_seed.sql`
+  (review round 1) — replaces the function so the optional request-key advisory
+  lock hashes into seed 1, a key space disjoint from the seed-0 identity lock, so
+  the take-request-key-lock-first ordering guarantee is structural rather than
+  incidental. Nothing else in the contract changes.
+- `supabase/migrations/20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql`
+  (review round 1) — re-grants the single authenticated EXECUTE after the
+  revoke-adjacent-to-CREATE-OR-REPLACE required by the privilege lint.
+- `supabase/tests/unified_clinical_visit.test.sql` (42 pgTAP assertions)
 - `supabase/tests/clinical_visit_resume_concurrency.local.mjs`
 
 ### Files changed
@@ -81,11 +89,12 @@ charting tasks cannot proceed without a managed, idempotent visit.
   actor from `auth.uid()`, the provider from `private.require_active_actor_provider`
   (unchanged contract), and the clinical date from `Asia/Manila` on the server.
   It accepts no organization, provider, actor or date from the browser.
-- Concurrency: a transaction-scoped advisory lock keyed by
+- Concurrency: a transaction-scoped identity advisory lock (seed 0) keyed by
   tenant/branch/patient/provider/date, `for no key update` on the resumed row,
   and a `unique_violation` re-select fallback. An optional idempotency key takes
-  a second advisory lock, always before the identity lock, so the two cannot
-  deadlock; it is never part of visit identity.
+  a second advisory lock in a **disjoint key space (seed 1)**, always before the
+  identity lock, so lock ordering is consistent by construction and the two
+  cannot deadlock; the key is never part of visit identity.
 - Only the create path writes one `clinical.encounter.opened` audit event with
   empty allow-listed metadata. A resume writes none. A finalized visit is never
   reopened — the next call opens a new managed visit.
@@ -101,7 +110,12 @@ Owner without an active provider link, receptionist, dental assistant (in the
 existing suite), provider active only at another branch, inactive linked
 provider, foreign-tenant dentist, cross-tenant patient, missing patient,
 foreign-tenant appointment, appointment belonging to another patient. Each is
-asserted to leave the managed encounter set unchanged. Reception-recorded and
+asserted to leave the managed encounter set unchanged. `clinical_rpcs.test.sql`
+additionally proves at runtime, as the `authenticated` role, that a fully
+authorized dentist is refused (`42501 permission denied for function`) by the
+superseded `create_clinical_encounter_v2` path. A managed OPEN visit dated
+yesterday is proved not to be resumed today, and that assertion was
+mutation-checked: removing `clinical_date` from the resume predicate fails it. Reception-recorded and
 dentist-allocated payments are proved to create no encounter and no
 encounter-opened audit event, plus a static proof that no payment function body
 references the lifecycle RPC or the encounter table.
@@ -113,8 +127,8 @@ All local only, on Docker Desktop `supabase_db_local`.
 - `npm run db:start:local` — already running; services reported.
 - `npm run db:migrate:local` — applied both new migrations forward; no reset.
 - `npm run db:types:local` — `Updated src/types/database.generated.ts.`
-- `npm run security:migrations` — passed; 298 files, 82 grant-terminal
-  migrations, 388 approved privileges.
+- `npm run security:migrations` — passed; 300 files, 83 grant-terminal
+  migrations, 389 approved privileges.
 - `npm run test:unit -- src/lib/clinical/service.test.ts` — 22/22 passed
   (5 failed before the implementation, as required by TDD).
 - `npm run test:unit -- scripts` — 13 files, 287/287 passed.
@@ -155,7 +169,8 @@ All local only, on Docker Desktop `supabase_db_local`.
   by Task 1.
 - `createClinicalEncounter` in `src/lib/clinical/service.ts` is retained but now
   fails closed; it is marked superseded in code and should be removed with the
-  other superseded paths.
+  other superseded paths. Its unit test no longer pins the argument shape of the
+  revoked RPC — only that it fails closed — so it will not mislead that sweep.
 - `public.add_treatment_plan_discussion` still accepts a client-supplied
   `p_treating_provider_id`. It creates no encounter, so it was deliberately left
   alone here and is flagged in the gap inventory for a controller ruling.

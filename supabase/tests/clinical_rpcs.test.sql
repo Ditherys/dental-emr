@@ -8,8 +8,9 @@ select extensions.no_plan();
 -- provider-a2 is active only at A Branch 2, provider-a3 is inactive, and
 -- provider-b is foreign. Fixture inserts run as the owner; every browser-callable
 -- RPC runs with set local role authenticated plus the request jwt claim. The
--- superseded `create_clinical_encounter_v2` is no longer browser-callable, so its
--- probes set only the jwt claim (see the note above encounter 1).
+-- superseded `create_clinical_encounter_v2` is no longer browser-callable: one probe
+-- proves that denial as the browser role, and its remaining body probes then set only
+-- the jwt claim (see the notes above encounter 1).
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
   ('b7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-a@p1403.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
   ('b7100000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','assistant-a@p1403.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
@@ -113,16 +114,23 @@ select extensions.ok(
   'the audit metadata allow-list extends to the bounded clinical parent_note_id/record_type keys and still rejects unknown keys'
 );
 
+-- The managed visit lifecycle now owns the browser encounter-creation boundary.
+-- Prove at runtime, as the browser role itself, that the superseded manual path is
+-- unreachable: a dentist who holds every clinical permission is still refused by
+-- the grant before the function body can run.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
+select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000001')$$,'42501','permission denied for function create_clinical_encounter_v2','a fully authorized dentist cannot reach the superseded manual encounter path from the browser role');
+reset role;
+
 -- Encounter 1: positive creation with an appointment and actor-derived provider link.
--- The managed visit lifecycle now owns the browser encounter-creation boundary, so
--- `create_clinical_encounter_v2` is no longer executable by `authenticated`. Its
--- internal tenant, provider, appointment, and role invariants are still exercised
--- here by invoking the SECURITY DEFINER body with the signed-in actor's JWT claim,
--- which is what `auth.uid()` reads; the grant boundary itself is asserted above.
+-- Because browser execute is revoked above, the superseded definer's internal tenant,
+-- provider, appointment, and role invariants are exercised from the postgres role with
+-- the signed-in actor's JWT claim, which is what `auth.uid()` reads.
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
 select extensions.is((select version from public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000001')),1,'dentist A opens an encounter linking the appointment and the signed-in dentist provider at version one');
-reset role;
 insert into p1403_encounters (seq, id)
 select 1, encounter.id
 from public.clinical_encounters as encounter
@@ -135,14 +143,11 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
 select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000002','b7600000-0000-0000-0000-000000000002')$$,'42501','not authorized','create safely denies a foreign patient');
 select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','b7600000-0000-0000-0000-000000000002')$$,'22023','invalid input','create rejects a foreign appointment');
-reset role;
 update public.providers set linked_user_id = null where id = 'c9100000-0000-0000-0000-000000000001';
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
 select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','create requires the signed-in dentist to have an active linked provider');
-reset role;
 update public.providers set linked_user_id = 'b7100000-0000-0000-0000-000000000001' where id = 'c9100000-0000-0000-0000-000000000001';
-reset role;
 
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000003',true);
@@ -153,7 +158,6 @@ select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000002'
 select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','dental assistant with only clinical.read cannot open encounters');
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000005',true);
 select extensions.throws_ok($$select public.create_clinical_encounter_v2('b7300000-0000-0000-0000-000000000003','b7500000-0000-0000-0000-000000000001',null)$$,'42501','not authorized','a foreign branch acting user cannot open encounters for another tenant');
-reset role;
 
 -- Note lifecycle on encounter 1: create DRAFT, update, finalize, immutable, amend.
 set local role authenticated;
