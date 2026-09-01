@@ -347,6 +347,7 @@ describe("registered database suites", () => {
       "specialist_requests_foundation.test.sql",
       "tooth_conditions.test.sql",
       "treatment_item_execution.test.sql",
+      "treatment_plan_actor_provider.test.sql",
       "treatment_plan_estimated_fee_contract.test.sql",
       "treatment_plan_rpcs.test.sql",
       "treatment_plans.test.sql",

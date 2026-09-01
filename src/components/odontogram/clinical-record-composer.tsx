@@ -12,6 +12,7 @@ import { BridgeWorkflow, type BridgeSupportComponentChoice, type RelationshipCha
 import { ClinicalNoteForm } from "./clinical-note-form";
 import { FindingForm } from "./finding-form";
 import { ImplantWorkflow } from "./implant-workflow";
+import { PlannedTreatmentForm, type PlanAuthoringContext } from "./planned-treatment-form";
 import {
   TreatmentEventForm,
   type ExistingProcedureCaseChoice,
@@ -37,7 +38,6 @@ const RECORD_KINDS: ReadonlyArray<{ value: ClinicalRecordKind; label: string }> 
  * options offers a write here.
  */
 const PENDING_KIND_OWNERS: Readonly<Partial<Record<ClinicalRecordKind, string>>> = {
-  PLANNED_TREATMENT: "the treatment plan workflow",
   PHOTO: "the clinical photograph workflow",
 };
 
@@ -91,6 +91,16 @@ export type ClinicalRecordComposerProps = {
   treatmentContext?: TreatmentComposerContext;
   /** Supplied by the workspace when the relationship projection is available. */
   relationshipContext?: RelationshipComposerContext;
+  /**
+   * The treatment plan the Treatment plan chart mode is authoring into. Null
+   * when the patient has no plan, absent in every other chart mode.
+   */
+  planContext?: PlanAuthoringContext | null;
+  /**
+   * The record kind the composer opens on. The Treatment plan mode opens on
+   * Planned treatment; every other mode keeps Finding.
+   */
+  defaultKind?: ClinicalRecordKind;
 };
 
 /**
@@ -110,8 +120,10 @@ export function ClinicalRecordComposer({
   onCancel,
   treatmentContext,
   relationshipContext,
+  planContext = null,
+  defaultKind = "FINDING",
 }: ClinicalRecordComposerProps): React.ReactElement {
-  const [kind, setKind] = React.useState<ClinicalRecordKind>("FINDING");
+  const [kind, setKind] = React.useState<ClinicalRecordKind>(defaultKind);
   const [clinicalDate, setClinicalDate] = React.useState(defaultClinicalDate);
   const treatmentReady = Boolean(treatmentContext && treatmentContext.procedures.length > 0);
   const isRelationship = kind === "BRIDGE" || kind === "IMPLANT";
@@ -156,6 +168,19 @@ export function ClinicalRecordComposer({
           toothCodes={toothCodes}
           clinicalDate={clinicalDate}
           onClinicalDateChange={setClinicalDate}
+          onRecorded={onRecorded}
+        />
+      )}
+
+      {kind === "PLANNED_TREATMENT" && (
+        <PlannedTreatmentForm
+          key="PLANNED_TREATMENT"
+          patientId={patientId}
+          branchId={branchId}
+          toothCodes={toothCodes}
+          clinicalDate={clinicalDate}
+          onClinicalDateChange={setClinicalDate}
+          plan={planContext}
           onRecorded={onRecorded}
         />
       )}

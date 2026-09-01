@@ -42,9 +42,13 @@ join public.roles as role on role.organization_id is null and role.code = assign
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('d7500000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000001','P1603-A-1','Patient','A',date '1990-01-01','d7300000-0000-0000-0000-000000000001'),
   ('d7500000-0000-0000-0000-000000000002','d7200000-0000-0000-0000-000000000002','P1603-B-1','Patient','B',date '1991-01-01',null);
-insert into public.providers (id, organization_id, first_name, last_name, provider_type, status) values
-  ('d9200000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
-  ('d9200000-0000-0000-0000-000000000004','d7200000-0000-0000-0000-000000000002','Dentist','B1','REGULAR','active');
+-- Plan authorship derives the treating provider from the signed-in actor, so
+-- dentist A1 carries an active provider link at P1603 A Main.
+insert into public.providers (id, organization_id, linked_user_id, first_name, last_name, provider_type, status) values
+  ('d9200000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000001','d7100000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
+  ('d9200000-0000-0000-0000-000000000004','d7200000-0000-0000-0000-000000000002',null,'Dentist','B1','REGULAR','active');
+insert into public.provider_branches (organization_id, provider_id, branch_id, is_active) values
+  ('d7200000-0000-0000-0000-000000000001','d9200000-0000-0000-0000-000000000001','d7300000-0000-0000-0000-000000000001',true);
 insert into public.procedures (id, organization_id, code, name, status) values
   ('d9300000-0000-0000-0000-000000000001','d7200000-0000-0000-0000-000000000001','PROC_A1','Synthetic Procedure A1','active');
 
@@ -85,7 +89,7 @@ select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001'
 select extensions.is((select line_no from public.add_treatment_plan_item('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'d9300000-0000-0000-0000-000000000001','26','Composite filling on 26.',2500.00)),1,'an item with an org procedure, FDI tooth, and fee is appended at line one');
 select extensions.is((select line_no from public.add_treatment_plan_item('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,null,'27','Crown on 27.',null)),2,'a second item without a procedure is appended at line two');
 select extensions.is((select alternative_no from public.add_treatment_plan_alternative('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'Extraction and implant alternative.')),1,'an alternative is appended at number one');
-select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),'d9200000-0000-0000-0000-000000000001','Case discussion','Patient prefers conservative care.')),'a discussion captures discussed_at on the DRAFT plan');
+select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion_v2('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),'Case discussion','Patient prefers conservative care.')),'a discussion captures discussed_at on the DRAFT plan');
 select extensions.is((select version from public.save_treatment_plan_drawing('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'{"strokes":[{"points":[{"x":1,"y":2},{"x":3,"y":4}]}],"width":320,"height":200}'::jsonb)),1,'a renderer-independent drawing is saved at version one');
 select extensions.is((select version from public.present_treatment_plan('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1)),2,'presenting the DRAFT plan moves it to PRESENTED at version two');
 select extensions.is((select version from public.acknowledge_treatment_plan('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),2)),3,'acknowledging the PRESENTED plan moves it to ACKNOWLEDGED at version three');

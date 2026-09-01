@@ -12,10 +12,12 @@ import {
   describeImplantStage,
   type ImplantComponentRecord,
 } from "@/lib/odontogram/implant";
+import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 
 import { ClinicalRecordComposer } from "./clinical-record-composer";
+import type { PlanAuthoringContext } from "./planned-treatment-form";
 import { ToothInspector, isLegacyToothEntry } from "./tooth-inspector";
 
 /** One body at a time, so the drawer never becomes a stack of panels. */
@@ -57,6 +59,13 @@ export type ToothRecordDrawerProps = {
    * not loaded; the composer then says exactly what is missing.
    */
   composerContext?: ClinicalComposerContext | null;
+  /**
+   * The chart mode the drawer was opened from. Treatment plan opens the
+   * composer on Planned treatment; every other mode opens on Finding.
+   */
+  chartMode?: ClinicalChartMode;
+  /** The plan a Treatment plan proposal is authored into, when there is one. */
+  planContext?: PlanAuthoringContext | null;
   /** Refetch the canonical projection after a confirmed server write. */
   onRecorded: () => void | Promise<void>;
 };
@@ -133,6 +142,8 @@ export function ToothRecordDrawer({
   dto,
   canWriteClinical,
   composerContext = null,
+  chartMode = "CURRENT_STATUS",
+  planContext = null,
   onRecorded,
 }: ToothRecordDrawerProps): React.ReactElement {
   const [body, setBody] = React.useState<DrawerBody>("summary");
@@ -254,6 +265,8 @@ export function ToothRecordDrawer({
               defaultClinicalDate={philippineClinicalDate()}
               treatmentContext={treatmentContext}
               relationshipContext={relationshipContext}
+              planContext={planContext}
+              defaultKind={chartMode === "TREATMENT_PLAN" ? "PLANNED_TREATMENT" : "FINDING"}
               onRecorded={async () => {
                 await onRecorded();
                 setBody("summary");

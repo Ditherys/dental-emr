@@ -118,10 +118,15 @@ export const addTreatmentPlanAlternativeInputSchema = z.object({
   summary: z.string().trim().min(1).max(2000),
 }).strict();
 
+/**
+ * The treating provider is derived from the signed-in actor by
+ * `add_treatment_plan_discussion_v2`. The field is absent here and the object is
+ * strict, so a browser that supplies one is a parse failure rather than a
+ * clinician choosing whose authorship the discussion carries.
+ */
 export const addTreatmentPlanDiscussionInputSchema = z.object({
   actingBranchId: databaseUuid,
   planId: databaseUuid,
-  treatingProviderId: nullableUuid(),
   context: z.string().trim().min(1).max(200),
   notes: boundedNullableText(4000),
 }).strict();

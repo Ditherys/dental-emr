@@ -14,6 +14,8 @@ import { ProgressRecordTable } from "@/components/odontogram/progress-record-tab
 import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
 import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
+import type { PlanAuthoringContext } from "@/components/odontogram/planned-treatment-form";
+import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 
@@ -44,6 +46,10 @@ type Props = {
   initialOdontogram?: PatientOdontogramDTO | null;
   /** Authorized server projection the record drawer hands to the composer. */
   composerContext?: ClinicalComposerContext | null;
+  /** Which chart mode mounted this section; the drawer opens accordingly. */
+  chartMode?: ClinicalChartMode;
+  /** The plan a Treatment plan proposal is authored into, when there is one. */
+  planContext?: PlanAuthoringContext | null;
   initialProgressEvents?: { patientId: string; events: ProgressEventDTO[] };
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
@@ -61,6 +67,8 @@ export function OdontogramSection({
   printProviderName,
   initialOdontogram,
   composerContext = null,
+  chartMode = "CURRENT_STATUS",
+  planContext = null,
   initialProgressEvents,
   procedureCases: suppliedProcedureCases,
   recordFollowup,
@@ -318,6 +326,8 @@ export function OdontogramSection({
         dto={dto}
         canWriteClinical={canWriteClinical}
         composerContext={composerContext}
+        chartMode={chartMode}
+        planContext={planContext}
         onRecorded={refetch}
       />
 

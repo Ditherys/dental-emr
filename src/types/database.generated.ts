@@ -7706,6 +7706,18 @@ export type Database = {
           discussion_id: string
         }[]
       }
+      add_treatment_plan_discussion_v2: {
+        Args: {
+          p_acting_branch_id: string
+          p_context: string
+          p_notes?: string
+          p_plan_id: string
+        }
+        Returns: {
+          discussed_at: string
+          discussion_id: string
+        }[]
+      }
       add_treatment_plan_item: {
         Args: {
           p_acting_branch_id: string

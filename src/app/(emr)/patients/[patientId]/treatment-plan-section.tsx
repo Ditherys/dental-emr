@@ -8,7 +8,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatPhpCentavos } from "@/lib/billing/money";
-import type { ProviderListItem } from "@/lib/providers/types";
 import type { CompleteTreatmentInput, TreatmentPlan, TreatmentPlanCompletionContext, TreatmentPlanDetail, TreatmentPlanItem, TreatmentPlanStatus } from "@/lib/treatment-plan/types";
 import { PlanModePanel } from "@/components/odontogram/plan-mode-panel";
 
@@ -47,7 +46,6 @@ type Props = {
   canWriteClinical: boolean;
   canGenerateDocuments: boolean;
   initialPlans: TreatmentPlan[];
-  initialProviders?: ProviderListItem[];
   loadFailed?: boolean;
   canReadBilling?: boolean;
   initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
@@ -74,7 +72,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinical, canGenerateDocuments, initialPlans, initialProviders = [], loadFailed, canReadBilling = false, initialProcedureSummaries = {} }: Props) {
+export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinical, canGenerateDocuments, initialPlans, loadFailed, canReadBilling = false, initialProcedureSummaries = {} }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,9 +87,6 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
   const [removeItem, setRemoveItem] = useState<{ plan: TreatmentPlanDetail; item: TreatmentPlanItem } | null>(null);
   const [confirmAcknowledge, setConfirmAcknowledge] = useState<TreatmentPlanDetail | null>(null);
   const [confirmPresent, setConfirmPresent] = useState<TreatmentPlanDetail | null>(null);
-
-  const providersById = new Map(initialProviders.map((provider) => [provider.providerId, provider.displayName]));
-  const providerName = (providerId: string | null) => (providerId ? providersById.get(providerId) ?? "Unknown provider" : "Not recorded");
 
   const openDetail = openPlanId ? details[openPlanId] : undefined;
 
@@ -252,7 +247,6 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
       const result = await addTreatmentPlanDiscussionAction({
         actingBranchId,
         planId: plan.planId,
-        treatingProviderId: null,
         context: requiredString(data, "context"),
       });
       setDiscussionDialog(null);
@@ -280,7 +274,7 @@ export function TreatmentPlanSection({ patientId, actingBranchId, canWriteClinic
 
   return <div>
     {error && !dialogOpen && <p role="alert" className="mb-4 border-y py-3 text-sm text-destructive">{error}</p>}
-    {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Treatment plans could not be loaded. Refresh to try again.</p> : openPlanId && openDetail ? <PlanDetailView plan={openDetail} completionContext={completionContexts[openPlanId]} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} saving={saving} providerName={providerName} back={() => { setOpenPlanId(null); setError(null); }} editTitle={saveTitle} requestPresent={setConfirmPresent} requestAcknowledge={setConfirmAcknowledge} openItem={setItemDialog} openAlternative={setAlternativeDialog} openDiscussion={setDiscussionDialog} requestRemoveItem={setRemoveItem} printPlan={() => printPlan(openDetail)} completeCase={completeCase} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} patientId={patientId} actingBranchId={actingBranchId} />
+    {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Treatment plans could not be loaded. Refresh to try again.</p> : openPlanId && openDetail ? <PlanDetailView plan={openDetail} completionContext={completionContexts[openPlanId]} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} saving={saving} back={() => { setOpenPlanId(null); setError(null); }} editTitle={saveTitle} requestPresent={setConfirmPresent} requestAcknowledge={setConfirmAcknowledge} openItem={setItemDialog} openAlternative={setAlternativeDialog} openDiscussion={setDiscussionDialog} requestRemoveItem={setRemoveItem} printPlan={() => printPlan(openDetail)} completeCase={completeCase} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} patientId={patientId} actingBranchId={actingBranchId} />
       : <>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">Plans are versioned; an acknowledged plan becomes part of the permanent record and can no longer be changed.</p>
@@ -340,13 +334,12 @@ function ItemCard({ item, editable, saving, openItem, requestRemoveItem, canRead
   return <li className="py-3"><div className="flex items-start justify-between gap-3"><p className="text-sm font-medium">{item.description}</p>{editable && <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={openItem}><Pencil aria-hidden="true" /><span className="sr-only">Edit item {item.lineNo}</span></Button><Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={requestRemoveItem}>Remove</Button></div>}</div><p className="mt-1 text-xs text-muted-foreground">Line {item.lineNo}{item.toothCode ? ` · Tooth ${item.toothCode}` : ""}{item.surfaces.length ? ` · ${item.surfaces.join(", ")}` : ""} · {item.priority} · sequence {item.sequenceNo} · {item.estimatedFeeCentavos === null ? "No fee" : formatEstimate(item.estimatedFeeCentavos)}</p>{item.notes && <p className="mt-1 text-xs text-muted-foreground">{item.notes}</p>}{canReadBilling && <ProcedurePaymentSummaryCard patientId={patientId} actingBranchId={actingBranchId} procedureId={item.itemId} procedureCaseId={item.procedureCaseId} initialSummary={initialSummary} />}</li>;
 }
 
-function PlanDetailView({ plan, completionContext, canWriteClinical, canGenerateDocuments, saving, providerName, back, editTitle, requestPresent, requestAcknowledge, openItem, openAlternative, openDiscussion, requestRemoveItem, printPlan, completeCase, canReadBilling = false, initialProcedureSummaries = {}, patientId, actingBranchId }: {
+function PlanDetailView({ plan, completionContext, canWriteClinical, canGenerateDocuments, saving, back, editTitle, requestPresent, requestAcknowledge, openItem, openAlternative, openDiscussion, requestRemoveItem, printPlan, completeCase, canReadBilling = false, initialProcedureSummaries = {}, patientId, actingBranchId }: {
   plan: TreatmentPlanDetail;
   completionContext?: TreatmentPlanCompletionContext;
   canWriteClinical: boolean;
   canGenerateDocuments: boolean;
   saving: boolean;
-  providerName(providerId: string | null): string;
   back(): void;
   editTitle(data: FormData): Promise<void>;
   requestPresent(plan: TreatmentPlanDetail): void;
@@ -399,7 +392,7 @@ function PlanDetailView({ plan, completionContext, canWriteClinical, canGenerate
 
     <div className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><h4 className="text-sm font-medium">Discussions</h4>{canWriteClinical && <Button type="button" variant="outline" className="min-h-11" disabled={saving} onClick={() => openDiscussion(plan)}><Plus aria-hidden="true" /> Add discussion</Button>}</div>
-      {plan.discussions.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No discussions recorded.</p> : <ul className="mt-2 divide-y border-y">{plan.discussions.map((discussion) => <li key={discussion.discussionId} className="py-3"><p className="text-sm font-medium">{discussion.context}</p><p className="mt-1 text-xs text-muted-foreground">{providerName(discussion.treatingProviderId)} · {discussion.discussedAt.slice(0, 16).replace("T", " ")}</p></li>)}</ul>}
+      {plan.discussions.length === 0 ? <p className="mt-2 text-sm text-muted-foreground">No discussions recorded.</p> : <ul className="mt-2 divide-y border-y">{plan.discussions.map((discussion) => <li key={discussion.discussionId} className="py-3"><p className="text-sm font-medium">{discussion.context}</p><p className="mt-1 text-xs text-muted-foreground">Recorded by the signed-in dentist · {discussion.discussedAt.slice(0, 16).replace("T", " ")}</p></li>)}</ul>}
     </div>
   </div>;
 }

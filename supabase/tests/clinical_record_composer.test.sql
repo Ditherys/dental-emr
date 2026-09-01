@@ -108,11 +108,16 @@ select extensions.ok(
 -- guarantee is unchanged and strengthened, because a third such writer now
 -- fails by name rather than merely by count.
 --
--- `complete_treatment_case` and `amend_tooth_clinical_entry` also insert tooth
--- entries and are browser-reachable, but neither opens a visit and neither did
--- before this task: completion runs inside a case the plan workflow opened, and
--- an amendment succeeds an existing entry. They are outside this assertion, as
--- they were outside the original one.
+-- Task 8 adds the third and last member: `complete_treatment_case` used to
+-- create its plan-linked clinical entry with encounter_id null, so a plan
+-- execution carried no visit attribution at all. It now obtains the managed
+-- visit itself, which is exactly the guarantee this assertion exists to state,
+-- so it belongs in the named set rather than beside it.
+--
+-- `amend_tooth_clinical_entry` also inserts tooth entries and is
+-- browser-reachable, but it opens no visit: an amendment succeeds an existing
+-- entry rather than recording new work. It stays outside this assertion, as it
+-- was outside the original one.
 select extensions.is(
   (select string_agg(proc.proname::text, ',' order by proc.proname::text)
    from pg_proc as proc
@@ -121,8 +126,8 @@ select extensions.is(
      and proc.prosrc ~* 'insert into public[.]tooth_clinical_entries'
      and proc.prosrc ~* 'start_or_resume_clinical_visit'
      and has_function_privilege('authenticated', proc.oid, 'execute')),
-  'record_treatment_event_v2,record_visit_tooth_findings',
-  'the browser-reachable paths that record a tooth entry bound to the managed visit are exactly the composer finding and treatment-event boundaries'
+  'complete_treatment_case,record_treatment_event_v2,record_visit_tooth_findings',
+  'the browser-reachable paths that record a tooth entry bound to the managed visit are exactly the composer finding, treatment-event and plan-completion boundaries'
 );
 
 -- Positive path: one dentist records a two-tooth surface finding.

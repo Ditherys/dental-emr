@@ -194,7 +194,7 @@ describe("treatment plan item and alternative actions", () => {
 
 describe("treatment plan discussion actions", () => {
   it("recheck clinical-write and forward the bounded inputs", async () => {
-    const discussion = { actingBranchId: branchId, planId, treatingProviderId: providerId, context: "Case discussion" };
+    const discussion = { actingBranchId: branchId, planId, context: "Case discussion" };
     await expect(addTreatmentPlanDiscussionAction(discussion)).resolves.toEqual({ ok: true });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
     expect(addTreatmentPlanDiscussion).toHaveBeenCalledWith(discussion);
@@ -203,6 +203,21 @@ describe("treatment plan discussion actions", () => {
 
   it("rejects malformed discussion context before authorization", async () => {
     await expect(addTreatmentPlanDiscussionAction({ actingBranchId: branchId, planId, context: "   " })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    expect(requirePermission).not.toHaveBeenCalled();
+    expect(addTreatmentPlanDiscussion).not.toHaveBeenCalled();
+  });
+
+  it("refuses a caller-supplied provider, organization, or author identity", async () => {
+    for (const forged of [
+      { treatingProviderId: providerId },
+      { organizationId: "c8200000-0000-0000-0000-000000000001" },
+      { createdBy: "c8100000-0000-0000-0000-000000000001" },
+      { providerDisplay: "Provider A" },
+    ]) {
+      await expect(
+        addTreatmentPlanDiscussionAction({ actingBranchId: branchId, planId, context: "Case discussion", ...forged }),
+      ).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    }
     expect(requirePermission).not.toHaveBeenCalled();
     expect(addTreatmentPlanDiscussion).not.toHaveBeenCalled();
   });

@@ -132,6 +132,11 @@ describe("treatment-plan service input validation boundary", () => {
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "C".repeat(201) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "Context", notes: "N".repeat(4001) })).rejects.toBeInstanceOf(z.ZodError);
     await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, treatingProviderId: "forged", context: "Context" })).rejects.toBeInstanceOf(z.ZodError);
+    // The treating provider is derived from the signed-in actor. A well-formed
+    // provider identifier is refused exactly as a malformed one is, so the
+    // browser can never choose whose clinical authorship a discussion carries.
+    await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, treatingProviderId: providerId, context: "Context" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "Context", createdBy: createdBy })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId: "forged" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId, organizationId: "foreign-org" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(getTreatmentPlanDetail({ actingBranchId: branchId, planId: "forged" })).rejects.toBeInstanceOf(z.ZodError);
@@ -222,9 +227,9 @@ describe("treatment-plan service RPC contract", () => {
     });
 
     rpc.mockResolvedValueOnce({ data: [{ discussion_id: discussionId, discussed_at: createdAt }], error: null });
-    await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, treatingProviderId: providerId, context: "Case discussion", notes: "Patient prefers conservative care." })).resolves.toEqual({ discussionId, discussedAt: createdAt });
-    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_discussion", {
-      p_acting_branch_id: branchId, p_plan_id: planId, p_treating_provider_id: providerId,
+    await expect(addTreatmentPlanDiscussion({ actingBranchId: branchId, planId, context: "Case discussion", notes: "Patient prefers conservative care." })).resolves.toEqual({ discussionId, discussedAt: createdAt });
+    expect(rpc).toHaveBeenLastCalledWith("add_treatment_plan_discussion_v2", {
+      p_acting_branch_id: branchId, p_plan_id: planId,
       p_context: "Case discussion", p_notes: "Patient prefers conservative care.",
     });
 

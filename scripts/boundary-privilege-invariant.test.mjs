@@ -259,7 +259,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.update_treatment_plan_item(uuid, uuid, uuid, integer, uuid, text, text, numeric)",
     "public.remove_treatment_plan_item(uuid, uuid, uuid, integer)",
     "public.add_treatment_plan_alternative(uuid, uuid, integer, text)",
-    "public.add_treatment_plan_discussion(uuid, uuid, uuid, text, text)",
+    "public.add_treatment_plan_discussion_v2(uuid, uuid, text, text)",
     "public.save_treatment_plan_drawing(uuid, uuid, integer, jsonb)",
     "public.list_treatment_plans(uuid, uuid)",
     "public.get_treatment_plan_detail(uuid, uuid)",

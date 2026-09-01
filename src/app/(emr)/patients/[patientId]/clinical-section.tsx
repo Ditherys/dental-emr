@@ -8,6 +8,7 @@ import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-wor
 import { ClinicalVisitHeader } from "@/components/clinical/clinical-visit-header";
 import { MedicalSafetySummary } from "@/components/clinical/medical-safety-summary";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
+import { TreatmentPlanMode } from "@/components/odontogram/treatment-plan-mode";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,7 +38,6 @@ import {
 } from "./clinical-actions";
 import { OdontogramSection } from "./odontogram-section";
 import { ProcedurePaymentSummaryCard } from "./procedure-payment-summary";
-import { TreatmentPlanSection } from "./treatment-plan-section";
 
 type Props = {
   patientId: string;
@@ -93,8 +93,11 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
+  // Plan printing moves with the plan page Task 17 removes; the prop stays on the
+  // route contract until then.
+  void _canGenerateDocuments;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -253,7 +256,15 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   ];
   const chart: Record<ClinicalChartMode, ReactNode> = {
     CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />,
-    TREATMENT_PLAN: <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />,
+    TREATMENT_PLAN: <TreatmentPlanMode
+      patientId={patientId}
+      actingBranchId={actingBranchId}
+      canWriteClinical={canWriteClinical}
+      initialPlans={initialTreatmentPlans}
+      procedures={clinicalComposerContext?.patientId === patientId ? clinicalComposerContext.procedures : []}
+      loadFailed={loadFailed}
+      chart={(planContext) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={planContext} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
+    />,
     PERIODONTAL: <PeriodontalModePanel />,
   };
 

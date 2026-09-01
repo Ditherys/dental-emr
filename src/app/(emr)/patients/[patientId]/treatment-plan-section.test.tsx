@@ -3,7 +3,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan, TreatmentPlanDetail } from "@/lib/treatment-plan/types";
 
 const treatmentPlanActions = vi.hoisted(() => ({
@@ -83,7 +82,6 @@ const alternativeId = "d7a00000-0000-0000-0000-000000000011";
 const discussionId = "d7a00000-0000-0000-0000-000000000012";
 const providerId = "d9200000-0000-0000-0000-000000000001";
 
-const provider: ProviderListItem = { providerId, displayName: "Dr. Synthetic Dentist", providerType: "REGULAR", status: "active", websiteVisible: false, primarySpecialtyLabel: null, branchCount: 1 };
 
 const draftPlan: TreatmentPlan = { planId, title: "Full mouth restoration", status: "DRAFT", version: 1, createdAt: "2026-08-27T09:00:00+00:00", itemCount: 1 };
 const acknowledgedPlan: TreatmentPlan = { planId: acknowledgedPlanId, title: "Implants and crowns", status: "ACKNOWLEDGED", version: 3, createdAt: "2026-08-27T10:00:00+00:00", itemCount: 2 };
@@ -132,7 +130,6 @@ function renderSection(overrides: { canWriteClinical?: boolean; canGenerateDocum
     canWriteClinical={overrides.canWriteClinical ?? false}
     canGenerateDocuments={overrides.canGenerateDocuments ?? true}
     initialPlans={overrides.plans ?? [draftPlan, acknowledgedPlan]}
-    initialProviders={[provider]}
   />);
 }
 
@@ -248,10 +245,13 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[0]);
     dialog = await screen.findByRole("dialog", { name: "Add discussion" });
     fireEvent.change(within(dialog).getByLabelText("Context"), { target: { value: "Consent discussion" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save discussion" }));
-    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, treatingProviderId: null, context: "Consent discussion" }));
+    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId, context: "Consent discussion" }));
 
     expect(screen.getByText("Case discussion")).toBeVisible();
-    expect(screen.getByText(/Dr. Synthetic Dentist/)).toBeVisible();
+    // The discussion no longer names a selectable provider: authorship is
+    // derived from the signed-in actor by the server boundary.
+    expect(screen.queryByText(/Dr. Synthetic Dentist/)).toBeNull();
+    expect(screen.getByText(/Recorded by the signed-in dentist/)).toBeVisible();
     expect(screen.getByText(/2026-08-27 09:30/)).toBeVisible();
   });
 
@@ -332,7 +332,7 @@ fireEvent.click(screen.getAllByRole("button", { name: "Open plan" })[1]);
     const dialog = await screen.findByRole("dialog", { name: "Add discussion" });
     fireEvent.change(within(dialog).getByLabelText("Context"), { target: { value: "Follow-up" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Save discussion" }));
-    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId: acknowledgedPlanId, treatingProviderId: null, context: "Follow-up" }));
+    await waitFor(() => expect(treatmentPlanActions.addTreatmentPlanDiscussionAction).toHaveBeenCalledWith({ actingBranchId: branchId, planId: acknowledgedPlanId, context: "Follow-up" }));
   });
 });
 

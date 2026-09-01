@@ -759,6 +759,26 @@ const odontogramClinicalAuditMetadataGrant = Object.freeze([
 const TREATMENT_PLAN_RPCS_GRANTS_MIGRATION =
   "20260827013401_treatment_plan_rpcs_grants.sql";
 
+// The object migration that REVOKES the browser grant on the superseded
+// provider-accepting discussion signature. It is the supersede pivot recorded
+// below; a grants file is never the pivot.
+const TREATMENT_PLAN_ACTOR_PROVIDER_MIGRATION =
+  "20260901010140_treatment_plan_actor_provider.sql";
+const TREATMENT_PLAN_ACTOR_PROVIDER_GRANTS_MIGRATION =
+  "20260901010141_treatment_plan_actor_provider_grants.sql";
+
+const treatmentPlanActorProviderGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The provider-free treatment plan discussion boundary. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch, and derives the treating provider from the signed-in user with private.require_active_actor_provider, so an owner who does not treat is refused rather than allowed to file a discussion under another clinician's identity. It validates the plan against the derived tenant, appends the discussion on any plan status because discussions are append-only, and audits it atomically. No organization, provider, actor, or provider display name may be supplied by a client. It replaces the five-argument signature that accepted a client-chosen treating provider, whose grant 20260901010140 revokes.",
+  },
+]);
+
 const treatmentPlanRpcGrants = Object.freeze([
   "public.create_treatment_plan(uuid,uuid,text)",
   "public.update_treatment_plan(uuid,uuid,integer,text)",
@@ -772,7 +792,23 @@ const treatmentPlanRpcGrants = Object.freeze([
   "public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)",
   "public.list_treatment_plans(uuid,uuid)",
   "public.get_treatment_plan_detail(uuid,uuid)",
-].map((object) => ({ grantee: "authenticated", objectClass: "function", object, privilege: "execute", columns: [], reason: "The only treatment-plan clinical boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Plans are versioned with an immutable PRESENTED/ACKNOWLEDGED state backed by a database trigger; discussions are append-only on any status and always capture provider, time, and context. Every mutation appends one atomic opaque audit event while the read projections write none." })));
+].map((object) => ({
+  grantee: "authenticated",
+  objectClass: "function",
+  object,
+  privilege: "execute",
+  columns: [],
+  // The provider-accepting discussion signature let the browser choose whose
+  // clinical authorship a plan discussion carried. `supersededFrom` names the
+  // object migration that REVOKES its grant, never the grants file that
+  // replaces it.
+  ...(object === "public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)"
+    ? {
+        supersededFrom: TREATMENT_PLAN_ACTOR_PROVIDER_MIGRATION,
+        supersededBy: "public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)",
+      }
+    : {}),
+  reason: "The only treatment-plan clinical boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Plans are versioned with an immutable PRESENTED/ACKNOWLEDGED state backed by a database trigger; discussions are append-only on any status and always capture provider, time, and context. Every mutation appends one atomic opaque audit event while the read projections write none." })));
 
 const TREATMENT_ESTIMATE_CENTAVO_REPAIR_MIGRATION =
   "20260828020505_treatment_estimate_centavo_contract_repair.sql";
@@ -1907,6 +1943,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_COMPOSER_CONTEXT_GRANTS_MIGRATION,
     grants: clinicalComposerContextGrants,
+  }),
+  Object.freeze({
+    file: TREATMENT_PLAN_ACTOR_PROVIDER_GRANTS_MIGRATION,
+    grants: treatmentPlanActorProviderGrants,
   }),
 ]);
 

@@ -180,10 +180,9 @@ export async function addTreatmentPlanAlternative(input: unknown): Promise<Treat
 
 export async function addTreatmentPlanDiscussion(input: unknown): Promise<TreatmentPlanDiscussionMutationResult> {
   const value = addTreatmentPlanDiscussionInputSchema.parse(input);
-  const row = treatmentPlanDiscussionMutationRowSchema.parse(firstRow(await callRpc("add_treatment_plan_discussion", {
+  const row = treatmentPlanDiscussionMutationRowSchema.parse(firstRow(await callRpc("add_treatment_plan_discussion_v2", {
     p_acting_branch_id: value.actingBranchId,
     p_plan_id: value.planId,
-    p_treating_provider_id: value.treatingProviderId ?? null,
     p_context: value.context,
     p_notes: value.notes ?? null,
   })));

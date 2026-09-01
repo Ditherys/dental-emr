@@ -39,9 +39,14 @@ join public.roles as role on role.organization_id is null and role.code = assign
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('b7500000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','P1602-A-1','Patient','A',date '1990-01-01','b7300000-0000-0000-0000-000000000001'),
   ('b7500000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000002','P1602-B-1','Patient','B',date '1991-01-01',null);
-insert into public.providers (id, organization_id, first_name, last_name, provider_type, status) values
-  ('c9200000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
-  ('c9200000-0000-0000-0000-000000000004','b7200000-0000-0000-0000-000000000002','Dentist','B1','REGULAR','active');
+-- Plan authorship derives the treating provider from the signed-in actor, so
+-- dentist A1 now carries an active provider link at P1602 A Main. Dentist B1
+-- stays foreign and unlinked.
+insert into public.providers (id, organization_id, linked_user_id, first_name, last_name, provider_type, status) values
+  ('c9200000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','b7100000-0000-0000-0000-000000000001','Dentist','A1','REGULAR','active'),
+  ('c9200000-0000-0000-0000-000000000004','b7200000-0000-0000-0000-000000000002',null,'Dentist','B1','REGULAR','active');
+insert into public.provider_branches (organization_id, provider_id, branch_id, is_active) values
+  ('b7200000-0000-0000-0000-000000000001','c9200000-0000-0000-0000-000000000001','b7300000-0000-0000-0000-000000000001',true);
 insert into public.procedures (id, organization_id, code, name, status) values
   ('c9300000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','PROC_A1','Synthetic Procedure A1','active'),
   ('c9300000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000002','PROC_B1','Synthetic Procedure B1','active');
@@ -64,7 +69,10 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)','execute')
   and has_function_privilege('authenticated','public.remove_treatment_plan_item(uuid,uuid,uuid,integer)','execute')
   and has_function_privilege('authenticated','public.add_treatment_plan_alternative(uuid,uuid,integer,text)','execute')
-  and has_function_privilege('authenticated','public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)','execute')
+  and has_function_privilege('authenticated','public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)','execute')
+  and not has_function_privilege('authenticated','public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)','execute')
+  and not has_function_privilege('anon','public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)','execute')
+  and not has_function_privilege('service_role','public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)','execute')
   and has_function_privilege('authenticated','public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.list_treatment_plans(uuid,uuid)','execute')
   and has_function_privilege('authenticated','public.get_treatment_plan_detail(uuid,uuid)','execute')
@@ -76,7 +84,7 @@ select extensions.ok(
   and not has_function_privilege('service_role','public.get_treatment_plan_detail(uuid,uuid)','execute'),
   'only authenticated has the treatment-plan RPC grants, including both centavo application writers'
 );
-select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_treatment_plan(uuid,uuid,text)'::regprocedure,'public.update_treatment_plan(uuid,uuid,integer,text)'::regprocedure,'public.present_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.acknowledge_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.remove_treatment_plan_item(uuid,uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_alternative(uuid,uuid,integer,text)'::regprocedure,'public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)'::regprocedure,'public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'::regprocedure,'public.list_treatment_plans(uuid,uuid)'::regprocedure,'public.get_treatment_plan_detail(uuid,uuid)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),14,'the treatment-plan definers, including both centavo application writers, pin an empty search path');
+select extensions.is((select count(*)::integer from pg_proc where oid in ('public.create_treatment_plan(uuid,uuid,text)'::regprocedure,'public.update_treatment_plan(uuid,uuid,integer,text)'::regprocedure,'public.present_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.acknowledge_treatment_plan(uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_item(uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.update_treatment_plan_item(uuid,uuid,uuid,integer,uuid,text,text,numeric)'::regprocedure,'public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)'::regprocedure,'public.remove_treatment_plan_item(uuid,uuid,uuid,integer)'::regprocedure,'public.add_treatment_plan_alternative(uuid,uuid,integer,text)'::regprocedure,'public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)'::regprocedure,'public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)'::regprocedure,'public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'::regprocedure,'public.list_treatment_plans(uuid,uuid)'::regprocedure,'public.get_treatment_plan_detail(uuid,uuid)'::regprocedure) and prosecdef and proconfig = array['search_path=""']::text[]),15,'the treatment-plan definers, including both centavo application writers, pin an empty search path');
 select extensions.ok(not exists (
   select 1
   from pg_proc as proc
@@ -167,7 +175,7 @@ select extensions.is((select count(*)::integer from public.audit_events where or
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000001','Case discussion','Patient prefers conservative care.')),'a DRAFT discussion captures discussed_at');
+select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion_v2('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'Case discussion','Patient prefers conservative care.')),'a DRAFT discussion captures discussed_at');
 reset role;
 select extensions.ok((select treating_provider_id='c9200000-0000-0000-0000-000000000001' and discussed_at is not null and context='Case discussion' and notes='Patient prefers conservative care.' and discussed_by='b7100000-0000-0000-0000-000000000001' from public.treatment_plan_discussions where organization_id='b7200000-0000-0000-0000-000000000001' and plan_id=(select id from p1602_plans where seq=1) and context='Case discussion'),'the discussion row captures the treating provider, discussed_at, and context together');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.discussion_added' and patient_id='b7500000-0000-0000-0000-000000000001'),1,'the discussion add writes exactly one treatment.plan.discussion_added audit event');
@@ -204,7 +212,7 @@ select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001'
 select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'{"strokes":[]}'::jsonb)$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects drawing saves as invalid state');
 select extensions.throws_ok($$select public.update_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'rewrite')$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects updates through the RPC');
 select extensions.throws_ok($$select public.present_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4)$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects re-presenting');
-select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000001','Consent discussion','Acknowledged the plan.')),'a discussion still appends on an ACKNOWLEDGED plan');
+select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion_v2('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'Consent discussion','Acknowledged the plan.')),'a discussion still appends on an ACKNOWLEDGED plan');
 reset role;
 select extensions.is((select count(*)::integer from public.treatment_plan_discussions where organization_id='b7200000-0000-0000-0000-000000000001' and plan_id=(select id from p1602_plans where seq=1) and context='Consent discussion'),1,'the acknowledged-plan discussion row persists');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.discussion_added' and patient_id='b7500000-0000-0000-0000-000000000001'),2,'the acknowledged discussion adds a second discussion_added audit');
@@ -269,8 +277,11 @@ select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-00
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'Too big',1000000000)$$,'22023','invalid input','an oversized estimated fee is rejected with a clean error');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'Fractional centavo',123.456)$$,'22023','invalid input','a fractional-centavo peso estimate is rejected rather than rounded');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,null,'   ',null)$$,'22023','invalid input','a blank item description is rejected with a clean error');
-select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000004','Foreign provider',null)$$,'22023','invalid input','a foreign-org treating provider is rejected with a clean error');
-select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),null,'   ',null)$$,'22023','invalid input','a blank discussion context is rejected with a clean error');
+-- The provider-accepting signature used to reject a foreign-organization
+-- treating provider. The replacement accepts no provider at all, so the
+-- stronger statement is that the browser can no longer reach the old signature.
+select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000004','Foreign provider',null)$$,'42501','permission denied for function add_treatment_plan_discussion','the superseded provider-accepting discussion signature is unreachable from the browser');
+select extensions.throws_ok($$select public.add_treatment_plan_discussion_v2('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'   ',null)$$,'22023','invalid input','a blank discussion context is rejected with a clean error');
 select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,'[1,2,3]'::jsonb)$$,'22023','invalid input','a non-object drawing is rejected with a clean error');
 select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,jsonb_build_object('data',repeat('x',70000)))$$,'22023','invalid input','an oversized drawing is rejected with a clean error');
 reset role;

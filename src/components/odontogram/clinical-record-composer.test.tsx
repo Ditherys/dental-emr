@@ -139,12 +139,26 @@ describe("ClinicalRecordComposer shell", () => {
     const user = userEvent.setup();
     renderComposer();
 
-    for (const kind of ["Planned treatment", "Photo"]) {
+    // Planned treatment is no longer a signpost: task 8 mounts its form. Photo
+    // remains one, and the guarantee is unchanged — a kind this composer cannot
+    // write names the workflow that owns it and offers no write here.
+    for (const kind of ["Photo"]) {
       await user.click(screen.getByRole("button", { name: kind }));
       const notice = screen.getByTestId("composer-unavailable");
       expect(notice).toHaveTextContent(/not available/i);
       expect(screen.queryByRole("button", { name: /^Record / })).not.toBeInTheDocument();
     }
+  });
+
+  it("mounts the planned-treatment form and says what is missing without a plan", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+
+    await user.click(screen.getByRole("button", { name: "Planned treatment" }));
+
+    expect(screen.queryByTestId("composer-unavailable")).not.toBeInTheDocument();
+    expect(screen.getByTestId("planned-treatment-unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Add planned treatment" })).not.toBeInTheDocument();
   });
 
   it("mounts the bridge form for the Bridge kind once the relationship context is supplied", async () => {
