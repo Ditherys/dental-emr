@@ -6,7 +6,11 @@ history; this file is deliberately not an append-only transcript.
 Task 9 (canonical periodontal data model) is complete across `5dce284`,
 `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 (pure
 periodontal calculations, graphics and classification) is complete across
-`4053739` and `4836ae9`. This commit is Task 11.
+`4053739` and `4836ae9`. Task 11 is `d589dbf` plus this commit, which applies
+review round 1: **0 Critical, 4 Important, 1 Minor**. All eight inherited
+requirements held under review; the four Important findings are two real defects
+in code this task added, one divergence from Task 10's port, and one bypass in a
+shipped boundary this task had left granted.
 
 ## Task 11 - Versioned periodontal draft, autosave, finalize, amend and compare RPCs (2026-09-02)
 
@@ -68,6 +72,10 @@ would have sorted before applied files.
   and one private summary helper. Grants nothing.
 - `20260901010243_full_periodontal_projection_grants.sql` - two `authenticated`
   execute grants plus a fail-closed boundary assertion.
+- `20260901010244_full_periodontal_rpcs_repair.sql` - review round 1. Four
+  guarded replaces of applied function bodies, re-created with EXECUTE rather
+  than a literal CREATE so every existing grant is preserved and no privilege
+  moves. Grants and revokes nothing, and is not a grant-terminal.
 
 ### The eight inherited requirements, and the test that proves each
 
@@ -162,10 +170,76 @@ reviewed pure port, and then:
 - audits the transition with `'{}'` metadata. A diagnosis, a stage and an
   override reason are clinical content and are never copied into an audit event.
 
+### Review round 1 fixes
+
+**1. `get_periodontal_workspace_v2` failed for a patient with no periodontal
+examination** - the first read the workspace performs for a newly registered
+patient, and the primary read boundary Task 12 depends on. `v_derived` is a
+record assigned only inside `if v_examination_id is not null`, then read under a
+`case when v_examination_id is null then null else ... end`. CASE does not
+protect it: PL/pgSQL resolves a record variable's tuple structure when it
+*plans* the reading expression, not when the branch runs. Worse, it is
+connection-state dependent - a backend that has already planned the statement
+with the record assigned then returns cleanly - so with pooled connections it
+presents as an *intermittent* failure. The record is now assigned on every path;
+the helper returns zero rows for a null examination and PL/pgSQL assigns nulls
+to every field, which is exactly the answer the payload wants, with the
+structure coming from the helper's declared return type.
+
+**2. The SQL derivation had already diverged from Task 10's TypeScript.** The
+drift risk recorded in the previous handoff as hypothetical was real. Arch
+adjacency checked only that the LEFT tooth's arch was known, so a permanent
+tooth paired with a **deciduous** one compared against a NULL arch, `not (NULL)`
+was NULL, and the pair silently dropped out of the `EXISTS`. The ported
+`arePerioTeethArchAdjacent` returns **false** for such a pair and therefore
+counts it. Text ordering always puts the permanent code on the left, so the
+asymmetry was one-directional, and the batch validator accepts deciduous codes,
+so it was reachable: in a mixed dentition whose only non-adjacent affected pair
+is permanent plus deciduous, SQL derived GINGIVITIS/HEALTH where TypeScript
+derived PERIODONTITIS. Beyond the wrong answer, a clinician confirming the
+browser value would have been forced to record an override reason for a
+disagreement that was a bug, corrupting the meaning of
+`classification_override_reason`. Both arches must now be known.
+
+**3. The PERIODONTITIS branch of the derivation is now tested.** Roughly 95
+lines - stage bands, the CAL-versus-bone-loss maximum, both complexity
+escalations, the stage IV override, all three grade buckets, the B baseline, the
+molar-incisor pattern and the known-attachment extent denominator - had no
+coverage at all; every previous derivation assertion exercised only the `else`
+branch. Ten table-driven cases now reach PERIODONTITIS with a real stage, grade
+and extent. Nine passed on first run, which is the evidence that the rest of the
+branch was correct; the tenth is the deciduous case above.
+
+**4. The superseded autosave boundary was a lost-update between two
+clinicians.** `public.save_periodontal_measurements` updated only `updated_at`
+and never incremented the version, so a write through it was invisible to the
+versioned boundary's guard: clinician A holds the draft at version N, anything
+reaching the superseded boundary writes measurements and leaves the version at
+N, and A's next autosave passes its `expected_version = N` check and silently
+overwrites them with no conflict shown to anyone. The RED run reproduced it
+exactly - a v2 save with a stale expected version succeeded and replaced a
+probing depth of 3 with 9. It now increments the version and returns the version
+it left behind. No shipped assertion pinned either value, which was checked
+before changing them.
+
+**5. MINOR - adoption is now visible in the audit trail and no longer rewrites
+authorship.** The amendment event records `action` as `ADOPTED` or `CREATED`
+(`action` is already on `private.audit_metadata_is_safe`'s allow-list and takes
+an uppercase token; `adopted` is not, and widening that shared allow-list with a
+boolean for one caller would enlarge a surface every audited write depends on).
+Adoption now preserves `examined_by` / `examined_at` / `examined_provider_id`,
+so measurements another clinician autosaved into the orphan DRAFT keep their
+author; the adopter is named as the audit actor and, at finalization, as
+`finalized_by` / `finalized_provider_id`. The one exception is a successor left
+with no provider at all, which `periodontal_examinations_finalized_state_check`
+would refuse to finalize: that one is stamped with the adopting clinician, which
+attributes it to the person actually doing the work and keeps the orphan from
+becoming a second dead end.
+
 ### Files added
 
 - `supabase/migrations/20260901010240..010243` (four files, above)
-- `supabase/tests/periodontal_full_chart_rpcs.test.sql` - 46 assertions
+- `supabase/tests/periodontal_full_chart_rpcs.test.sql` - 69 assertions
 - `supabase/tests/periodontal_autosave_concurrency.local.mjs`
 
 ### Files changed
@@ -180,9 +254,10 @@ reviewed pure port, and then:
 - `scripts/boundary-privilege-invariant.test.mjs`,
   `scripts/migration-privilege-lint.test.mjs`,
   `scripts/remote-database-test-guard.test.mjs` - the counts and fixture lists
-  these gates pin, moved with the new objects (files 327 to 331, tables 127 to
+  these gates pin, moved with the new objects (files 327 to 332, tables 127 to
   128, functions 491 to 503, SECURITY DEFINER 361 to 368, browser-reachable
-  approved grants 262 to 268).
+  approved grants 262 to 268). Only the file count moved again in review round
+  1, because 20260901010244 creates no object at all.
 - `supabase/tests/approved_grant_registry_integrity.test.sql` - six signatures
   added, count 251 to 257.
 - `supabase/tests/periodontal_current_state_guard.test.sql` - the inverted
@@ -216,7 +291,8 @@ None.
   measurement and holds no browser or service privilege.
 - Negative cases proved: a receptionist may not open a draft; an owner with no
   active provider link at the acting branch may not open one; a dentist from
-  another organization may not open one for a foreign patient; an actor with no
+  another organization may not open one at a branch and for a patient that are
+  both outside their own organization; an actor with no
   provider link may not finalize another clinician's draft; a dentist without
   `patient.clinical.correct` may not amend; a DRAFT predecessor may not be
   amended; a foreign-organization dentist may not read the workspace; comparison
@@ -242,12 +318,40 @@ node <runner> supabase/tests/periodontal_autosave_concurrency.local.mjs
 -> FAIL relation "private.periodontal_workflow_idempotency" does not exist
 ```
 
-Task gate, run exactly as the brief lists it:
+Review round 1 followed the same discipline. Every fix was reproduced as a
+failing assertion before the repair migration was written:
 
 ```
-npm run db:migrate:local     -> applied 010240..010243, then "Local database is up to date."
-npm run db:types:local       -> Updated src/types/database.generated.ts.
-npm run security:migrations  -> Migration privilege lint passed (331 files, 92 terminals, 404 approved)
+psql < supabase/tests/periodontal_full_chart_rpcs.test.sql
+-> ERROR: record "v_derived" is not assigned yet          (finding 1)
+
+not ok - the superseded autosave boundary reports the version it actually left behind
+#   have: 1   want: 2                                     (finding 4)
+not ok - the lost update the superseded boundary used to allow no longer happens
+#   have: 9   want: 3                                     (finding 4, the overwrite itself)
+not ok - a permanent tooth and a deciduous tooth are not arch-adjacent ...
+#   have: HEALTH/~/~/~   want: PERIODONTITIS/II/~/GENERALIZED   (finding 2)
+not ok - adopting an orphan successor is distinguishable from creating one ...
+#   have: NULL   want: ADOPTED                            (finding 5)
+not ok - creating a successor is distinguishable from adopting one ...
+#   have: NULL   want: CREATED                            (finding 5)
+not ok - the adopted successor ... keeping the authorship of the clinician who charted it
+```
+
+`have: 9 want: 3` is the lost update itself: a versioned autosave carrying a
+stale `expected_version` succeeded and replaced a probing depth of 3 with 9,
+because the write it should have conflicted with had left the version untouched.
+
+Nine of the ten new PERIODONTITIS cases passed on first run, which is the
+evidence that the rest of that branch was already correct rather than untested
+and wrong.
+
+Task gate, run exactly as the brief lists it (after the repair migration):
+
+```
+npm run db:migrate:local     -> applied 010244, then "Local database is up to date."
+npm run db:types:local       -> Updated src/types/database.generated.ts. (no signature changed)
+npm run security:migrations  -> Migration privilege lint passed (332 files, 92 terminals, 404 approved)
 npm run test:unit -- src/lib/odontogram/service.test.ts \
   "src/app/(emr)/patients/[patientId]/perio-actions.test.ts"
                              -> Test Files 2 passed (2) / Tests 52 passed (52)
@@ -267,6 +371,14 @@ PASS supabase/tests/periodontal_charting.test.sql
 PASS supabase/tests/periodontal_full_chart.test.sql
 PASS supabase/tests/periodontal_full_chart_rpcs.test.sql
 PASS supabase/tests/periodontal_current_state_guard.test.sql
+```
+
+Because the repair changes two functions other domains also touch, the visit and
+composer suites were run directly as well:
+
+```
+psql < supabase/tests/clinical_record_composer.test.sql -> P1_TEST_PASS
+psql < supabase/tests/unified_clinical_visit.test.sql   -> P1_TEST_PASS
 ```
 
 The three lint warnings are pre-existing and in files this task did not touch
@@ -310,23 +422,30 @@ security acceptance remain release gates.
 
 ### Known residual risks and open questions
 
-1. **The clinical mapping is still unvalidated.** The SQL derivation mirrors
+1. **The clinical mapping is still unvalidated, and the two implementations
+   still have no shared golden table.** The SQL derivation mirrors
    `perio-classification.ts`, which remains on the dentist acceptance gate opened
-   in Task 10. The SQL and the TypeScript are two hand-maintained
-   implementations of one rule set; nothing in the repository yet asserts they
-   agree on a shared table of cases. That cross-check is the single largest
-   residual risk here.
+   in Task 10. Review round 1 found a real divergence between them (arch
+   adjacency across a deciduous tooth), so this is a demonstrated risk, not a
+   theoretical one. Both sides now have their own table-driven cases and agree on
+   them, but nothing drives one table through both. That cross-check remains the
+   single largest residual risk here.
 2. **Completeness is strict.** An examination is complete only when every present
    tooth carries six charted sites with a known attachment level, so a chart with
    one unrecorded gingival margin cannot be finalized. That is Task 10's own
    definition of complete and is deliberate, but it is a clinical workflow
    decision a dentist should confirm.
-3. **The shipped v1 boundaries remain granted.** They were repaired rather than
-   revoked, because `odontogram_permission_contract.test.sql` and
+3. **The shipped v1 boundaries remain granted**, repaired rather than revoked,
+   because `odontogram_permission_contract.test.sql` and
    `periodontal_full_chart.test.sql` both assert `authenticated` still holds
-   them. They still lack a version guard on autosave and request keys, so a
-   direct caller can bypass optimistic concurrency. Revoking them is a bounded
-   follow-up that must also update those two assertions.
+   them. The lost-update they allowed is closed: v1 autosave now advances the
+   version, so a v1 write is no longer invisible to the versioned guard, and a
+   pgTAP assertion proves the overwrite no longer happens. What remains is that
+   v1 still accepts no `expected_version` and no request key of its own, so a
+   direct v1 caller cannot detect a conflict before writing - it can only no
+   longer hide one afterwards. Revoking v1 is a bounded follow-up that must also
+   invert those two grant assertions. `perio-actions.ts` still exports both the
+   v1- and v2-shaped actions; Task 12 should import only the v2 ones.
 4. `create_periodontal_draft_v2` resumes the one open non-amendment DRAFT on the
    visit. A clinician who genuinely wants two concurrent periodontal drafts on
    one visit cannot have them; that has not been asked for.
@@ -355,6 +474,12 @@ security acceptance remain release gates.
   autosave.
 - That no audit event, error message, action result or log line carries
   measurement content.
+- Whether any other PL/pgSQL record variable in the periodontal code is read on
+  a path where it may not have been assigned; `compare_periodontal_examinations_v2`
+  assigns both of its records unconditionally, but the class of bug is worth a
+  sweep.
+- Whether the SQL derivation and `derivePerioClassification` still disagree
+  anywhere else, now that one divergence has been found.
 
 ### Next bounded task
 

@@ -82,6 +82,7 @@ insert into public.provider_branches (organization_id, provider_id, branch_id, i
 
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('ea500000-0000-0000-0000-000000000001','ea200000-0000-0000-0000-000000000001','PFR-A-1','Patient','A1',date '1985-01-01','ea300000-0000-0000-0000-000000000001'),
+  ('ea500000-0000-0000-0000-000000000003','ea200000-0000-0000-0000-000000000001','PFR-A-2','Patient','A2',date '1987-03-03','ea300000-0000-0000-0000-000000000001'),
   ('ea500000-0000-0000-0000-000000000002','ea200000-0000-0000-0000-000000000002','PFR-B-1','Patient','B1',date '1986-02-02','ea300000-0000-0000-0000-000000000002');
 
 create temporary table perio_rpc_scratch (
@@ -663,12 +664,27 @@ select extensions.ok(
 
 reset role;
 
+-- Adoption supplies the missing explanation; it does not rewrite the record to
+-- claim the adopter took measurements another clinician autosaved into the
+-- orphan DRAFT. Authorship stays with whoever charted it, the correction is
+-- rebound to the visit it is actually being made in, and the adopter is named
+-- as the audit actor.
 select extensions.ok(
   (select exam.amendment_reason is not null and exam.status = 'DRAFT'
-     and exam.examined_provider_id = 'ea600000-0000-0000-0000-000000000002'::uuid
+     and exam.examined_by = 'ea100000-0000-0000-0000-000000000001'::uuid
+     and exam.examined_provider_id = 'ea600000-0000-0000-0000-000000000001'::uuid
    from public.periodontal_examinations as exam
    where exam.id = 'ea800000-0000-0000-0000-00000000000c'),
-  'the adopted successor gains the bounded amendment reason it never had and the amending clinician''s own provider'
+  'the adopted successor gains the bounded amendment reason it never had while keeping the authorship of the clinician who charted it'
+);
+
+select extensions.is(
+  (select event.metadata ->> 'action'
+   from public.audit_events as event
+   where event.entity_id = 'ea800000-0000-0000-0000-00000000000c'
+     and event.action = 'clinical.perio.examination.amended'),
+  'ADOPTED',
+  'adopting an orphan successor is distinguishable from creating one in the audit trail'
 );
 
 select extensions.is(
@@ -705,6 +721,30 @@ reset role;
 -- ===========================================================================
 -- 7. The workspace and comparison projections
 -- ===========================================================================
+
+-- FIRST, deliberately: a record variable's tuple structure is resolved when
+-- PL/pgSQL plans the expression that reads it, so a projection that leaves its
+-- derived record unassigned on the no-examination path fails - and fails only
+-- until some other call in the same backend has planned it with the record
+-- assigned. Reading a patient who has never been charted is the very first
+-- thing the workspace does for a new patient, so it is asserted before any
+-- other call to this function warms the plan.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.ok(
+  (select workspace.payload -> 'examination' = 'null'::jsonb
+     and workspace.payload -> 'derived' = 'null'::jsonb
+     and workspace.payload -> 'sites' = '[]'::jsonb
+     and workspace.payload -> 'timeline' = '[]'::jsonb
+   from public.get_periodontal_workspace_v2(
+     'ea500000-0000-0000-0000-000000000003'::uuid,
+     'ea300000-0000-0000-0000-000000000001'::uuid, null) as workspace),
+  'the workspace projection answers a patient with no periodontal examination at all instead of failing'
+);
+
+reset role;
 
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
@@ -769,6 +809,354 @@ select extensions.throws_ok(
 );
 
 reset role;
+
+-- ===========================================================================
+-- 8. The superseded autosave boundary can no longer hide a write
+--
+-- public.save_periodontal_measurements updated only updated_at and never
+-- touched the version, so a write through it was invisible to the versioned
+-- boundary's guard: a clinician holding the draft at version N could autosave
+-- straight over measurements someone else had just written, with no conflict
+-- shown to anyone. It now increments the version like every other accepted
+-- batch, so the versioned boundary sees the write and refuses.
+-- ===========================================================================
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-00000000000f','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select legacy.version from public.save_periodontal_measurements(
+     'ea300000-0000-0000-0000-000000000001'::uuid,
+     'ea800000-0000-0000-0000-00000000000f'::uuid,
+     '[{"tooth_fdi":"17","site":"B","probing_depth_mm":3,"gingival_margin_mm":0}]'::jsonb,
+     '[]'::jsonb, '[]'::jsonb, '[]'::jsonb) as legacy),
+  2,
+  'the superseded autosave boundary reports the version it actually left behind'
+);
+
+reset role;
+
+select extensions.is(
+  (select exam.version from public.periodontal_examinations as exam
+    where exam.id = 'ea800000-0000-0000-0000-00000000000f'),
+  2,
+  'a write through the superseded autosave boundary advances the examination version'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.throws_ok(
+  $$select * from public.save_periodontal_measurements_v2(
+      'ea800000-0000-0000-0000-00000000000f'::uuid, 1,
+      '{"sites":[{"tooth_fdi":"17","site":"B","probing_depth_mm":9,"gingival_margin_mm":0}]}'::jsonb,
+      'ea900000-0000-0000-0000-000000000050'::uuid)$$,
+  'P0001','stale version',
+  'the versioned boundary now sees a write made through the superseded one and refuses to overwrite it'
+);
+
+reset role;
+
+select extensions.is(
+  (select site.probing_depth_mm from public.periodontal_site_measurements as site
+    where site.examination_id = 'ea800000-0000-0000-0000-00000000000f'
+      and site.tooth_fdi = '17' and site.site = 'B'),
+  3,
+  'the lost update the superseded boundary used to allow no longer happens'
+);
+
+-- ===========================================================================
+-- 9. Amendment lineage: the creating path, and what it audits
+-- ===========================================================================
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-00000000000e','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+insert into public.periodontal_site_measurements (
+  organization_id, examination_id, tooth_fdi, site, probing_depth_mm,
+  gingival_margin_mm, bleeding_on_probing, suppuration
+)
+select 'ea200000-0000-0000-0000-000000000001'::uuid,
+       'ea800000-0000-0000-0000-00000000000e'::uuid, '27', site_code.site, 3, 0, false, false
+from (values ('MB'),('B'),('DB'),('ML'),('L'),('DL')) as site_code(site);
+
+update public.periodontal_examinations
+set status = 'FINAL', finalized_at = statement_timestamp(),
+    finalized_by = 'ea100000-0000-0000-0000-000000000001',
+    finalized_provider_id = 'ea600000-0000-0000-0000-000000000001'
+where id = 'ea800000-0000-0000-0000-00000000000e';
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000002',true);
+
+select extensions.ok(
+  (select not amendment.adopted
+   from public.amend_periodontal_examination_v2(
+     'ea800000-0000-0000-0000-00000000000e'::uuid,
+     'The maintenance chart was signed against the wrong quadrant.',
+     'ea900000-0000-0000-0000-000000000051'::uuid) as amendment),
+  'a predecessor with no successor at all gets a freshly created amendment rather than an adoption'
+);
+
+reset role;
+
+select extensions.is(
+  (select event.metadata ->> 'action'
+   from public.audit_events as event
+   join public.periodontal_examinations as exam on exam.id = event.entity_id
+   where exam.predecessor_examination_id = 'ea800000-0000-0000-0000-00000000000e'
+     and event.action = 'clinical.perio.examination.amended'),
+  'CREATED',
+  'creating a successor is distinguishable from adopting one in the audit trail'
+);
+
+select extensions.is(
+  (select pg_catalog.count(*)::integer
+   from public.periodontal_site_measurements as site
+   join public.periodontal_examinations as exam
+     on exam.id = site.examination_id
+   where exam.predecessor_examination_id = 'ea800000-0000-0000-0000-00000000000e'),
+  6,
+  'the created amendment starts as a clone of the record it corrects'
+);
+
+select extensions.ok(
+  (select exam.examined_provider_id = 'ea600000-0000-0000-0000-000000000002'::uuid
+     and exam.amendment_reason is not null
+   from public.periodontal_examinations as exam
+   where exam.predecessor_examination_id = 'ea800000-0000-0000-0000-00000000000e'),
+  'a freshly created amendment is authored by the amending clinician, because nobody else charted it'
+);
+
+-- An orphan successor whose attribution triple is INCOMPLETE. The revoked
+-- three-argument amend boundary could leave the provider null, and examined_by
+-- is ON DELETE SET NULL, so deleting the authoring user empties one column of
+-- an otherwise complete triple. Preserving a partial triple would leave an
+-- amendment that periodontal_examinations_finalized_state_check can never
+-- finalize, turning the orphan into a second dead end.
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000010','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+update public.periodontal_examinations
+set status = 'FINAL', finalized_at = statement_timestamp(),
+    finalized_by = 'ea100000-0000-0000-0000-000000000001',
+    finalized_provider_id = 'ea600000-0000-0000-0000-000000000001'
+where id = 'ea800000-0000-0000-0000-000000000010';
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, predecessor_examination_id,
+  examination_kind, status, version, examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000011','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'ea800000-0000-0000-0000-000000000010',
+  'AMENDMENT','DRAFT', 2, statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001', null
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000002',true);
+
+select extensions.ok(
+  (select amendment.adopted
+   from public.amend_periodontal_examination_v2(
+     'ea800000-0000-0000-0000-000000000010'::uuid,
+     'The maintenance chart recorded the wrong probing depths.',
+     'ea900000-0000-0000-0000-000000000052'::uuid) as amendment),
+  'an orphan successor with an incomplete attribution triple is still adopted'
+);
+
+reset role;
+
+select extensions.ok(
+  (select exam.examined_at is not null
+     and exam.examined_by = 'ea100000-0000-0000-0000-000000000002'::uuid
+     and exam.examined_provider_id = 'ea600000-0000-0000-0000-000000000002'::uuid
+   from public.periodontal_examinations as exam
+   where exam.id = 'ea800000-0000-0000-0000-000000000011'),
+  'an incomplete attribution triple is completed with the adopting clinician rather than preserved half-empty, so the amendment can still be finalized'
+);
+
+-- ===========================================================================
+-- 10. The derived classification: the PERIODONTITIS branch
+--
+-- Finalization trusts private.periodontal_derived_classification, so the branch
+-- it trusts most is exercised directly against canonical rows: stage bands, the
+-- CAL-versus-bone-loss maximum, both complexity escalations, the stage IV
+-- override, all three grade buckets and the B baseline, the molar-incisor
+-- pattern, and the known-attachment extent denominator.
+-- ===========================================================================
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+)
+select spec.id, 'ea200000-0000-0000-0000-000000000001'::uuid,
+       'ea500000-0000-0000-0000-000000000001'::uuid,
+       (select encounter_id from perio_rpc_scratch where label = 'draft'),
+       'RE-EVALUATION', 'DRAFT', statement_timestamp(),
+       'ea100000-0000-0000-0000-000000000001'::uuid,
+       'ea600000-0000-0000-0000-000000000001'::uuid
+from (values
+  ('ea8d0000-0000-0000-0000-000000000001'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000002'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000003'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000004'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000005'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000006'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000008'::uuid),
+  ('ea8d0000-0000-0000-0000-000000000009'::uuid),
+  ('ea8d0000-0000-0000-0000-00000000000a'::uuid)
+) as spec(id);
+
+-- Six sites per listed tooth. cal_mm is generated as probing depth plus margin.
+insert into public.periodontal_site_measurements (
+  organization_id, examination_id, tooth_fdi, site, probing_depth_mm,
+  gingival_margin_mm, bleeding_on_probing, suppuration
+)
+select 'ea200000-0000-0000-0000-000000000001'::uuid, spec.exam, spec.tooth,
+       site_code.site, spec.pd, spec.margin, false, false
+from (values
+  -- Stage II, grade B, generalized: two non-adjacent molars at CAL 3.
+  ('ea8d0000-0000-0000-0000-000000000001'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000001'::uuid, '26', 3, 0),
+  -- CAL band 1, but a probing depth of 6 escalates complexity to stage III.
+  ('ea8d0000-0000-0000-0000-000000000002'::uuid, '16', 6, -4),
+  ('ea8d0000-0000-0000-0000-000000000002'::uuid, '26', 6, -4),
+  -- CAL band 2, escalated to stage III by a furcation grade 2 below.
+  ('ea8d0000-0000-0000-0000-000000000003'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000003'::uuid, '26', 3, 0),
+  -- Stage IV from teeth lost to periodontitis, overriding the band.
+  ('ea8d0000-0000-0000-0000-000000000004'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000004'::uuid, '26', 3, 0),
+  -- Bone loss band 3 beats CAL band 2, and the ratio grades C.
+  ('ea8d0000-0000-0000-0000-000000000005'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000005'::uuid, '26', 3, 0),
+  -- An affected molar and an affected incisor, nothing else: molar-incisor.
+  ('ea8d0000-0000-0000-0000-000000000006'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000006'::uuid, '11', 3, 0),
+  -- Two affected of eight teeth whose attachment level is known: localized.
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '26', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '13', 2, -2),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '14', 2, -2),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '15', 2, -2),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '23', 2, -2),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '24', 2, -2),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, '25', 2, -2),
+  -- A permanent molar and a deciduous molar. A deciduous tooth has no
+  -- permanent-arch position, so the pair is NOT adjacent and must count.
+  ('ea8d0000-0000-0000-0000-000000000008'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000008'::uuid, '55', 3, 0),
+  -- Grade C from a heavy current smoker.
+  ('ea8d0000-0000-0000-0000-000000000009'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-000000000009'::uuid, '26', 3, 0),
+  -- Grade C from diabetes with a raised HbA1c.
+  ('ea8d0000-0000-0000-0000-00000000000a'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-00000000000a'::uuid, '26', 3, 0)
+) as spec(exam, tooth, pd, margin)
+cross join (values ('MB'),('B'),('DB'),('ML'),('L'),('DL')) as site_code(site);
+
+insert into public.periodontal_furcation_measurements (
+  organization_id, examination_id, tooth_fdi, entrance, grade
+) values (
+  'ea200000-0000-0000-0000-000000000001','ea8d0000-0000-0000-0000-000000000003','16','buccal',2
+);
+
+update public.periodontal_examinations as exam
+set age_years_snapshot = spec.age,
+    smoking_status = spec.smoking,
+    cigarettes_per_day = spec.cigarettes,
+    diabetes_status = spec.diabetes,
+    hba1c_percent = spec.hba1c,
+    teeth_lost_to_periodontitis = spec.teeth_lost,
+    radiographic_bone_loss_percent = spec.bone_loss
+from (values
+  ('ea8d0000-0000-0000-0000-000000000001'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000002'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000003'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000004'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, 5::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000005'::uuid, 30::smallint, null::text, null::smallint, null::text, null::numeric, null::smallint, 40::smallint),
+  ('ea8d0000-0000-0000-0000-000000000006'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-000000000009'::uuid, 40::smallint, 'CURRENT'::text, 20::smallint, 'NONE'::text, null::numeric, null::smallint, null::smallint),
+  ('ea8d0000-0000-0000-0000-00000000000a'::uuid, 40::smallint, 'NEVER'::text, null::smallint, 'TYPE_2'::text, 8.1::numeric, null::smallint, null::smallint)
+) as spec(exam, age, smoking, cigarettes, diabetes, hba1c, teeth_lost, bone_loss)
+where exam.id = spec.exam;
+
+select extensions.is(
+  (select derivation.diagnosis || '/' || coalesce(derivation.stage, '~')
+     || '/' || coalesce(derivation.grade, '~') || '/' || coalesce(derivation.extent, '~')
+   from private.periodontal_derived_classification(
+     'ea200000-0000-0000-0000-000000000001'::uuid, spec.exam) as derivation),
+  spec.expected,
+  spec.description
+)
+from (values
+  ('ea8d0000-0000-0000-0000-000000000001'::uuid, 'PERIODONTITIS/II/B/GENERALIZED',
+   'interdental attachment loss at two non-adjacent teeth is periodontitis, staged from the attachment band and graded from the known risk modifiers'),
+  ('ea8d0000-0000-0000-0000-000000000002'::uuid, 'PERIODONTITIS/III/B/GENERALIZED',
+   'a probing depth of 6 mm escalates complexity to stage III without downgrading anything'),
+  ('ea8d0000-0000-0000-0000-000000000003'::uuid, 'PERIODONTITIS/III/B/GENERALIZED',
+   'a furcation grade 2 escalates complexity to stage III'),
+  ('ea8d0000-0000-0000-0000-000000000004'::uuid, 'PERIODONTITIS/IV/B/GENERALIZED',
+   'five teeth lost to periodontitis overrides the derived stage with IV'),
+  ('ea8d0000-0000-0000-0000-000000000005'::uuid, 'PERIODONTITIS/III/C/GENERALIZED',
+   'the higher of the attachment and bone-loss bands wins, and a bone-loss-over-age ratio above 1 grades C'),
+  ('ea8d0000-0000-0000-0000-000000000006'::uuid, 'PERIODONTITIS/II/B/MOLAR_INCISOR',
+   'an affected molar and an affected incisor with nothing else affected is the molar-incisor pattern'),
+  ('ea8d0000-0000-0000-0000-000000000007'::uuid, 'PERIODONTITIS/II/B/LOCALIZED',
+   'the extent denominator counts teeth whose attachment level is actually known, so two affected of eight is localized'),
+  ('ea8d0000-0000-0000-0000-000000000008'::uuid, 'PERIODONTITIS/II/~/GENERALIZED',
+   'a permanent tooth and a deciduous tooth are not arch-adjacent, so the pair counts and the grade stays unknown when no modifier is recorded'),
+  ('ea8d0000-0000-0000-0000-000000000009'::uuid, 'PERIODONTITIS/II/C/GENERALIZED',
+   'a current smoker at ten or more cigarettes a day grades C'),
+  ('ea8d0000-0000-0000-0000-00000000000a'::uuid, 'PERIODONTITIS/II/C/GENERALIZED',
+   'diabetes with an HbA1c at or above 7 grades C')
+) as spec(exam, expected, description);
+
+select extensions.ok(
+  (select derivation.complete and derivation.present_tooth_count = 2
+     and derivation.teeth_with_known_interdental_cal = 2
+   from private.periodontal_derived_classification(
+     'ea200000-0000-0000-0000-000000000001'::uuid,
+     'ea8d0000-0000-0000-0000-000000000001'::uuid) as derivation),
+  'the completeness summary counts only present teeth and only known attachment levels'
+);
 
 with test_failures as (
   select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$'
