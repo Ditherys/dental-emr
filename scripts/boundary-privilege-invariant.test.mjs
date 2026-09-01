@@ -252,6 +252,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
     "public.resolve_odontogram_entity_patient(uuid,text,uuid)",
     "public.create_treatment_plan(uuid, uuid, text)",
+    "public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)",
     "public.update_treatment_plan(uuid, uuid, integer, text)",
     "public.present_treatment_plan(uuid, uuid, integer)",
     "public.acknowledge_treatment_plan(uuid, uuid, integer)",
@@ -1456,7 +1457,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(265);
+    expect(approved.size).toBe(266);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

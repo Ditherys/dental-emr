@@ -152,9 +152,28 @@ describe("treatment-plan service RPC contract", () => {
   it("binds plan create, update, present, and acknowledge to their exact contracts", async () => {
     rpc.mockResolvedValueOnce({ data: [{ plan_id: planId, version: 1 }], error: null });
     await expect(createTreatmentPlan({ actingBranchId: branchId, patientId, title: "Full mouth restoration" })).resolves.toEqual({ planId, version: 1 });
-    expect(rpc).toHaveBeenLastCalledWith("create_treatment_plan", {
+    expect(rpc).toHaveBeenLastCalledWith("create_treatment_plan_v2", {
       p_acting_branch_id: branchId, p_patient_id: patientId, p_title: "Full mouth restoration",
+      p_supersedes_plan_id: null, p_amendment_reason: null,
     });
+
+    // A plan that replaces one on record names it and says why. The pair is
+    // accepted only together, so an unexplained amendment cannot be submitted.
+    rpc.mockResolvedValueOnce({ data: [{ plan_id: planId, version: 1 }], error: null });
+    await expect(createTreatmentPlan({
+      actingBranchId: branchId, patientId, title: "Revised proposal",
+      supersedesPlanId: itemId, amendmentReason: "Patient declined the crown on 27.",
+    })).resolves.toEqual({ planId, version: 1 });
+    expect(rpc).toHaveBeenLastCalledWith("create_treatment_plan_v2", {
+      p_acting_branch_id: branchId, p_patient_id: patientId, p_title: "Revised proposal",
+      p_supersedes_plan_id: itemId, p_amendment_reason: "Patient declined the crown on 27.",
+    });
+    await expect(createTreatmentPlan({
+      actingBranchId: branchId, patientId, title: "Revised proposal", supersedesPlanId: itemId,
+    })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(createTreatmentPlan({
+      actingBranchId: branchId, patientId, title: "Revised proposal", amendmentReason: "No predecessor",
+    })).rejects.toBeInstanceOf(z.ZodError);
 
     rpc.mockResolvedValueOnce({ data: [{ plan_id: planId, version: 2 }], error: null });
     await expect(updateTreatmentPlan({ actingBranchId: branchId, planId, expectedVersion: 1, title: "Restoration v2" })).resolves.toEqual({ planId, version: 2 });
@@ -247,7 +266,7 @@ describe("treatment-plan service RPC contract", () => {
 
   it("returns the detail jsonb in the bounded DTO shape", async () => {
     const detail = {
-      plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt, updatedAt: createdAt, createdBy },
+      plan: { planId, patientId, title: "Full mouth restoration", status: "ACKNOWLEDGED", version: 3, createdAt, updatedAt: createdAt, createdBy, supersedesPlanId: null, amendmentReason: null },
       items: [{ itemId, lineNo: 1, procedureId, toothCode: "26", description: "Composite filling on 26.", estimatedFeeCentavos: "250000", priority: "HIGH", sequenceNo: 1, surfaces: ["O"], notes: "Synthetic detail", procedureCaseId: null, createdAt }],
       alternatives: [{ alternativeId, alternativeNo: 1, summary: "Extraction and implant alternative.", createdAt }],
       discussions: [{ discussionId, discussedBy: createdBy, treatingProviderId: providerId, discussedAt: createdAt, context: "Case discussion", notes: "Patient prefers conservative care.", createdAt }],
@@ -283,7 +302,7 @@ describe("treatment-plan service RPC contract", () => {
     rpc.mockResolvedValueOnce({ data: [{ plan_id: planId, title: "Plan", status: "ARCHIVED", version: 1, created_at: createdAt, item_count: 0, has_drawing: false }], error: null });
     await expect(listTreatmentPlans({ actingBranchId: branchId, patientId })).rejects.toBeInstanceOf(z.ZodError);
 
-    rpc.mockResolvedValueOnce({ data: { plan: { planId, title: "Plan", status: "DRAFT", version: 1, createdAt, updatedAt: createdAt, createdBy }, items: [], alternatives: [], discussions: [], drawing: { drawingId, updatedBy: createdBy, updatedAt: createdAt, version: 1 } }, error: null });
+    rpc.mockResolvedValueOnce({ data: { plan: { planId, title: "Plan", status: "DRAFT", version: 1, createdAt, updatedAt: createdAt, createdBy, supersedesPlanId: null, amendmentReason: null }, items: [], alternatives: [], discussions: [], drawing: { drawingId, updatedBy: createdBy, updatedAt: createdAt, version: 1 } }, error: null });
     await expect(getTreatmentPlanDetail({ actingBranchId: branchId, planId })).rejects.toBeInstanceOf(z.ZodError);
   });
 

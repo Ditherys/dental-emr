@@ -7586,34 +7586,40 @@ export type Database = {
       }
       treatment_plans: {
         Row: {
+          amendment_reason: string | null
           created_at: string
           created_by: string | null
           id: string
           organization_id: string
           patient_id: string
           status: string
+          supersedes_plan_id: string | null
           title: string
           updated_at: string
           version: number
         }
         Insert: {
+          amendment_reason?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           organization_id: string
           patient_id: string
           status?: string
+          supersedes_plan_id?: string | null
           title: string
           updated_at?: string
           version?: number
         }
         Update: {
+          amendment_reason?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           organization_id?: string
           patient_id?: string
           status?: string
+          supersedes_plan_id?: string | null
           title?: string
           updated_at?: string
           version?: number
@@ -7631,6 +7637,13 @@ export type Database = {
             columns: ["organization_id", "patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "treatment_plans_organization_supersedes_fk"
+            columns: ["organization_id", "supersedes_plan_id"]
+            isOneToOne: false
+            referencedRelation: "treatment_plans"
             referencedColumns: ["organization_id", "id"]
           },
         ]
@@ -8675,6 +8688,19 @@ export type Database = {
         Args: {
           p_acting_branch_id: string
           p_patient_id: string
+          p_title: string
+        }
+        Returns: {
+          plan_id: string
+          version: number
+        }[]
+      }
+      create_treatment_plan_v2: {
+        Args: {
+          p_acting_branch_id: string
+          p_amendment_reason?: string
+          p_patient_id: string
+          p_supersedes_plan_id?: string
           p_title: string
         }
         Returns: {

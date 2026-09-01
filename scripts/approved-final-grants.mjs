@@ -767,6 +767,25 @@ const TREATMENT_PLAN_ACTOR_PROVIDER_MIGRATION =
 const TREATMENT_PLAN_ACTOR_PROVIDER_GRANTS_MIGRATION =
   "20260901010141_treatment_plan_actor_provider_grants.sql";
 
+// The review-round repair. Its object migration 20260901010142 revokes no
+// registered grant - it drops a row lock, adds two nullable columns and creates
+// one function - so no entry below needs a supersede pivot. Had it revoked one,
+// the pivot would have to name that object migration, never this grants file.
+const TREATMENT_PLAN_AMENDMENT_GRANTS_MIGRATION =
+  "20260901010143_treatment_plan_amendment_grants.sql";
+
+const treatmentPlanAmendmentGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The treatment plan creation boundary that records an amendment rather than performing one. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch, and validates the patient against the derived tenant. A superseded plan and a bounded amendment reason are accepted only together, so a plan that replaces finalized clinical history can never be created without saying why; the predecessor is revalidated against the derived tenant and the same patient, a partial unique index refuses a second successor, and the predecessor row is never mutated. The reason stays on the RLS-protected plan row and is never copied into the audit event. No organization, provider, actor, or author identity may be supplied by a client.",
+  },
+]);
+
 const treatmentPlanActorProviderGrants = Object.freeze([
   {
     grantee: "authenticated",
@@ -1947,6 +1966,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: TREATMENT_PLAN_ACTOR_PROVIDER_GRANTS_MIGRATION,
     grants: treatmentPlanActorProviderGrants,
+  }),
+  Object.freeze({
+    file: TREATMENT_PLAN_AMENDMENT_GRANTS_MIGRATION,
+    grants: treatmentPlanAmendmentGrants,
   }),
 ]);
 

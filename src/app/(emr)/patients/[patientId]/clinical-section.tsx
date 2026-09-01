@@ -263,7 +263,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
       initialPlans={initialTreatmentPlans}
       procedures={clinicalComposerContext?.patientId === patientId ? clinicalComposerContext.procedures : []}
       loadFailed={loadFailed}
-      chart={(planContext) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={planContext} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
+      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
     />,
     PERIODONTAL: <PeriodontalModePanel />,
   };

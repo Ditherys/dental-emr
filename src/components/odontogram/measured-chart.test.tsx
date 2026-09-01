@@ -47,6 +47,7 @@ function Harness({
   readOnly = false,
   viewport = "QUADRANT_1" as ChartViewportChoice,
   dentition,
+  proposals,
 }: {
   projection?: ReturnType<typeof projectPatientChart>;
   initial?: readonly number[];
@@ -54,6 +55,7 @@ function Harness({
   readOnly?: boolean;
   viewport?: ChartViewportChoice;
   dentition?: ChartDentition;
+  proposals?: ReadonlyMap<number, { count: number; priority: "URGENT" | "HIGH" | "ROUTINE" | "ELECTIVE"; surfaces: readonly string[] }>;
 }) {
   const [selected, setSelected] = React.useState<readonly number[]>(initial);
   return (
@@ -64,6 +66,7 @@ function Harness({
       dentition={dentition}
       selectedFdi={selected}
       readOnly={readOnly}
+      proposals={proposals}
       onSelectionChange={(next) => {
         onChange?.(next);
         setSelected(next);
@@ -117,6 +120,46 @@ describe("resolveSelection", () => {
     expect(resolveSelection(ordered, [], null, 16, { toggle: false, range: true })).toEqual([16]);
     expect(resolveSelection(ordered, [], 16, 46, { toggle: false, range: true })).toEqual([46]);
     expect(resolveSelection(ordered, [], 16, 16, { toggle: false, range: true })).toEqual([16]);
+  });
+});
+
+describe("MeasuredChart treatment plan proposals", () => {
+  // The same projection twice. A proposal is not a clinical record, so the
+  // current-status chart must be identical to the plan chart minus the marker.
+  const recorded = chartWith({ entries: [entry(16)], implants: [] });
+
+  it("marks the proposed teeth when the Treatment plan mode supplies proposals", () => {
+    render(
+      <Harness
+        projection={recorded}
+        proposals={new Map([[15, { count: 2, priority: "URGENT", surfaces: ["O", "M"] }]])}
+      />,
+    );
+
+    const proposed = tooth(15);
+    expect(proposed).toHaveAttribute("data-proposed", "1");
+    expect(proposed).toHaveAttribute("data-proposed-count", "2");
+    expect(proposed).toHaveAttribute("data-proposed-priority", "URGENT");
+    expect(proposed).toHaveAttribute("data-proposed-surfaces", "O,M");
+    expect(screen.getByTestId("tooth-proposal-15")).toBeTruthy();
+    // Proposed is announced in its own words and never as recorded status.
+    expect(proposed.getAttribute("aria-label")).toContain("proposed treatment: 2 items");
+    expect(proposed.getAttribute("aria-label")).toContain("not yet performed");
+
+    // A tooth with a real record but no proposal keeps its recorded state only.
+    expect(tooth(16)).toHaveAttribute("data-proposed", "0");
+    expect(tooth(16)).toHaveAttribute("data-current", "1");
+    expect(tooth(16).getAttribute("aria-label")).not.toContain("proposed");
+  });
+
+  it("marks no tooth at all in the current-status chart for the same projection", () => {
+    render(<Harness projection={recorded} />);
+
+    for (const fdi of [15, 16]) {
+      expect(tooth(fdi)).toHaveAttribute("data-proposed", "0");
+      expect(tooth(fdi).getAttribute("aria-label")).not.toContain("proposed");
+    }
+    expect(screen.queryByTestId("tooth-proposal-15")).toBeNull();
   });
 });
 

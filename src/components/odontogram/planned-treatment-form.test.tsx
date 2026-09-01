@@ -35,8 +35,6 @@ function renderForm(plan: PlanAuthoringContext | null, toothCodes: readonly stri
       patientId={patientId}
       branchId={branchId}
       toothCodes={toothCodes}
-      clinicalDate="2026-09-01"
-      onClinicalDateChange={vi.fn()}
       plan={plan}
       onRecorded={onRecorded}
     />,
@@ -60,7 +58,6 @@ describe("PlannedTreatmentForm", () => {
     fireEvent.change(screen.getByLabelText("Proposed treatment"), { target: { value: "Root canal on 26" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /Occlusal/ }));
     fireEvent.change(screen.getByLabelText("Priority"), { target: { value: "HIGH" } });
-    fireEvent.change(screen.getByLabelText("Sequence"), { target: { value: "5" } });
     fireEvent.change(screen.getByLabelText("Estimated fee (PHP)"), { target: { value: "1250.50" } });
     fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "Discussed with the patient." } });
     fireEvent.submit(screen.getByRole("form", { name: "Add planned treatment" }));
@@ -75,7 +72,6 @@ describe("PlannedTreatmentForm", () => {
       description: "Root canal on 26",
       estimatedFeeCentavos: "125050",
       priority: "HIGH",
-      sequenceNo: 5,
       surfaces: ["O"],
       notes: "Discussed with the patient.",
     });
@@ -89,8 +85,27 @@ describe("PlannedTreatmentForm", () => {
     fireEvent.submit(screen.getByRole("form", { name: "Add planned treatment" }));
 
     await waitFor(() => expect(addTreatmentPlanItemAction).toHaveBeenCalledTimes(2));
-    expect(addTreatmentPlanItemAction.mock.calls[0]![0]).toMatchObject({ toothCode: "26", sequenceNo: 4 });
-    expect(addTreatmentPlanItemAction.mock.calls[1]![0]).toMatchObject({ toothCode: "27", sequenceNo: 5 });
+    expect(addTreatmentPlanItemAction.mock.calls[0]![0]).toMatchObject({ toothCode: "26" });
+    expect(addTreatmentPlanItemAction.mock.calls[1]![0]).toMatchObject({ toothCode: "27" });
+  });
+
+  it("never sends a sequence number, so two submissions cannot share one", async () => {
+    renderForm(draftPlan, ["26", "27"]);
+
+    fireEvent.change(screen.getByLabelText("Proposed treatment"), { target: { value: "Root canal" } });
+    fireEvent.submit(screen.getByRole("form", { name: "Add planned treatment" }));
+
+    await waitFor(() => expect(addTreatmentPlanItemAction).toHaveBeenCalledTimes(2));
+    for (const call of addTreatmentPlanItemAction.mock.calls) {
+      expect(call[0] as Record<string, unknown>).not.toHaveProperty("sequenceNo");
+    }
+    expect(screen.queryByLabelText("Sequence")).toBeNull();
+  });
+
+  it("promises no clinical date it does not record", () => {
+    renderForm(draftPlan);
+
+    expect(screen.queryByLabelText("Clinical date")).toBeNull();
   });
 
   it("submits no organization, provider, or author identity", async () => {

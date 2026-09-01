@@ -43,9 +43,6 @@ export type PlannedTreatmentFormProps = {
   branchId: string;
   /** FDI codes of the teeth this proposal is being authored against. */
   toothCodes: readonly string[];
-  /** The explicit clinical date the composer owns and preserves across kinds. */
-  clinicalDate: string;
-  onClinicalDateChange: (next: string) => void;
   plan: PlanAuthoringContext | null;
   onRecorded: () => void | Promise<void>;
 };
@@ -89,8 +86,6 @@ function pesosToCentavos(value: string): string | null {
 export function PlannedTreatmentForm({
   branchId,
   toothCodes,
-  clinicalDate,
-  onClinicalDateChange,
   plan,
   onRecorded,
 }: PlannedTreatmentFormProps): React.ReactElement {
@@ -99,7 +94,6 @@ export function PlannedTreatmentForm({
   const [description, setDescription] = React.useState("");
   const [surfaces, setSurfaces] = React.useState<readonly ToothSurfaceCode[]>([]);
   const [priority, setPriority] = React.useState<Priority>("ROUTINE");
-  const [sequenceNo, setSequenceNo] = React.useState("");
   const [estimatedFee, setEstimatedFee] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
@@ -107,9 +101,7 @@ export function PlannedTreatmentForm({
   const procedureFieldId = React.useId();
   const descriptionId = React.useId();
   const priorityId = React.useId();
-  const sequenceId = React.useId();
   const feeId = React.useId();
-  const dateId = React.useId();
   const notesId = React.useId();
 
   const availableSurfaces = React.useMemo(() => allowedSurfacesForToothCodes(toothCodes), [toothCodes]);
@@ -163,12 +155,14 @@ export function PlannedTreatmentForm({
     setSaving(true);
     setError(null);
     try {
-      const firstSequence = sequenceNo.trim() === "" ? plan.nextSequenceNo : Number(sequenceNo);
       const selectedSurfaces = availableSurfaces.filter((surface) => surfaces.includes(surface));
       // One plan line per selected tooth, in selection order. The plan version
       // is unchanged by an item append, so every line in the batch carries the
-      // version the server projection reported.
-      for (const [index, toothCode] of toothCodes.entries()) {
+      // version the server projection reported. The sequence number is
+      // deliberately NOT sent: the boundary derives it from the server-assigned
+      // line number, so two submissions landing before a revalidation can never
+      // share one.
+      for (const toothCode of toothCodes) {
         const result = await addTreatmentPlanItemAction({
           actingBranchId: branchId,
           planId: plan.planId,
@@ -178,7 +172,6 @@ export function PlannedTreatmentForm({
           description: trimmedDescription,
           estimatedFeeCentavos: pesosToCentavos(estimatedFee),
           priority,
-          sequenceNo: firstSequence + index,
           surfaces: [...selectedSurfaces],
           notes: notes.trim() === "" ? null : notes.trim(),
         });
@@ -191,7 +184,6 @@ export function PlannedTreatmentForm({
       setSurfaces([]);
       setNotes("");
       setEstimatedFee("");
-      setSequenceNo("");
       await onRecorded();
       router.refresh();
     } catch {
@@ -297,17 +289,14 @@ export function PlannedTreatmentForm({
           </Select>
         </label>
 
-        <label htmlFor={sequenceId} className="grid gap-1 text-xs font-medium">
-          Sequence
+        <label htmlFor={feeId} className="grid gap-1 text-xs font-medium">
+          Estimated fee (PHP)
           <Input
-            id={sequenceId}
-            type="number"
-            min={1}
-            max={999}
-            placeholder={String(plan.nextSequenceNo)}
-            value={sequenceNo}
+            id={feeId}
+            inputMode="decimal"
+            value={estimatedFee}
             onChange={(event) => {
-              setSequenceNo(event.target.value);
+              setEstimatedFee(event.target.value);
               setError(null);
             }}
             className="min-h-11"
@@ -315,34 +304,12 @@ export function PlannedTreatmentForm({
         </label>
       </div>
 
-      <label htmlFor={feeId} className="grid gap-1 text-xs font-medium">
-        Estimated fee (PHP)
-        <Input
-          id={feeId}
-          inputMode="decimal"
-          value={estimatedFee}
-          onChange={(event) => {
-            setEstimatedFee(event.target.value);
-            setError(null);
-          }}
-          className="min-h-11"
-        />
-      </label>
-
-      <label htmlFor={dateId} className="grid gap-1 text-xs font-medium">
-        Clinical date
-        <Input
-          id={dateId}
-          type="date"
-          required
-          value={clinicalDate}
-          onChange={(event) => {
-            setError(null);
-            onClinicalDateChange(event.target.value);
-          }}
-          className="min-h-11"
-        />
-      </label>
+      {/*
+        A proposal carries no clinical date. It is not something that happened
+        on a day; it is sequenced by the plan, and the date belongs to the
+        treatment that later executes it. Showing a date control here would
+        promise a field the record does not keep.
+      */}
 
       <label htmlFor={notesId} className="grid gap-1 text-xs font-medium">
         Notes (optional)

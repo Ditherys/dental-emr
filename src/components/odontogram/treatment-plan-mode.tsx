@@ -15,9 +15,22 @@ import {
 } from "@/app/(emr)/patients/[patientId]/treatment-plan-actions";
 
 import { useClinicalChartView } from "./clinical-chart-toolbar";
+import type { ToothProposalMarker } from "./measured-tooth";
 import type { PlanAuthoringContext } from "./planned-treatment-form";
 
 export type { PlanAuthoringContext };
+
+/**
+ * Everything the chart needs to become the Treatment plan surface: the plan its
+ * composer authors into, and the proposals its teeth must mark. Both are
+ * projected from the same authorized plan read; neither is a clinical record.
+ */
+export type TreatmentPlanChartContext = {
+  plan: PlanAuthoringContext | null;
+  proposalsByTooth: ReadonlyMap<number, ToothProposalMarker>;
+};
+
+const PRIORITY_RANK = { URGENT: 0, HIGH: 1, ROUTINE: 2, ELECTIVE: 3 } as const;
 
 const STATUS_LABELS = {
   DRAFT: "Draft",
@@ -32,11 +45,11 @@ export type TreatmentPlanModeProps = {
   /** The patient's plans, read on the server for this render. */
   initialPlans: readonly TreatmentPlan[];
   /**
-   * The anatomical chart. It is a function so the chart's composer receives the
-   * plan this mode is authoring into without this component having to know
-   * anything about the odontogram.
+   * The anatomical chart. It is a function so the chart receives the plan its
+   * composer authors into and the per-tooth proposals it must mark, without
+   * this component having to know anything about the odontogram.
    */
-  chart: (plan: PlanAuthoringContext | null) => React.ReactNode;
+  chart: (context: TreatmentPlanChartContext) => React.ReactNode;
   /** Procedure catalogue from the authorized composer projection, when present. */
   procedures?: readonly { procedureId: string; name: string }[];
   loadFailed?: boolean;
@@ -67,6 +80,26 @@ function readFailureMessage(code: string): string {
     return "Your access or selected branch changed. The treatment plan could not be loaded; refresh and try again.";
   }
   return "The treatment plan could not be loaded. Refresh to try again.";
+}
+
+/**
+ * A refused write is not a refused read, and telling a clinician to refresh
+ * after a stale-version denial sends them to the wrong remedy.
+ */
+function writeFailureMessage(code: string): string {
+  if (code === "NOT_AUTHORIZED") {
+    return "Your access or selected branch changed. Nothing was saved; refresh the record before trying again.";
+  }
+  if (code === "STALE_VERSION") {
+    return "This plan changed while you were working, so nothing was saved. Reload the plan and repeat the action.";
+  }
+  if (code === "INVALID_STATE") {
+    return "This plan is no longer in a state that allows that action. Reload the plan to see where it stands.";
+  }
+  if (code === "INVALID_INPUT") {
+    return "Review the entered values and try again.";
+  }
+  return "The treatment plan could not be saved. Try again when you are ready.";
 }
 
 /**
@@ -115,7 +148,9 @@ export function TreatmentPlanMode({
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [title, setTitle] = React.useState("");
+  const [amendmentReason, setAmendmentReason] = React.useState("");
   const titleId = React.useId();
+  const reasonId = React.useId();
 
   React.useEffect(() => {
     if (planId === null) return;
@@ -156,6 +191,34 @@ export function TreatmentPlanMode({
     [detail, items, procedures],
   );
 
+  // The chart's proposal markers, projected from the clinician-authored tooth
+  // and surfaces of each plan item. Nothing is invented: an item with no tooth
+  // marks no tooth.
+  const proposalsByTooth = React.useMemo<ReadonlyMap<number, ToothProposalMarker>>(() => {
+    const markers = new Map<number, ToothProposalMarker>();
+    for (const item of items) {
+      if (item.toothCode === null) continue;
+      const fdi = Number(item.toothCode);
+      if (!Number.isInteger(fdi)) continue;
+      const existing = markers.get(fdi);
+      const surfaces = new Set([...(existing?.surfaces ?? []), ...item.surfaces]);
+      markers.set(fdi, {
+        count: (existing?.count ?? 0) + 1,
+        priority:
+          existing && PRIORITY_RANK[existing.priority] <= PRIORITY_RANK[item.priority]
+            ? existing.priority
+            : item.priority,
+        surfaces: [...surfaces].sort(),
+      });
+    }
+    return markers;
+  }, [items]);
+
+  const chartContext = React.useMemo<TreatmentPlanChartContext>(
+    () => ({ plan: planContext, proposalsByTooth }),
+    [planContext, proposalsByTooth],
+  );
+
   const overlayTeeth = React.useMemo(() => {
     const byTooth = new Map<string, TreatmentPlanItem[]>();
     for (const item of items) {
@@ -180,13 +243,25 @@ export function TreatmentPlanMode({
     }
     setBusy(true);
     try {
-      const result = await createTreatmentPlanAction({ actingBranchId, patientId, title: trimmed });
+      const amending = detail !== null;
+      const trimmedReason = amendmentReason.trim();
+      if (amending && trimmedReason === "") {
+        setActionError("A new plan version replaces the one on record. Say why before creating it.");
+        return;
+      }
+      const result = await createTreatmentPlanAction({
+        actingBranchId,
+        patientId,
+        title: trimmed,
+        ...(amending ? { supersedesPlanId: detail.plan.planId, amendmentReason: trimmedReason } : {}),
+      });
       if (!result.ok) {
-        setActionError(readFailureMessage(result.code));
+        setActionError(writeFailureMessage(result.code));
         return;
       }
       setActionError(null);
       setTitle("");
+      setAmendmentReason("");
       router.refresh();
     } finally {
       setBusy(false);
@@ -203,7 +278,7 @@ export function TreatmentPlanMode({
           ? await presentTreatmentPlanAction(input)
           : await acknowledgeTreatmentPlanAction(input);
       if (!result.ok) {
-        setActionError(readFailureMessage(result.code));
+        setActionError(writeFailureMessage(result.code));
         return;
       }
       setActionError(null);
@@ -219,7 +294,7 @@ export function TreatmentPlanMode({
   return (
     <div data-testid="treatment-plan-mode" className="flex w-full min-w-0 flex-col gap-4">
       <div data-testid="treatment-plan-chart" className="w-full min-w-0">
-        {chart(planContext)}
+        {chart(chartContext)}
       </div>
 
       {focusedItems.length > 0 && (
@@ -258,7 +333,13 @@ export function TreatmentPlanMode({
               <p data-testid="plan-summary" className="mt-0.5 text-xs text-muted-foreground">
                 {STATUS_LABELS[detail.plan.status]} · v{detail.plan.version} · {items.length} proposed item
                 {items.length === 1 ? "" : "s"} · created {detail.plan.createdAt.slice(0, 10)}
+                {detail.plan.supersedesPlanId ? " · replaces an earlier plan" : ""}
               </p>
+              {detail.plan.amendmentReason && (
+                <p data-testid="plan-amendment-reason" className="mt-0.5 text-xs text-muted-foreground">
+                  Amended because: {detail.plan.amendmentReason}
+                </p>
+              )}
             </div>
             {canWriteClinical && status === "DRAFT" && (
               <Button
@@ -340,7 +421,7 @@ export function TreatmentPlanMode({
 
       {canWriteClinical && (
         <form
-          aria-label="Create treatment plan"
+          aria-label={detail ? "Create new plan version" : "Create treatment plan"}
           onSubmit={createPlan}
           className="flex w-full min-w-0 flex-wrap items-end gap-2 border-t pt-3"
         >
@@ -354,8 +435,26 @@ export function TreatmentPlanMode({
               className="min-h-11"
             />
           </label>
+          {/*
+            A plan already on record is never edited. Replacing it creates a new
+            version that names its predecessor and says why, so the change is
+            explained rather than silent.
+          */}
+          {detail && (
+            <label htmlFor={reasonId} className="grid min-w-60 flex-1 gap-1 text-xs font-medium">
+              Reason for the new version
+              <Input
+                id={reasonId}
+                required
+                maxLength={2000}
+                value={amendmentReason}
+                onChange={(event) => setAmendmentReason(event.target.value)}
+                className="min-h-11"
+              />
+            </label>
+          )}
           <Button type="submit" size="sm" className="min-h-11" disabled={busy}>
-            Create plan
+            {detail ? "Create new version" : "Create plan"}
           </Button>
         </form>
       )}

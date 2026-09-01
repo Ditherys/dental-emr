@@ -56,11 +56,22 @@ export const completeTreatmentInputSchema = z.object({
   idempotencyKey: z.string().trim().min(1).max(80),
 }).strict();
 
+/**
+ * A plan that replaces another must say which one and why. The pair is accepted
+ * only together: a predecessor without a reason is the unexplained amendment
+ * the clinical-history rule exists to refuse, and a reason without a
+ * predecessor describes nothing. The database enforces the same pair.
+ */
 export const createTreatmentPlanInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
   title: titleSchema(),
-}).strict();
+  supersedesPlanId: databaseUuid.optional(),
+  amendmentReason: z.string().trim().min(1).max(2000).optional(),
+}).strict().refine(
+  (value) => (value.supersedesPlanId === undefined) === (value.amendmentReason === undefined),
+  "a superseded plan and an amendment reason are required together",
+);
 
 export const updateTreatmentPlanInputSchema = z.object({
   actingBranchId: databaseUuid,
@@ -210,6 +221,8 @@ export const treatmentPlanJsonSchema = z.object({
   createdAt: isoTimestamp,
   updatedAt: isoTimestamp,
   createdBy: databaseUuid,
+  supersedesPlanId: databaseUuid.nullable(),
+  amendmentReason: z.string().max(2000).nullable(),
 }).strict();
 
 export const treatmentPlanItemJsonSchema = z.object({

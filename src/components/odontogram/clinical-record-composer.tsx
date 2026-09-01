@@ -178,8 +178,6 @@ export function ClinicalRecordComposer({
           patientId={patientId}
           branchId={branchId}
           toothCodes={toothCodes}
-          clinicalDate={clinicalDate}
-          onClinicalDateChange={setClinicalDate}
           plan={planContext}
           onRecorded={onRecorded}
         />

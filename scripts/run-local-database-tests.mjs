@@ -27,6 +27,7 @@ import { runTreatmentItemExecutionConcurrencyTest } from "../supabase/tests/trea
 import { runOdontogramImplantIdempotencyConcurrencyTest } from "../supabase/tests/odontogram_implant_idempotency_concurrency.local.mjs";
 import { runProcedureInstallmentSchedulesConcurrencyTest } from "../supabase/tests/procedure_installment_schedules_concurrency.local.mjs";
 import { runClinicalVisitResumeConcurrencyTest } from "../supabase/tests/clinical_visit_resume_concurrency.local.mjs";
+import { runTreatmentCaseCompletionConcurrencyTest } from "../supabase/tests/treatment_case_completion_concurrency.local.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -196,6 +197,12 @@ try {
     dockerEnvironment,
   });
   console.log("PASS supabase/tests/procedure_installment_schedules_concurrency.local.mjs");
+  await runTreatmentCaseCompletionConcurrencyTest({
+    command: resolveLocalDatabaseTestCommand("local concurrency test", containerName),
+    repositoryRoot,
+    dockerEnvironment,
+  });
+  console.log("PASS supabase/tests/treatment_case_completion_concurrency.local.mjs");
   await runClinicalVisitResumeConcurrencyTest({
     command: resolveLocalDatabaseTestCommand("local concurrency test", containerName),
     repositoryRoot,

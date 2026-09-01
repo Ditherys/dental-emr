@@ -19,6 +19,7 @@ import type { NumberingSystem } from "@/lib/odontogram/dentition";
 
 import { useClinicalChartView } from "./clinical-chart-toolbar";
 import { MeasuredChart } from "./measured-chart";
+import type { ToothProposalMarker } from "./measured-tooth";
 import { ForkPrintProjectionBridge } from "./fork-print-chart";
 import "./styles.css";
 
@@ -42,6 +43,12 @@ export type ForkOdontogramProps = {
   /** Retained for prop compatibility. The projection-only renderer never emits drafts. */
   onDraftChange: (drafts: readonly ForkClinicalDraft[]) => void;
   onError: (message: string) => void;
+  /**
+   * Proposed treatment per tooth, projected from treatment plan items by the
+   * Treatment plan chart mode. It is never derived from the patient DTO and
+   * never written to it.
+   */
+  proposals?: ReadonlyMap<number, ToothProposalMarker>;
 };
 
 const RELATIONSHIP_OWNED_CODES = new Set(["BRIDGE", "IMPLANT"]);
@@ -215,6 +222,7 @@ export function ForkOdontogram({
   canWriteClinical,
   onSelect,
   onError,
+  proposals,
 }: ForkOdontogramProps): React.ReactElement {
   // The Clinical chart workspace owns notation, dentition, region and selection
   // through its single toolbar. Mounted outside that workspace this falls back
@@ -268,6 +276,7 @@ export function ForkOdontogram({
         viewport={view.viewport}
         dentition={view.dentition}
         selectedFdi={view.selectedFdi}
+        proposals={proposals}
         onSelectionChange={handleSelectionChange}
         readOnly={!canWriteClinical}
       />

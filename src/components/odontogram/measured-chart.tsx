@@ -13,7 +13,7 @@ import {
   type RendererToothProjection,
 } from "@/lib/odontogram/renderer-projection";
 
-import { MeasuredTooth, type SelectionModifiers } from "./measured-tooth";
+import { MeasuredTooth, type SelectionModifiers, type ToothProposalMarker } from "./measured-tooth";
 
 /**
  * The EMR-owned anatomical chart.
@@ -53,6 +53,12 @@ export type AnatomicalChartProps = {
   selectedFdi: readonly number[];
   onSelectionChange: (next: readonly number[]) => void;
   readOnly?: boolean;
+  /**
+   * Proposed treatment per tooth, keyed by FDI. Supplied only by the Treatment
+   * plan chart mode; absent everywhere else, so the current-status chart never
+   * shows a proposal marker for the same projection.
+   */
+  proposals?: ReadonlyMap<number, ToothProposalMarker>;
 };
 
 type ArchRow = "upper" | "lower";
@@ -137,9 +143,11 @@ function ToothRow({
   label,
   arch,
   auto,
+  proposals,
 }: {
   teeth: readonly number[];
   chart: ReadonlyMap<number, RendererToothProjection>;
+  proposals?: ReadonlyMap<number, ToothProposalMarker>;
   notation: NumberingSystem;
   selected: ReadonlySet<number>;
   readOnly: boolean;
@@ -176,6 +184,7 @@ function ToothRow({
             selected={selected.has(fdi)}
             readOnly={readOnly}
             forceToggle={multiSelect}
+            proposal={proposals?.get(fdi) ?? null}
             onActivate={onActivate}
           />
         );
@@ -192,6 +201,7 @@ export function MeasuredChart({
   selectedFdi,
   onSelectionChange,
   readOnly = false,
+  proposals,
 }: AnatomicalChartProps): React.ReactElement {
   const [multiSelect, setMultiSelect] = React.useState(false);
   const anchorRef = React.useRef<number | null>(null);
@@ -284,6 +294,7 @@ export function MeasuredChart({
             selected={selected}
             readOnly={readOnly}
             multiSelect={multiSelect}
+            proposals={proposals}
             onActivate={handleActivate}
           />
         ))}

@@ -62,6 +62,7 @@ insert into public.provider_branches (organization_id, provider_id, branch_id, i
   ('c8200000-0000-0000-0000-000000000002','c8600000-0000-0000-0000-000000000003','c8300000-0000-0000-0000-000000000002',true);
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
   ('c8500000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001','TPAP-A-1','Patient','A1',date '1990-01-01','c8300000-0000-0000-0000-000000000001'),
+  ('c8500000-0000-0000-0000-000000000003','c8200000-0000-0000-0000-000000000001','TPAP-A-2','Patient','A2',date '1992-03-03','c8300000-0000-0000-0000-000000000001'),
   ('c8500000-0000-0000-0000-000000000002','c8200000-0000-0000-0000-000000000002','TPAP-B-1','Patient','B1',date '1991-02-02','c8300000-0000-0000-0000-000000000002');
 insert into public.procedures (id, organization_id, code, name, status) values
   ('c8700000-0000-0000-0000-000000000001','c8200000-0000-0000-0000-000000000001','TPAP_RCT','Synthetic root canal','active');
@@ -293,6 +294,142 @@ select extensions.is(
    from public.treatment_plan_items where plan_id = 'c8800000-0000-0000-0000-000000000001'),
   '27/HIGH/2/O/Discussed with the patient.',
   'the plan item keeps its tooth, priority, sequence, surfaces and notes exactly'
+);
+
+-- The sequence number is assigned by the server from the line number when the
+-- client does not choose one, so two appends landing back to back can never
+-- share a sequence.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','c8100000-0000-0000-0000-000000000001',true);
+select * from public.add_treatment_plan_item_centavos(
+  'c8300000-0000-0000-0000-000000000001','c8800000-0000-0000-0000-000000000001',1,
+  null,'36','Server sequenced A',null,null,null,null,null,false,false,false,false
+);
+select * from public.add_treatment_plan_item_centavos(
+  'c8300000-0000-0000-0000-000000000001','c8800000-0000-0000-0000-000000000001',1,
+  null,'46','Server sequenced B',null,null,null,null,null,false,false,false,false
+);
+reset role;
+select extensions.is(
+  (select pg_catalog.string_agg(item.line_no::text || ':' || item.sequence_no::text, ',' order by item.line_no)
+   from public.treatment_plan_items as item
+   where item.plan_id = 'c8800000-0000-0000-0000-000000000001'
+     and item.description like 'Server sequenced%'),
+  '2:2,3:3',
+  'an item append with no client sequence takes its server-assigned line number'
+);
+select extensions.is(
+  (select count(distinct item.sequence_no)::integer
+   from public.treatment_plan_items as item
+   where item.plan_id = 'c8800000-0000-0000-0000-000000000001'
+     and item.description like 'Server sequenced%'),
+  2,
+  'two server-sequenced appends never share one sequence number'
+);
+
+-- ---------------------------------------------------------------------------
+-- A plan change is an explained new version, never a silent overwrite
+-- ---------------------------------------------------------------------------
+
+select extensions.ok(
+  has_function_privilege('authenticated','public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)','execute')
+  and not has_function_privilege('anon','public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)','execute')
+  and not has_function_privilege('service_role','public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)','execute')
+  and not has_function_privilege('public','public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)','execute'),
+  'only authenticated may execute the explained plan version boundary'
+);
+select extensions.ok(
+  (select prosecdef and proconfig = array['search_path=""']::text[]
+   from pg_proc where oid = 'public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)'::regprocedure),
+  'the plan version boundary is SECURITY DEFINER with an empty search path'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','c8100000-0000-0000-0000-000000000001',true);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Unexplained replacement','c8800000-0000-0000-0000-000000000002',null)$$,
+  '22023','invalid input',
+  'a plan that replaces another without a reason is refused'
+);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Unexplained replacement','c8800000-0000-0000-0000-000000000002','   ')$$,
+  '22023','invalid input',
+  'a blank amendment reason is refused'
+);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Reason without predecessor',null,'Explaining nothing')$$,
+  '22023','invalid input',
+  'an amendment reason without a predecessor is refused'
+);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Cross tenant predecessor','c8800000-0000-0000-0000-000000000003','Reason')$$,
+  '42501','not authorized',
+  'a predecessor belonging to another organization is not reachable'
+);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000003','Another patient predecessor','c8800000-0000-0000-0000-000000000002','Reason')$$,
+  '22023','invalid input',
+  'a plan may only be replaced for the patient it belongs to'
+);
+select * from public.create_treatment_plan_v2(
+  'c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001',
+  'Revised synthetic proposal','c8800000-0000-0000-0000-000000000002',
+  'Patient declined the crown; a simpler restoration was agreed.'
+);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Second successor','c8800000-0000-0000-0000-000000000002','A competing fork')$$,
+  '23505',
+  null,
+  'one plan may not be forked into two competing successors'
+);
+select set_config('request.jwt.claim.sub','c8100000-0000-0000-0000-000000000004',true);
+select extensions.throws_ok(
+  $$select * from public.create_treatment_plan_v2('c8300000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Receptionist version',null,null)$$,
+  '42501','not authorized',
+  'a receptionist may not create a plan version either'
+);
+reset role;
+
+select extensions.is(
+  (select plan.status || '|' || plan.amendment_reason
+   from public.treatment_plans as plan
+   where plan.supersedes_plan_id = 'c8800000-0000-0000-0000-000000000002'),
+  'DRAFT|Patient declined the crown; a simpler restoration was agreed.',
+  'the new version records what it replaces and why, and starts as a draft'
+);
+select extensions.is(
+  (select plan.status || '|' || plan.version::text || '|' || plan.title
+   from public.treatment_plans as plan
+   where plan.id = 'c8800000-0000-0000-0000-000000000002'),
+  'ACKNOWLEDGED|2|Synthetic acknowledged proposal',
+  'the superseded plan row is left exactly as it was acknowledged'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events
+   where organization_id = 'c8200000-0000-0000-0000-000000000001'
+     and action = 'treatment.plan.amended'),
+  1,
+  'an explained plan version writes exactly one amendment audit event'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events
+   where organization_id = 'c8200000-0000-0000-0000-000000000001'
+     and action = 'treatment.plan.amended'
+     and metadata::text like '%declined%'),
+  0,
+  'the amendment audit event never carries the clinical reason text'
+);
+select extensions.is(
+  (select count(*)::integer from public.treatment_plans
+   where supersedes_plan_id is not null and amendment_reason is null),
+  0,
+  'no plan may name a predecessor without recording why'
+);
+select extensions.throws_ok(
+  $$insert into public.treatment_plans (organization_id, patient_id, title, status, created_by, supersedes_plan_id) values ('c8200000-0000-0000-0000-000000000001','c8500000-0000-0000-0000-000000000001','Direct unexplained successor','DRAFT','c8100000-0000-0000-0000-000000000001','c8800000-0000-0000-0000-000000000001')$$,
+  '23514',
+  null,
+  'the database itself refuses a successor with no recorded reason'
 );
 
 -- ---------------------------------------------------------------------------

@@ -86,10 +86,12 @@ function structuredDetailArgs(value: { priority?: string; sequenceNo?: number; s
 
 export async function createTreatmentPlan(input: unknown): Promise<TreatmentPlanMutationResult> {
   const value = createTreatmentPlanInputSchema.parse(input);
-  const row = treatmentPlanMutationRowSchema.parse(firstRow(await callRpc("create_treatment_plan", {
+  const row = treatmentPlanMutationRowSchema.parse(firstRow(await callRpc("create_treatment_plan_v2", {
     p_acting_branch_id: value.actingBranchId,
     p_patient_id: value.patientId,
     p_title: value.title,
+    p_supersedes_plan_id: value.supersedesPlanId ?? null,
+    p_amendment_reason: value.amendmentReason ?? null,
   })));
   return { planId: row.plan_id, version: row.version };
 }

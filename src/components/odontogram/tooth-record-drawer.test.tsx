@@ -158,6 +158,38 @@ describe("ToothRecordDrawer summary", () => {
     expect(drawer).not.toHaveTextContent("FRACTURE");
   });
 
+  it("opens the composer on Planned treatment in the Treatment plan chart mode", async () => {
+    const user = userEvent.setup();
+    renderDrawer({
+      chartMode: "TREATMENT_PLAN",
+      planContext: {
+        planId: "c8800000-0000-0000-0000-000000000001",
+        planTitle: "Synthetic proposal",
+        planVersion: 2,
+        status: "DRAFT",
+        nextSequenceNo: 1,
+        procedures: [],
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+
+    expect(screen.getByRole("button", { name: "Planned treatment" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Finding" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("form", { name: "Add planned treatment" })).toBeInTheDocument();
+  });
+
+  it("opens the composer on Finding in every other chart mode", async () => {
+    const user = userEvent.setup();
+    renderDrawer();
+
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+
+    expect(screen.getByRole("button", { name: "Finding" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Planned treatment" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("form", { name: "Record clinical finding" })).toBeInTheDocument();
+  });
+
   it("lists the tooth history oldest first", () => {
     renderDrawer();
 

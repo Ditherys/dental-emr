@@ -19,7 +19,13 @@ insert into public.procedures (id, organization_id, code, name, status) values
   ('c9300000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','PROC_A1','Synthetic Procedure A1','active'),
   ('c9300000-0000-0000-0000-000000000002','b7200000-0000-0000-0000-000000000002','PROC_B1','Synthetic Procedure B1','active');
 
-select extensions.columns_are('public','treatment_plans',array['id','organization_id','patient_id','title','status','version','created_by','created_at','updated_at'],'treatment_plans has only the approved P16-01 fields');
+-- supersedes_plan_id and amendment_reason are the reviewed task-8 amendment
+-- provenance: a plan that replaces finalized clinical history must name its
+-- predecessor and say why, enforced by a tenant-safe FK, a bounded reason check,
+-- a reason-required check and a single-successor partial unique index.
+select extensions.columns_are('public','treatment_plans',array['id','organization_id','patient_id','title','status','version','created_by','created_at','updated_at','supersedes_plan_id','amendment_reason'],'treatment_plans has only the approved fields plus the reviewed amendment provenance');
+select extensions.is((select count(*)::integer from pg_indexes where schemaname='public' and tablename='treatment_plans' and indexname='treatment_plans_single_successor_idx'),1,'treatment_plans refuses two competing successors for one plan');
+select extensions.ok((select count(*)=3 from pg_constraint where conrelid='public.treatment_plans'::regclass and conname in ('treatment_plans_organization_supersedes_fk','treatment_plans_amendment_reason_bounded_check','treatment_plans_amendment_reason_required_check')),'the amendment provenance is tenant-safe, bounded, and never unexplained');
 select extensions.ok((select relrowsecurity from pg_class where oid = 'public.treatment_plans'::regclass),'treatment_plans has RLS enabled');
 select extensions.ok(not exists(select 1 from (values(0::oid),((select oid from pg_roles where rolname='anon')),((select oid from pg_roles where rolname='authenticated')),((select oid from pg_roles where rolname='service_role'))) as role(role_oid) cross join (values('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER')) as privilege(name) where has_table_privilege(role.role_oid,'public.treatment_plans',privilege.name)),'PUBLIC, anon, authenticated, and service_role have no treatment_plans privileges');
 select extensions.is((select count(*)::integer from pg_policies where schemaname='public' and tablename='treatment_plans'),0,'treatment_plans is deny-by-default with no browser policies');

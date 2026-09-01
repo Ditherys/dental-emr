@@ -26,6 +26,21 @@ export type SelectionModifiers = {
   range: boolean;
 };
 
+/**
+ * A treatment plan proposal standing against this tooth.
+ *
+ * A proposal is NOT a clinical record. It is projected from the
+ * clinician-authored tooth and surfaces of a treatment plan item, and is drawn
+ * as a deliberately different, dashed marker so it can never be read as
+ * recorded status.
+ */
+export type ToothProposalMarker = {
+  /** How many plan lines stand against this tooth. */
+  count: number;
+  priority: "URGENT" | "HIGH" | "ROUTINE" | "ELECTIVE";
+  surfaces: readonly string[];
+};
+
 export type MeasuredToothProps = {
   tooth: RendererToothProjection;
   notation: NumberingSystem;
@@ -36,6 +51,8 @@ export type MeasuredToothProps = {
   onFocusChange?: (fdi: number) => void;
   /** Forces `toggle` on, for the touch `Select multiple` mode. */
   forceToggle?: boolean;
+  /** Proposed, not recorded. Supplied only by the Treatment plan chart mode. */
+  proposal?: ToothProposalMarker | null;
 };
 
 function detailText(detail: ClinicalFeatureDetail): string {
@@ -69,12 +86,21 @@ export function MeasuredTooth({
   tabIndex,
   onFocusChange,
   forceToggle = false,
+  proposal = null,
 }: MeasuredToothProps): React.ReactElement {
   const displayLabel = toLabel(tooth.fdi, notation);
   const summary = clinicalSummary(tooth);
+  // Stated after the recorded summary and in its own words, so a proposal is
+  // never announced as part of the clinical record.
+  const proposalSummary = proposal
+    ? ` - proposed treatment: ${proposal.count} item${proposal.count === 1 ? "" : "s"}, ` +
+      `${proposal.priority.toLowerCase()} priority` +
+      `${proposal.surfaces.length > 0 ? `, surfaces ${proposal.surfaces.join(",")}` : ""} - not yet performed`
+    : "";
   const ariaLabel =
     `Tooth ${displayLabel} in ${notation} notation - FDI ${tooth.fdi}, ` +
-    `Universal ${toLabel(tooth.fdi, "UNIVERSAL")}, Palmer ${toLabel(tooth.fdi, "PALMER")} - ${summary}`;
+    `Universal ${toLabel(tooth.fdi, "UNIVERSAL")}, Palmer ${toLabel(tooth.fdi, "PALMER")} - ${summary}` +
+    proposalSummary;
 
   const activate = React.useCallback(
     (modifiers: SelectionModifiers) => {
@@ -98,6 +124,10 @@ export function MeasuredTooth({
       data-read-only={readOnly ? "1" : "0"}
       data-planned={hasPlanned ? "1" : "0"}
       data-current={hasRecord ? "1" : "0"}
+      data-proposed={proposal ? "1" : "0"}
+      data-proposed-count={proposal ? String(proposal.count) : undefined}
+      data-proposed-priority={proposal ? proposal.priority : undefined}
+      data-proposed-surfaces={proposal ? proposal.surfaces.join(",") : undefined}
       data-bridge-role={tooth.bridgeRole ?? "none"}
       aria-pressed={selected}
       aria-label={ariaLabel}
@@ -117,11 +147,23 @@ export function MeasuredTooth({
         "odontogram-tooth group relative flex min-h-11 min-w-0 flex-col items-center gap-1 rounded-md border p-1",
         "touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected ? "border-primary bg-primary/5 ring-2 ring-primary" : "border-border bg-card",
+        // Dashed and offset, never the solid border/ring recorded status and
+        // selection use, so a proposal reads as a proposal at a glance.
+        proposal ? "outline-2 outline-offset-2 outline-dashed outline-primary/70" : "",
       ].join(" ")}
     >
       <span className="text-[11px] font-medium tabular-nums text-muted-foreground" aria-hidden="true">
         {displayLabel}
       </span>
+      {proposal && (
+        <span
+          data-testid={`tooth-proposal-${tooth.fdi}`}
+          aria-hidden="true"
+          className="absolute top-0.5 right-0.5 rounded-sm border border-dashed border-primary/70 px-1 text-[10px] leading-tight text-primary"
+        >
+          {proposal.count}
+        </span>
+      )}
       <span className="relative flex h-[74px] w-full items-center justify-center overflow-hidden" aria-hidden="true">
         <React.Suspense fallback={<span className="text-xs text-muted-foreground">{tooth.fdi}</span>}>
           <MeasuredToothAsset tooth={tooth} label={ariaLabel} />
