@@ -6,11 +6,17 @@ history; this file is deliberately not an append-only transcript.
 Task 9 (canonical periodontal data model) is complete across `5dce284`,
 `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 (pure
 periodontal calculations, graphics and classification) is complete across
-`4053739` and `4836ae9`. Task 11 is `d589dbf` plus this commit, which applies
-review round 1: **0 Critical, 4 Important, 1 Minor**. All eight inherited
-requirements held under review; the four Important findings are two real defects
-in code this task added, one divergence from Task 10's port, and one bypass in a
-shipped boundary this task had left granted.
+`4053739` and `4836ae9`. Task 11 is `d589dbf`, `fadd7e2` and this commit.
+
+Round 1 (`fadd7e2`) applied **0 Critical, 4 Important, 1 Minor**: two real
+defects in code this task added, one divergence from Task 10's port, and one
+bypass in a shipped boundary this task had left granted. All eight inherited
+requirements held.
+
+Round 2 (this commit) closes the task. The re-review found all findings
+addressed and no new breakage; what remained was **four unreached decision
+points** in the derivation and **two Low items**, one of which was a behaviour
+change round 1 had introduced.
 
 ## Task 11 - Versioned periodontal draft, autosave, finalize, amend and compare RPCs (2026-09-02)
 
@@ -76,6 +82,9 @@ would have sorted before applied files.
   guarded replaces of applied function bodies, re-created with EXECUTE rather
   than a literal CREATE so every existing grant is preserved and no privilege
   moves. Grants and revokes nothing, and is not a grant-terminal.
+- `20260901010245_periodontal_noop_version_and_adoption_lineage.sql` - review
+  round 2. Five guarded replaces across two applied bodies, same EXECUTE
+  discipline, same fail-closed guards. Grants and revokes nothing.
 
 ### The eight inherited requirements, and the test that proves each
 
@@ -236,10 +245,79 @@ would refuse to finalize: that one is stamped with the adopting clinician, which
 attributes it to the person actually doing the work and keeps the orphan from
 becoming a second dead end.
 
+### Review round 2 fixes
+
+Test-only apart from two Low items. The re-review confirmed round 1's fixes were
+structurally total rather than conditionally safe, and that no privilege had
+moved. What remained were paths that were **unreached** rather than
+reached-and-correct.
+
+**Four derivation paths now covered.** Grade **A** (a bone-loss-over-age ratio
+below 0.25 with both modifiers unremarkable); attachment band **III reached
+through attachment alone** (CAL 5 with no bone loss and no complexity
+escalation, so band 3 is not entered only via bone loss); the **buccal and oral
+fallback**, which is the second entry into the PERIODONTITIS branch and the only
+reachable `stage = null` inside it - exactly the shape
+`perio_exam_derived_stageable_check` exists to police; and a **discriminating**
+extent denominator.
+
+**The denominator assertion was certifying nothing, and now does.** Every tooth
+in the old case had a known attachment level, so `present_tooth_count` and
+`teeth_with_known_interdental_cal` coincided at 8 and an implementation using
+the present-tooth count would have passed identically. The new case gives four
+present teeth an **unknown** attachment level, so the counts diverge (8 and 4)
+and the two implementations disagree. Proved by mutation rather than asserted:
+replacing the denominator with the present-tooth count inside a rolled-back
+transaction turns the new cases red -
+
+```
+not ok - the extent denominator counts teeth whose attachment level is known ...
+#   have: PERIODONTITIS/II/B/LOCALIZED   want: PERIODONTITIS/II/B/GENERALIZED
+not ok - the buccal and oral fallback ... leaves the stage, grade and extent unknown ...
+#   have: PERIODONTITIS/~/~/LOCALIZED    want: PERIODONTITIS/~/~/~
+```
+
+The second line is the more interesting one: with a present-tooth denominator, a
+mouth where **no** attachment level is known still reports an extent, which is a
+manufactured finding.
+
+**LOW 1 - a no-op v1 call no longer manufactures a conflict.** Round 1 made
+`public.save_periodontal_measurements` increment the version on every accepted
+call, including a batch of four empty arrays that writes nothing, so a no-op
+call handed a versioned client a `stale version` conflict corresponding to no
+write at all. It failed conservatively - a false conflict, never a silent
+overwrite - but a client cannot tell a phantom conflict from a real one. The
+increment is now gated on the batch carrying rows, which is the same condition
+the audit event already reports. No assertion pinned either value; that was
+checked before changing it.
+
+**LOW 2 - a replaced attribution is now named.** On the incomplete-triple
+adoption path the superseded attribution was replaced and nothing recorded what
+it had been. The amendment event now carries `attribution_previous_provider`,
+which is already on `private.audit_metadata_is_safe`'s allow-list and means
+exactly that; it is emitted only when adoption actually replaced an attribution
+naming a provider, and `jsonb_strip_nulls` drops it otherwise.
+
+The superseded `examined_by` is a **user** id and the allow-list carries no
+user-id key. That was not widened: a shared IMMUTABLE function every audited
+write depends on should not gain a key to carry one identifier for one caller -
+the trap this task already declined for `adopted` and the one Task 8 hit. The
+acting user is on the event as `actor_user_id`, and a superseded author only
+exists to record when the successor was left with a null provider by the revoked
+three-argument boundary, in which case it remains recoverable from the audit
+event that created that successor against the same entity. In the other
+sub-case the author column is null because the user was deleted, so there is
+nothing left to record.
+
+**Ledgered, not fixed** (round 2): the unordered `VALUES` loop in the
+guarded-replace migrations. Every step is order-independent, so it is safe
+today; an explicit sequence column would be more robust but is not worth
+reshaping an applied migration for.
+
 ### Files added
 
 - `supabase/migrations/20260901010240..010243` (four files, above)
-- `supabase/tests/periodontal_full_chart_rpcs.test.sql` - 69 assertions
+- `supabase/tests/periodontal_full_chart_rpcs.test.sql` - 82 assertions
 - `supabase/tests/periodontal_autosave_concurrency.local.mjs`
 
 ### Files changed
@@ -256,8 +334,9 @@ becoming a second dead end.
   `scripts/remote-database-test-guard.test.mjs` - the counts and fixture lists
   these gates pin, moved with the new objects (files 327 to 332, tables 127 to
   128, functions 491 to 503, SECURITY DEFINER 361 to 368, browser-reachable
-  approved grants 262 to 268). Only the file count moved again in review round
-  1, because 20260901010244 creates no object at all.
+  approved grants 262 to 268). Only the file count moved again in review rounds
+  1 and 2 (to 333), because neither 20260901010244 nor 20260901010245 creates
+  any object at all.
 - `supabase/tests/approved_grant_registry_integrity.test.sql` - six signatures
   added, count 251 to 257.
 - `supabase/tests/periodontal_current_state_guard.test.sql` - the inverted
@@ -349,9 +428,9 @@ and wrong.
 Task gate, run exactly as the brief lists it (after the repair migration):
 
 ```
-npm run db:migrate:local     -> applied 010244, then "Local database is up to date."
+npm run db:migrate:local     -> applied 010245, then "Local database is up to date."
 npm run db:types:local       -> Updated src/types/database.generated.ts. (no signature changed)
-npm run security:migrations  -> Migration privilege lint passed (332 files, 92 terminals, 404 approved)
+npm run security:migrations  -> Migration privilege lint passed (333 files, 92 terminals, 404 approved)
 npm run test:unit -- src/lib/odontogram/service.test.ts \
   "src/app/(emr)/patients/[patientId]/perio-actions.test.ts"
                              -> Test Files 2 passed (2) / Tests 52 passed (52)
@@ -440,9 +519,10 @@ security acceptance remain release gates.
    `periodontal_full_chart.test.sql` both assert `authenticated` still holds
    them. The lost-update they allowed is closed: v1 autosave now advances the
    version, so a v1 write is no longer invisible to the versioned guard, and a
-   pgTAP assertion proves the overwrite no longer happens. What remains is that
-   v1 still accepts no `expected_version` and no request key of its own, so a
-   direct v1 caller cannot detect a conflict before writing - it can only no
+   pgTAP assertion proves the overwrite no longer happens, and a no-op v1 call
+   leaves the version alone rather than manufacturing a conflict. What remains is
+   that v1 still accepts no `expected_version` and no request key of its own, so
+   a direct v1 caller cannot detect a conflict before writing - it can only no
    longer hide one afterwards. Revoking v1 is a bounded follow-up that must also
    invert those two grant assertions. `perio-actions.ts` still exports both the
    v1- and v2-shaped actions; Task 12 should import only the v2 ones.

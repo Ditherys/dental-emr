@@ -878,6 +878,130 @@ select extensions.is(
   'the lost update the superseded boundary used to allow no longer happens'
 );
 
+-- A no-op batch through the superseded boundary writes nothing, so it must
+-- leave the version alone. Incrementing on an empty batch would hand a
+-- versioned client a `stale version` conflict that corresponds to no write at
+-- all, and a client cannot tell a phantom conflict from a real one.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select legacy.version from public.save_periodontal_measurements(
+     'ea300000-0000-0000-0000-000000000001'::uuid,
+     'ea800000-0000-0000-0000-00000000000f'::uuid,
+     '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb) as legacy),
+  2,
+  'a batch of empty arrays through the superseded boundary reports the unchanged version'
+);
+
+reset role;
+
+select extensions.is(
+  (select exam.version from public.periodontal_examinations as exam
+    where exam.id = 'ea800000-0000-0000-0000-00000000000f'),
+  2,
+  'a no-op call through the superseded boundary does not advance the version'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select save.version from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-00000000000f'::uuid, 2,
+     '{"sites":[{"tooth_fdi":"17","site":"B","probing_depth_mm":4,"gingival_margin_mm":0}]}'::jsonb,
+     'ea900000-0000-0000-0000-000000000053'::uuid) as save),
+  3,
+  'the versioned boundary is not handed a phantom conflict by a no-op call through the superseded one'
+);
+
+reset role;
+
+-- ===========================================================================
+-- 9b. Adoption records the attribution it replaced
+--
+-- examined_by is ON DELETE SET NULL, so deleting an authoring user empties one
+-- column of an otherwise complete triple. Adoption completes the triple with
+-- the adopter, and names the provider it superseded so the replacement is not
+-- silent.
+-- ===========================================================================
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000012','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+update public.periodontal_examinations
+set status = 'FINAL', finalized_at = statement_timestamp(),
+    finalized_by = 'ea100000-0000-0000-0000-000000000001',
+    finalized_provider_id = 'ea600000-0000-0000-0000-000000000001'
+where id = 'ea800000-0000-0000-0000-000000000012';
+
+-- The orphan an ON DELETE SET NULL leaves behind: a time and a provider, but no
+-- author.
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, predecessor_examination_id,
+  examination_kind, status, version, examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000013','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'ea800000-0000-0000-0000-000000000012',
+  'AMENDMENT','DRAFT', 2, statement_timestamp(),
+  null, 'ea600000-0000-0000-0000-000000000001'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000002',true);
+
+select extensions.ok(
+  (select amendment.adopted
+   from public.amend_periodontal_examination_v2(
+     'ea800000-0000-0000-0000-000000000012'::uuid,
+     'The maintenance chart was signed before the radiographs were read.',
+     'ea900000-0000-0000-0000-000000000054'::uuid) as amendment),
+  'an orphan successor whose author was deleted is still adopted'
+);
+
+reset role;
+
+select extensions.is(
+  (select event.metadata ->> 'attribution_previous_provider'
+   from public.audit_events as event
+   where event.entity_id = 'ea800000-0000-0000-0000-000000000013'
+     and event.action = 'clinical.perio.examination.amended'),
+  'ea600000-0000-0000-0000-000000000001',
+  'replacing an incomplete attribution names the provider it superseded'
+);
+
+select extensions.ok(
+  (select exam.examined_by = 'ea100000-0000-0000-0000-000000000002'::uuid
+     and exam.examined_provider_id = 'ea600000-0000-0000-0000-000000000002'::uuid
+   from public.periodontal_examinations as exam
+   where exam.id = 'ea800000-0000-0000-0000-000000000013'),
+  'the completed attribution names the adopting clinician, so the amendment stays finalizable'
+);
+
+-- Adoption that preserves a complete triple replaces no attribution, so there
+-- is nothing to report and the key is absent rather than null.
+select extensions.ok(
+  (select not (event.metadata ? 'attribution_previous_provider')
+   from public.audit_events as event
+   where event.entity_id = 'ea800000-0000-0000-0000-00000000000c'
+     and event.action = 'clinical.perio.examination.amended'),
+  'preserving a complete attribution reports no superseded provider at all'
+);
+
+
 -- ===========================================================================
 -- 9. Amendment lineage: the creating path, and what it audits
 -- ===========================================================================
@@ -1156,6 +1280,134 @@ select extensions.ok(
      'ea200000-0000-0000-0000-000000000001'::uuid,
      'ea8d0000-0000-0000-0000-000000000001'::uuid) as derivation),
   'the completeness summary counts only present teeth and only known attachment levels'
+);
+
+-- Four decision points the ten cases above do not reach. Each is unreached
+-- rather than reached-and-correct, and Task 12 renders these values straight to
+-- a clinician.
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+)
+select spec.id, 'ea200000-0000-0000-0000-000000000001'::uuid,
+       'ea500000-0000-0000-0000-000000000001'::uuid,
+       (select encounter_id from perio_rpc_scratch where label = 'draft'),
+       'RE-EVALUATION', 'DRAFT', statement_timestamp(),
+       'ea100000-0000-0000-0000-000000000001'::uuid,
+       'ea600000-0000-0000-0000-000000000001'::uuid
+from (values
+  ('ea8d0000-0000-0000-0000-00000000000b'::uuid),
+  ('ea8d0000-0000-0000-0000-00000000000c'::uuid),
+  ('ea8d0000-0000-0000-0000-00000000000d'::uuid),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid)
+) as spec(id);
+
+-- Uniform six-site charts. A NULL margin makes the attachment level at that
+-- site unknown, which is not the same as an attachment level of zero.
+insert into public.periodontal_site_measurements (
+  organization_id, examination_id, tooth_fdi, site, probing_depth_mm,
+  gingival_margin_mm, bleeding_on_probing, suppuration
+)
+select 'ea200000-0000-0000-0000-000000000001'::uuid, spec.exam, spec.tooth,
+       site_code.site, spec.pd, spec.margin, false, false
+from (values
+  -- Grade A: a bone-loss-over-age ratio below 0.25 with both modifiers known
+  -- and unremarkable. Bone loss of 5 % is band 1, so the attachment band still
+  -- decides the stage.
+  ('ea8d0000-0000-0000-0000-00000000000b'::uuid, '16', 3, 0::integer),
+  ('ea8d0000-0000-0000-0000-00000000000b'::uuid, '26', 3, 0),
+  -- Attachment band 3 reached through attachment alone: CAL 5 with a probing
+  -- depth below the escalation threshold and no bone loss recorded.
+  ('ea8d0000-0000-0000-0000-00000000000c'::uuid, '16', 5, 0),
+  ('ea8d0000-0000-0000-0000-00000000000c'::uuid, '26', 5, 0),
+  -- The extent denominator, made to discriminate: two affected teeth, two more
+  -- whose attachment level is KNOWN and healthy, and four present teeth whose
+  -- attachment level is unknown. Counting present teeth would answer
+  -- LOCALIZED (2/8); counting known attachment answers GENERALIZED (2/4).
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '16', 3, 0),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '26', 3, 0),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '13', 2, -2),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '23', 2, -2),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '14', 3, null),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '15', 3, null),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '24', 3, null),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, '25', 3, null)
+) as spec(exam, tooth, pd, margin)
+cross join (values ('MB'),('B'),('DB'),('ML'),('L'),('DL')) as site_code(site);
+
+-- The buccal/oral fallback needs per-site control: the interdental sites carry
+-- no margin, so no tooth is "affected" by the interdental criterion at all, and
+-- the branch can only be entered through the second route.
+insert into public.periodontal_site_measurements (
+  organization_id, examination_id, tooth_fdi, site, probing_depth_mm,
+  gingival_margin_mm, bleeding_on_probing, suppuration
+)
+select 'ea200000-0000-0000-0000-000000000001'::uuid,
+       'ea8d0000-0000-0000-0000-00000000000d'::uuid, spec.tooth, spec.site,
+       spec.pd, spec.margin, false, false
+from (values
+  ('16'::text, 'MB'::text, 4, null::integer), ('16', 'DB', 4, null),
+  ('16', 'ML', 4, null), ('16', 'DL', 4, null),
+  ('16', 'B', 4, -1), ('16', 'L', 4, -1),
+  ('26', 'MB', 4, null), ('26', 'DB', 4, null),
+  ('26', 'ML', 4, null), ('26', 'DL', 4, null),
+  ('26', 'B', 4, -1), ('26', 'L', 4, -1)
+) as spec(tooth, site, pd, margin);
+
+update public.periodontal_examinations as exam
+set age_years_snapshot = spec.age,
+    smoking_status = spec.smoking,
+    diabetes_status = spec.diabetes,
+    radiographic_bone_loss_percent = spec.bone_loss
+from (values
+  ('ea8d0000-0000-0000-0000-00000000000b'::uuid, 40::smallint, 'NEVER'::text, 'NONE'::text, 5::smallint),
+  ('ea8d0000-0000-0000-0000-00000000000c'::uuid, 40::smallint, 'NEVER'::text, 'NONE'::text, null::smallint),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, 40::smallint, 'NEVER'::text, 'NONE'::text, null::smallint)
+) as spec(exam, age, smoking, diabetes, bone_loss)
+where exam.id = spec.exam;
+
+select extensions.is(
+  (select derivation.diagnosis || '/' || coalesce(derivation.stage, '~')
+     || '/' || coalesce(derivation.grade, '~') || '/' || coalesce(derivation.extent, '~')
+   from private.periodontal_derived_classification(
+     'ea200000-0000-0000-0000-000000000001'::uuid, spec.exam) as derivation),
+  spec.expected,
+  spec.description
+)
+from (values
+  ('ea8d0000-0000-0000-0000-00000000000b'::uuid, 'PERIODONTITIS/II/A/GENERALIZED',
+   'a bone-loss-over-age ratio below 0.25 with both modifiers unremarkable grades A'),
+  ('ea8d0000-0000-0000-0000-00000000000c'::uuid, 'PERIODONTITIS/III/B/GENERALIZED',
+   'an interdental attachment level of 5 mm reaches band III through attachment alone, with no bone loss and no complexity escalation'),
+  ('ea8d0000-0000-0000-0000-00000000000d'::uuid, 'PERIODONTITIS/~/~/~',
+   'the buccal and oral fallback reaches periodontitis on its own, and leaves the stage, grade and extent unknown rather than inventing them'),
+  ('ea8d0000-0000-0000-0000-00000000000e'::uuid, 'PERIODONTITIS/II/B/GENERALIZED',
+   'the extent denominator counts teeth whose attachment level is known, so two affected of four known is generalized even though it is two of eight present')
+) as spec(exam, expected, description);
+
+-- The discriminating half of the previous assertion: the two counts must
+-- actually diverge, or an implementation using the present-tooth count would
+-- pass it identically.
+select extensions.ok(
+  (select derivation.present_tooth_count = 8
+     and derivation.teeth_with_known_interdental_cal = 4
+     and not derivation.complete
+   from private.periodontal_derived_classification(
+     'ea200000-0000-0000-0000-000000000001'::uuid,
+     'ea8d0000-0000-0000-0000-00000000000e'::uuid) as derivation),
+  'a present tooth whose attachment level is unknown is counted as present but not as known, so the two counts diverge'
+);
+
+-- The same distinction on the entry criterion: no tooth reaches the interdental
+-- rule here, so the branch was entered through the buccal and oral fallback.
+select extensions.ok(
+  (select derivation.present_tooth_count = 2
+     and derivation.teeth_with_known_interdental_cal = 0
+   from private.periodontal_derived_classification(
+     'ea200000-0000-0000-0000-000000000001'::uuid,
+     'ea8d0000-0000-0000-0000-00000000000d'::uuid) as derivation),
+  'the buccal and oral fallback is reached with no tooth carrying a known interdental attachment level at all'
 );
 
 with test_failures as (
