@@ -43,12 +43,12 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and has_function_privilege('authenticated','public.record_visit_bridge_v2(uuid,uuid,jsonb,date,uuid,text,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_bridge(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_bridge(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_plan_implant_design(uuid,uuid,uuid,jsonb)','execute')
   and has_function_privilege('authenticated','public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)','execute')
-  and has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and has_function_privilege('authenticated','public.record_visit_implant_component_v2(uuid,uuid,jsonb,date,uuid,text,text)','execute')
   and has_function_privilege('authenticated','public.amend_current_implant_component(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.void_current_implant_component(uuid,uuid,integer,text)','execute')
   and has_function_privilege('authenticated','public.create_periodontal_examination(uuid,uuid,uuid,text)','execute')
@@ -81,6 +81,21 @@ select extensions.ok(
 select extensions.ok(
   not has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)','execute'),
   'authenticated is denied the retired five-argument implant v3 overload'
+);
+
+-- Task 7 retired both six-argument v3 relationship writers. They open no
+-- clinical visit, write encounter_id = null and accept an unbounded
+-- client-supplied occurrence time, so leaving them callable would have bypassed
+-- the managed-visit attribution and the backdating window the visit-bound
+-- boundary enforces.
+select extensions.ok(
+  not has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and not has_function_privilege('anon','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and not has_function_privilege('service_role','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and not has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and not has_function_privilege('anon','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute')
+  and not has_function_privilege('service_role','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute'),
+  'the superseded v3 relationship writers are unreachable from every browser and service role'
 );
 
 select extensions.ok(

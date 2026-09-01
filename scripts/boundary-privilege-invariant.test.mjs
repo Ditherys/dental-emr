@@ -225,14 +225,12 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.update_draft_plan_bridge_design(uuid,uuid,integer,jsonb)",
     "public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
     "public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)",
-    "public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)",
     "public.amend_current_bridge(uuid,uuid,integer,jsonb)",
     "public.void_current_bridge(uuid,uuid,integer,text)",
     "public.create_plan_implant_design(uuid,uuid,uuid,jsonb)",
     "public.update_draft_plan_implant_design(uuid,uuid,integer,jsonb)",
     "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)",
     "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)",
-    "public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,uuid,text)",
     "public.amend_current_implant_component(uuid,uuid,integer,jsonb)",
     "public.void_current_implant_component(uuid,uuid,integer,text)",
     "public.create_periodontal_examination(uuid,uuid,uuid,text)",
@@ -1458,7 +1456,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(267);
+    expect(approved.size).toBe(265);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

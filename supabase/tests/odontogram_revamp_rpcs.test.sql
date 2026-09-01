@@ -1,5 +1,5 @@
 begin;
-select extensions.plan(13);
+select extensions.plan(14);
 select extensions.ok(has_function_privilege('authenticated','public.get_patient_odontogram_v3(uuid,uuid)','execute'),'v3 odontogram read is callable');
 -- Superseded by the visit-bound composer, which cannot record a finding without
 -- an encounter or a treating provider. The v3 direct path stays defined so
@@ -12,7 +12,8 @@ select extensions.ok(not has_function_privilege('service_role','public.record_pr
 select extensions.ok(not has_function_privilege('authenticated','public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute'),'legacy bridge provider-picker signature is not callable');
 select extensions.ok(not has_function_privilege('authenticated','public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)','execute'),'legacy implant provider-picker signature is not callable');
 select extensions.ok(not has_function_privilege('authenticated','public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)','execute'),'legacy clinical entry signature is not callable');
-select extensions.ok(has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute'),'provider-derived bridge v3 is callable');
+select extensions.ok(not has_function_privilege('authenticated','public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,uuid,text)','execute'),'provider-derived bridge v3 is retired: superseded by the visit-bound public.record_visit_bridge_v2');
+select extensions.ok(has_function_privilege('authenticated','public.record_visit_bridge_v2(uuid,uuid,jsonb,date,uuid,text,text)','execute'),'the visit-bound bridge writer is the callable replacement');
 select extensions.throws_ok($$select public.record_procedure_followup(null,null,null,null,null)$$,'42501','not authorized','anonymous caller cannot record a follow-up');
 select extensions.throws_ok($$select public.record_direct_treatment_with_charge(null,null,null,null,'{}'::jsonb,null)$$,'42501','not authorized','anonymous caller cannot post direct treatment');
 set local role authenticated;

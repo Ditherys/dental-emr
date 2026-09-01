@@ -197,6 +197,7 @@ export function ToothRecordDrawer({
             chargeChoices: context.chargeChoices,
             supportComponents: context.supportComponents,
             implantStageByTooth: context.implantStageByTooth,
+            implantParentByTooth: context.implantParentByTooth,
           }
         : undefined,
     [context],

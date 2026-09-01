@@ -4,7 +4,7 @@ const {
   requirePermission,
   revalidatePath,
   transitionTreatmentPlanItemExecution,
-  recordCurrentImplantComponent,
+  recordVisitImplantComponent,
   recordVisitToothFindings,
   recordVisitClinicalNote,
   recordTreatmentEvent,
@@ -12,7 +12,7 @@ const {
   requirePermission: vi.fn(),
   revalidatePath: vi.fn(),
   transitionTreatmentPlanItemExecution: vi.fn(),
-  recordCurrentImplantComponent: vi.fn(),
+  recordVisitImplantComponent: vi.fn(),
   recordVisitToothFindings: vi.fn(),
   recordVisitClinicalNote: vi.fn(),
   recordTreatmentEvent: vi.fn(),
@@ -23,14 +23,14 @@ vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/odontogram/service", () => ({
   OdontogramServiceError: class OdontogramServiceError extends Error { constructor(public readonly code: string) { super(code); } },
   transitionTreatmentPlanItemExecution,
-  recordCurrentImplantComponent,
+  recordVisitImplantComponent,
   recordVisitToothFindings,
   recordVisitClinicalNote,
   recordTreatmentEvent,
 }));
 
 import {
-  recordCurrentImplantComponentAction,
+  recordVisitImplantComponentAction,
   recordTreatmentEventAction,
   recordVisitClinicalNoteAction,
   recordVisitToothFindingsAction,
@@ -49,7 +49,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requirePermission.mockResolvedValue({});
   transitionTreatmentPlanItemExecution.mockResolvedValue({ itemId, patientId: authoritativePatientId, executionState: "ACCEPTED", version: 2 });
-  recordCurrentImplantComponent.mockResolvedValue({ componentId: itemId, patientId: authoritativePatientId, version: 1 });
+  recordVisitImplantComponent.mockResolvedValue({ componentId: itemId, patientId: authoritativePatientId, version: 1, encounterId, serviceDate: "2026-09-01", replayed: false });
   recordVisitToothFindings.mockResolvedValue({ patientId: authoritativePatientId, encounterId, clinicalDate: "2026-09-01", recordedCount: 1 });
   recordVisitClinicalNote.mockResolvedValue({ patientId: authoritativePatientId, encounterId, noteId, version: 1 });
   recordTreatmentEvent.mockResolvedValue({
@@ -67,21 +67,45 @@ beforeEach(() => {
   });
 });
 
-describe("provider-free implant action boundary", () => {
+// Review round 1 removed `recordCurrentImplantComponentAction`, the superseded
+// provider-free v3 action: it opened no clinical visit and accepted an unbounded
+// client-supplied occurrence time. The same two guarantees this block always
+// asserted — the server-resolved patient is the one revalidated, and a
+// caller-supplied provider identity is refused — now hold on the replacement.
+describe("visit-bound implant action boundary", () => {
   const chargeId = "c6000000-0000-0000-0000-000000000006";
   const occurredAt = "2026-08-30T00:00:00.000Z";
-  const input = { actingBranchId: branchId, patientId, chargeId, occurredAt, idempotencyKey: "implant-action-v3", components: [{ tooth_fdi: "16", ordinal: 1, component_kind: "FIXTURE" }] };
+  const input = {
+    branchId,
+    patientId,
+    chargeId,
+    serviceDate: "2026-09-01",
+    note: null,
+    idempotencyKey: "implant-action-v2",
+    components: [{ tooth_fdi: "16", ordinal: 1, component_kind: "FIXTURE" }],
+  };
 
-  it("accepts the six-argument implant v3 browser input and revalidates the resolved patient", async () => {
-    await expect(recordCurrentImplantComponentAction(input)).resolves.toEqual({ ok: true });
-    expect(recordCurrentImplantComponent).toHaveBeenCalledWith(input);
+  it("accepts the visit-bound implant input and revalidates the resolved patient", async () => {
+    await expect(recordVisitImplantComponentAction(input)).resolves.toEqual({ ok: true, replayed: false });
+    expect(recordVisitImplantComponent).toHaveBeenCalledWith(input);
     expect(revalidatePath).toHaveBeenCalledWith(`/patients/${authoritativePatientId}`, "page");
   });
 
-  it("rejects caller supplied provider identity and retired executedAt fields", async () => {
-    await expect(recordCurrentImplantComponentAction({ ...input, treatingProviderId: itemId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
-    await expect(recordCurrentImplantComponentAction({ ...input, executedAt: occurredAt })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
-    expect(recordCurrentImplantComponent).not.toHaveBeenCalled();
+  it("rejects caller supplied provider identity, organization and occurrence time", async () => {
+    await expect(recordVisitImplantComponentAction({ ...input, treatingProviderId: itemId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(recordVisitImplantComponentAction({ ...input, organizationId: itemId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(recordVisitImplantComponentAction({ ...input, occurredAt })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    expect(recordVisitImplantComponent).not.toHaveBeenCalled();
+  });
+
+  it("refuses a staged component that names no component to attach to", async () => {
+    await expect(
+      recordVisitImplantComponentAction({
+        ...input,
+        components: [{ tooth_fdi: "16", ordinal: 1, component_kind: "ABUTMENT" }],
+      }),
+    ).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    expect(recordVisitImplantComponent).not.toHaveBeenCalled();
   });
 });
 

@@ -520,6 +520,7 @@ describe("OdontogramSection O7", () => {
           chargeChoices: [{ chargeId: "00000000-0000-4000-a000-0000000000c1", label: "Synthetic bridge · ₱90,000.00" }],
           supportComponents: [],
           implantStageByTooth: {},
+          implantParentByTooth: {},
         }}
       />,
     );

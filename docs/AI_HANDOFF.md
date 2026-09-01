@@ -1,7 +1,11 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 7
+# AI Handoff - Unified Clinical Chart workspace, Task 7 (review fixes)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
+
+This checkpoint is the second commit of Task 7. It applies the round-1 review
+findings on top of `dfbfca1`; the sections below describe the task as it now
+stands, with a dedicated review-fix section at the end.
 
 ## Task 7 - Contextual bridge and implant records, and the projection that makes the composer usable (2026-09-01)
 
@@ -68,7 +72,13 @@ The controller confirmed this choice after the fact and re-allocated Task 8.
 - `supabase/migrations/20260901010131_relationship_workflows_v2_grants.sql`
 - `supabase/migrations/20260901010132_clinical_composer_context.sql`
 - `supabase/migrations/20260901010133_clinical_composer_context_grants.sql`
-- `supabase/tests/odontogram_relationship_workflows_v2.test.sql` (54 assertions)
+- `supabase/migrations/20260901010134_relationship_workflows_v2_repair.sql`
+  (review round 1: the staged-chain normalizer, the one-fixture-per-tooth
+  trigger, two `pg_get_functiondef` guarded replaces, and the v3 revokes)
+- `supabase/migrations/20260901010135_visit_implant_chain_volatility.sql`
+  (the staged-chain normalizer must be `volatile` to hold a `FOR KEY SHARE` row
+  lock; `20260901010134` is applied and was not edited)
+- `supabase/tests/odontogram_relationship_workflows_v2.test.sql` (66 assertions)
 - `src/lib/odontogram/composer-context.ts` - the client-safe shape of the
   projection, declared explicitly so a client component never imports the
   `server-only` service module.
@@ -105,6 +115,12 @@ The controller confirmed this choice after the fact and re-allocated Task 8.
   and the three script test files - registry, suite registration, inventory.
 - `supabase/tests/odontogram_relationships.test.sql`,
   `supabase/tests/odontogram_implant_idempotency_concurrency.local.mjs`.
+- Review round 1 additionally changed
+  `supabase/tests/odontogram_rpcs_v2.test.sql`,
+  `supabase/tests/odontogram_permission_contract.test.sql`,
+  `supabase/tests/odontogram_revamp_rpcs.test.sql` and
+  `src/app/(emr)/patients/[patientId]/odontogram-actions.test.ts` - see
+  "Existing test assertions changed this round".
 
 ### Files deleted
 
@@ -141,16 +157,34 @@ None. `tooth-inspector.tsx` is untouched; Task 17 owns its removal.
 - **Lock ordering.** Seed 4 for both relationship request keys, taken before the
   visit's seed-1 request lock and seed-0 identity lock. Identical for every
   caller, so no cycle is constructible. (0 and 1 belong to the visit, 2 to the
-  Task 5 composer, 3 to Task 6.)
+  Task 5 composer, 3 to Task 6.) Seed 5 is the one-fixture-per-tooth identity
+  lock, taken inside the trigger at INSERT time; each transaction takes at most
+  one, because a chain is bound to a single tooth position.
+- **The staged continuation is revalidated, not trusted.** A root component may
+  name an existing `depends_on_component_id`;
+  `private.normalize_visit_implant_chain` resolves it against the derived
+  organization, the patient, the tooth position and the required parent kind,
+  and refuses anything else. pgTAP proves a component belonging to another
+  patient and one belonging to another tenant are both refused.
+- **One current fixture per tooth is a database invariant.** The
+  `dental_implant_components_single_current_fixture` trigger refuses a second
+  live CURRENT fixture with `23505` on every insert path, so the browser's stage
+  picker is a convenience rather than the guard.
+- **The superseded v3 relationship writers hold no browser grant.** They were the
+  only remaining way to write a relationship with a null encounter and an
+  unbounded occurrence time.
 - **Idempotency.** Both boundaries reuse
   `private.odontogram_revamp_current_idempotency` under the existing
   `CURRENT_BRIDGE` / `CURRENT_IMPLANT` operations, so a v2 and a v3 call cannot
   slip past each other on the same key. The browser derives the key from a
   SHA-256 of the submitted facts, proved by a form test that an unchanged retry
   reuses the key and an edited span rotates it.
-- **`supersededFrom`.** Neither object migration revokes any registered grant, so
-  no registry entry needed a supersede pivot; the registry records why, and
-  records that a pivot would have had to name the revoking object migration.
+- **`supersededFrom`.** `20260901010130` and `20260901010132` revoke no
+  registered grant, so their entries need no pivot. `20260901010134` does revoke
+  two, so the two v3 entries record
+  `supersededFrom: "20260901010134_relationship_workflows_v2_repair.sql"` - the
+  object migration that **revokes**, never a grants file. The registry comments
+  state the rule at both places.
 
 ### Negative authorization cases covered (pgTAP, all `throws_ok`)
 
@@ -163,9 +197,16 @@ support`), a future service date, a service date beyond the one-year backdating
 window, a crown depending directly on the fixture, a chain not beginning with a
 fixture, a chain spanning two tooth positions, an external placeholder, and the
 same request key carrying a different implant (`P0001 idempotency conflict`).
+Review round 1 adds: a second current fixture on an already-implanted tooth
+(`23505 tooth already carries a current implant fixture`), a staged component
+naming another patient's fixture, a staged component naming another tenant's
+abutment, and a staged crown attempting to sit directly on a fixture (all
+`invalid implant chain`).
 Closing assertions prove every refused attempt left no relationship, no
 component and **no clinical visit** behind. The context projection separately
-refuses a cross-tenant patient, a foreign-tenant dentist and a receptionist.
+refuses a cross-tenant patient, a foreign-tenant dentist and a receptionist, and
+returns no charge and no payment method to a caller holding neither
+`billing.charge` nor `payment.record`.
 
 ### Existing test assertions changed, and why
 
@@ -192,9 +233,9 @@ refuses a cross-tenant patient, a foreign-tenant dentist and a receptionist.
   columns, tenant-safe encounter FKs, surviving append-only guards, no sealed
   bridge with a service date but no visit). No assertion changed.
 
-### Commands run and observed results
+### Commands run and observed results (first commit, dfbfca1)
 
-All local only.
+All local only. The review round re-ran every gate; see "Review-fix commands" below for the current figures.
 
 - **RED gate, before implementation.**
   `psql < supabase/tests/odontogram_relationship_workflows_v2.test.sql` -
@@ -218,7 +259,8 @@ All local only.
   **halts at `treatment_plans.test.sql`**, the first of the three verified
   pre-existing failures (assertion 7, extra `notes` column - confirmed
   unchanged).
-- Suites run directly against the local container:
+- Suites run directly against the local container (these are the first commit's
+  figures; the review round below re-ran them):
   `odontogram_relationship_workflows_v2` **54 assertions, P1_TEST_PASS**;
   `odontogram_relationships` **P1_TEST_PASS**; and `clinical_record_composer`,
   `clinical_schema`, `schema`, `foundation_rls`, `owner_full_access`,
@@ -258,16 +300,18 @@ All local only.
 
 ### Known residual risks and open questions
 
-- **`record_current_bridge_v3` and `record_current_implant_component_v3` remain
-  granted to `authenticated`.** The brief said *add* provider-free v2 boundaries,
-  not retire the v3 ones, so their grants and their actions
-  (`recordCurrentBridgeAction`, `recordCurrentImplantComponentAction`) are
-  untouched and now carry a comment naming them superseded. Two browser-callable
-  relationship writers therefore exist, and the older pair opens no visit and
-  stores no service date. This is a cleanliness gap, not an authorization gap:
-  both derive the provider server-side and both enforce the same tenant checks.
-  Revoking them needs a `supersededFrom` pivot on two registered grants and would
-  touch several existing suites; it belongs with Task 17's cleanup.
+- **The one-fixture-per-tooth trigger closes the duplicate-chain race, but not a
+  concurrent-amendment race.** It serializes every insert path on the tooth
+  identity (advisory seed 5) before it reads, so no two transactions can both
+  place a fixture. It deliberately allows a successor that supersedes its
+  predecessor, which is how amendment works; two concurrent amendments of the
+  same fixture remain governed by the existing optimistic version, not by this
+  trigger.
+- **The staged-continuation parent is pinned, not re-derived.**
+  `private.normalize_visit_implant_chain` takes `FOR KEY SHARE` on the named
+  component, so it cannot be voided or superseded between validation and the
+  insert that depends on it. That is why the function is `volatile`; a `stable`
+  function may not take a row lock.
 - **The implant chain payload shape changed, and the old one was broken.** The
   previous `implant-workflow.tsx` submitted `depends_on_component_id`, which
   `private.normalize_implant_chain` ignores; any chain longer than one component
@@ -297,7 +341,113 @@ All local only.
 - Geometry remains unverified until the hosted gate: jsdom applies no Tailwind,
   so the 44px targets are proved only as an authored class contract.
 
+### Review fixes applied in this commit
+
+Round 1 returned two Important and five Minor findings; three Minors were
+ledgered as deferred by the controller. All the rest are fixed.
+
+1. **Staged implant placement was offered but could never be honoured
+   (Important).** `ImplantWorkflow` built its payload from the remaining stages
+   with `ordinal: index + 1` and no dependency on the root, so a clinician
+   returning to seat the abutment submitted a chain beginning with an abutment
+   and no fixture — which `private.normalize_implant_chain` and the client schema
+   both refuse. The two states where it broke (`recordedStage` of `FIXTURE` and
+   `ABUTMENT`) were exactly the ones the form tests never exercised. **The
+   boundary was extended rather than the form disabled**, because staged
+   placement is how implants actually work. `20260901010134` adds
+   `private.normalize_visit_implant_chain`, which accepts a root carrying
+   `depends_on_component_id` and revalidates it **server-side** against the
+   derived tenant, the patient, the tooth position and the required parent kind.
+   The composer supplies the id from the same authorized projection
+   (`implant_tip_by_tooth`); it is never trusted from the browser.
+2. **The only guard against a duplicate implant chain was browser state
+   (Important, same finding).** `20260901010134` adds
+   `dental_implant_components_single_current_fixture`, a BEFORE INSERT trigger
+   that serializes on `(organization, patient, tooth)` and then refuses a second
+   live CURRENT fixture with `23505`. It covers every insert path — the visit
+   boundary, the superseded v3 path and plan completion — and deliberately
+   permits a successor that supersedes its predecessor, so amendment still works.
+3. **The superseded v3 paths were an encounter-attribution bypass (Important).**
+   They write `encounter_id = null`, take an unbounded client-supplied
+   `p_occurred_at` including future dates, and require only
+   `patient.clinical.write`. A grep found **no production caller** — only tests —
+   so the preferred fix was taken: `recordCurrentBridgeAction` and
+   `recordCurrentImplantComponentAction` were removed, and `20260901010134`
+   revokes execute on both signatures from every browser and service role. The
+   two registered grants now carry
+   `supersededFrom: "20260901010134_relationship_workflows_v2_repair.sql"` — the
+   migration that **revokes**, never the grants file. This restores the invariant
+   that a null `encounter_id` means "recorded before the workspace".
+4. **The money gate in the projection was untested (Minor).** A
+   `DENTAL_ASSISTANT` fixture — `patient.clinical.read` but neither
+   `billing.charge` nor `payment.record` — now proves the projection returns no
+   charge and no payment method while its clinical half matches the dentist's.
+5. **`array_agg` was unqualified (Minor)** inside an empty-`search_path` body
+   whose every other reference is `pg_catalog.`-qualified. Qualified by guarded
+   replace.
+6. **Deferred by the controller, not fixed:** superseded/voided relationships
+   absent from the drawer's dated history; the inherited check-then-write window
+   on bridge support validation; projection freshness requiring `revalidatePath`.
+
+### Existing test assertions changed this round, and why
+
+- `odontogram_rpcs_v2.test.sql`: the eight statements that **execute** a v3
+  relationship writer now run as `postgres` rather than `authenticated`, because
+  the browser grant is revoked. Every behavioural assertion is unchanged — the
+  functions authorize on `auth.uid()`, not on the session role — and that the
+  browser can no longer reach them is asserted separately in
+  `odontogram_permission_contract.test.sql`.
+- `odontogram_permission_contract.test.sql`: the two "v3 is callable" clauses in
+  the browser-surface assertion became the v2 signatures, and a new assertion
+  proves both v3 signatures are denied to `authenticated`, `anon` and
+  `service_role`.
+- `odontogram_revamp_rpcs.test.sql`: "provider-derived bridge v3 is callable"
+  became "is retired", plus a new assertion that the v2 replacement is callable.
+  Plan 13 -> 14.
+- `odontogram-actions.test.ts`: the `provider-free implant action boundary`
+  block targeted a removed action. It was retargeted at
+  `recordVisitImplantComponentAction`, keeping both original guarantees (the
+  server-resolved patient is revalidated; a caller-supplied provider identity is
+  refused), adding organization and `occurredAt` to the refused set, and adding a
+  case for a staged component that names nothing to attach to.
+- `migration-privilege-lint.test.mjs`: 311 -> 313 files, 478 -> 481 functions.
+- `boundary-privilege-invariant.test.mjs`: the two v3 signatures left the
+  effective-final fixture; approved-key count 267 -> 265.
+
+### Review-fix commands and observed results
+
+- `npm run db:migrate:local` — applied `20260901010134` and `20260901010135`;
+  re-run reports **`Local database is up to date.`** The v2 grants survived both
+  `CREATE OR REPLACE` replacements, verified against `has_function_privilege`,
+  and both v3 signatures now report false.
+- `npm run db:types:local` — regenerated.
+- `npm run security:migrations` — **passed**; 313 files, 3011 statements, 1310
+  privilege statements, 88 grant-terminals, 396 approved final privileges.
+- `npm run test:unit -- <the five brief files>` — **5 files, 66/66 passed.**
+- `npm run typecheck` — **passed, no output.**
+- `npm run lint` — **0 errors**, the same 3 pre-existing warnings.
+- `npm run test:db:local` — **halts at `treatment_plans.test.sql`** as before;
+  every odontogram and clinical suite before it passes, including the four this
+  round modified.
+- Run directly: `odontogram_relationship_workflows_v2` **66 assertions,
+  P1_TEST_PASS**; `odontogram_relationships`, `odontogram_rpcs_v2`,
+  `odontogram_permission_contract`, `odontogram_revamp_rpcs`,
+  `odontogram_revamp_permission_contract`, `odontogram_atomic_completion_revamp`,
+  `clinical_record_composer`, `clinical_treatment_events_v2`,
+  `billing_charge_ledger`, `billing_authorization`,
+  `procedure_cases_and_plan_details`, `treatment_item_execution`,
+  `owner_full_access`, `foundation_rls`, `schema` — all **P1_TEST_PASS**.
+- Concurrency tests run directly: `odontogram_implant_idempotency_concurrency`,
+  `clinical_visit_resume_concurrency`, `odontogram_lineage_concurrency`,
+  `treatment_item_execution_concurrency` — **all PASS.**
+- `npx vitest run scripts/` — **13 files, 287/287 passed.**
+- `npm run test:unit` (whole suite) — **1926/1936 passed, 10 failed**: the same 7
+  pre-existing booking failures, plus `fork-package`, `perio-workspace` and
+  `fork-print-chart`, the documented parallel-load flakes, which **pass when the
+  three are run together alone (14/14)**.
+- `git diff --check` — clean.
+
 ### Next bounded task
 
-Task 8 of the plan. Do not start it until Task 7 is independently reviewed and
-accepted. `20260901010134`/`010135` onward are free.
+Task 8 of the plan. Do not start it until this review round is accepted.
+`20260901010136` onward are free.

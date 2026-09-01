@@ -464,6 +464,11 @@ export async function getClinicalComposerContext(input: unknown) {
       label: component.label,
     })),
     implantStageByTooth: row.implant_stage_by_tooth,
+    // The component a staged continuation attaches to, decided by the same
+    // authorized read. The write boundary revalidates whichever id it is given.
+    implantParentByTooth: Object.fromEntries(
+      Object.entries(row.implant_tip_by_tooth).map(([toothCode, tip]) => [toothCode, tip.component_id]),
+    ),
   };
 }
 

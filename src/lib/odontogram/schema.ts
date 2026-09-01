@@ -1014,6 +1014,13 @@ export const visitImplantComponentSchema = z
     component_kind: implantComponentKindSchema,
     attachment_value: implantAttachmentValueSchema.nullable().optional(),
     depends_on_ordinal: z.number().int().positive().optional(),
+    /**
+     * A staged continuation attaches to a component recorded at an earlier
+     * visit. The id is only ever a hint: the boundary revalidates it against the
+     * derived tenant, the patient, the tooth position and the required parent
+     * kind before anything is written.
+     */
+    depends_on_component_id: databaseUuid.optional(),
   })
   .strict();
 
@@ -1033,11 +1040,28 @@ export const visitImplantComponentInputSchema = z
       if (component.ordinal !== index + 1) {
         ctx.addIssue({ code: "custom", path: ["components", index, "ordinal"], message: "ordinals must be contiguous from one" });
       }
-      if (index === 0 && (component.component_kind !== "FIXTURE" || component.depends_on_ordinal !== undefined)) {
-        ctx.addIssue({ code: "custom", path: ["components", 0], message: "a chain begins with an independent fixture" });
+      if (index === 0) {
+        // A chain either places its own fixture and depends on nothing, or
+        // continues an existing chain and names the component it attaches to.
+        // It is never both, and never neither.
+        const placesFixture = component.component_kind === "FIXTURE";
+        if (component.depends_on_ordinal !== undefined) {
+          ctx.addIssue({ code: "custom", path: ["components", 0], message: "a chain root cannot depend on an ordinal" });
+        }
+        if (placesFixture && component.depends_on_component_id !== undefined) {
+          ctx.addIssue({ code: "custom", path: ["components", 0], message: "a fixture depends on nothing" });
+        }
+        if (!placesFixture && component.depends_on_component_id === undefined) {
+          ctx.addIssue({ code: "custom", path: ["components", 0], message: "a staged component must name the component it attaches to" });
+        }
       }
-      if (index > 0 && (component.depends_on_ordinal === undefined || component.depends_on_ordinal >= component.ordinal)) {
-        ctx.addIssue({ code: "custom", path: ["components", index], message: "a dependent component references an earlier one" });
+      if (index > 0) {
+        if (component.depends_on_component_id !== undefined) {
+          ctx.addIssue({ code: "custom", path: ["components", index], message: "only a chain root may name an existing component" });
+        }
+        if (component.depends_on_ordinal === undefined || component.depends_on_ordinal >= component.ordinal) {
+          ctx.addIssue({ code: "custom", path: ["components", index], message: "a dependent component references an earlier one" });
+        }
       }
     });
     if (new Set(value.components.map((component) => component.tooth_fdi)).size > 1) {
@@ -1123,5 +1147,9 @@ export const clinicalComposerContextRowSchema = z
         .strict(),
     ),
     implant_stage_by_tooth: z.record(toothCodeSchema, implantComponentKindSchema),
+    implant_tip_by_tooth: z.record(
+      toothCodeSchema,
+      z.object({ stage: implantComponentKindSchema, component_id: databaseUuid }).strict(),
+    ),
   })
   .strict();

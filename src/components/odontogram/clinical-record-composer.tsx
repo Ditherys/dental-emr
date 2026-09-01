@@ -68,6 +68,8 @@ export type RelationshipComposerContext = {
   chargeChoices: readonly RelationshipChargeChoice[];
   supportComponents: readonly BridgeSupportComponentChoice[];
   implantStageByTooth: Readonly<Record<string, ImplantComponentKind>>;
+  /** Tooth position to the live component a staged continuation attaches to. */
+  implantParentByTooth: Readonly<Record<string, string>>;
 };
 
 export function composerToothSummary(toothCodes: readonly string[]): string {
@@ -213,6 +215,11 @@ export function ClinicalRecordComposer({
           recordedStage={
             toothCodes.length === 1
               ? (relationshipContext.implantStageByTooth[toothCodes[0]!] ?? null)
+              : null
+          }
+          parentComponentId={
+            toothCodes.length === 1
+              ? (relationshipContext.implantParentByTooth[toothCodes[0]!] ?? null)
               : null
           }
           onRecorded={onRecorded}

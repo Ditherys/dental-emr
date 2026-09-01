@@ -30,6 +30,12 @@ export type ImplantWorkflowProps = {
   chargeChoices: readonly RelationshipChargeChoice[];
   /** The stage the canonical record already carries for the selected tooth. */
   recordedStage: ImplantComponentKind | null;
+  /**
+   * The live component a staged continuation attaches to, from the same
+   * authorized server projection that reported the stage. The boundary
+   * revalidates it against the derived tenant, patient and tooth before writing.
+   */
+  parentComponentId: string | null;
   onRecorded: () => void | Promise<void>;
 };
 
@@ -38,6 +44,7 @@ type SubmittedComponent = {
   ordinal: number;
   component_kind: ImplantComponentKind;
   depends_on_ordinal?: number;
+  depends_on_component_id?: string;
 };
 
 function failureMessage(code: string): string {
@@ -67,6 +74,7 @@ export function ImplantWorkflow({
   onServiceDateChange,
   chargeChoices,
   recordedStage,
+  parentComponentId,
   onRecorded,
 }: ImplantWorkflowProps): React.ReactElement {
   const router = useRouter();
@@ -113,6 +121,27 @@ export function ImplantWorkflow({
     );
   }
 
+  // A staged continuation must attach to the component the chart already
+  // carries. Without it the submission could only ever be refused, so the form
+  // says so rather than offering a write that cannot be honoured.
+  if (firstStage !== "FIXTURE" && parentComponentId === null) {
+    return (
+      <div data-testid="implant-workflow" className="grid gap-2">
+        <p data-testid="implant-stage-recorded" className="text-xs text-muted-foreground">
+          Tooth {toothCode} · {describeImplantStage(recordedStage)}
+        </p>
+        <p
+          data-testid="implant-parent-unavailable"
+          role="status"
+          className="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground"
+        >
+          The recorded implant component this stage attaches to is not available in this workspace yet.
+          Refresh the chart and try again.
+        </p>
+      </div>
+    );
+  }
+
   if (chargeChoices.length === 0) {
     return (
       <div data-testid="implant-workflow" className="grid gap-2">
@@ -136,11 +165,19 @@ export function ImplantWorkflow({
     CHAIN_ORDER.indexOf(firstStage),
     CHAIN_ORDER.indexOf(throughStage) + 1,
   );
+  // The root either places this tooth's fixture and depends on nothing, or
+  // continues an existing chain and names the recorded component it sits on.
+  // Every later component in the same submission depends on the ordinal before
+  // it, exactly as the canonical chain model requires.
   const components: SubmittedComponent[] = stages.map((stage, index) => ({
     tooth_fdi: toothCode,
     ordinal: index + 1,
     component_kind: stage,
-    ...(index === 0 ? {} : { depends_on_ordinal: index }),
+    ...(index > 0
+      ? { depends_on_ordinal: index }
+      : stage === "FIXTURE"
+        ? {}
+        : { depends_on_component_id: parentComponentId! }),
   }));
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {

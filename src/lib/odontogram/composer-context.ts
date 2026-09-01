@@ -46,4 +46,6 @@ export type ClinicalComposerContext = {
     label: string;
   }[];
   implantStageByTooth: Readonly<Record<string, ImplantComponentKind>>;
+  /** Tooth position to the live component a staged continuation attaches to. */
+  implantParentByTooth: Readonly<Record<string, string>>;
 };

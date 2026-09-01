@@ -61,6 +61,7 @@ const relationshipContext = {
   chargeChoices: [{ chargeId: "d3000000-0000-0000-0000-000000000003", label: "Bridge · ₱90,000.00" }],
   supportComponents: [],
   implantStageByTooth: {},
+  implantParentByTooth: {},
 };
 
 describe("ClinicalRecordComposer shell", () => {

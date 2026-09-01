@@ -12,7 +12,8 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
   ('f7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-a@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
   ('f7100000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','owner-plain-a@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
   ('f7100000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000','authenticated','authenticated','reception-a@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
-  ('f7100000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-b@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
+  ('f7100000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-b@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
+  ('f7100000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000000','authenticated','authenticated','assistant-a@rel.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
 insert into public.organizations (id, legal_name, business_name, slug) values
   ('f7200000-0000-0000-0000-000000000001','REL Synthetic A Inc.','REL A','rel-a'),
   ('f7200000-0000-0000-0000-000000000002','REL Synthetic B Inc.','REL B','rel-b');
@@ -23,19 +24,22 @@ insert into public.organization_members (id, organization_id, user_id, membershi
   ('f7400000-0000-0000-0000-000000000001','f7200000-0000-0000-0000-000000000001','f7100000-0000-0000-0000-000000000001','active',statement_timestamp()),
   ('f7400000-0000-0000-0000-000000000002','f7200000-0000-0000-0000-000000000001','f7100000-0000-0000-0000-000000000002','active',statement_timestamp()),
   ('f7400000-0000-0000-0000-000000000003','f7200000-0000-0000-0000-000000000001','f7100000-0000-0000-0000-000000000003','active',statement_timestamp()),
-  ('f7400000-0000-0000-0000-000000000004','f7200000-0000-0000-0000-000000000002','f7100000-0000-0000-0000-000000000004','active',statement_timestamp());
+  ('f7400000-0000-0000-0000-000000000004','f7200000-0000-0000-0000-000000000002','f7100000-0000-0000-0000-000000000004','active',statement_timestamp()),
+  ('f7400000-0000-0000-0000-000000000005','f7200000-0000-0000-0000-000000000001','f7100000-0000-0000-0000-000000000005','active',statement_timestamp());
 insert into public.branch_memberships (organization_id, branch_id, organization_member_id, access_status) values
   ('f7200000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7400000-0000-0000-0000-000000000001','active'),
   ('f7200000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7400000-0000-0000-0000-000000000002','active'),
   ('f7200000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7400000-0000-0000-0000-000000000003','active'),
-  ('f7200000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000003','f7400000-0000-0000-0000-000000000004','active');
+  ('f7200000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000003','f7400000-0000-0000-0000-000000000004','active'),
+  ('f7200000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7400000-0000-0000-0000-000000000005','active');
 insert into public.member_roles (organization_id, organization_member_id, role_id, branch_id, assigned_by)
 select assignment.organization_id, assignment.member_id, role.id, assignment.branch_id, assignment.user_id
 from (values
   ('f7200000-0000-0000-0000-000000000001'::uuid,'f7400000-0000-0000-0000-000000000001'::uuid,'DENTIST'::text,null::uuid,'f7100000-0000-0000-0000-000000000001'::uuid),
   ('f7200000-0000-0000-0000-000000000001'::uuid,'f7400000-0000-0000-0000-000000000002'::uuid,'OWNER'::text,null::uuid,'f7100000-0000-0000-0000-000000000002'::uuid),
   ('f7200000-0000-0000-0000-000000000001'::uuid,'f7400000-0000-0000-0000-000000000003'::uuid,'RECEPTIONIST'::text,'f7300000-0000-0000-0000-000000000001'::uuid,'f7100000-0000-0000-0000-000000000001'::uuid),
-  ('f7200000-0000-0000-0000-000000000002'::uuid,'f7400000-0000-0000-0000-000000000004'::uuid,'DENTIST'::text,null::uuid,'f7100000-0000-0000-0000-000000000004'::uuid)
+  ('f7200000-0000-0000-0000-000000000002'::uuid,'f7400000-0000-0000-0000-000000000004'::uuid,'DENTIST'::text,null::uuid,'f7100000-0000-0000-0000-000000000004'::uuid),
+  ('f7200000-0000-0000-0000-000000000001'::uuid,'f7400000-0000-0000-0000-000000000005'::uuid,'DENTAL_ASSISTANT'::text,null::uuid,'f7100000-0000-0000-0000-000000000001'::uuid)
 ) as assignment(organization_id, member_id, role_code, branch_id, user_id)
 join public.roles as role on role.organization_id is null and role.code = assignment.role_code;
 insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id) values
@@ -59,7 +63,21 @@ insert into public.charges (id, organization_id, patient_id, branch_id, provider
   ('f7800000-0000-0000-0000-000000000002','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge','f7100000-0000-0000-0000-000000000001'),
   ('f7800000-0000-0000-0000-000000000003','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000001',9000000,current_date,'rel-other-patient-charge','f7100000-0000-0000-0000-000000000001'),
   ('f7800000-0000-0000-0000-000000000004','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-2','f7100000-0000-0000-0000-000000000001'),
-  ('f7800000-0000-0000-0000-000000000005','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000001',9000000,current_date,'rel-bridge-charge-2','f7100000-0000-0000-0000-000000000001');
+  ('f7800000-0000-0000-0000-000000000005','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000001',9000000,current_date,'rel-bridge-charge-2','f7100000-0000-0000-0000-000000000001'),
+  ('f7800000-0000-0000-0000-000000000006','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-3','f7100000-0000-0000-0000-000000000001'),
+  ('f7800000-0000-0000-0000-000000000007','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-4','f7100000-0000-0000-0000-000000000001'),
+  ('f7800000-0000-0000-0000-000000000008','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-a2','f7100000-0000-0000-0000-000000000001');
+
+-- A foreign-tenant implant abutment. A staged chain in organization A must never
+-- be able to attach to it.
+insert into public.procedures (id, organization_id, code, name, status) values
+  ('f7700000-0000-0000-0000-000000000003','f7200000-0000-0000-0000-000000000002','REL_IMPLANT_B','Synthetic implant B','active');
+insert into public.charges (id, organization_id, patient_id, branch_id, provider_id, procedure_id, amount_centavos, service_date, idempotency_key, created_by) values
+  ('f7800000-0000-0000-0000-00000000000b','f7200000-0000-0000-0000-000000000002','f7500000-0000-0000-0000-000000000003','f7300000-0000-0000-0000-000000000003','f7600000-0000-0000-0000-000000000002','f7700000-0000-0000-0000-000000000003',12000000,current_date,'rel-implant-charge-b','f7100000-0000-0000-0000-000000000004');
+insert into public.dental_implant_components (id, organization_id, patient_id, tooth_fdi, ordinal, component_kind, record_kind, treating_provider_id, executed_at, charge_id, sealed_at, recorded_by, version) values
+  ('f7a00000-0000-0000-0000-0000000000b1','f7200000-0000-0000-0000-000000000002','f7500000-0000-0000-0000-000000000003','36',1,'FIXTURE','CURRENT','f7600000-0000-0000-0000-000000000002',statement_timestamp(),'f7800000-0000-0000-0000-00000000000b',statement_timestamp(),'f7100000-0000-0000-0000-000000000004',1);
+insert into public.dental_implant_components (id, organization_id, patient_id, tooth_fdi, ordinal, component_kind, record_kind, depends_on_component_id, treating_provider_id, executed_at, charge_id, sealed_at, recorded_by, version) values
+  ('f7a00000-0000-0000-0000-0000000000b2','f7200000-0000-0000-0000-000000000002','f7500000-0000-0000-0000-000000000003','36',2,'ABUTMENT','CURRENT','f7a00000-0000-0000-0000-0000000000b1','f7600000-0000-0000-0000-000000000002',statement_timestamp(),'f7800000-0000-0000-0000-00000000000b',statement_timestamp(),'f7100000-0000-0000-0000-000000000004',1);
 
 -- A historical relationship row recorded before this task. It must keep NULL
 -- encounter/service-date/note: nothing is invented for it.
@@ -436,6 +454,106 @@ select extensions.is(
 );
 
 -- ---------------------------------------------------------------------------
+-- Staged implant placement across visits, and the one-fixture-per-tooth guard
+-- ---------------------------------------------------------------------------
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f7100000-0000-0000-0000-000000000001',true);
+
+-- Visit one on tooth 26: the fixture alone.
+insert into rel_result (seq, payload)
+select 10, pg_catalog.to_jsonb(result)
+from public.record_visit_implant_component_v2(
+  'f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001',
+  '[{"tooth_fdi":"26","ordinal":1,"component_kind":"FIXTURE"}]'::jsonb,
+  (timezone('Asia/Manila', statement_timestamp()))::date - 120,
+  'f7800000-0000-0000-0000-000000000006',
+  'Fixture placed; abutment deferred for osseointegration.',
+  'rel-staged-fixture'
+) as result;
+
+-- A second fixture on the same tooth is refused by the database, not by the
+-- browser's stage picker.
+select extensions.throws_ok(
+  $q$select public.record_visit_implant_component_v2('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','[{"tooth_fdi":"26","ordinal":1,"component_kind":"FIXTURE"}]'::jsonb,(timezone('Asia/Manila', statement_timestamp()))::date,'f7800000-0000-0000-0000-000000000007',null,'rel-second-fixture')$q$,
+  '23505','tooth already carries a current implant fixture',
+  'a second current fixture on an already-implanted tooth is refused in the database'
+);
+
+-- A staged continuation may not name a component belonging to another patient.
+select extensions.throws_ok(
+  format($q$select public.record_visit_implant_component_v2('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000002','[{"tooth_fdi":"26","ordinal":1,"component_kind":"ABUTMENT","depends_on_component_id":"%s"}]'::jsonb,(timezone('Asia/Manila', statement_timestamp()))::date,'f7800000-0000-0000-0000-000000000008',null,'rel-cross-patient-parent')$q$,
+    (select payload->>'component_id' from rel_result where seq=10)),
+  '22023','invalid implant chain',
+  'a staged component naming another patient''s fixture is refused'
+);
+
+-- Nor one belonging to another tenant.
+select extensions.throws_ok(
+  $q$select public.record_visit_implant_component_v2('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','[{"tooth_fdi":"36","ordinal":1,"component_kind":"CROWN","depends_on_component_id":"f7a00000-0000-0000-0000-0000000000b2"}]'::jsonb,(timezone('Asia/Manila', statement_timestamp()))::date,'f7800000-0000-0000-0000-000000000007',null,'rel-cross-tenant-parent')$q$,
+  '22023','invalid implant chain',
+  'a staged component naming another tenant''s abutment is refused'
+);
+
+-- Nor may it skip a stage: a crown may not sit directly on a fixture.
+select extensions.throws_ok(
+  format($q$select public.record_visit_implant_component_v2('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','[{"tooth_fdi":"26","ordinal":1,"component_kind":"CROWN","depends_on_component_id":"%s"}]'::jsonb,(timezone('Asia/Manila', statement_timestamp()))::date,'f7800000-0000-0000-0000-000000000007',null,'rel-staged-skip')$q$,
+    (select payload->>'component_id' from rel_result where seq=10)),
+  '22023','invalid implant chain',
+  'a staged crown may not sit directly on the fixture'
+);
+
+-- Visit two on tooth 26: the abutment, attached to the fixture placed months
+-- earlier. This is the submission the form now offers and could never honour.
+insert into rel_result (seq, payload)
+select 11, pg_catalog.to_jsonb(result)
+from public.record_visit_implant_component_v2(
+  'f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001',
+  format('[{"tooth_fdi":"26","ordinal":1,"component_kind":"ABUTMENT","depends_on_component_id":"%s"}]',
+    (select payload->>'component_id' from rel_result where seq=10))::jsonb,
+  (timezone('Asia/Manila', statement_timestamp()))::date,
+  'f7800000-0000-0000-0000-000000000007',
+  'Abutment connected after osseointegration.',
+  'rel-staged-abutment'
+) as result;
+
+reset role;
+
+select extensions.is(
+  (select count(*)::text from public.dental_implant_components as component
+   where component.organization_id='f7200000-0000-0000-0000-000000000001'
+     and component.tooth_fdi='26'),
+  '2',
+  'tooth 26 carries exactly the fixture and the abutment staged onto it'
+);
+select extensions.is(
+  (select component.depends_on_component_id::text
+   from public.dental_implant_components as component
+   where component.organization_id='f7200000-0000-0000-0000-000000000001'
+     and component.tooth_fdi='26' and component.component_kind='ABUTMENT'),
+  (select payload->>'component_id' from rel_result where seq=10),
+  'the staged abutment depends on the fixture recorded at the earlier visit'
+);
+-- Each staged component keeps the date the work was actually done, and each is
+-- bound to a managed visit. The two components share one encounter here only
+-- because a pgTAP transaction is a single clinical day; the visit boundary
+-- resumes the day's managed visit rather than opening a second one.
+select extensions.ok(
+  (select earlier.service_date < later.service_date
+      and earlier.encounter_id is not null
+      and later.encounter_id is not null
+   from public.dental_implant_components as earlier
+   join public.dental_implant_components as later
+     on later.organization_id = earlier.organization_id
+    and later.tooth_fdi = earlier.tooth_fdi
+    and later.component_kind = 'ABUTMENT'
+   where earlier.organization_id='f7200000-0000-0000-0000-000000000001'
+     and earlier.tooth_fdi='26' and earlier.component_kind='FIXTURE'),
+  'each staged component keeps its own service date and is bound to a managed visit'
+);
+
+-- ---------------------------------------------------------------------------
 -- The composer context projection: what makes the shared forms reachable
 -- ---------------------------------------------------------------------------
 
@@ -481,6 +599,41 @@ select extensions.is(
   (select payload->'implant_stage_by_tooth'->>'16' from rel_result where seq=5),
   'CROWN',
   'the projection reports the stage tooth 16 has actually reached'
+);
+select extensions.is(
+  (select payload->'implant_tip_by_tooth'->'16'->>'stage' from rel_result where seq=5),
+  'CROWN',
+  'the tip projection agrees with the stage projection'
+);
+select extensions.ok(
+  (select (payload->'implant_tip_by_tooth'->'16'->>'component_id') is not null from rel_result where seq=5),
+  'the tip projection names the component a staged continuation would attach to'
+);
+
+-- The money gate. A dental assistant holds patient.clinical.read but neither
+-- billing.charge nor payment.record, so the projection offers no charge to link
+-- a relationship to and no method to take payment with, while still returning
+-- the clinical content the composer needs.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f7100000-0000-0000-0000-000000000005',true);
+insert into rel_result (seq, payload)
+select 20, public.get_clinical_composer_context('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001');
+
+select extensions.is(
+  (select pg_catalog.jsonb_array_length(payload->'charge_choices') from rel_result where seq=20),
+  0,
+  'a caller without billing.charge is offered no charge to link a relationship to'
+);
+select extensions.is(
+  (select pg_catalog.jsonb_array_length(payload->'payment_methods') from rel_result where seq=20),
+  0,
+  'a caller without payment.record is offered no payment method'
+);
+select extensions.is(
+  (select pg_catalog.jsonb_array_length(payload->'procedures') from rel_result where seq=20),
+  (select pg_catalog.jsonb_array_length(payload->'procedures') from rel_result where seq=5),
+  'the clinical half of the projection is unaffected by the money gate'
 );
 
 reset role;

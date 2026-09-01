@@ -17,8 +17,6 @@ import {
   findingInputSchema,
   getPatientOdontogramInputSchema,
   visitClinicalNoteInputSchema,
-  recordCurrentBridgeInputSchema,
-  recordCurrentImplantComponentInputSchema,
   recordToothClinicalEntryInputSchema,
   resolveLegacyOdontogramEntryInputSchema,
   savePeriodontalMeasurementsInputSchema,
@@ -45,8 +43,6 @@ import {
   createPlanImplantDesign,
   finalizePeriodontalExamination,
   getPatientOdontogram,
-  recordCurrentBridge,
-  recordCurrentImplantComponent,
   recordToothClinicalEntry,
   recordTreatmentEvent,
   recordVisitClinicalNote,
@@ -266,12 +262,14 @@ export async function recordVisitImplantComponentAction(input: unknown): Promise
 
 // Bridge
 //
-// `recordCurrentBridgeAction` and `recordCurrentImplantComponentAction` below
-// reach the superseded provider-free v3 relationship path, which opens no
-// clinical visit and carries no service date. They are retained only until the
-// superseded odontogram write paths are removed; the composer uses the
-// visit-bound actions above. The plan-design, amend and void actions beside them
-// are separate boundaries this task does not supersede.
+// The superseded provider-free v3 relationship actions were removed here in
+// review round 1: they opened no clinical visit, wrote a null encounter, and
+// accepted an unbounded client-supplied occurrence time, so they bypassed both
+// the managed-visit attribution and the backdating window the visit-bound
+// actions above enforce. 20260901010134 additionally revokes browser execute on
+// the two RPCs, so the path fails closed at the database as well. The
+// plan-design, amend and void actions below are separate boundaries this task
+// does not supersede.
 
 export async function createPlanBridgeDesignAction(input: unknown): Promise<OdontogramMutationResult> {
   const invalidResult = invalid(createPlanBridgeDesignInputSchema, input); if (invalidResult) return invalidResult;
@@ -290,17 +288,6 @@ export async function updateDraftPlanBridgeDesignAction(input: unknown): Promise
     const value = updateDraftPlanBridgeDesignInputSchema.parse(input);
     await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
     const mutation = await updateDraftPlanBridgeDesign(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
-export async function recordCurrentBridgeAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(recordCurrentBridgeInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = recordCurrentBridgeInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    const mutation = await recordCurrentBridge(value);
     revalidateAuthoritativePatient(mutation.patientId);
     return { ok: true };
   } catch (error) { return result(error); }
@@ -349,17 +336,6 @@ export async function updateDraftPlanImplantDesignAction(input: unknown): Promis
     const value = updateDraftPlanImplantDesignInputSchema.parse(input);
     await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
     const mutation = await updateDraftPlanImplantDesign(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
-export async function recordCurrentImplantComponentAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(recordCurrentImplantComponentInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = recordCurrentImplantComponentInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    const mutation = await recordCurrentImplantComponent(value);
     revalidateAuthoritativePatient(mutation.patientId);
     return { ok: true };
   } catch (error) { return result(error); }
