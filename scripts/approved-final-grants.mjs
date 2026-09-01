@@ -500,6 +500,15 @@ const CLINICAL_RECORD_COMPOSER_RPCS_GRANTS_MIGRATION =
 // revoking object migration, never this grants file.
 const CLINICAL_TREATMENT_EVENTS_V2_GRANTS_MIGRATION =
   "20260901010121_clinical_treatment_events_v2_grants.sql";
+// The visit-bound relationship boundary and the composer's read-only context.
+// Both object migrations only CREATE new functions and forward-add nullable
+// columns; neither revokes anything any registered grant carries, so no entry
+// below needs a supersede pivot. Had one revoked a registered grant, the pivot
+// would have to name that revoking object migration, never these grants files.
+const RELATIONSHIP_WORKFLOWS_V2_GRANTS_MIGRATION =
+  "20260901010131_relationship_workflows_v2_grants.sql";
+const CLINICAL_COMPOSER_CONTEXT_GRANTS_MIGRATION =
+  "20260901010133_clinical_composer_context_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -919,6 +928,39 @@ const clinicalTreatmentEventGrants = Object.freeze([
     columns: [],
     reason:
       "The only browser-callable treatment-event write. It derives organization, actor, treating provider and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, and obtains its encounter from public.start_or_resume_clinical_visit so no treatment exists without a managed visit. One transaction creates or locks the procedure case, records the dated entry per treated tooth, links only findings that are open, active, unresolved and on a treated tooth, and confirms at most one charge: a new case requires one, an already-charged case refuses a replacement, and a plan-linked first charge is delegated to public.complete_treatment_case so the immutable materialization contract is inherited rather than restated. billing.charge is required only when an amount is confirmed and payment.record only when money is submitted; payment is recorded and allocated to this case charge alone through the reviewed billing boundary, and installments remain expectations while the allocation ledger stays the balance authority. No confirmed charge is ever updated, a replayed request key returns the stored result, and no organization, provider, actor, encounter or visit date may be supplied by a client.",
+  },
+]);
+
+const relationshipWorkflowV2Grants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.record_visit_bridge_v2(uuid,uuid,jsonb,date,uuid,text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The visit-bound browser boundary for recording a CURRENT dental bridge. It derives organization, actor, treating provider and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write and billing.charge at an active acting branch plus an active linked provider there, and validates the patient and the named charge against the derived tenant before anything is written. The ordered span, unit roles and implant support are revalidated by the reviewed private.validate_bridge_units_payload, and the encounter comes from public.start_or_resume_clinical_visit, so no bridge can exist without a managed visit or an attributable provider. The visit linkage, the stated service date and the bounded note are written with the original row and the row is only then sealed, so sealed clinical history is never rewritten. A replayed request key returns the stored identity and the same key with a different payload is refused. No organization, provider, actor or encounter may be supplied by a client, and no charge is posted here.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.record_visit_implant_component_v2(uuid,uuid,jsonb,date,uuid,text,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The visit-bound browser boundary for recording a CURRENT implant chain. It derives organization, actor, treating provider and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write and billing.charge at an active acting branch plus an active linked provider there, and validates the patient and the named charge against the derived tenant. The fixture/abutment/crown dependency chain, the single tooth position and the attachment vocabulary are revalidated by the reviewed private.normalize_implant_chain, and a pre-existing external placeholder is refused because it records no work done at a visit. The encounter comes from public.start_or_resume_clinical_visit, and the visit linkage, service date and bounded note are written with the original rows. A replayed request key returns the stored identity and the same key with a different payload is refused. No organization, provider, actor or encounter may be supplied by a client, and no charge is posted here.",
+  },
+]);
+
+const clinicalComposerContextGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_clinical_composer_context(uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The read-only projection the unified clinical chart workspace hands to the shared record composer, and the reason its treatment, bridge and implant forms are reachable at all. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, and validates the patient against the derived tenant. It, not the browser, decides which procedures, unresolved active findings, plan items, open procedure cases, payment methods, charges and implant abutments are eligible; payment methods and charges are projected only to a caller who already holds the matching billing permission the write boundary independently re-checks. Every projection is bounded and the function writes nothing at all — no row, no state change and no audit event — so opening the composer never opens an encounter.",
   },
 ]);
 
@@ -1852,6 +1894,14 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_TREATMENT_EVENTS_V2_GRANTS_MIGRATION,
     grants: clinicalTreatmentEventGrants,
+  }),
+  Object.freeze({
+    file: RELATIONSHIP_WORKFLOWS_V2_GRANTS_MIGRATION,
+    grants: relationshipWorkflowV2Grants,
+  }),
+  Object.freeze({
+    file: CLINICAL_COMPOSER_CONTEXT_GRANTS_MIGRATION,
+    grants: clinicalComposerContextGrants,
   }),
 ]);
 

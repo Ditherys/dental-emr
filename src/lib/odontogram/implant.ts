@@ -68,6 +68,42 @@ export function validateImplantChain(
   return { ok: true, errors: [], value: components };
 }
 
+/**
+ * The stage an implant has actually reached, read from the current projection.
+ *
+ * The chain is built one component at a time across visits, so this is the
+ * furthest component the canonical record carries — never a guess from the
+ * charge, the plan, or the renderer.
+ */
+export function currentImplantStage(
+  components: readonly ImplantComponentRecord[],
+): ImplantComponentKind | null {
+  const ordered = [...components].sort((left, right) => right.ordinal - left.ordinal);
+  return ordered[0]?.componentKind ?? null;
+}
+
+/**
+ * The one component a clinician may add next. A stage is never skipped: an
+ * abutment needs its fixture and a crown needs its abutment, exactly as
+ * `validateImplantChain` and the database chain normalizer both require.
+ */
+export function nextImplantStage(
+  stage: ImplantComponentKind | null,
+): ImplantComponentKind | null {
+  if (stage === null) return "FIXTURE";
+  if (stage === "FIXTURE") return "ABUTMENT";
+  if (stage === "ABUTMENT") return "CROWN";
+  return null;
+}
+
+export function describeImplantStage(stage: ImplantComponentKind | null): string {
+  if (stage === null) return "No implant recorded";
+  if (stage === "FIXTURE") return "Fixture placed";
+  if (stage === "ABUTMENT") return "Abutment connected";
+  if (stage === "CROWN") return "Crown seated";
+  return "Attachment seated";
+}
+
 export function currentImplantProjection(
   components: readonly ImplantComponentRecord[],
 ): ImplantComponentRecord[] {

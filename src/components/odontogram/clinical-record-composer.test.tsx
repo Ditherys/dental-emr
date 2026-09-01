@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   recordVisitToothFindingsAction: vi.fn(),
   recordVisitClinicalNoteAction: vi.fn(),
   recordTreatmentEventAction: vi.fn(),
+  recordVisitBridgeAction: vi.fn(),
+  recordVisitImplantComponentAction: vi.fn(),
   routerRefresh: vi.fn(),
 }));
 
@@ -18,6 +20,8 @@ vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({
   recordVisitToothFindingsAction: mocks.recordVisitToothFindingsAction,
   recordVisitClinicalNoteAction: mocks.recordVisitClinicalNoteAction,
   recordTreatmentEventAction: mocks.recordTreatmentEventAction,
+  recordVisitBridgeAction: mocks.recordVisitBridgeAction,
+  recordVisitImplantComponentAction: mocks.recordVisitImplantComponentAction,
 }));
 
 import { ClinicalRecordComposer } from "./clinical-record-composer";
@@ -49,7 +53,15 @@ beforeEach(() => {
   mocks.recordVisitToothFindingsAction.mockResolvedValue({ ok: true });
   mocks.recordVisitClinicalNoteAction.mockResolvedValue({ ok: true });
   mocks.recordTreatmentEventAction.mockResolvedValue({ ok: true });
+  mocks.recordVisitBridgeAction.mockResolvedValue({ ok: true, replayed: false });
+  mocks.recordVisitImplantComponentAction.mockResolvedValue({ ok: true, replayed: false });
 });
+
+const relationshipContext = {
+  chargeChoices: [{ chargeId: "d3000000-0000-0000-0000-000000000003", label: "Bridge · ₱90,000.00" }],
+  supportComponents: [],
+  implantStageByTooth: {},
+};
 
 describe("ClinicalRecordComposer shell", () => {
   it("offers every record kind and mounts only the selected form", async () => {
@@ -119,16 +131,50 @@ describe("ClinicalRecordComposer shell", () => {
     expect(screen.queryByLabelText(/payment/i)).not.toBeInTheDocument();
   });
 
+  // Bridge and Implant left this loop in Task 7: they are contextual forms the
+  // composer now mounts, not signposts. Planned treatment (Task 8) and Photo
+  // (Task 14) remain signposts and keep the original assertion unchanged.
   it("announces the owning workflow for the record kinds this composer does not write yet", async () => {
     const user = userEvent.setup();
     renderComposer();
 
-    for (const kind of ["Planned treatment", "Bridge", "Implant", "Photo"]) {
+    for (const kind of ["Planned treatment", "Photo"]) {
       await user.click(screen.getByRole("button", { name: kind }));
       const notice = screen.getByTestId("composer-unavailable");
       expect(notice).toHaveTextContent(/not available/i);
       expect(screen.queryByRole("button", { name: /^Record / })).not.toBeInTheDocument();
     }
+  });
+
+  it("mounts the bridge form for the Bridge kind once the relationship context is supplied", async () => {
+    const user = userEvent.setup();
+    renderComposer({ toothCodes: ["24", "25", "26"], relationshipContext });
+
+    await user.click(screen.getByRole("button", { name: "Bridge" }));
+
+    expect(screen.getByTestId("bridge-workflow")).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("mounts the implant form for the Implant kind once the relationship context is supplied", async () => {
+    const user = userEvent.setup();
+    renderComposer({ toothCodes: ["16"], relationshipContext });
+
+    await user.click(screen.getByRole("button", { name: "Implant" }));
+
+    expect(screen.getByTestId("implant-workflow")).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("says why a relationship cannot be recorded when the workspace supplied no context", async () => {
+    const user = userEvent.setup();
+    renderComposer({ toothCodes: ["24", "25"] });
+
+    await user.click(screen.getByRole("button", { name: "Bridge" }));
+    expect(screen.getByTestId("composer-relationship-unavailable")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Implant" }));
+    expect(screen.getByTestId("composer-relationship-unavailable")).toBeInTheDocument();
   });
 
   it("mounts the treatment form for a treatment event once a procedure catalogue is supplied", async () => {

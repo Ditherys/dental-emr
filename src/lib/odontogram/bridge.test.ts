@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bridgeConnectors,
+  bridgeSpanSummary,
   currentBridgeProjection,
   deriveBridgeSupportMode,
+  orderedBridgeUnits,
   validateBridgeUnits,
   type BridgeRecord,
   type BridgeUnit,
@@ -37,5 +40,25 @@ describe("bridge domain", () => {
     ];
 
     expect(currentBridgeProjection(records).map((record) => record.id)).toEqual(["new"]);
+  });
+
+  it("orders units by their canonical ordinal, not by the order they arrived", () => {
+    expect(orderedBridgeUnits([span[2]!, span[0]!, span[1]!]).map((unit) => unit.toothFdi)).toEqual([
+      24, 25, 26,
+    ]);
+  });
+
+  it("derives one connector between each consecutive canonical unit pair", () => {
+    expect(bridgeConnectors(span)).toEqual([
+      { fromToothFdi: 24, toToothFdi: 25 },
+      { fromToothFdi: 25, toToothFdi: 26 },
+    ]);
+    // A connector is a projection of the relationship, so a single unit — which
+    // is not a bridge — has none, and nothing is invented to draw one.
+    expect(bridgeConnectors([span[0]!])).toEqual([]);
+  });
+
+  it("summarises the span with its abutment and pontic roles for the record drawer", () => {
+    expect(bridgeSpanSummary(span)).toBe("24–26 · 3 units · 2 abutments, 1 pontic");
   });
 });

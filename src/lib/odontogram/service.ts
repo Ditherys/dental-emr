@@ -43,6 +43,12 @@ import {
   findingInputSchema,
   treatmentEventInputSchema,
   treatmentEventRowSchema,
+  clinicalComposerContextInputSchema,
+  clinicalComposerContextRowSchema,
+  visitBridgeInputSchema,
+  visitBridgeRowSchema,
+  visitImplantComponentInputSchema,
+  visitImplantComponentRowSchema,
   visitClinicalNoteInputSchema,
   visitClinicalNoteRowSchema,
   visitToothFindingsRowSchema,
@@ -346,6 +352,119 @@ export async function resolveLegacyOdontogramEntry(input: unknown) {
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "LEGACY_RESOLUTION", row.resolution_id);
   return { resolutionId: row.resolution_id, legacyEntryId: row.legacy_entry_id, patientId, resolutionKind: row.resolution_kind };
+}
+
+// ---------------------------------------------------------------------------
+// Visit-bound relationships (task 7)
+//
+// One database transaction per submission: the RPC starts or resumes the managed
+// visit, binds the relationship to that encounter and to the server-derived
+// provider, revalidates the span or the component chain, and stores the stated
+// service date. The browser supplies no organization, provider, actor or
+// encounter; the patient revalidated afterwards is the one the server resolved.
+// ---------------------------------------------------------------------------
+
+export async function recordVisitBridge(input: unknown) {
+  const value = visitBridgeInputSchema.parse(input);
+  const row = visitBridgeRowSchema.parse(firstRow(await callRpc("record_visit_bridge_v2" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_units: value.units,
+    p_service_date: value.serviceDate,
+    p_charge_id: value.chargeId,
+    p_note: value.note,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  const patientId = await resolveMutationPatient(value.branchId, "BRIDGE", row.bridge_id);
+  return {
+    bridgeId: row.bridge_id,
+    patientId,
+    version: row.version,
+    encounterId: row.encounter_id,
+    serviceDate: row.service_date,
+    replayed: row.replayed,
+  };
+}
+
+export async function recordVisitImplantComponent(input: unknown) {
+  const value = visitImplantComponentInputSchema.parse(input);
+  const row = visitImplantComponentRowSchema.parse(firstRow(await callRpc("record_visit_implant_component_v2" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_components: value.components,
+    p_service_date: value.serviceDate,
+    p_charge_id: value.chargeId,
+    p_note: value.note,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  const patientId = await resolveMutationPatient(value.branchId, "IMPLANT_COMPONENT", row.component_id);
+  return {
+    componentId: row.component_id,
+    patientId,
+    version: row.version,
+    encounterId: row.encounter_id,
+    serviceDate: row.service_date,
+    replayed: row.replayed,
+  };
+}
+
+/**
+ * The one authorized read that makes the shared composer's forms usable.
+ *
+ * Every eligibility decision — which procedures, which unresolved findings,
+ * which plan items, which open cases, which payment methods, which charges and
+ * which implant abutments — belongs to the database function. This layer only
+ * parses and renames.
+ */
+export async function getClinicalComposerContext(input: unknown) {
+  const value = clinicalComposerContextInputSchema.parse(input);
+  const row = clinicalComposerContextRowSchema.parse(await callRpc("get_clinical_composer_context" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+  }));
+  return {
+    patientId: row.patient_id,
+    patientIdentifier: row.patient_identifier,
+    procedures: row.procedures.map((procedure) => ({
+      procedureId: procedure.procedure_id,
+      name: procedure.name,
+    })),
+    activeFindings: row.active_findings.map((finding) => ({
+      entryId: finding.entry_id,
+      toothCode: finding.tooth_code,
+      findingCode: finding.finding_code,
+      label: finding.label,
+    })),
+    planItems: row.plan_items.map((item) => ({
+      planItemId: item.plan_item_id,
+      procedureCaseId: item.procedure_case_id,
+      caseVersion: item.case_version,
+      procedureId: item.procedure_id,
+      toothCode: item.tooth_code,
+      label: item.label,
+    })),
+    openCases: row.open_cases.map((openCase) => ({
+      procedureCaseId: openCase.procedure_case_id,
+      caseVersion: openCase.case_version,
+      procedureId: openCase.procedure_id,
+      label: openCase.label,
+    })),
+    paymentMethods: row.payment_methods.map((method) => ({
+      paymentMethodId: method.payment_method_id,
+      name: method.name,
+    })),
+    chargeChoices: row.charge_choices.map((charge) => ({
+      chargeId: charge.charge_id,
+      label: charge.label,
+    })),
+    supportComponents: row.support_components.map((component) => ({
+      componentId: component.component_id,
+      toothFdi: component.tooth_fdi,
+      componentKind: component.component_kind,
+      label: component.label,
+    })),
+    implantStageByTooth: row.implant_stage_by_tooth,
+  };
 }
 
 // ---------------------------------------------------------------------------

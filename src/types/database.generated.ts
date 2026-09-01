@@ -2029,8 +2029,10 @@ export type Database = {
       dental_bridges: {
         Row: {
           charge_id: string | null
+          clinical_note: string | null
           created_at: string
           design_snapshot: Json | null
+          encounter_id: string | null
           executed_at: string | null
           id: string
           organization_id: string
@@ -2043,6 +2045,7 @@ export type Database = {
           recorded_at: string
           recorded_by: string | null
           sealed_at: string | null
+          service_date: string | null
           source_plan_design_id: string | null
           supersedes_bridge_id: string | null
           support_kind: string | null
@@ -2053,8 +2056,10 @@ export type Database = {
         }
         Insert: {
           charge_id?: string | null
+          clinical_note?: string | null
           created_at?: string
           design_snapshot?: Json | null
+          encounter_id?: string | null
           executed_at?: string | null
           id?: string
           organization_id: string
@@ -2067,6 +2072,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           sealed_at?: string | null
+          service_date?: string | null
           source_plan_design_id?: string | null
           supersedes_bridge_id?: string | null
           support_kind?: string | null
@@ -2077,8 +2083,10 @@ export type Database = {
         }
         Update: {
           charge_id?: string | null
+          clinical_note?: string | null
           created_at?: string
           design_snapshot?: Json | null
+          encounter_id?: string | null
           executed_at?: string | null
           id?: string
           organization_id?: string
@@ -2091,6 +2099,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           sealed_at?: string | null
+          service_date?: string | null
           source_plan_design_id?: string | null
           supersedes_bridge_id?: string | null
           support_kind?: string | null
@@ -2105,6 +2114,13 @@ export type Database = {
             columns: ["organization_id", "charge_id"]
             isOneToOne: false
             referencedRelation: "charges"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_bridges_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -2211,10 +2227,12 @@ export type Database = {
         Row: {
           attachment_value: string | null
           charge_id: string | null
+          clinical_note: string | null
           component_kind: string
           created_at: string
           depends_on_component_id: string | null
           design_snapshot: Json | null
+          encounter_id: string | null
           executed_at: string | null
           id: string
           ordinal: number
@@ -2227,6 +2245,7 @@ export type Database = {
           recorded_at: string
           recorded_by: string | null
           sealed_at: string | null
+          service_date: string | null
           source_plan_design_component_id: string | null
           supersedes_component_id: string | null
           tooth_fdi: string
@@ -2238,10 +2257,12 @@ export type Database = {
         Insert: {
           attachment_value?: string | null
           charge_id?: string | null
+          clinical_note?: string | null
           component_kind: string
           created_at?: string
           depends_on_component_id?: string | null
           design_snapshot?: Json | null
+          encounter_id?: string | null
           executed_at?: string | null
           id?: string
           ordinal: number
@@ -2254,6 +2275,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           sealed_at?: string | null
+          service_date?: string | null
           source_plan_design_component_id?: string | null
           supersedes_component_id?: string | null
           tooth_fdi: string
@@ -2265,10 +2287,12 @@ export type Database = {
         Update: {
           attachment_value?: string | null
           charge_id?: string | null
+          clinical_note?: string | null
           component_kind?: string
           created_at?: string
           depends_on_component_id?: string | null
           design_snapshot?: Json | null
+          encounter_id?: string | null
           executed_at?: string | null
           id?: string
           ordinal?: number
@@ -2281,6 +2305,7 @@ export type Database = {
           recorded_at?: string
           recorded_by?: string | null
           sealed_at?: string | null
+          service_date?: string | null
           source_plan_design_component_id?: string | null
           supersedes_component_id?: string | null
           tooth_fdi?: string
@@ -2302,6 +2327,13 @@ export type Database = {
             columns: ["organization_id", "depends_on_component_id"]
             isOneToOne: false
             referencedRelation: "dental_implant_components"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "dental_implant_components_organization_encounter_fk"
+            columns: ["organization_id", "encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
             referencedColumns: ["organization_id", "id"]
           },
           {
@@ -8833,6 +8865,10 @@ export type Database = {
           patient_count: number
         }[]
       }
+      get_clinical_composer_context: {
+        Args: { p_branch_id: string; p_patient_id: string }
+        Returns: Json
+      }
       get_clinical_encounter_detail: {
         Args: { p_acting_branch_id: string; p_encounter_id: string }
         Returns: Json
@@ -9993,6 +10029,24 @@ export type Database = {
         }
         Returns: Json
       }
+      record_visit_bridge_v2: {
+        Args: {
+          p_branch_id: string
+          p_charge_id: string
+          p_idempotency_key: string
+          p_note: string
+          p_patient_id: string
+          p_service_date: string
+          p_units: Json
+        }
+        Returns: {
+          bridge_id: string
+          encounter_id: string
+          replayed: boolean
+          service_date: string
+          version: number
+        }[]
+      }
       record_visit_clinical_note: {
         Args: {
           p_branch_id: string
@@ -10005,6 +10059,24 @@ export type Database = {
           encounter_id: string
           note_id: string
           patient_id: string
+          version: number
+        }[]
+      }
+      record_visit_implant_component_v2: {
+        Args: {
+          p_branch_id: string
+          p_charge_id: string
+          p_components: Json
+          p_idempotency_key: string
+          p_note: string
+          p_patient_id: string
+          p_service_date: string
+        }
+        Returns: {
+          component_id: string
+          encounter_id: string
+          replayed: boolean
+          service_date: string
           version: number
         }[]
       }

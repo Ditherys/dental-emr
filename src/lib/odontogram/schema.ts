@@ -975,3 +975,153 @@ export const treatmentEventRowSchema = z
     replayed: z.boolean(),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Visit-bound relationship workflows (task 7)
+//
+// The public boundary carries route context and clinical facts only. There is
+// deliberately no organizationId, treatingProviderId, createdBy, provider
+// display name or encounterId: the RPC derives every one of them, and `.strict()`
+// turns an attempt to supply one into a parse failure rather than an ignored
+// field.
+// ---------------------------------------------------------------------------
+
+export const visitBridgeInputSchema = z
+  .object({
+    patientId: databaseUuid,
+    branchId: databaseUuid,
+    units: z.array(bridgeUnitSchema).min(2).max(16),
+    serviceDate: isoDateSchema,
+    chargeId: databaseUuid,
+    note: boundedText(1, 2000).nullable(),
+    idempotencyKey: boundedText(1, 128),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const ordinals = value.units.map((unit) => unit.ordinal).sort((left, right) => left - right);
+    if (ordinals.some((ordinal, index) => ordinal !== index + 1)) {
+      ctx.addIssue({ code: "custom", path: ["units"], message: "ordinals must be contiguous from one" });
+    }
+    if (new Set(value.units.map((unit) => unit.tooth_fdi)).size !== value.units.length) {
+      ctx.addIssue({ code: "custom", path: ["units"], message: "duplicate tooth" });
+    }
+  });
+
+export const visitImplantComponentSchema = z
+  .object({
+    tooth_fdi: toothCodeSchema,
+    ordinal: z.number().int().positive(),
+    component_kind: implantComponentKindSchema,
+    attachment_value: implantAttachmentValueSchema.nullable().optional(),
+    depends_on_ordinal: z.number().int().positive().optional(),
+  })
+  .strict();
+
+export const visitImplantComponentInputSchema = z
+  .object({
+    patientId: databaseUuid,
+    branchId: databaseUuid,
+    components: z.array(visitImplantComponentSchema).min(1).max(4),
+    serviceDate: isoDateSchema,
+    chargeId: databaseUuid,
+    note: boundedText(1, 2000).nullable(),
+    idempotencyKey: boundedText(1, 128),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    value.components.forEach((component, index) => {
+      if (component.ordinal !== index + 1) {
+        ctx.addIssue({ code: "custom", path: ["components", index, "ordinal"], message: "ordinals must be contiguous from one" });
+      }
+      if (index === 0 && (component.component_kind !== "FIXTURE" || component.depends_on_ordinal !== undefined)) {
+        ctx.addIssue({ code: "custom", path: ["components", 0], message: "a chain begins with an independent fixture" });
+      }
+      if (index > 0 && (component.depends_on_ordinal === undefined || component.depends_on_ordinal >= component.ordinal)) {
+        ctx.addIssue({ code: "custom", path: ["components", index], message: "a dependent component references an earlier one" });
+      }
+    });
+    if (new Set(value.components.map((component) => component.tooth_fdi)).size > 1) {
+      ctx.addIssue({ code: "custom", path: ["components"], message: "a chain stays at one tooth position" });
+    }
+  });
+
+export const visitBridgeRowSchema = z
+  .object({
+    bridge_id: databaseUuid,
+    version: z.number().int().positive(),
+    encounter_id: databaseUuid.nullable(),
+    service_date: isoDateSchema.nullable(),
+    replayed: z.boolean(),
+  })
+  .strict();
+
+export const visitImplantComponentRowSchema = z
+  .object({
+    component_id: databaseUuid,
+    version: z.number().int().positive(),
+    encounter_id: databaseUuid.nullable(),
+    service_date: isoDateSchema.nullable(),
+    replayed: z.boolean(),
+  })
+  .strict();
+
+// ---------------------------------------------------------------------------
+// The composer's read-only context projection (task 7)
+// ---------------------------------------------------------------------------
+
+export const clinicalComposerContextInputSchema = z
+  .object({ branchId: databaseUuid, patientId: databaseUuid })
+  .strict();
+
+export const clinicalComposerContextRowSchema = z
+  .object({
+    patient_id: databaseUuid,
+    patient_identifier: z.string(),
+    procedures: z.array(z.object({ procedure_id: databaseUuid, name: z.string() }).strict()),
+    active_findings: z.array(
+      z
+        .object({
+          entry_id: databaseUuid,
+          tooth_code: toothCodeSchema,
+          finding_code: z.string(),
+          label: z.string(),
+        })
+        .strict(),
+    ),
+    plan_items: z.array(
+      z
+        .object({
+          plan_item_id: databaseUuid,
+          procedure_case_id: databaseUuid,
+          case_version: z.number().int().positive(),
+          procedure_id: databaseUuid,
+          tooth_code: toothCodeSchema,
+          label: z.string(),
+        })
+        .strict(),
+    ),
+    open_cases: z.array(
+      z
+        .object({
+          procedure_case_id: databaseUuid,
+          case_version: z.number().int().positive(),
+          procedure_id: databaseUuid,
+          label: z.string(),
+        })
+        .strict(),
+    ),
+    payment_methods: z.array(z.object({ payment_method_id: databaseUuid, name: z.string() }).strict()),
+    charge_choices: z.array(z.object({ charge_id: databaseUuid, label: z.string() }).strict()),
+    support_components: z.array(
+      z
+        .object({
+          component_id: databaseUuid,
+          tooth_fdi: toothCodeSchema,
+          component_kind: implantComponentKindSchema,
+          label: z.string(),
+        })
+        .strict(),
+    ),
+    implant_stage_by_tooth: z.record(toothCodeSchema, implantComponentKindSchema),
+  })
+  .strict();

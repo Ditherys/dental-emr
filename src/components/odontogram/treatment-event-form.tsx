@@ -21,6 +21,7 @@ import {
   type ToothSurfaceCode,
   type TreatmentEventCode,
 } from "@/lib/odontogram/clinical-codes";
+import { deriveClinicalRequestKey } from "@/lib/odontogram/request-key";
 import { recordTreatmentEventAction } from "@/app/(emr)/patients/[patientId]/odontogram-actions";
 
 import { ProcedureChargeConfirmation, formatCentavos } from "./procedure-charge-confirmation";
@@ -133,15 +134,10 @@ type SubmittedFacts = {
  * different payload.
  */
 export async function deriveTreatmentRequestKey(facts: unknown): Promise<string> {
-  const subtle = globalThis.crypto?.subtle;
-  if (!subtle) {
-    // Without Web Crypto there is no derivable key, so the submission is
-    // refused rather than sent under a guessable or colliding one.
-    throw new Error("secure request key unavailable");
-  }
-  const digest = await subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(facts)));
-  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  // Task 7 moved the derivation into `@/lib/odontogram/request-key` so the
+  // bridge and implant forms submit under the identical contract. The behaviour
+  // and this export are unchanged.
+  return deriveClinicalRequestKey(facts);
 }
 
 /**

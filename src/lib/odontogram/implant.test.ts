@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   currentImplantProjection,
+  currentImplantStage,
+  describeImplantStage,
+  nextImplantStage,
   validateImplantChain,
   type ImplantComponentRecord,
 } from "./implant";
@@ -64,5 +67,28 @@ describe("implant domain", () => {
 
   it("excludes unsealed CURRENT components from the current projection", () => {
     expect(currentImplantProjection([{ ...internalChain[0]!, id: "unsealed", sealedAt: null }])).toEqual([]);
+  });
+
+  it("reports the stage the current chain has actually reached", () => {
+    expect(currentImplantStage([])).toBeNull();
+    expect(currentImplantStage([internalChain[0]!])).toBe("FIXTURE");
+    expect(currentImplantStage([internalChain[0]!, internalChain[1]!])).toBe("ABUTMENT");
+    expect(currentImplantStage(internalChain)).toBe("CROWN");
+  });
+
+  it("names the one component a clinician may add next, and refuses to skip a stage", () => {
+    expect(nextImplantStage(null)).toBe("FIXTURE");
+    expect(nextImplantStage("FIXTURE")).toBe("ABUTMENT");
+    expect(nextImplantStage("ABUTMENT")).toBe("CROWN");
+    expect(nextImplantStage("CROWN")).toBeNull();
+    expect(nextImplantStage("ATTACHMENT")).toBeNull();
+  });
+
+  it("describes each stage in the words a chart reader uses", () => {
+    expect(describeImplantStage(null)).toBe("No implant recorded");
+    expect(describeImplantStage("FIXTURE")).toBe("Fixture placed");
+    expect(describeImplantStage("ABUTMENT")).toBe("Abutment connected");
+    expect(describeImplantStage("CROWN")).toBe("Crown seated");
+    expect(describeImplantStage("ATTACHMENT")).toBe("Attachment seated");
   });
 });

@@ -4,7 +4,15 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { bridgeSpanSummary, type BridgeUnit } from "@/lib/odontogram/bridge";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
+import {
+  currentImplantProjection,
+  currentImplantStage,
+  describeImplantStage,
+  type ImplantComponentRecord,
+} from "@/lib/odontogram/implant";
+import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 
 import { ClinicalRecordComposer } from "./clinical-record-composer";
@@ -43,9 +51,69 @@ export type ToothRecordDrawerProps = {
   notation: NumberingSystem;
   dto: PatientOdontogramDTO | null;
   canWriteClinical: boolean;
+  /**
+   * The authorized server projection that makes the composer's treatment,
+   * bridge and implant forms usable. Absent when the read was refused or has
+   * not loaded; the composer then says exactly what is missing.
+   */
+  composerContext?: ClinicalComposerContext | null;
   /** Refetch the canonical projection after a confirmed server write. */
   onRecorded: () => void | Promise<void>;
 };
+
+/**
+ * The current bridge and implant record for one tooth, read from the canonical
+ * relationship DTOs. The chart's connector is a projection of this, never the
+ * other way round.
+ */
+function relationshipSummary(
+  dto: PatientOdontogramDTO | null,
+  toothCode: string | null,
+): { bridge: string | null; bridgeDate: string | null; implant: string | null; implantDate: string | null } | null {
+  if (!dto || toothCode === null) return null;
+
+  const bridge = (dto.bridges ?? []).find(
+    (candidate) =>
+      candidate.event_state === "CURRENT" &&
+      (candidate.units ?? []).some((unit) => unit.tooth_fdi === toothCode),
+  );
+  const unit = bridge?.units?.find((candidate) => candidate.tooth_fdi === toothCode) ?? null;
+  const bridgeUnits: BridgeUnit[] = (bridge?.units ?? []).map((candidate) => ({
+    toothFdi: Number(candidate.tooth_fdi),
+    ordinal: candidate.ordinal,
+    role: candidate.role,
+    supportKind: candidate.support_kind,
+    supportComponentId: candidate.support_component_id,
+  }));
+
+  const chain = (dto.implantChains ?? []).find(
+    (candidate) => candidate.event_state === "CURRENT" && candidate.tooth_fdi === toothCode,
+  );
+  const components: ImplantComponentRecord[] = (chain?.components ?? []).map((component) => ({
+    id: component.id,
+    patientId: dto.patientId,
+    toothFdi: Number(chain?.tooth_fdi ?? toothCode),
+    ordinal: component.ordinal,
+    componentKind: component.component_kind,
+    recordKind: chain?.record_kind ?? "CURRENT",
+    dependsOnComponentId: component.depends_on_component_id,
+    provenance: null,
+    sealedAt: component.sealed_at,
+    voidedAt: null,
+    supersedesComponentId: component.supersedes_component_id,
+  }));
+  const stage = chain ? currentImplantStage(currentImplantProjection(components)) : null;
+
+  if (!bridge && !chain) return null;
+  return {
+    bridge: bridge && unit
+      ? `${bridgeSpanSummary(bridgeUnits)} · this tooth is the ${unit.role === "PONTIC" ? "pontic" : "abutment"}`
+      : null,
+    bridgeDate: bridge?.executed_at ? String(bridge.executed_at).slice(0, 10) : null,
+    implant: chain ? describeImplantStage(stage) : null,
+    implantDate: chain?.executed_at ? String(chain.executed_at).slice(0, 10) : null,
+  };
+}
 
 /**
  * The one temporary tooth surface of the clinical chart.
@@ -64,6 +132,7 @@ export function ToothRecordDrawer({
   notation,
   dto,
   canWriteClinical,
+  composerContext = null,
   onRecorded,
 }: ToothRecordDrawerProps): React.ReactElement {
   const [body, setBody] = React.useState<DrawerBody>("summary");
@@ -97,6 +166,41 @@ export function ToothRecordDrawer({
   );
 
   const legacyEntries = React.useMemo(() => toothEntries.filter(isLegacyToothEntry), [toothEntries]);
+
+  const relationship = React.useMemo(
+    () => (isCurrentPatientDto ? relationshipSummary(dto, focusedCode) : null),
+    [dto, focusedCode, isCurrentPatientDto],
+  );
+
+  // A projection belonging to another patient is never used, exactly as the
+  // odontogram DTO is not. The composer then reports what is missing rather than
+  // mounting a form against the wrong record.
+  const context = composerContext?.patientId === patientId ? composerContext : null;
+  const treatmentContext = React.useMemo(
+    () =>
+      context
+        ? {
+            patientIdentifier: context.patientIdentifier,
+            procedures: context.procedures,
+            activeFindings: context.activeFindings,
+            planItems: context.planItems,
+            openCases: context.openCases,
+            paymentMethods: context.paymentMethods,
+          }
+        : undefined,
+    [context],
+  );
+  const relationshipContext = React.useMemo(
+    () =>
+      context
+        ? {
+            chargeChoices: context.chargeChoices,
+            supportComponents: context.supportComponents,
+            implantStageByTooth: context.implantStageByTooth,
+          }
+        : undefined,
+    [context],
+  );
 
   const heading =
     selectedFdi.length === 0
@@ -147,6 +251,8 @@ export function ToothRecordDrawer({
               branchId={branchId}
               toothCodes={toothCodes}
               defaultClinicalDate={philippineClinicalDate()}
+              treatmentContext={treatmentContext}
+              relationshipContext={relationshipContext}
               onRecorded={async () => {
                 await onRecorded();
                 setBody("summary");
@@ -210,6 +316,32 @@ export function ToothRecordDrawer({
                   )}
                 </div>
               </section>
+
+              {relationship && (
+                <section aria-labelledby="tooth-relationship-heading" className="grid gap-1.5">
+                  <h4 id="tooth-relationship-heading" className="text-xs font-semibold text-muted-foreground">
+                    Bridge and implant{recordScope}
+                  </h4>
+                  <ul data-testid="tooth-relationship-summary" className="divide-y rounded-md border">
+                    {relationship.bridge && (
+                      <li className="px-3 py-2">
+                        <p className="text-sm font-medium">{relationship.bridge}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Bridge{relationship.bridgeDate ? ` · placed ${relationship.bridgeDate}` : ""}
+                        </p>
+                      </li>
+                    )}
+                    {relationship.implant && (
+                      <li className="px-3 py-2">
+                        <p className="text-sm font-medium">{relationship.implant}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Implant{relationship.implantDate ? ` · recorded ${relationship.implantDate}` : ""}
+                        </p>
+                      </li>
+                    )}
+                  </ul>
+                </section>
+              )}
 
               <section aria-labelledby="tooth-history-heading" className="grid gap-1.5">
                 <h4 id="tooth-history-heading" className="text-xs font-semibold text-muted-foreground">

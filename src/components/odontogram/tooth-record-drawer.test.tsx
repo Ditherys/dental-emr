@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   recordVisitToothFindingsAction: vi.fn(),
   recordVisitClinicalNoteAction: vi.fn(),
+  recordTreatmentEventAction: vi.fn(),
+  recordVisitBridgeAction: vi.fn(),
+  recordVisitImplantComponentAction: vi.fn(),
   routerRefresh: vi.fn(),
 }));
 
@@ -16,6 +19,9 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.routerRef
 vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({
   recordVisitToothFindingsAction: mocks.recordVisitToothFindingsAction,
   recordVisitClinicalNoteAction: mocks.recordVisitClinicalNoteAction,
+  recordTreatmentEventAction: mocks.recordTreatmentEventAction,
+  recordVisitBridgeAction: mocks.recordVisitBridgeAction,
+  recordVisitImplantComponentAction: mocks.recordVisitImplantComponentAction,
 }));
 
 import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
@@ -107,7 +113,34 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.recordVisitToothFindingsAction.mockResolvedValue({ ok: true });
   mocks.recordVisitClinicalNoteAction.mockResolvedValue({ ok: true });
+  mocks.recordTreatmentEventAction.mockResolvedValue({ ok: true, replayed: false });
+  mocks.recordVisitBridgeAction.mockResolvedValue({ ok: true, replayed: false });
+  mocks.recordVisitImplantComponentAction.mockResolvedValue({ ok: true, replayed: false });
 });
+
+/**
+ * The projection the workspace hands the drawer, in the shape the authorized
+ * server read produces. The drawer never assembles it in the browser.
+ */
+const composerContext = {
+  patientId,
+  patientIdentifier: "SYN-1 · Synthetic Patient",
+  procedures: [{ procedureId: "d1000000-0000-0000-0000-000000000001", name: "Synthetic filling" }],
+  activeFindings: [
+    {
+      entryId: "e0000000-0000-4000-a000-000000000003",
+      toothCode: "16",
+      findingCode: "CARIES",
+      label: "16 · caries",
+    },
+  ],
+  planItems: [],
+  openCases: [],
+  paymentMethods: [{ paymentMethodId: "d2000000-0000-0000-0000-000000000002", name: "Cash" }],
+  chargeChoices: [{ chargeId: "d3000000-0000-0000-0000-000000000003", label: "Bridge · ₱90,000.00" }],
+  supportComponents: [],
+  implantStageByTooth: {},
+};
 
 describe("ToothRecordDrawer summary", () => {
   it("names the selected tooth and summarises only that tooth's current record", () => {
@@ -188,6 +221,125 @@ describe("ToothRecordDrawer summary", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Close" })[0]!);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("ToothRecordDrawer clinical composer reachability", () => {
+  it("opens the treatment-event form the way production composes it", async () => {
+    const user = userEvent.setup();
+    renderDrawer({ composerContext });
+
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+    await user.click(screen.getByRole("button", { name: "Treatment performed" }));
+
+    // Task 6 built this form; until the workspace supplied its context nothing
+    // could mount it. Reaching it from the drawer is the proof it is reachable.
+    expect(screen.getByRole("form", { name: /record treatment performed/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/actual cost/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-treatment-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("offers only the findings the server projected as resolvable for the selected tooth", async () => {
+    const user = userEvent.setup();
+    renderDrawer({ composerContext, selectedFdi: [24] });
+
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+    await user.click(screen.getByRole("button", { name: "Treatment performed" }));
+
+    // The one projected finding belongs to tooth 16, so tooth 24's treatment
+    // offers none of it. The browser never widens the eligible set.
+    expect(screen.queryByRole("checkbox", { name: /16 · caries/i })).toBeNull();
+  });
+
+  it("opens the bridge and implant forms from Add clinical record rather than a permanent card", async () => {
+    const user = userEvent.setup();
+    renderDrawer({ composerContext, selectedFdi: [24, 25, 26] });
+
+    expect(screen.queryByTestId("bridge-workflow")).toBeNull();
+    expect(screen.queryByTestId("implant-workflow")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+    await user.click(screen.getByRole("button", { name: "Bridge" }));
+    expect(screen.getByTestId("bridge-workflow")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Implant" }));
+    expect(screen.queryByTestId("bridge-workflow")).toBeNull();
+    expect(screen.getByTestId("implant-workflow")).toBeInTheDocument();
+  });
+});
+
+describe("ToothRecordDrawer relationship summary", () => {
+  const bridgeDto = {
+    ...dto,
+    bridges: [
+      {
+        bridgeId: "b0000000-0000-4000-a000-000000000001",
+        patient_id: patientId,
+        record_kind: "CURRENT" as const,
+        parent_plan_id: null,
+        parent_plan_item_id: null,
+        source_plan_design_id: null,
+        support_kind: "NATURAL_TOOTH" as const,
+        treating_provider_id: "b0000000-0000-4000-a000-00000000000a",
+        executed_at: "2026-08-20T04:00:00+00:00",
+        charge_id: "b0000000-0000-4000-a000-00000000000b",
+        recorded_by: null,
+        recorded_at: "2026-08-20T04:00:00+00:00",
+        version: 1,
+        sealed_at: "2026-08-20T04:00:00+00:00",
+        voided_at: null,
+        supersedes_bridge_id: null,
+        event_state: "CURRENT" as const,
+        units: [
+          { tooth_fdi: "24", ordinal: 1, role: "ABUTMENT" as const, support_kind: "NATURAL_TOOTH" as const, support_component_id: null },
+          { tooth_fdi: "25", ordinal: 2, role: "PONTIC" as const, support_kind: "NONE" as const, support_component_id: null },
+          { tooth_fdi: "26", ordinal: 3, role: "ABUTMENT" as const, support_kind: "NATURAL_TOOTH" as const, support_component_id: null },
+        ],
+      },
+    ],
+    implantChains: [
+      {
+        root_component_id: "c0000000-0000-4000-a000-000000000001",
+        tooth_fdi: "16",
+        record_kind: "CURRENT" as const,
+        parent_plan_id: null,
+        parent_plan_item_id: null,
+        source_plan_design_component_id: null,
+        treating_provider_id: "b0000000-0000-4000-a000-00000000000a",
+        executed_at: "2026-07-02T04:00:00+00:00",
+        charge_id: "b0000000-0000-4000-a000-00000000000c",
+        recorded_by: null,
+        recorded_at: "2026-07-02T04:00:00+00:00",
+        event_state: "CURRENT" as const,
+        components: [
+          { id: "c0000000-0000-4000-a000-000000000001", ordinal: 1, component_kind: "FIXTURE" as const, attachment_value: null, depends_on_component_id: null, supersedes_component_id: null, version: 1, sealed_at: "2026-07-02T04:00:00+00:00", event_state: "CURRENT" as const },
+          { id: "c0000000-0000-4000-a000-000000000002", ordinal: 2, component_kind: "ABUTMENT" as const, attachment_value: null, depends_on_component_id: "c0000000-0000-4000-a000-000000000001", supersedes_component_id: null, version: 1, sealed_at: "2026-07-02T04:00:00+00:00", event_state: "CURRENT" as const },
+        ],
+      },
+    ],
+  };
+
+  it("states the span and role of the bridge the selected tooth belongs to", () => {
+    renderDrawer({ dto: bridgeDto, selectedFdi: [25] });
+
+    const summary = screen.getByTestId("tooth-relationship-summary");
+    expect(summary).toHaveTextContent("24–26");
+    expect(summary).toHaveTextContent(/pontic/i);
+    expect(summary).toHaveTextContent("2026-08-20");
+  });
+
+  it("states the implant stage the selected tooth has reached and when it was recorded", () => {
+    renderDrawer({ dto: bridgeDto, selectedFdi: [16] });
+
+    const summary = screen.getByTestId("tooth-relationship-summary");
+    expect(summary).toHaveTextContent("Abutment connected");
+    expect(summary).toHaveTextContent("2026-07-02");
+  });
+
+  it("shows no relationship section for a tooth that carries none", () => {
+    renderDrawer({ dto: bridgeDto, selectedFdi: [17] });
+
+    expect(screen.queryByTestId("tooth-relationship-summary")).toBeNull();
   });
 });
 

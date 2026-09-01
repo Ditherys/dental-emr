@@ -8,7 +8,8 @@ import type { ClinicalVisitState } from "@/lib/clinical/types";
 import { ClinicalPhotoServiceError, listClinicalPhotos } from "@/lib/clinical-media/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
-import { OdontogramServiceError, getPatientOdontogram } from "@/lib/odontogram/service";
+import { OdontogramServiceError, getClinicalComposerContext, getPatientOdontogram } from "@/lib/odontogram/service";
+import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { getPatient } from "@/lib/patients/data";
 import { PatientServiceError } from "@/lib/patients/errors";
@@ -170,6 +171,7 @@ export default async function PatientPage({
   let medicalRecords: Awaited<ReturnType<typeof listPatientMedicalRecords>> = [];
   const toothConditions: ToothCondition[] = [];
   let initialOdontogram: PatientOdontogramDTO | null = null;
+  let clinicalComposerContext: ClinicalComposerContext | null = null;
   let treatmentPlans: Awaited<ReturnType<typeof listTreatmentPlans>> = [];
   let clinicalLoadFailed = false;
   let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
@@ -252,6 +254,17 @@ export default async function PatientPage({
       }
       clinicalLoadFailed = true;
     }
+    // The one authorized read that makes the record composer's treatment,
+    // bridge and implant forms usable. It is deliberately separate from the
+    // odontogram read: a refused or failed context leaves the chart intact and
+    // the composer says exactly what is missing rather than mounting a form
+    // against nothing.
+    try {
+      clinicalComposerContext = await getClinicalComposerContext({ branchId: actingBranchId, patientId });
+    } catch (error) {
+      if (!(error instanceof OdontogramServiceError || error instanceof AuthorizationError)) throw error;
+      clinicalComposerContext = null;
+    }
     try {
       initialClinicalPhotos = await listClinicalPhotos({ actingBranchId, patientId });
     } catch (error) {
@@ -320,6 +333,7 @@ export default async function PatientPage({
       initialMedicalRecords={medicalRecords}
       initialToothConditions={toothConditions}
       initialOdontogram={initialOdontogram}
+      clinicalComposerContext={clinicalComposerContext}
       initialTreatmentPlans={treatmentPlans}
       canGenerateDocuments={canGenerateDocuments}
       initialProviders={clinicalProviders}

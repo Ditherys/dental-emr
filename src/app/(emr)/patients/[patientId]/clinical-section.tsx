@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, ClinicalVisitState, MedicalRecord } from "@/lib/clinical/types";
+import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { progressEventsFromAccount, progressEventsFromOdontogram, type PatientAccountRowDTO } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
@@ -51,6 +52,7 @@ type Props = {
   initialProviders?: ProviderListItem[];
   initialToothConditions?: ToothCondition[];
   initialOdontogram?: PatientOdontogramDTO | null;
+  clinicalComposerContext?: ClinicalComposerContext | null;
   initialTreatmentPlans?: TreatmentPlan[];
   canGenerateDocuments?: boolean;
   providersUnavailable?: boolean;
@@ -91,7 +93,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -250,7 +252,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
     ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : []),
   ];
   const chart: Record<ClinicalChartMode, ReactNode> = {
-    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />,
+    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />,
     TREATMENT_PLAN: <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />,
     PERIODONTAL: <PeriodontalModePanel />,
   };

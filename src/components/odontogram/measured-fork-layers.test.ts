@@ -405,3 +405,82 @@ describe("measured fork layer activation — primary anatomy", () => {
     expect(result.has("fissure-sealing")).toBe(false);
   });
 });
+
+/**
+ * Task 7. A relationship is not a crown-shaped approximation: an implant and a
+ * bridge each activate their own reviewed anatomy, and each stage of the implant
+ * chain changes which anatomical layers are painted.
+ */
+describe("measured fork layer activation — relationship anatomy", () => {
+  const missing = tooth(16, {
+    anatomy: "MISSING",
+    features: [feature({ code: "TOOTH_STATE", state: "MISSING" })],
+  });
+
+  it("moves a missing tooth through fixture, abutment and crown as real anatomical layers", () => {
+    const gap = active(missing);
+    expect(gap.has("missing-closed")).toBe(true);
+    expect(gap.has("implant")).toBe(false);
+    expect(gap.has("implant-base")).toBe(false);
+
+    const fixture = active(tooth(16, { anatomy: "IMPLANT_FIXTURE" }));
+    expect(fixture.has("implant")).toBe(true);
+    expect(fixture.has("implant-base")).toBe(true);
+    expect(fixture.has("implant-connector")).toBe(false);
+    expect(fixture.has("prosthesis-implant-crown")).toBe(false);
+    expect(fixture.has("tooth-base")).toBe(false);
+
+    const abutment = active(tooth(16, { anatomy: "IMPLANT_ABUTMENT" }));
+    expect(abutment.has("implant")).toBe(true);
+    expect(abutment.has("implant-connector")).toBe(true);
+    expect(abutment.has("prosthesis-implant-crown")).toBe(false);
+
+    const crown = active(tooth(16, { anatomy: "IMPLANT_CROWN" }));
+    expect(crown.has("implant")).toBe(true);
+    expect(crown.has("implant-connector")).toBe(true);
+    expect(crown.has("prosthesis-implant")).toBe(true);
+    expect(crown.has("prosthesis-implant-crown")).toBe(true);
+    expect(crown.has("prosthesis-implant-gum")).toBe(true);
+
+    // Every stage is a different set, so the chart genuinely changes shape as
+    // the chain advances rather than repainting one implant icon.
+    const sets = [gap, fixture, abutment, crown].map((set) => [...set].sort().join("|"));
+    expect(new Set(sets).size).toBe(4);
+  });
+
+  it("renders a bridge abutment and pontic as prosthesis anatomy with its own connector", () => {
+    const abutment = active(tooth(24, { bridgeRole: "ABUTMENT" }));
+    expect(abutment.has("prosthesis")).toBe(true);
+    expect(abutment.has("prosthesis-crown")).toBe(true);
+    expect(abutment.has("prosthesis-connector")).toBe(true);
+    // A bridge is not a crown: no single-tooth crown artwork stands in for it.
+    expect(abutment.has("tooth-crownprep")).toBe(false);
+    expect(abutment.has("emax-crown")).toBe(false);
+
+    const pontic = active(
+      tooth(25, {
+        bridgeRole: "PONTIC",
+        anatomy: "MISSING",
+        features: [feature({ code: "TOOTH_STATE", state: "MISSING" })],
+      }),
+    );
+    expect(pontic.has("prosthesis")).toBe(true);
+    expect(pontic.has("prosthesis-connector")).toBe(true);
+    // The gap the pontic fills is no longer drawn as a closed gap.
+    expect(pontic.has("missing-closed")).toBe(false);
+  });
+
+  it("uses the recorded bridge material rather than the generic prosthesis when one exists", () => {
+    const zircon = active(
+      tooth(24, {
+        bridgeRole: "ABUTMENT",
+        features: [
+          feature({ code: "RESTORATION", restorationType: "bridge", material: "zircon", marginalLeakage: false }),
+        ],
+      }),
+    );
+    expect(zircon.has("zircon-crown")).toBe(true);
+    expect(zircon.has("zircon-bridge-connector")).toBe(true);
+    expect(zircon.has("prosthesis-connector")).toBe(false);
+  });
+});

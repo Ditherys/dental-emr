@@ -823,6 +823,54 @@ select extensions.is(
   'approved O4-O13 odontogram migrations are recorded'
 );
 
+-- Task 7 forward-added the visit linkage. The relationship contract itself is
+-- unchanged: the columns are nullable, the append-only history guards still
+-- refuse every update of a sealed CURRENT row, and no historical relationship
+-- was given an invented encounter, service date or note.
+select extensions.ok(
+  (select bool_and(not attribute.attnotnull)
+   from pg_attribute as attribute
+   where attribute.attrelid in ('public.dental_bridges'::regclass,'public.dental_implant_components'::regclass)
+     and attribute.attname in ('encounter_id','service_date','clinical_note')
+     and not attribute.attisdropped),
+  'the forward-added relationship linkage columns are nullable'
+);
+
+select extensions.ok(
+  exists (
+    select 1 from pg_constraint as constraint_row
+    where constraint_row.conname = 'dental_bridges_organization_encounter_fk'
+      and constraint_row.conrelid = 'public.dental_bridges'::regclass
+  )
+  and exists (
+    select 1 from pg_constraint as constraint_row
+    where constraint_row.conname = 'dental_implant_components_organization_encounter_fk'
+      and constraint_row.conrelid = 'public.dental_implant_components'::regclass
+  ),
+  'the visit linkage is tenant-safe on both relationship tables'
+);
+
+select extensions.ok(
+  exists (
+    select 1 from pg_trigger as trigger_row
+    where trigger_row.tgrelid = 'public.dental_bridges'::regclass
+      and trigger_row.tgname = 'dental_bridges_append_only_check'
+  )
+  and exists (
+    select 1 from pg_trigger as trigger_row
+    where trigger_row.tgrelid = 'public.dental_implant_components'::regclass
+      and trigger_row.tgname = 'dental_implant_components_append_only_check'
+  ),
+  'the append-only history guards survive the forward-added linkage columns'
+);
+
+select extensions.is(
+  (select count(*)::integer from public.dental_bridges as bridge
+   where bridge.sealed_at is not null and bridge.service_date is not null and bridge.encounter_id is null),
+  0,
+  'no sealed bridge carries a service date without the visit it was recorded in'
+);
+
 with test_failures as (
   select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$'
 )

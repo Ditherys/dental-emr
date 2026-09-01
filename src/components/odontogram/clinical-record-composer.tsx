@@ -6,8 +6,12 @@ import { Button } from "@/components/ui/button";
 import type { ClinicalRecordKind } from "@/lib/clinical/types";
 import { cn } from "@/lib/utils";
 
+import type { ImplantComponentKind } from "@/lib/odontogram/implant";
+
+import { BridgeWorkflow, type BridgeSupportComponentChoice, type RelationshipChargeChoice } from "./bridge-workflow";
 import { ClinicalNoteForm } from "./clinical-note-form";
 import { FindingForm } from "./finding-form";
+import { ImplantWorkflow } from "./implant-workflow";
 import {
   TreatmentEventForm,
   type ExistingProcedureCaseChoice,
@@ -34,8 +38,6 @@ const RECORD_KINDS: ReadonlyArray<{ value: ClinicalRecordKind; label: string }> 
  */
 const PENDING_KIND_OWNERS: Readonly<Partial<Record<ClinicalRecordKind, string>>> = {
   PLANNED_TREATMENT: "the treatment plan workflow",
-  BRIDGE: "the bridge relationship workflow",
-  IMPLANT: "the implant relationship workflow",
   PHOTO: "the clinical photograph workflow",
 };
 
@@ -55,6 +57,19 @@ export type TreatmentComposerContext = {
   paymentMethods: readonly TreatmentPaymentMethodChoice[];
 };
 
+/**
+ * Everything a bridge or an implant needs beyond the tooth selection: the
+ * charges a relationship may be linked to, the implant abutments a bridge unit
+ * may be supported by, and the implant stage each tooth has already reached.
+ * All of it comes from the same authorized server projection as the treatment
+ * context; the browser decides none of it.
+ */
+export type RelationshipComposerContext = {
+  chargeChoices: readonly RelationshipChargeChoice[];
+  supportComponents: readonly BridgeSupportComponentChoice[];
+  implantStageByTooth: Readonly<Record<string, ImplantComponentKind>>;
+};
+
 export function composerToothSummary(toothCodes: readonly string[]): string {
   if (toothCodes.length === 0) return "No tooth selected";
   if (toothCodes.length === 1) return `Tooth ${toothCodes[0]}`;
@@ -72,6 +87,8 @@ export type ClinicalRecordComposerProps = {
   onCancel: () => void;
   /** Supplied by the workspace when the treatment catalogue is available. */
   treatmentContext?: TreatmentComposerContext;
+  /** Supplied by the workspace when the relationship projection is available. */
+  relationshipContext?: RelationshipComposerContext;
 };
 
 /**
@@ -90,10 +107,12 @@ export function ClinicalRecordComposer({
   onRecorded,
   onCancel,
   treatmentContext,
+  relationshipContext,
 }: ClinicalRecordComposerProps): React.ReactElement {
   const [kind, setKind] = React.useState<ClinicalRecordKind>("FINDING");
   const [clinicalDate, setClinicalDate] = React.useState(defaultClinicalDate);
   const treatmentReady = Boolean(treatmentContext && treatmentContext.procedures.length > 0);
+  const isRelationship = kind === "BRIDGE" || kind === "IMPLANT";
   const pendingOwner = PENDING_KIND_OWNERS[kind];
 
   return (
@@ -165,6 +184,49 @@ export function ClinicalRecordComposer({
         >
           A treatment is recorded against a procedure and its actual cost, and no procedure catalogue is
           available in this workspace yet. Nothing can be charged from here until it is.
+        </p>
+      )}
+
+      {kind === "BRIDGE" && relationshipContext && (
+        <BridgeWorkflow
+          key="BRIDGE"
+          patientId={patientId}
+          branchId={branchId}
+          toothCodes={toothCodes}
+          serviceDate={clinicalDate}
+          onServiceDateChange={setClinicalDate}
+          chargeChoices={relationshipContext.chargeChoices}
+          supportComponents={relationshipContext.supportComponents}
+          onRecorded={onRecorded}
+        />
+      )}
+
+      {kind === "IMPLANT" && relationshipContext && (
+        <ImplantWorkflow
+          key="IMPLANT"
+          patientId={patientId}
+          branchId={branchId}
+          toothCodes={toothCodes}
+          serviceDate={clinicalDate}
+          onServiceDateChange={setClinicalDate}
+          chargeChoices={relationshipContext.chargeChoices}
+          recordedStage={
+            toothCodes.length === 1
+              ? (relationshipContext.implantStageByTooth[toothCodes[0]!] ?? null)
+              : null
+          }
+          onRecorded={onRecorded}
+        />
+      )}
+
+      {isRelationship && !relationshipContext && (
+        <p
+          data-testid="composer-relationship-unavailable"
+          role="status"
+          className="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground"
+        >
+          A bridge or an implant is recorded against the procedure that was charged for it, and this
+          workspace has no charge projection yet. Nothing can be linked from here until it does.
         </p>
       )}
 

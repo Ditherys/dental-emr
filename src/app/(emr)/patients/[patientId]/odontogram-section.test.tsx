@@ -474,7 +474,11 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByText(/anatomical clinical chart/i)).toBeInTheDocument();
   });
 
-  it("presents the relationship record kinds from the selected tooth without offering an unbuilt write", async () => {
+  // Task 7 made Bridge and Implant real composer forms, so this test no longer
+  // asserts a signpost. What it still proves is the same guarantee: without the
+  // authorized server projection the section refuses to offer a write it cannot
+  // honour, and it says exactly what is missing.
+  it("refuses the relationship record kinds until the workspace supplies the server projection", async () => {
     const user = userEvent.setup();
     render(
       <OdontogramSection
@@ -489,12 +493,50 @@ describe("OdontogramSection O7", () => {
     expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add clinical record" }));
 
-    // Bridge and implant relationship writes are not this task's to build, so
-    // the composer names them and names their owning workflow instead of
-    // offering a write it cannot honour.
     await user.click(screen.getByRole("button", { name: "Bridge" }));
-    expect(screen.getByTestId("composer-unavailable")).toHaveTextContent(/bridge relationship workflow/i);
+    expect(screen.getByTestId("composer-relationship-unavailable")).toHaveTextContent(/no charge projection/i);
+    expect(screen.queryByTestId("bridge-workflow")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Implant" }));
-    expect(screen.getByTestId("composer-unavailable")).toHaveTextContent(/implant relationship workflow/i);
+    expect(screen.getByTestId("composer-relationship-unavailable")).toHaveTextContent(/no charge projection/i);
+    expect(screen.queryByTestId("implant-workflow")).toBeNull();
+  });
+
+  it("mounts the composer's contextual forms once the server projection reaches the drawer", async () => {
+    const user = userEvent.setup();
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+        composerContext={{
+          patientId: mockDto.patientId,
+          patientIdentifier: "SYN-1 · Synthetic Patient",
+          procedures: [{ procedureId: "00000000-0000-4000-a000-0000000000b1", name: "Synthetic bridge" }],
+          activeFindings: [],
+          planItems: [],
+          openCases: [],
+          paymentMethods: [],
+          chargeChoices: [{ chargeId: "00000000-0000-4000-a000-0000000000c1", label: "Synthetic bridge · ₱90,000.00" }],
+          supportComponents: [],
+          implantStageByTooth: {},
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tooth 24/i }));
+    expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add clinical record" }));
+
+    await user.click(screen.getByRole("button", { name: "Implant" }));
+    expect(screen.getByTestId("implant-workflow")).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-relationship-unavailable")).toBeNull();
+
+    // The treatment-event form Task 6 built is reachable through the same
+    // projection: the workspace supplies it, the drawer forwards it, and the
+    // composer mounts the form rather than a notice.
+    await user.click(screen.getByRole("button", { name: "Treatment performed" }));
+    expect(screen.getByRole("form", { name: /record treatment performed/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-treatment-unavailable")).toBeNull();
   });
 });

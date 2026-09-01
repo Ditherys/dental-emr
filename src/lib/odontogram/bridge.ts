@@ -58,6 +58,46 @@ export function deriveBridgeSupportMode(units: readonly BridgeUnit[]): BridgeSup
   return abutmentSupport.has("IMPLANT_COMPONENT") ? "IMPLANT_COMPONENT" : "NATURAL_TOOTH";
 }
 
+/** A bridge's units in their canonical ordinal order, never arrival order. */
+export function orderedBridgeUnits(units: readonly BridgeUnit[]): BridgeUnit[] {
+  return [...units].sort((left, right) => left.ordinal - right.ordinal);
+}
+
+/**
+ * The visual connector between two adjacent units.
+ *
+ * A connector is a projection of the canonical relationship, not a record of
+ * its own: it exists only between consecutive canonical units, and a span with
+ * a single unit — which is not a bridge — has none.
+ */
+export type BridgeConnector = { fromToothFdi: number; toToothFdi: number };
+
+export function bridgeConnectors(units: readonly BridgeUnit[]): BridgeConnector[] {
+  const ordered = orderedBridgeUnits(units);
+  const connectors: BridgeConnector[] = [];
+  for (let index = 1; index < ordered.length; index += 1) {
+    connectors.push({ fromToothFdi: ordered[index - 1]!.toothFdi, toToothFdi: ordered[index]!.toothFdi });
+  }
+  return connectors;
+}
+
+/** The one line a chart reader needs: which teeth, how many, and their roles. */
+export function bridgeSpanSummary(units: readonly BridgeUnit[]): string {
+  const ordered = orderedBridgeUnits(units);
+  if (ordered.length === 0) return "No bridge recorded";
+  const abutments = ordered.filter((unit) => unit.role === "ABUTMENT").length;
+  const pontics = ordered.length - abutments;
+  const span =
+    ordered.length === 1
+      ? String(ordered[0]!.toothFdi)
+      : `${ordered[0]!.toothFdi}–${ordered[ordered.length - 1]!.toothFdi}`;
+  const roles = [
+    `${abutments} ${abutments === 1 ? "abutment" : "abutments"}`,
+    `${pontics} ${pontics === 1 ? "pontic" : "pontics"}`,
+  ].join(", ");
+  return `${span} · ${ordered.length} units · ${roles}`;
+}
+
 export function currentBridgeProjection(records: readonly BridgeRecord[]): BridgeRecord[] {
   const supersededIds = new Set(
     records.map((record) => record.supersedesBridgeId).filter((id): id is string => id !== null),

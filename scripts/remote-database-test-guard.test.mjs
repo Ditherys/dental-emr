@@ -298,6 +298,7 @@ describe("registered database suites", () => {
       "odontogram_feature_details.test.sql",
       "odontogram_o2_o4_contract_repair.test.sql",
       "odontogram_permission_contract.test.sql",
+      "odontogram_relationship_workflows_v2.test.sql",
       "odontogram_relationships.test.sql",
       "odontogram_revamp_permission_contract.test.sql",
       "odontogram_revamp_relationship_perio.test.sql",

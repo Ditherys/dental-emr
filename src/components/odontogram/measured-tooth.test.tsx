@@ -404,3 +404,67 @@ describe("MeasuredTooth — labelling and activation", () => {
     expect(onActivate).toHaveBeenCalledWith(11, { toggle: false, range: false });
   });
 });
+
+/**
+ * Task 7. The relationship workflows claim to change the chart, so the chart is
+ * asserted at the rendered `data-layer` / `data-active` contract rather than at
+ * a placeholder shape.
+ */
+describe("MeasuredTooth — relationship stages change real anatomical layers", () => {
+  const missingFeature = {
+    detail: { code: "TOOTH_STATE", state: "MISSING" },
+    surfaces: [],
+    planned: false,
+  } as const;
+
+  function activeLayerIds(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll('[data-layer][data-active="1"]'))
+      .map((element) => element.getAttribute("data-layer") ?? "")
+      .sort();
+  }
+
+  it("repaints the gap as fixture, then abutment, then crown", () => {
+    const gap = renderTooth(tooth(36, { anatomy: "MISSING", features: [missingFeature] })).container;
+    expect(activeState(gap, "missing-closed")).toBe("1");
+    expect(activeState(gap, "implant-base")).toBe("0");
+    const gapLayers = activeLayerIds(gap);
+    cleanup();
+
+    const fixture = renderTooth(tooth(36, { anatomy: "IMPLANT_FIXTURE" })).container;
+    expect(activeState(fixture, "implant")).toBe("1");
+    expect(activeState(fixture, "implant-base")).toBe("1");
+    expect(activeState(fixture, "implant-connector")).toBe("0");
+    expect(activeState(fixture, "missing-closed")).toBe("0");
+    const fixtureLayers = activeLayerIds(fixture);
+    cleanup();
+
+    const abutment = renderTooth(tooth(36, { anatomy: "IMPLANT_ABUTMENT" })).container;
+    expect(activeState(abutment, "implant-connector")).toBe("1");
+    expect(activeState(abutment, "prosthesis-implant-crown")).toBe("0");
+    const abutmentLayers = activeLayerIds(abutment);
+    cleanup();
+
+    const crown = renderTooth(tooth(36, { anatomy: "IMPLANT_CROWN" })).container;
+    expect(activeState(crown, "prosthesis-implant")).toBe("1");
+    expect(activeState(crown, "prosthesis-implant-crown")).toBe("1");
+    const crownLayers = activeLayerIds(crown);
+
+    const distinct = new Set([gapLayers, fixtureLayers, abutmentLayers, crownLayers].map((ids) => ids.join("|")));
+    expect(distinct.size).toBe(4);
+  });
+
+  it("draws a bridge abutment and pontic from prosthesis artwork, not a crown stand-in", () => {
+    const abutment = renderTooth(tooth(14, { bridgeRole: "ABUTMENT" })).container;
+    expect(activeState(abutment, "prosthesis")).toBe("1");
+    expect(activeState(abutment, "prosthesis-crown")).toBe("1");
+    expect(activeState(abutment, "prosthesis-connector")).toBe("1");
+    expect(activeState(abutment, "tooth-crownprep")).toBe("0");
+    cleanup();
+
+    const pontic = renderTooth(
+      tooth(15, { bridgeRole: "PONTIC", anatomy: "MISSING", features: [missingFeature] }),
+    ).container;
+    expect(activeState(pontic, "prosthesis-connector")).toBe("1");
+    expect(activeState(pontic, "missing-closed")).toBe("0");
+  });
+});

@@ -47,6 +47,8 @@ import {
   findDuplicateCandidatesAction,
   lifecyclePatientAction,
 } from "./actions";
+import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
+
 import { ClinicalSection } from "./clinical-section";
 import { ContactsSection, RelationshipsSection } from "./patient-contacts-relationships";
 import { PatientDemographics } from "./patient-demographics";
@@ -97,6 +99,8 @@ type Props = {
   initialMedicalRecords?: MedicalRecord[];
   initialToothConditions?: ToothCondition[];
   initialOdontogram?: PatientOdontogramDTO | null;
+  /** Authorized server projection that makes the record composer's forms usable. */
+  clinicalComposerContext?: ClinicalComposerContext | null;
   initialTreatmentPlans?: TreatmentPlan[];
   canGenerateDocuments?: boolean;
   initialProviders?: ProviderListItem[];
@@ -146,6 +150,7 @@ export function PatientWorkspace({
   initialMedicalRecords = [],
   initialToothConditions = [],
   initialOdontogram = null,
+  clinicalComposerContext = null,
   initialTreatmentPlans = [],
   canGenerateDocuments = false,
   initialProviders = [],
@@ -505,6 +510,7 @@ export function PatientWorkspace({
               initialMedicalRecords={initialMedicalRecords}
               initialToothConditions={initialToothConditions}
               initialOdontogram={initialOdontogram}
+              clinicalComposerContext={clinicalComposerContext}
               initialTreatmentPlans={initialTreatmentPlans}
               canGenerateDocuments={canGenerateDocuments}
               initialProviders={initialProviders}

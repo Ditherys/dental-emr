@@ -24,6 +24,8 @@ import {
   savePeriodontalMeasurementsInputSchema,
   transitionTreatmentPlanItemExecutionInputSchema,
   treatmentEventInputSchema,
+  visitBridgeInputSchema,
+  visitImplantComponentInputSchema,
   updateDraftPlanBridgeDesignInputSchema,
   updateDraftPlanImplantDesignInputSchema,
   voidCurrentBridgeInputSchema,
@@ -49,6 +51,8 @@ import {
   recordTreatmentEvent,
   recordVisitClinicalNote,
   recordVisitToothFindings,
+  recordVisitBridge,
+  recordVisitImplantComponent,
   resolveLegacyOdontogramEntry,
   savePeriodontalMeasurements,
   transitionTreatmentPlanItemExecution,
@@ -71,6 +75,15 @@ export type OdontogramDTOListResult = { ok: true; odontogram: PatientOdontogramD
  * the form would report a plain success for a write that did not happen.
  */
 export type TreatmentEventActionResult =
+  | { ok: true; replayed: boolean }
+  | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
+/**
+ * A relationship write reports whether the server replayed a stored result, for
+ * the same reason a treatment event does: the request key is a hash of the
+ * submitted facts, so a byte-identical retry replays rather than recording a
+ * second bridge or a second implant chain.
+ */
+export type RelationshipActionResult =
   | { ok: true; replayed: boolean }
   | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 export type OdontogramIdResult = { ok: true; id: string; version: number } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
@@ -219,7 +232,46 @@ export async function resolveLegacyOdontogramEntryAction(input: unknown): Promis
   } catch (error) { return result(error); }
 }
 
+// Visit-bound relationships (task 7)
+//
+// The public boundary accepts route context and clinical facts only. The RPC
+// behind each action starts or resumes the managed visit, re-derives the
+// organization, the branch authority and the treating provider, revalidates the
+// span or the component chain and the named charge, and returns the patient the
+// server resolved.
+
+export async function recordVisitBridgeAction(input: unknown): Promise<RelationshipActionResult> {
+  const invalidResult = invalid(visitBridgeInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = visitBridgeInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
+    await requirePermission({ permission: "billing.charge", branchId: value.branchId });
+    const mutation = await recordVisitBridge(value);
+    revalidateAuthoritativePatient(mutation.patientId);
+    return { ok: true, replayed: mutation.replayed };
+  } catch (error) { return result(error); }
+}
+
+export async function recordVisitImplantComponentAction(input: unknown): Promise<RelationshipActionResult> {
+  const invalidResult = invalid(visitImplantComponentInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = visitImplantComponentInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
+    await requirePermission({ permission: "billing.charge", branchId: value.branchId });
+    const mutation = await recordVisitImplantComponent(value);
+    revalidateAuthoritativePatient(mutation.patientId);
+    return { ok: true, replayed: mutation.replayed };
+  } catch (error) { return result(error); }
+}
+
 // Bridge
+//
+// `recordCurrentBridgeAction` and `recordCurrentImplantComponentAction` below
+// reach the superseded provider-free v3 relationship path, which opens no
+// clinical visit and carries no service date. They are retained only until the
+// superseded odontogram write paths are removed; the composer uses the
+// visit-bound actions above. The plan-design, amend and void actions beside them
+// are separate boundaries this task does not supersede.
 
 export async function createPlanBridgeDesignAction(input: unknown): Promise<OdontogramMutationResult> {
   const invalidResult = invalid(createPlanBridgeDesignInputSchema, input); if (invalidResult) return invalidResult;
