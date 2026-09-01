@@ -81,7 +81,8 @@ insert into public.procedures (id, organization_id, code, name, status) values
   ('d1700000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','PRG_ORTHO','Synthetic orthodontic case','active'),
   ('d1700000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','PRG_RCT','Synthetic root canal','active'),
   ('d1700000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','PRG_CONSULT','Synthetic consultation','active'),
-  ('d1700000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','PRG_EXTRACT','Synthetic extraction','active');
+  ('d1700000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','PRG_EXTRACT','Synthetic extraction','active'),
+  ('d1700000-0000-0000-0000-000000000006','d1200000-0000-0000-0000-000000000001','PRG_HYGIENE','Synthetic hygiene visit','active');
 
 -- ---------------------------------------------------------------------------
 -- The clinical spine: one encounter, one finalized note, one prescription.
@@ -141,14 +142,18 @@ insert into public.charges (id, organization_id, patient_id, branch_id, provider
   ('d1f00000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000001',150000,date '2026-08-24',timestamptz '2026-08-24 07:00:00+00','prog-charge-fill','d1100000-0000-0000-0000-000000000001'),
   ('d1f00000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000003',450000,date '2026-08-25',timestamptz '2026-08-25 07:00:00+00','prog-charge-rct','d1100000-0000-0000-0000-000000000001'),
   ('d1f00000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000004',100000,date '2026-08-26',timestamptz '2026-08-26 07:00:00+00','prog-charge-consult','d1100000-0000-0000-0000-000000000001'),
-  ('d1f00000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000005',200000,date '2026-08-27',timestamptz '2026-08-27 07:00:00+00','prog-charge-extract','d1100000-0000-0000-0000-000000000001');
+  ('d1f00000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000005',200000,date '2026-08-27',timestamptz '2026-08-27 07:00:00+00','prog-charge-extract','d1100000-0000-0000-0000-000000000001'),
+  -- 300,000 billed, 100,000 credited, then voided. The void withdrew the
+  -- ADJUSTED 200,000, never the raw 300,000.
+  ('d1f00000-0000-0000-0000-000000000006','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000006',300000,date '2026-08-29',timestamptz '2026-08-29 07:00:00+00','prog-charge-hygiene','d1100000-0000-0000-0000-000000000001');
 
 insert into public.procedure_cases (id, organization_id, patient_id, origin_branch_id, procedure_id, treatment_plan_item_id, charge_id, opened_by, opened_at, status, version) values
   ('d1a00000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000002',null,'d1f00000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-23 06:30:00+00','OPEN',1),
   ('d1a00000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000001',null,'d1f00000-0000-0000-0000-000000000002','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-24 06:30:00+00','OPEN',1),
   ('d1a00000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000003','d1900000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000003','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-25 06:30:00+00','OPEN',1),
   ('d1a00000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000004',null,'d1f00000-0000-0000-0000-000000000004','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-26 06:30:00+00','OPEN',1),
-  ('d1a00000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000005',null,'d1f00000-0000-0000-0000-000000000005','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-27 06:30:00+00','OPEN',1);
+  ('d1a00000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000005',null,'d1f00000-0000-0000-0000-000000000005','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-27 06:30:00+00','OPEN',1),
+  ('d1a00000-0000-0000-0000-000000000006','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1700000-0000-0000-0000-000000000006',null,'d1f00000-0000-0000-0000-000000000006','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-29 06:30:00+00','OPEN',1);
 
 -- The orthodontic treatment was PERFORMED on 2026-08-16 and the charge was
 -- POSTED on 2026-08-23. Two facts, two dates, and the projection must never
@@ -195,10 +200,18 @@ insert into public.payment_refunds (id, organization_id, payment_id, patient_id,
   ('d2700000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000005','d1500000-0000-0000-0000-000000000001',300000,'Synthetic refund reason',timestamptz '2026-09-01 09:00:00+00','d1100000-0000-0000-0000-000000000001','prog-refund');
 
 insert into public.charge_adjustments (id, organization_id, charge_id, direction, amount_centavos, reason, occurred_at, created_by, idempotency_key) values
-  ('d2500000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000003','CREDIT',50000,'Synthetic goodwill adjustment',timestamptz '2026-08-25 09:00:00+00','d1100000-0000-0000-0000-000000000001','prog-adjust-rct');
+  ('d2500000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000003','CREDIT',50000,'Synthetic goodwill adjustment',timestamptz '2026-08-25 09:00:00+00','d1100000-0000-0000-0000-000000000001','prog-adjust-rct'),
+  ('d2500000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000006','CREDIT',100000,'Synthetic hygiene credit',timestamptz '2026-08-29 09:00:00+00','d1100000-0000-0000-0000-000000000001','prog-adjust-hygiene');
 
 insert into public.charge_voids (id, organization_id, charge_id, reason, voided_at, voided_by) values
-  ('d2600000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000004','Synthetic charge void reason',timestamptz '2026-08-26 10:00:00+00','d1100000-0000-0000-0000-000000000001');
+  ('d2600000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000004','Synthetic charge void reason',timestamptz '2026-08-26 10:00:00+00','d1100000-0000-0000-0000-000000000001'),
+  ('d2600000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000006','Synthetic hygiene void reason',timestamptz '2026-08-29 10:00:00+00','d1100000-0000-0000-0000-000000000001');
+
+-- The root-canal charge was posted under clinician A and its attribution was
+-- later CORRECTED to clinician C through the append-only correction ledger.
+-- public.charges is immutable, so charge.provider_id still names A.
+insert into public.charge_attribution_corrections (id, organization_id, charge_id, previous_provider_id, corrected_provider_id, previous_branch_id, corrected_branch_id, previous_service_date, corrected_service_date, reason, occurred_at, corrected_by, idempotency_key) values
+  ('d2a00000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000003','d1600000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000003','d1300000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001',date '2026-08-25',date '2026-08-25','Synthetic attribution correction reason',timestamptz '2026-08-31 07:00:00+00','d1100000-0000-0000-0000-000000000001','prog-attr-rct');
 
 -- ---------------------------------------------------------------------------
 -- Periodontal examination and clinical photographs.
@@ -560,6 +573,27 @@ select extensions.is(
   'a photograph names the clinician who took it rather than discarding the attribution it holds'
 );
 
+-- public.charges is immutable, so charge.provider_id keeps naming the clinician
+-- the charge was POSTED under. Attribution is corrected through the append-only
+-- charge_attribution_corrections ledger, and the record must show the standing
+-- attribution rather than the superseded one.
+select extensions.is(
+  (select row_value->>'providerDisplay'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'charge'
+     and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000003'),
+  'Cara Santos',
+  'a charge whose attribution was corrected names the corrected clinician, not the superseded one'
+);
+select extensions.is(
+  (select row_value->>'providerDisplay'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'charge'
+     and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000001'),
+  'Alba Reyes',
+  'an uncorrected charge still names the clinician it was posted under'
+);
+
 select extensions.is(
   (select count(*)::integer
    from prog_payload, jsonb_array_elements(payload->'rows') as row_value
@@ -729,6 +763,24 @@ select extensions.is(
    where seq = 1 and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000001'),
   '8000000',
   'a charge states the amount billed'
+);
+-- 300,000 billed, 100,000 credited, then voided. The void withdrew 200,000, and
+-- stating the raw 300,000 would overstate what actually moved.
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'charge_void'
+     and row_value->>'sourceId' = 'd2600000-0000-0000-0000-000000000002'),
+  '-200000',
+  'a void of an adjusted charge withdraws the adjusted amount, never the raw one'
+);
+select extensions.is(
+  (select row_value->>'chargeMinor' || '/' || (row_value->>'paidMinor') || '/' || (row_value->>'balanceMinor')
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'charge'
+     and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000006'),
+  '0/0/0',
+  'the credited-then-voided case owes nothing, and its position and its void line agree'
 );
 select extensions.ok(
   (select bool_and(row_value->>'lineAmountMinor' is null)

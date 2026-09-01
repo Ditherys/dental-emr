@@ -6,6 +6,7 @@ import {
   clinicalProgressEventLabel,
   clinicalProgressTimeLabel,
   clinicalProgressToothLabel,
+  clinicalProgressUnfinishedLabel,
   parseClinicalProgressRecord,
 } from "./progress-record";
 
@@ -151,6 +152,15 @@ describe("clinical progress formatting", () => {
     expect(clinicalProgressEventLabel("CHARGE")).toBe("Charge posted");
     expect(clinicalProgressEventLabel("ALLOCATION")).toBe("Payment applied");
     expect(clinicalProgressEventLabel("PERIODONTAL")).not.toContain("_");
+  });
+
+  it("calls an open visit in progress and an unsigned document a draft", () => {
+    // In a clinical record those two words mean different things: a visit that
+    // is still happening is not an unfinished document.
+    expect(clinicalProgressUnfinishedLabel("ENCOUNTER")).toBe("In progress");
+    expect(clinicalProgressUnfinishedLabel("NOTE")).toBe("Draft");
+    expect(clinicalProgressUnfinishedLabel("PERIODONTAL")).toBe("Draft");
+    expect(clinicalProgressUnfinishedLabel("PLAN")).toBe("Draft");
   });
 
   it("says nothing rather than dash-filling a record with no tooth", () => {

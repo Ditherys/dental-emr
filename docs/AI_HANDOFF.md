@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 13 (round 2)
+# AI Handoff - Unified Clinical Chart workspace, Task 13 (round 3, final)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -6,7 +6,7 @@ history; this file is deliberately not an append-only transcript.
 Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
-`2ec2a4d`. Task 13 is `1f9c97b` and this commit.
+`2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and this commit.
 
 ## Task 13 - the canonical chronological progress-record projection (2026-09-02)
 
@@ -438,7 +438,8 @@ Every ledger row now carries `lineAmountMinor`: the signed amount THAT ONE event
 moved, read from its own `amount_centavos`, never derived from another row and
 never a total. `charge_void`, `payment_void` and `charge_adjustment_reversal`
 have no amount column of their own, so they carry the amount of the row they
-withdraw, negated. Signs: a charge, payment or allocation is positive; a refund,
+withdraw, negated. Round 3 corrected `charge_void` to negate the ADJUSTED amount
+rather than the raw one. Signs: a charge, payment or allocation is positive; a refund,
 reversal or void is negative; an adjustment is signed by its direction.
 
 Desktop headers are now `Amount` / `Case charge` / `Case paid` / `Case balance`,
@@ -462,8 +463,9 @@ Every row from a source with a draft lifecycle now carries `finalized`
 (`clinical_encounters`, `clinical_notes`, `prescriptions`, `treatment_plans`,
 `periodontal_examinations`); every other source carries `null` rather than
 guessing. Drafts are **shown, not hidden** - an unfinished note is part of the
-record-in-progress - and the table marks them with a restrained bordered `Draft`
-label so they cannot read as signed history.
+record-in-progress - and the table marks them so they cannot read as signed
+history. Round 3 refined that marker: it is per-source (`In progress` for an open
+visit, `Draft` for an unsigned document) and carries full foreground emphasis.
 
 Tests: a DRAFT note and a DRAFT periodontal examination were added to the
 fixture; six pgTAP assertions cover finalized note true / draft note false /
@@ -585,7 +587,170 @@ Playwright was not run; hosted E2E remains unauthorized.
    because `providers.linked_user_id` carries no uniqueness constraint per
    organization. One user linked to two provider rows in one tenant is already a
    data defect; this makes the projection deterministic rather than correct in
-   that case.
+   that case. LEDGERED by the reviewer as deferred.
+
+## Task 13 round 3 - review fixes: 1 Important-family, 1 Medium, 2 Low (2026-09-02)
+
+Re-review came back all-addressed with no new Critical or Important breakage.
+Four items remained. One migration,
+`20260901010311_clinical_progress_charge_attribution_repair.sql`, allocated from
+the verified ceiling `20260901010310`. It grants and revokes nothing and
+declares nothing at top level.
+
+### 1 - a corrected charge still named the superseded clinician
+
+The CHARGE branch read `public.charges.provider_id` directly. That column is
+immutable and records the clinician the charge was **posted** under; attribution
+is corrected through the append-only `public.charge_attribution_corrections`
+ledger, and `private.charge_current_attribution` (`20260828010500`) is the
+canonical resolver for the attribution that currently stands. A charge whose
+attribution had been corrected therefore displayed the wrong clinician,
+permanently, in the patient's own record.
+
+This is the same family as the `procedure_case_events` misattribution round 2
+repaired, and it is fixed the same way: read the canonical resolver, never the
+raw column. Fixing four of five instances of one defect is not discipline, it is
+an inconsistent record.
+
+Test: the root-canal charge is posted under `Alba Reyes` and corrected to
+`Cara Santos` through the correction ledger; the row is asserted to name
+`Cara Santos`, and the uncorrected orthodontic charge is asserted to still name
+`Alba Reyes` so the resolver is not simply returning the last provider it saw.
+
+### 2 - a void overstated what it withdrew
+
+The `charge_void` branch reported `-charge.amount_centavos`: the RAW billed
+amount. A charge carrying a prior credit adjustment stood at less than that when
+it was voided, so the line overstated the movement by the whole adjustment - in
+the one column round 2 had just been required to make accurate.
+
+It now reports `-private.charge_adjusted_amount(charge.id, v_organization_id)`,
+which is exactly the position `private.clinical_progress_case_money` zeroes on a
+void, so the line amount and the case position agree by construction rather than
+by coincidence.
+
+Test: a sixth procedure case - 300,000 billed, 100,000 credited, then voided.
+The void line is asserted to be `-200000`, and the case position `0/0/0`. No
+existing fixture reached this combination.
+
+### 3 - an OPEN encounter rendered a `Draft` chip
+
+**Chosen: a distinct label, not suppression.** An open visit is a real and
+useful thing for a chronology to show - it is the row a clinician is currently
+working inside - so hiding the marker would remove information. But in a
+clinical record "draft" and "in progress" are not interchangeable: a visit that
+is still happening is not an unfinished document. `clinicalProgressUnfinishedLabel`
+returns `In progress` for `ENCOUNTER` and `Draft` for every other source. The
+`finalized` field itself is unchanged, so nothing about the data moved; only
+what the screen calls it.
+
+### 4 - the unfinished marker now carries deliberate emphasis
+
+It was `text-[0.6875rem]` `font-normal` `text-muted-foreground` - the quietest
+element in a row whose title is `font-medium`. It is now full foreground
+contrast, `font-medium`, `text-xs`, with a `border-foreground/40` border. It
+stays monochrome, because an EMR does not need a colour here, but it is an
+emphasis choice rather than the default muted treatment. "This content is not
+finalized" is not a de-emphasis-worthy fact in a clinical chronology.
+
+Test: `gives the unfinished marker real emphasis rather than the lowest in the
+row` asserts the marker's class does NOT contain `text-muted-foreground` and
+DOES contain `font-medium` and `text-foreground`.
+
+### Ledgered, not fixed
+
+`private.clinical_progress_actor_provider` ordering by `provider.id` with no
+per-organization uniqueness on `providers.linked_user_id`, and `row_number()`
+over the whole union per call. Both explicitly deferred by the reviewer.
+
+### Round 3 files
+
+Added: `supabase/migrations/20260901010311_clinical_progress_charge_attribution_repair.sql`.
+
+Changed: `supabase/tests/clinical_progress_record.test.sql` (65 -> 69
+assertions), `src/lib/odontogram/progress-record.ts` (+ suite),
+`src/components/odontogram/progress-record-table.tsx` (+ suite),
+`scripts/migration-privilege-lint.test.mjs` (files 337 -> 338 only; the function
+declaration count stays 508 and the SECURITY DEFINER count stays 369, because
+20260901010311 declares nothing at top level at all - the boundary is replaced
+inside a `$definition$` literal that `splitSqlStatements` cannot see).
+
+No grant was added, so `scripts/approved-final-grants.mjs`,
+`scripts/boundary-privilege-invariant.test.mjs` and
+`supabase/tests/approved_grant_registry_integrity.test.sql` are unchanged at
+405 / 269 / 258.
+
+### How the applied boundary was replaced, again
+
+Same guarded DO-block `execute` as round 2, with the anchors counted against the
+**applied** body before writing the migration, so the guards pass on a fresh
+chain rather than failing closed spuriously:
+
+```
+charge.provider_id,          -> 1
+-charge.amount_centavos      -> 1
+charge_current_attribution   -> 0
+```
+
+Two new pre-guards this round: the repaired marker `charge_current_attribution`
+must be absent, and `lineAmountMinor` must be **present** - so this migration
+refuses to run against a body that predates the round-2 repair and cannot
+silently revert it. The post-guard re-asserts posture, both directions of the
+browser boundary, and that BOTH repairs survive.
+
+### Round 3 tests run and observed results
+
+RED, database, before the migration:
+
+```
+not ok 32 - a charge whose attribution was corrected names the corrected clinician, not the superseded one
+not ok 56 - a void of an adjusted charge withdraws the adjusted amount, never the raw one
+```
+
+RED, TypeScript: `Tests 3 failed | 23 passed (26)`.
+
+```
+npm run db:migrate:local    -> applied 20260901010311
+npm run db:types:local      -> Updated; NO diff (the boundary signature is unchanged)
+npm run security:migrations -> passed (338 files, 93 terminals, 405 approved)
+npm run test:unit -- progress-record.test.ts progress-record-table.test.tsx
+                            -> Test Files 2 passed (2) / Tests 26 passed (26)
+npm run test:db:local       -> halts at treatment_plans.test.sql (pre-existing);
+                               PASS clinical_progress_record.test.sql
+                               PASS approved_grant_registry_integrity.test.sql
+npm run typecheck           -> clean
+npm run lint                -> 0 errors, 3 warnings (pre-existing, untouched files)
+npx vitest run scripts/     -> 13 files, 288 tests passed
+```
+
+Run directly, because the gate halts before the end:
+
+```
+psql < supabase/tests/clinical_progress_record.test.sql          -> P1_TEST_PASS (69 assertions)
+psql < supabase/tests/approved_grant_registry_integrity.test.sql -> P1_TEST_PASS
+```
+
+`security:migrations` and `approved_grant_registry_integrity` were confirmed
+passing together, after the counter move.
+
+Regression: `clinical-section`, `odontogram-section`, `patient-workspace`,
+`clinical-chart-workspace`, `service` -> 5 files, 111 tests passed.
+
+Playwright was not run; hosted E2E remains unauthorized.
+
+### Round 3 residual risks
+
+1. `private.charge_current_attribution` is called once per CHARGE row in the
+   page, and it scans `charge_attribution_corrections` by `charge_id`, which has
+   no index on that column. Bounded at 200 rows per page and correct, but it is
+   a per-row lookup; if a patient page ever gets slow this is the first place to
+   look.
+2. The void line amount uses the adjusted amount **as of the read**, not as of
+   the void. An adjustment posted after a void would change what the void row
+   claims to have withdrawn. `public.void_charge` makes that path unreachable
+   through the reviewed boundary, and the alternative - reconstructing the
+   adjustment set as at the void timestamp - would be a genuine point-in-time
+   ledger reconstruction rather than a projection.
 
 ### Next bounded task
 

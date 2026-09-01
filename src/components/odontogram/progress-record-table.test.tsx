@@ -105,6 +105,35 @@ describe("ProgressRecordTable", () => {
     expect(rows[1]).not.toHaveTextContent(/draft/i);
   });
 
+  it("calls an open visit in progress rather than a draft", () => {
+    render(
+      <ProgressRecordTable
+        record={record([
+          row({ eventId: "visit", eventType: "ENCOUNTER", finalized: false, procedureLabel: null }),
+          row({ eventId: "note", eventType: "NOTE", finalized: false, procedureLabel: null }),
+        ])}
+      />,
+    );
+
+    const rows = within(screen.getByTestId("progress-record-table")).getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent(/in progress/i);
+    expect(rows[0]).not.toHaveTextContent(/draft/i);
+    expect(rows[1]).toHaveTextContent(/draft/i);
+  });
+
+  it("gives the unfinished marker real emphasis rather than the lowest in the row", () => {
+    render(<ProgressRecordTable record={record([row({ eventType: "NOTE", finalized: false })])} />);
+
+    const marker = within(screen.getByTestId("progress-record-table")).getByTestId(
+      "progress-record-unfinished",
+    );
+    // "This is not finalized" is not a de-emphasis-worthy fact in a clinical
+    // chronology: it must not be rendered as the quietest thing in the row.
+    expect(marker.className).not.toContain("text-muted-foreground");
+    expect(marker.className).toContain("font-medium");
+    expect(marker.className).toContain("text-foreground");
+  });
+
   it("renders the record in the order the server returned it and never re-sorts", () => {
     render(
       <ProgressRecordTable

@@ -5,6 +5,7 @@ import {
   clinicalProgressProcedureLabel,
   clinicalProgressTimeLabel,
   clinicalProgressToothLabel,
+  clinicalProgressUnfinishedLabel,
   type ClinicalProgressRecord,
   type ClinicalProgressRow,
 } from "@/lib/odontogram/progress-record";
@@ -30,11 +31,20 @@ function eventTitle(row: ClinicalProgressRow): string {
   return procedure === null ? label : `${label} · ${procedure}`;
 }
 
-/** An unfinished clinical record must never be mistakable for signed history. */
-function DraftMark() {
+/**
+ * An unfinished clinical record must never be mistakable for signed history, so
+ * this is deliberately NOT the quietest thing in the row: full foreground
+ * contrast, the same weight as the row title, and a solid border. It stays
+ * monochrome - an EMR does not need a colour here - but it is an emphasis
+ * choice rather than the default muted treatment.
+ */
+function UnfinishedMark({ row }: { row: ClinicalProgressRow }) {
   return (
-    <span className="ml-2 rounded-sm border px-1 py-px align-middle text-[0.6875rem] font-normal uppercase tracking-wide text-muted-foreground">
-      Draft
+    <span
+      data-testid="progress-record-unfinished"
+      className="ml-2 rounded-sm border border-foreground/40 px-1.5 py-px align-middle text-xs font-medium uppercase tracking-wide text-foreground"
+    >
+      {clinicalProgressUnfinishedLabel(row.eventType)}
     </span>
   );
 }
@@ -43,7 +53,7 @@ function EventCell({ row }: { row: ClinicalProgressRow }) {
   return (
     <>
       {eventTitle(row)}
-      {row.finalized === false && <DraftMark />}
+      {row.finalized === false && <UnfinishedMark row={row} />}
     </>
   );
 }

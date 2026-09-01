@@ -143,6 +143,17 @@ export function clinicalProgressEventLabel(eventType: ClinicalProgressEventType)
   return EVENT_LABELS[eventType];
 }
 
+/**
+ * What an unfinished row of this kind should be called. In a clinical record
+ * the two words are not interchangeable: a visit that is still happening is in
+ * progress, an unsigned note or examination is a draft. Calling an open
+ * encounter a draft would describe it as an unfinished document, which it is
+ * not.
+ */
+export function clinicalProgressUnfinishedLabel(eventType: ClinicalProgressEventType): string {
+  return eventType === "ENCOUNTER" ? "In progress" : "Draft";
+}
+
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "short",

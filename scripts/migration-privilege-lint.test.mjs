@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(337);
+    expect(result.checked.files).toBe(338);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -352,6 +352,10 @@ describe("the active migration chain", () => {
     // progress-record projection boundary and its two private derivation
     // helpers. Only the boundary is SECURITY DEFINER, so the definer count
     // below moves by exactly one.
+    //
+    // Still 508 after 20260901010311: that migration declares nothing at top
+    // level at all. It replaces the projection boundary through the same
+    // DO-block EXECUTE and adds no helper, so only the file count moves.
     //
     // 508 with 20260901010310, which adds ONE top-level declaration: the
     // private actor-provider helper. That migration also replaces the applied
