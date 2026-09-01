@@ -421,8 +421,11 @@ describe("OdontogramSection O7", () => {
     expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
   });
 
-  it("opens the bounded periodontal workspace for a relational draft examination", async () => {
-    const user = userEvent.setup();
+  // Task 12 moved periodontal charting out of this section: it is the third
+  // primary chart mode now, not a dialog hanging off the tooth chart, so the
+  // detached top-right action is gone. What this asserts changed with it — the
+  // dialog it used to open no longer exists to be opened.
+  it("no longer offers a detached periodontal entry action", async () => {
     const dtoWithPerio: PatientOdontogramDTO = {
       ...mockDto,
       periodontalExaminations: [
@@ -455,9 +458,11 @@ describe("OdontogramSection O7", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Open periodontal entry" }));
-
-    expect(await screen.findByTestId("perio-workspace")).toHaveAttribute("data-examination-id", "00000000-0000-4000-a000-000000000099");
+    expect(await screen.findByTestId("odontogram-section")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open periodontal entry" })).toBeNull();
+    expect(screen.queryByTestId("perio-workspace")).toBeNull();
+    // The tooth-record path this section does own is untouched.
+    expect(screen.getByRole("button", { name: "Open tooth record" })).toBeInTheDocument();
   });
 
   it("keeps the relational clinical history available to the browser print view", () => {

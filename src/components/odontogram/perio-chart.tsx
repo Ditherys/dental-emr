@@ -195,7 +195,12 @@ export function PerioChart({
                 const state = getState(tooth);
                 const disabled = readOnly || !state.toothPresent || state.implantContext;
                 const pd = measurement ? String(measurement.probingDepthMm) : "";
-                const gm = measurement ? String(measurement.gingivalMarginMm) : "0";
+                // An unrecorded gingival margin is blank, never "0": the record
+                // keeps "not assessed" distinct from "assessed and at the CEJ".
+                const gm =
+                  measurement && measurement.gingivalMarginMm !== null
+                    ? String(measurement.gingivalMarginMm)
+                    : "";
                 const accessibleSite = SITE_LABELS[site];
                 const update = (field: PerioSiteField, value: string | boolean) => {
                   if (!disabled) onSiteChange(tooth, site, field, value);
@@ -256,7 +261,14 @@ export function PerioChart({
                         </span>
                         {previous && previous.calMm !== null ? <span className="text-slate-400">prev {previous.calMm}</span> : null}
                       </div>
-                    ) : <span className="px-0.5 text-[10px] text-slate-400" aria-hidden="true">—</span>}
+                    ) : (
+                      <span
+                        data-testid={`perio-unknown-cal-${tooth}-${site}`}
+                        className="px-0.5 text-[10px] text-slate-400 italic"
+                      >
+                        Not recorded
+                      </span>
+                    )}
                     <label className="flex min-h-[28px] items-center gap-1 rounded px-1 py-0.5 text-[10px] text-slate-600 touch-manipulation focus-within:ring-1 focus-within:ring-blue-400">
                       <input type="checkbox" aria-label={`Tooth ${tooth} ${accessibleSite} bleeding`} checked={Boolean(measurement?.bleedingOnProbing)} onChange={(event) => update("bop", event.target.checked)} disabled={disabled} className="size-4 rounded border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500" />
                       BOP

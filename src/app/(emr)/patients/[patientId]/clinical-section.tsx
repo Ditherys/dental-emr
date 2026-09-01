@@ -2,11 +2,13 @@
 
 import { Ellipsis, LoaderCircle, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 
 import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-workspace";
 import { ClinicalVisitHeader } from "@/components/clinical/clinical-visit-header";
 import { MedicalSafetySummary } from "@/components/clinical/medical-safety-summary";
+import { PeriodontalExamWorkspace, type PeriodontalWorkspaceHandlers } from "@/components/odontogram/periodontal-exam-workspace";
+import type { PerioComparisonPayload, PeriodontalWorkspacePayload } from "@/components/odontogram/periodontal-summary";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { TreatmentPlanMode } from "@/components/odontogram/treatment-plan-mode";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -37,12 +39,21 @@ import {
   type ClinicalVisitResult,
 } from "./clinical-actions";
 import { OdontogramSection } from "./odontogram-section";
+import {
+  amendPeriodontalExaminationV2Action,
+  comparePeriodontalExaminationsAction,
+  createPeriodontalDraftAction,
+  finalizePeriodontalExaminationV2Action,
+  getPeriodontalWorkspaceAction,
+  savePeriodontalMeasurementsV2Action,
+} from "./perio-actions";
 import { ProcedurePaymentSummaryCard } from "./procedure-payment-summary";
 
 type Props = {
   patientId: string;
   actingBranchId: string;
   canWriteClinical: boolean;
+  canCorrectClinical?: boolean;
   printPatientName?: string;
   printBranchName?: string;
   printProviderName?: string;
@@ -93,7 +104,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
   // Plan printing moves with the plan page Task 17 removes; the prop stays on the
   // route contract until then.
@@ -265,7 +276,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
       loadFailed={loadFailed}
       chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
     />,
-    PERIODONTAL: <PeriodontalModePanel />,
+    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical ?? canWriteClinical} />,
   };
 
   return <section id="clinical" className="border-t py-6">
@@ -390,10 +401,49 @@ function NoteItem({ note, canWrite, saving, edit, amend, finalize }: { note: Cli
   </li>;
 }
 
-function PeriodontalModePanel() {
-  return <div className="rounded-md border px-3 py-4 text-sm text-muted-foreground">
-    Periodontal charting is entered from the current-status chart. Open <span className="font-medium text-foreground">Open periodontal entry</span> there to record six-site measurements.
-  </div>;
+/** A request key, not a secret; the server owns idempotency, this only names the attempt. */
+function requestKey(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(16)}-0000-4000-8000-${Math.trunc(Math.random() * 1e12).toString(16).padStart(12, "0").slice(0, 12)}`;
+}
+
+/**
+ * Periodontal is a primary chart mode, not a dialog hanging off the tooth
+ * chart. Every read rebuilds from `get_periodontal_workspace_v2`; every write
+ * goes through a versioned v2 action that re-derives its own tenant, branch and
+ * provider server-side. No organization, provider or author identifier is sent
+ * from here.
+ */
+function PeriodontalModePanel({ patientId, actingBranchId, canWriteClinical, canCorrectClinical }: { patientId: string; actingBranchId: string; canWriteClinical: boolean; canCorrectClinical: boolean }) {
+  const handlers = useMemo<PeriodontalWorkspaceHandlers>(() => ({
+    load: async ({ examinationId }) => {
+      const result = await getPeriodontalWorkspaceAction({ patientId, actingBranchId, examinationId: examinationId ?? null });
+      return result.ok
+        ? { ok: true, payload: result.payload as PeriodontalWorkspacePayload }
+        : { ok: false, code: result.code };
+    },
+    createDraft: async ({ examinationKind, examinedAt }) =>
+      createPeriodontalDraftAction({ actingBranchId, patientId, examinationKind, examinedAt, idempotencyKey: requestKey() }),
+    save: async ({ examinationId, expectedVersion, batch, attemptKey }) =>
+      savePeriodontalMeasurementsV2Action({ actingBranchId, examinationId, expectedVersion, batch, idempotencyKey: attemptKey ?? requestKey() }),
+    finalize: async ({ examinationId, expectedVersion, confirmation }) =>
+      finalizePeriodontalExaminationV2Action({ actingBranchId, examinationId, expectedVersion, confirmation, idempotencyKey: requestKey() }),
+    amend: async ({ predecessorExaminationId, reason }) =>
+      amendPeriodontalExaminationV2Action({ actingBranchId, predecessorExaminationId, reason, idempotencyKey: requestKey() }),
+    compare: async ({ leftExaminationId, rightExaminationId }) => {
+      const result = await comparePeriodontalExaminationsAction({ patientId, actingBranchId, leftExaminationId, rightExaminationId });
+      return result.ok
+        ? { ok: true, payload: result.payload as PerioComparisonPayload }
+        : { ok: false, code: result.code };
+    },
+  }), [actingBranchId, patientId]);
+
+  return <PeriodontalExamWorkspace
+    patientId={patientId}
+    actingBranchId={actingBranchId}
+    canWriteClinical={canWriteClinical}
+    canCorrect={canCorrectClinical}
+    handlers={handlers}
+  />;
 }
 
 function NoteDialog({ state, saving, error, close, save }: { state: NonNullable<NoteDialogState>; saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {

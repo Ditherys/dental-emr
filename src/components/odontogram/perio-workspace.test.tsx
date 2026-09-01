@@ -209,3 +209,66 @@ describe("PerioWorkspace O10", () => {
     expect(screen.getByTestId("perio-message")).toHaveTextContent(/nothing valid to save/i);
   });
 });
+
+describe("PerioWorkspace unknown measurements", () => {
+  it("leaves an unrecorded gingival margin blank rather than showing zero", () => {
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[
+          { toothFdi: "16", site: "MB", probingDepthMm: 4, gingivalMarginMm: null, calMm: null },
+        ]}
+      />,
+    );
+
+    const gm = screen.getAllByRole("spinbutton", {
+      name: /tooth 16 mesio-buccal gingival margin/i,
+    })[0] as HTMLInputElement;
+    expect(gm.value).toBe("");
+    expect(gm.value).not.toBe("0");
+    expect(gm.value).not.toBe("null");
+  });
+
+  it("reports an unknown attachment level in words rather than as a number", () => {
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[
+          { toothFdi: "16", site: "MB", probingDepthMm: 4, gingivalMarginMm: null, calMm: null },
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByTestId("perio-unknown-cal-16-MB")[0]).toHaveTextContent(/not recorded/i);
+  });
+
+  it("omits an unassessed margin, bleeding and suppuration from the save payload", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => ({ ok: true }));
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[]}
+        onSave={onSave}
+      />,
+    );
+
+    await user.type(screen.getByTestId("perio-input-16-MB"), "4");
+    await user.click(screen.getByTestId("perio-save"));
+
+    const payload = (onSave.mock.calls[0] as unknown[])[0] as {
+      sites: Array<Record<string, unknown>>;
+    };
+    expect(payload.sites).toHaveLength(1);
+    expect(payload.sites[0].probing_depth_mm).toBe(4);
+    expect(payload.sites[0].gingival_margin_mm).toBeUndefined();
+    expect(payload.sites[0].bleeding_on_probing).toBeUndefined();
+    expect(payload.sites[0].suppuration).toBeUndefined();
+  }, 20000);
+});

@@ -6,10 +6,12 @@ import { AuthorizationError, requirePermission } from "@/lib/authorization";
 import {
   amendPeriodontalExaminationInputSchema,
   amendPeriodontalExaminationV2InputSchema,
+  comparePeriodontalExaminationsInputSchema,
   createPeriodontalDraftInputSchema,
   createPeriodontalExaminationInputSchema,
   finalizePeriodontalExaminationInputSchema,
   finalizePeriodontalExaminationV2InputSchema,
+  periodontalWorkspaceInputSchema,
   savePeriodontalMeasurementsInputSchema,
   savePeriodontalMeasurementsV2InputSchema,
 } from "@/lib/odontogram/schema";
@@ -17,10 +19,12 @@ import { OdontogramServiceError, mapOdontogramRpcError } from "@/lib/odontogram/
 import {
   amendPeriodontalExamination,
   amendPeriodontalExaminationV2,
+  comparePeriodontalExaminations,
   createPeriodontalDraft,
   createPeriodontalExamination,
   finalizePeriodontalExamination,
   finalizePeriodontalExaminationV2,
+  getPeriodontalWorkspace,
   savePeriodontalMeasurements,
   savePeriodontalMeasurementsV2,
 } from "@/lib/odontogram/service";
@@ -161,6 +165,36 @@ export async function finalizePeriodontalExaminationV2Action(input: unknown): Pr
     const res = await finalizePeriodontalExaminationV2(v);
     revalidateAuthoritativePatient(res.patientId);
     return { ok: true, id: res.examinationId, version: res.version, overridden: res.overridden };
+  } catch (e) { return mapError(e); }
+}
+
+// ---------------------------------------------------------------------------
+// The read projections
+//
+// Both are read-only: they open no encounter, write no row, and emit no audit
+// event, so opening the periodontal workspace never records that a chart was
+// looked at as if it were clinical work. Neither revalidates a path.
+// ---------------------------------------------------------------------------
+
+export type PerioProjectionResult = { ok: true; payload: unknown } | PerioFailure;
+
+export async function getPeriodontalWorkspaceAction(input: unknown): Promise<PerioProjectionResult> {
+  const inv = invalidResult(periodontalWorkspaceInputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = periodontalWorkspaceInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.read", branchId: v.actingBranchId });
+    return { ok: true, payload: await getPeriodontalWorkspace(v) };
+  } catch (e) { return mapError(e); }
+}
+
+export async function comparePeriodontalExaminationsAction(input: unknown): Promise<PerioProjectionResult> {
+  const inv = invalidResult(comparePeriodontalExaminationsInputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = comparePeriodontalExaminationsInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.read", branchId: v.actingBranchId });
+    return { ok: true, payload: await comparePeriodontalExaminations(v) };
   } catch (e) { return mapError(e); }
 }
 

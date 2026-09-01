@@ -4,10 +4,8 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
 import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
-import { PerioWorkspace, type PerioMeasurement, type PerioToothState } from "@/components/odontogram/perio-workspace";
 import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
@@ -22,11 +20,6 @@ import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
-import {
-  amendPeriodontalExaminationAction,
-  finalizePeriodontalExaminationAction,
-  savePeriodontalMeasurementsAction,
-} from "./perio-actions";
 
 /**
  * The projection-only renderer never emits fork drafts. The prop stays until
@@ -86,7 +79,6 @@ export function OdontogramSection({
   const dto = isCurrentPatientSnapshot ? dtoSnapshot.dto : null;
   const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
-  const [perioOpen, setPerioOpen] = React.useState(false);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
 
@@ -112,7 +104,6 @@ export function OdontogramSection({
   React.useEffect(() => {
     setDrawerOpen(false);
     setError(null);
-    setPerioOpen(false);
     setFollowupOpen(false);
   }, [patientId]);
 
@@ -180,46 +171,6 @@ export function OdontogramSection({
     setLoading(true);
     void refetch();
   }, [hasMismatchedInitialDto, initialDto, loadFailed, patientId, refetch]);
-
-  const selectedPeriodontalExam = React.useMemo(() => {
-    const examinations = dto?.periodontalExaminations ?? [];
-    return examinations.find((exam) => exam.status === "DRAFT") ?? examinations[0] ?? null;
-  }, [dto]);
-
-  const selectedPerioSites = React.useMemo<PerioMeasurement[]>(() => {
-    if (!selectedPeriodontalExam) return [];
-    return selectedPeriodontalExam.sites.map((site) => ({
-      toothFdi: site.tooth_fdi,
-      site: site.site,
-      probingDepthMm: site.probing_depth_mm,
-      gingivalMarginMm: site.gingival_margin_mm,
-      calMm: site.cal_mm,
-      bleedingOnProbing: site.bleeding_on_probing,
-      suppuration: site.suppuration,
-    }));
-  }, [selectedPeriodontalExam]);
-
-  const perioToothStates = React.useMemo<Readonly<Record<string, PerioToothState>>>(() => {
-    const states: Record<string, PerioToothState> = {};
-    if (!dto) return states;
-
-    for (const entry of dto.entries ?? []) {
-      if (entry.status === "PLANNED" || entry.lifecycle !== "OPEN" || entry.event_state !== "CURRENT") continue;
-      const isMissing = entry.clinical_code === "MISSING" || (entry.detail?.code === "TOOTH_STATE" && entry.detail.state === "MISSING");
-      if (isMissing) states[entry.tooth_code] = { toothPresent: false };
-    }
-    for (const chain of dto.implantChains ?? []) {
-      if (chain.record_kind === "CURRENT" && chain.event_state === "CURRENT") states[chain.tooth_fdi] = { toothPresent: true, implantContext: true };
-    }
-    for (const site of selectedPeriodontalExam?.sites ?? []) {
-      const existing = states[site.tooth_fdi] ?? {};
-      states[site.tooth_fdi] = {
-        toothPresent: site.tooth_present === false ? false : existing.toothPresent,
-        implantContext: site.implant_context === true || existing.implantContext,
-      };
-    }
-    return states;
-  }, [dto, selectedPeriodontalExam]);
 
   const progressEvents = React.useMemo(
     () => isCurrentPatientSnapshot ? (suppliedProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
@@ -301,9 +252,6 @@ export function OdontogramSection({
           <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setDrawerOpen(true)}>
             Open tooth record
           </Button>
-          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setPerioOpen(true)}>
-            Open periodontal entry
-          </Button>
         </div>
       </div>
 
@@ -335,55 +283,6 @@ export function OdontogramSection({
         planContext={planContext}
         onRecorded={refetch}
       />
-
-      <Dialog open={perioOpen} onOpenChange={(open) => !open && setPerioOpen(false)}>
-        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-auto sm:w-[min(96vw,72rem)]" onEscapeKeyDown={() => setPerioOpen(false)}>
-          <DialogHeader>
-            <DialogTitle>Periodontal entry</DialogTitle>
-            <DialogDescription>Six-site measurements remain a bounded periodontal examination, separate from the tooth-chart projection.</DialogDescription>
-          </DialogHeader>
-          {selectedPeriodontalExam && canWriteClinical ? (
-            <PerioWorkspace
-              patientId={patientId}
-              actingBranchId={actingBranchId}
-              examination={{
-                id: selectedPeriodontalExam.id,
-                status: selectedPeriodontalExam.status,
-                version: selectedPeriodontalExam.version,
-                examinationKind: selectedPeriodontalExam.examination_kind,
-                examinedAt: selectedPeriodontalExam.examined_at,
-                examinedProviderId: selectedPeriodontalExam.examined_provider_id,
-                finalizedAt: selectedPeriodontalExam.finalized_at,
-                finalizedBy: selectedPeriodontalExam.finalized_by,
-                encounterId: selectedPeriodontalExam.encounter_id,
-              }}
-              initialSites={selectedPerioSites}
-              toothStates={perioToothStates}
-              onSave={async (payload) => {
-                const result = await savePeriodontalMeasurementsAction(payload);
-                if (result.ok) void refetch();
-                return result;
-              }}
-              onFinalize={async (payload) => {
-                const result = await finalizePeriodontalExaminationAction(payload);
-                if (result.ok) void refetch();
-                return result;
-              }}
-              onAmend={async (payload) => {
-                const result = await amendPeriodontalExaminationAction(payload);
-                if (result.ok) void refetch();
-                return result;
-              }}
-            />
-          ) : (
-            <div className="rounded-md border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
-              {selectedPeriodontalExam
-                ? "This periodontal examination is read-only for your current clinical permission."
-                : "No periodontal examination is available yet. Create one from an authorized clinical encounter before charting measurements."}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {recordFollowup && (
         <ProcedureFollowupDialog

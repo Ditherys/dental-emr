@@ -15,10 +15,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { PERIO_SITE_ORDER } from "@/lib/odontogram/perio";
+import { deriveCal, PERIO_SITE_ORDER } from "@/lib/odontogram/perio";
 import type { PerioSite } from "@/lib/odontogram/clinical-codes";
 import { PerioChart, type PerioChartMeasurement, type PerioSiteField, type PerioToothState } from "./perio-chart";
 
+/**
+ * The bounded six-site periodontal entry surface.
+ *
+ * Superseded as the primary work surface by
+ * `periodontal-exam-workspace.tsx`, which is mounted as the third primary chart
+ * mode and reads `get_periodontal_workspace_v2`. This component is retained and
+ * still tested; it is no longer mounted by any route.
+ */
 type SiteKey = `${string}:${PerioSite}`;
 
 export type PerioMeasurement = PerioChartMeasurement;
@@ -124,10 +132,12 @@ export function PerioWorkspace({
       const next = new Map(previous);
       const key = siteKey(tooth, site);
       const existing = next.get(key);
+      // Unknown is null all the way through. A margin nobody recorded is not a
+      // margin of 0, and a bleeding answer nobody gave is not "no bleeding".
       let probingDepth = existing?.probingDepthMm ?? 0;
-      let gingivalMargin = existing?.gingivalMarginMm ?? 0;
-      let bleedingOnProbing = existing?.bleedingOnProbing ?? false;
-      let suppuration = existing?.suppuration ?? false;
+      let gingivalMargin: number | null = existing?.gingivalMarginMm ?? null;
+      let bleedingOnProbing: boolean | null = existing?.bleedingOnProbing ?? null;
+      let suppuration: boolean | null = existing?.suppuration ?? null;
 
       if (field === "pd") {
         const number = value === "" ? 0 : Number(value);
@@ -138,9 +148,9 @@ export function PerioWorkspace({
           return next;
         }
       } else if (field === "gm") {
-        const number = value === "" ? 0 : Number(value);
-        if (value !== "" && (!Number.isInteger(number) || number < -10 || number > 20)) return previous;
-        gingivalMargin = value === "" ? 0 : number;
+        const number = value === "" ? null : Number(value);
+        if (number !== null && (!Number.isInteger(number) || number < -10 || number > 20)) return previous;
+        gingivalMargin = number;
       } else if (field === "bop") {
         bleedingOnProbing = Boolean(value);
       } else {
@@ -151,8 +161,8 @@ export function PerioWorkspace({
         next.delete(key);
         return next;
       }
-      const calMm = probingDepth + gingivalMargin;
-      if (calMm < -9 || calMm > 35) return previous;
+      const calMm = deriveCal(probingDepth, gingivalMargin);
+      if (calMm !== null && (calMm < -9 || calMm > 35)) return previous;
       next.set(key, {
         toothFdi: tooth,
         site,
@@ -272,8 +282,8 @@ export function PerioWorkspace({
                     document.getElementById(`perio-phone-tooth`)?.focus();
                   }
                 }} className="h-9 text-center" disabled={disabled} inputMode="numeric" />
-                <Input type="number" min={-10} max={20} step={1} aria-label={`Tooth ${phoneTooth} ${accessibleSite} gingival margin phone`} placeholder="GM" value={measurement ? String(measurement.gingivalMarginMm) : "0"} onChange={(event) => updateSite(phoneTooth, site, "gm", event.target.value)} className="h-9 w-full text-center" disabled={disabled} inputMode="numeric" />
-                <span className="text-xs tabular-nums text-slate-600" data-testid={`perio-phone-cal-${phoneTooth}-${site}`}>{measurement ? `CAL ${measurement.calMm}` : "—"}</span>
+                <Input type="number" min={-10} max={20} step={1} aria-label={`Tooth ${phoneTooth} ${accessibleSite} gingival margin phone`} placeholder="GM" value={measurement && measurement.gingivalMarginMm !== null ? String(measurement.gingivalMarginMm) : ""} onChange={(event) => updateSite(phoneTooth, site, "gm", event.target.value)} className="h-9 w-full text-center" disabled={disabled} inputMode="numeric" />
+                <span className="text-xs tabular-nums text-slate-600" data-testid={`perio-phone-cal-${phoneTooth}-${site}`}>{measurement && measurement.calMm !== null ? `CAL ${measurement.calMm}` : <span data-testid={`perio-unknown-cal-${phoneTooth}-${site}`} className="italic text-slate-400">Not recorded</span>}</span>
               </div>
             );
           })}

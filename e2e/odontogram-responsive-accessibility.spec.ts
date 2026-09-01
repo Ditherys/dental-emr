@@ -135,6 +135,71 @@ test("@responsive dental chart stays complete, touch-safe and free of page overf
   await expect(tooth11).toBeFocused();
 });
 
+/**
+ * Task 12 — the periodontal work surface under the responsive matrix.
+ *
+ * PENDING: written, never executed. Hosted E2E is a release gate and was not
+ * authorized for this task. The 44px and overflow claims below are unproven
+ * until this runs on the shared synthetic TEST environment; jsdom applies no
+ * Tailwind and resolves no container query, so the unit suite cannot stand in.
+ */
+test("@responsive the periodontal chart mode stays touch-safe and free of page overflow", async ({ page }, testInfo) => {
+  const patientId = await createSyntheticOdontogramPatient(
+    page,
+    environment,
+    `periogrid${environment.runId}${testInfo.retry}${Date.now()}`,
+  );
+
+  await signInDentistWithTotp(page, environment);
+  await openOdontogram(page, patientId, environment);
+
+  await page
+    .getByRole("group", { name: "Chart mode" })
+    .getByRole("button", { name: "Periodontal" })
+    .click();
+
+  await expect(page.getByTestId("perio-exam-workspace")).toBeVisible();
+  await expectNoPageOverflow(page);
+
+  await page.getByLabel("Examination type").selectOption("INITIAL");
+  await page.getByRole("button", { name: "Start new examination" }).click();
+
+  // The dense grid is wide by nature. It must scroll inside its own container
+  // and never push the page sideways, at every width in the matrix.
+  const gridScroll = page.getByTestId("perio-grid-scroll");
+  await expect(gridScroll).toBeVisible();
+  await expectNoPageOverflow(page);
+
+  const archScroll = page.getByTestId("perio-arch-scroll");
+  await expect(archScroll).toBeVisible();
+  await expectNoPageOverflow(page);
+
+  // Every three-state toggle is a 44px touch target, and it reads its state in
+  // words rather than only by colour.
+  const bleeding = page.getByRole("button", {
+    name: /Tooth 16 mesio-buccal bleeding on probing, not recorded/,
+  });
+  const box = await bleeding.boundingBox();
+  expect(box?.height ?? 0, "bleeding toggle height").toBeGreaterThanOrEqual(44);
+  expect(box?.width ?? 0, "bleeding toggle width").toBeGreaterThanOrEqual(44);
+
+  await bleeding.click();
+  await expect(
+    page.getByRole("button", { name: /Tooth 16 mesio-buccal bleeding on probing, present/ }),
+  ).toHaveAttribute("data-state", "PRESENT");
+
+  // Switching the charting arch changes what is rendered, not what is scrolled.
+  await page.getByLabel("Charting arch").selectOption("LOWER");
+  await expect(page.getByRole("rowheader", { name: /Tooth 46/ })).toBeVisible();
+  await expectNoPageOverflow(page);
+
+  // The arch focus control keeps both arches reachable.
+  await page.getByLabel("Arch focus").selectOption("LOWER");
+  await expect(page.getByTestId("perio-arch-LOWER")).toBeVisible();
+  await expect(page.getByTestId("perio-arch-UPPER")).toHaveCount(0);
+  await expectNoPageOverflow(page);
+});
+
 async function expectNoPageOverflow(page: import("@playwright/test").Page): Promise<void> {
   const overflow = await page.evaluate(() => ({
     page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
