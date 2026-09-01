@@ -43,7 +43,7 @@ export type PhotoUploadDialogProps = {
 const ACCEPTED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 const MIME_EXTENSION: Record<(typeof ACCEPTED_MIME_TYPES)[number], "jpg" | "png" | "webp"> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-const CATEGORY_LABELS: Record<ClinicalPhotoCategory, string> = { BEFORE: "Before", PROGRESS: "Progress", AFTER: "After", DIAGNOSTIC: "Diagnostic", INTRAORAL: "Intraoral", EXTRAORAL: "Extraoral", OTHER: "Other" };
+const CATEGORY_LABELS: Record<ClinicalPhotoCategory, string> = { BEFORE: "Before", PROGRESS: "Progress", AFTER: "After", DIAGNOSTIC: "Diagnostic", RADIOGRAPH: "Radiograph", INTRAORAL: "Intraoral", EXTRAORAL: "Extraoral", OTHER: "Other" };
 
 function dateTimeLocal(value: string | undefined) {
   if (!value) return "";
@@ -91,6 +91,32 @@ export function PhotoUploadDialog({
   const [procedureCaseId, setProcedureCaseId] = useState(defaultProcedureCaseId ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // The dialog stays mounted between uploads, so its initial state is only the
+  // first context it ever saw. Each time it is opened it must adopt the context
+  // the clinician opened it from — otherwise a photograph attached from tooth
+  // 36 would silently carry tooth 11 from an earlier visit into the record.
+  // The adjustment runs during render rather than in an effect so no frame can
+  // paint the previous selection against the new one.
+  const [openedWith, setOpenedWith] = useState<string | null>(null);
+  const contextKey = open
+    ? [defaultCaptureAt, defaultCategory, defaultToothCodes.join(","), defaultSurfaces.join(","), defaultProcedureCaseId ?? ""].join("|")
+    : null;
+  if (contextKey !== openedWith) {
+    setOpenedWith(contextKey);
+    if (contextKey !== null) {
+      setFile(null);
+      setCategory(defaultCategory);
+      setCaptureAt(dateTimeLocal(defaultCaptureAt));
+      setToothCodesValue(defaultToothCodes.join(", "));
+      setSurfacesValue(defaultSurfaces.join(", "));
+      setDisplayFilename("");
+      setFilenameWasEdited(false);
+      setNote("");
+      setProcedureCaseId(defaultProcedureCaseId ?? "");
+      setError(null);
+    }
+  }
 
   const toothCodes = useMemo(() => parseList(toothCodesValue), [toothCodesValue]);
   const suggested = useMemo(() => suggestedName(category, captureAt, toothCodes, sequence, file), [category, captureAt, file, sequence, toothCodes]);

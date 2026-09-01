@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useClinicalPhotoAttachment } from "@/components/clinical/clinical-gallery-sheet";
 import { Button } from "@/components/ui/button";
 import type { ClinicalRecordKind } from "@/lib/clinical/types";
 import { cn } from "@/lib/utils";
@@ -127,7 +128,13 @@ export function ClinicalRecordComposer({
   const [clinicalDate, setClinicalDate] = React.useState(defaultClinicalDate);
   const treatmentReady = Boolean(treatmentContext && treatmentContext.procedures.length > 0);
   const isRelationship = kind === "BRIDGE" || kind === "IMPLANT";
-  const pendingOwner = PENDING_KIND_OWNERS[kind];
+  const attachPhoto = useClinicalPhotoAttachment();
+  // A photograph is not written from here. The composer hands the photo
+  // workflow the context the clinician already established — the selected
+  // teeth and the clinical date — and that workflow remains the only place a
+  // clinical image is recorded. Where no photo workflow is mounted the kind
+  // stays a signpost rather than a dead button.
+  const pendingOwner = kind === "PHOTO" && attachPhoto ? undefined : PENDING_KIND_OWNERS[kind];
 
   return (
     <section aria-labelledby="clinical-record-composer-heading" className="grid gap-3">
@@ -267,6 +274,31 @@ export function ClinicalRecordComposer({
           branchId={branchId}
           onRecorded={onRecorded}
         />
+      )}
+
+      {kind === "PHOTO" && attachPhoto && (
+        <div className="grid gap-2 rounded-md border border-dashed px-3 py-3">
+          <p className="text-xs text-muted-foreground">
+            A photograph is attached through the clinical photograph workflow, prefilled with this
+            selection and clinical date. Recording the image does not open a clinical encounter on its
+            own.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-11 justify-center"
+            onClick={() =>
+              attachPhoto({
+                toothCodes: [...toothCodes],
+                clinicalDate,
+                procedureCaseId: null,
+              })
+            }
+          >
+            Add clinical photograph
+          </Button>
+        </div>
       )}
 
       {pendingOwner && (

@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ellipsis, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import {
+  ClinicalPhotoAttachmentProvider,
+  type ClinicalPhotoAttachmentContext,
+} from "@/components/clinical/clinical-gallery-sheet";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -81,6 +85,20 @@ import {
   type DuplicateRequest,
   type PatientSectionKey,
 } from "./patient-sections";
+
+/**
+ * The composer works in clinical dates; the upload flow needs a capture
+ * instant. A bare date is completed with the clinician's own wall-clock time so
+ * the prefill lands on the day being charted rather than on a server's UTC day.
+ * It is only a starting value: the clinician may correct it before confirming.
+ */
+function photoCaptureAtFrom(clinicalDate: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(clinicalDate)) return clinicalDate;
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${clinicalDate}T${hours}:${minutes}`;
+}
 
 type Props = {
   patient: PatientDetail;
@@ -193,6 +211,26 @@ export function PatientWorkspace({
   const [review, setReview] = useState<DuplicateReview | null>(null);
   const [reviewRequest, setReviewRequest] = useState<DuplicateRequest | null>(null);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
+  // The clinical context the upload flow was opened from. Null when it was
+  // opened from the gallery itself, which carries no tooth selection.
+  const [photoAttachment, setPhotoAttachment] = useState<ClinicalPhotoAttachmentContext | null>(null);
+
+  const openPhotoUpload = useCallback((context: ClinicalPhotoAttachmentContext | null) => {
+    setPhotoAttachment(context);
+    setPhotoUploadOpen(true);
+  }, []);
+
+  // The procedure cases a photograph may be linked to. They come from the same
+  // authorized server projection the composer uses; the browser invents none of
+  // them, and linking remains an explicit choice rather than an inference.
+  const photoProcedureCases = useMemo(
+    () =>
+      (clinicalComposerContext?.openCases ?? []).map((openCase) => ({
+        procedureCaseId: openCase.procedureCaseId,
+        display: openCase.label,
+      })),
+    [clinicalComposerContext],
+  );
 
   const photoFailureMessage = useCallback((code: string) => {
     if (code === "NOT_AUTHORIZED") return "Your access or selected branch changed. Refresh the record and try again.";
@@ -510,7 +548,11 @@ export function PatientWorkspace({
           />
         )}
         {clinicalBreakout && (
-          <>
+          // The photo workflow lives here, so the chart composer several layers
+          // below can hand it a selection without any intermediate layer being
+          // given a say in clinical media. A read-only user is offered no
+          // attachment path at all.
+          <ClinicalPhotoAttachmentProvider attach={canWriteClinical ? openPhotoUpload : null}>
             <ClinicalSection
               patientId={patient.patientId}
               actingBranchId={actingBranchId}
@@ -540,7 +582,7 @@ export function PatientWorkspace({
                   canWriteClinical={canWriteClinical}
                   initialPhotos={initialClinicalPhotos}
                   loadFailed={clinicalPhotosUnavailable}
-                  onOpenUpload={canWriteClinical ? () => setPhotoUploadOpen(true) : undefined}
+                  onOpenUpload={canWriteClinical ? () => openPhotoUpload(null) : undefined}
                   onRefresh={() => router.refresh()}
                   resolveDerivativeUrl={resolvePhotoDerivative}
                   onRename={canWriteClinical ? renameClinicalPhoto : undefined}
@@ -557,8 +599,12 @@ export function PatientWorkspace({
               onOpenChange={setPhotoUploadOpen}
               canWriteClinical={canWriteClinical}
               onSubmit={uploadClinicalPhoto}
+              defaultCaptureAt={photoAttachment ? photoCaptureAtFrom(photoAttachment.clinicalDate) : ""}
+              defaultToothCodes={photoAttachment?.toothCodes ?? []}
+              defaultProcedureCaseId={photoAttachment?.procedureCaseId ?? null}
+              procedureCases={photoProcedureCases}
             />
-          </>
+          </ClinicalPhotoAttachmentProvider>
         )}
         {section === "intake" && canManageIntake && (
           <IntakeSection

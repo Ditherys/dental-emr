@@ -90,6 +90,60 @@ describe("PhotoUploadDialog", () => {
     expect(screen.getByRole("button", { name: "Confirm and add to record" })).toBeDisabled();
   });
 
+  it("offers RADIOGRAPH alongside the existing categories without dropping any of them", () => {
+    render(<PhotoUploadDialog open onOpenChange={vi.fn()} canWriteClinical onSubmit={vi.fn()} />);
+
+    const options = within(screen.getByLabelText("Photo category"))
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+
+    expect(options).toEqual(
+      expect.arrayContaining(["BEFORE", "PROGRESS", "AFTER", "DIAGNOSTIC", "RADIOGRAPH", "INTRAORAL", "EXTRAORAL", "OTHER"]),
+    );
+    expect(within(screen.getByLabelText("Photo category")).getByRole("option", { name: "Radiograph" })).toBeInTheDocument();
+  });
+
+  it("re-applies the composer's context every time the upload flow is opened", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PhotoUploadDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        canWriteClinical
+        defaultCaptureAt="2026-08-30T10:00:00+08:00"
+        defaultToothCodes={["11"]}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    rerender(
+      <PhotoUploadDialog
+        open
+        onOpenChange={vi.fn()}
+        canWriteClinical
+        defaultCaptureAt="2026-09-01T14:30:00+08:00"
+        defaultCategory="RADIOGRAPH"
+        defaultToothCodes={["36", "37"]}
+        defaultSurfaces={["O"]}
+        defaultProcedureCaseId="22000000-0000-0000-0000-000000000021"
+        procedureCases={[{ procedureCaseId: "22000000-0000-0000-0000-000000000021", display: "Composite restoration" }]}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Photo category")).toHaveValue("RADIOGRAPH");
+    expect(screen.getByLabelText("Capture date and time")).toHaveValue("2026-09-01T14:30");
+    expect(screen.getByLabelText("Tooth codes")).toHaveValue("36, 37");
+    expect(screen.getByLabelText("Surfaces")).toHaveValue("O");
+    expect(screen.getByLabelText("Procedure case")).toHaveValue("22000000-0000-0000-0000-000000000021");
+
+    const file = new File(["synthetic image"], "camera.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Photo file"), { target: { files: [file] } });
+    expect(screen.getByLabelText("Display filename")).toHaveValue("2026-09-01_radiograph_tooth-36-37_01.jpg");
+
+    await user.clear(screen.getByLabelText("Clinical note"));
+  });
+
   it("does not expose upload controls to a read-only user", () => {
     render(<PhotoUploadDialog open onOpenChange={vi.fn()} canWriteClinical={false} onSubmit={vi.fn()} />);
 

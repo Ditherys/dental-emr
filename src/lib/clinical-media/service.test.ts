@@ -33,6 +33,16 @@ describe("clinical photo service", () => {
     expect(rpc.mock.calls.map(([name]) => name)).toEqual(["create_clinical_photo", "list_clinical_photos"]);
   });
 
+  it("carries RADIOGRAPH to the canonical RPC and still refuses an unknown category", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ ...row, category: "RADIOGRAPH", display_filename: "periapical-11.jpg" }], error: null });
+    await expect(createClinicalPhoto({ ...ids, category: "RADIOGRAPH", displayFilename: "periapical-11.jpg", originalClientFilename: "camera.jpg", captureAt: "2026-08-30T10:00:00+08:00" })).resolves.toMatchObject({ category: "RADIOGRAPH" });
+    expect(rpc).toHaveBeenCalledWith("create_clinical_photo", expect.objectContaining({ p_category: "RADIOGRAPH" }));
+
+    rpc.mockReset();
+    await expect(createClinicalPhoto({ ...ids, category: "MRI", displayFilename: "scan.jpg", originalClientFilename: "camera.jpg", captureAt: "2026-08-30T10:00:00+08:00" })).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("presigns an image source, verifies its stored size and MIME, then creates metadata", async () => {
     const storage = {
       createUploadUrl: vi.fn(async () => ({ url: "https://storage.example/put", expiresAt: new Date() })),

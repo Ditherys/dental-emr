@@ -24,6 +24,8 @@ vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({
   recordVisitImplantComponentAction: mocks.recordVisitImplantComponentAction,
 }));
 
+import { ClinicalPhotoAttachmentProvider } from "@/components/clinical/clinical-gallery-sheet";
+
 import { ClinicalRecordComposer } from "./clinical-record-composer";
 
 const patientId = "c2000000-0000-0000-0000-000000000002";
@@ -132,22 +134,48 @@ describe("ClinicalRecordComposer shell", () => {
     expect(screen.queryByLabelText(/payment/i)).not.toBeInTheDocument();
   });
 
-  // Bridge and Implant left this loop in Task 7: they are contextual forms the
-  // composer now mounts, not signposts. Planned treatment (Task 8) and Photo
-  // (Task 14) remain signposts and keep the original assertion unchanged.
+  // Bridge and Implant left this loop in Task 7 and Planned treatment in Task 8.
+  // Task 14 gives Photo its workflow, so the signpost survives only where no
+  // photo workflow is mounted above the composer. The guarantee is unchanged in
+  // that case: a kind this composer cannot write names the workflow that owns
+  // it and offers no write here.
   it("announces the owning workflow for the record kinds this composer does not write yet", async () => {
     const user = userEvent.setup();
     renderComposer();
 
-    // Planned treatment is no longer a signpost: task 8 mounts its form. Photo
-    // remains one, and the guarantee is unchanged — a kind this composer cannot
-    // write names the workflow that owns it and offers no write here.
     for (const kind of ["Photo"]) {
       await user.click(screen.getByRole("button", { name: kind }));
       const notice = screen.getByTestId("composer-unavailable");
       expect(notice).toHaveTextContent(/not available/i);
       expect(screen.queryByRole("button", { name: /^Record / })).not.toBeInTheDocument();
     }
+  });
+
+  it("hands the selected teeth and clinical date to the photo workflow instead of writing a photo itself", async () => {
+    const user = userEvent.setup();
+    const attach = vi.fn();
+    render(
+      <ClinicalPhotoAttachmentProvider attach={attach}>
+        <ClinicalRecordComposer
+          patientId={patientId}
+          branchId={branchId}
+          toothCodes={["36", "37"]}
+          defaultClinicalDate="2026-09-01"
+          onRecorded={vi.fn()}
+          onCancel={vi.fn()}
+        />
+      </ClinicalPhotoAttachmentProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Photo" }));
+    expect(screen.queryByTestId("composer-unavailable")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Add clinical photograph" }));
+    expect(attach).toHaveBeenCalledWith({
+      toothCodes: ["36", "37"],
+      clinicalDate: "2026-09-01",
+      procedureCaseId: null,
+    });
   });
 
   it("mounts the planned-treatment form and says what is missing without a plan", async () => {

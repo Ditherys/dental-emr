@@ -101,6 +101,7 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "periodontal_full_chart.test.sql",
   "periodontal_full_chart_rpcs.test.sql",
   "clinical_photographs.test.sql",
+  "clinical_photo_radiograph.test.sql",
   // Registered before treatment_plans.test.sql on purpose: the local gate halts
   // there, so a suite placed after it would never execute locally.
   "clinical_progress_record.test.sql",

@@ -63,6 +63,23 @@ const photos: ClinicalPhotoDisplay[] = [
     version: 1,
     photographerDisplayName: "Dr. Other Dentist",
   },
+  {
+    photoId: "22000000-0000-0000-0000-000000000015",
+    patientId,
+    procedureCaseId: null,
+    category: "RADIOGRAPH",
+    displayFilename: "2026-08-20_radiograph_tooth-36_01.jpg",
+    captureAt: "2026-08-20T08:00:00+08:00",
+    toothCodes: ["36"],
+    surfaces: [],
+    note: null,
+    processingStatus: "READY",
+    pairedPhotoId: null,
+    version: 1,
+    previewUrl: "/private/preview-radiograph.jpg",
+    displayUrl: "/private/display-radiograph.jpg",
+    photographerDisplayName: "Dr. Synthetic Dentist",
+  },
 ];
 
 afterEach(() => {
@@ -123,6 +140,22 @@ describe("ClinicalPhotoGallery", () => {
     await user.clear(screen.getByLabelText("Filter by tooth"));
     await user.selectOptions(screen.getByLabelText("Filter by photographer"), "Dr. Other Dentist");
     expect(screen.getByText("2026-08-15_diagnostic_01.png")).toBeVisible();
+  });
+
+  it("labels a radiograph as its own category and filters it without hiding diagnostic photographs", async () => {
+    const user = userEvent.setup();
+    render(<ClinicalPhotoGallery patientId={patientId} actingBranchId="32000000-0000-0000-0000-000000000001" initialPhotos={photos} canWriteClinical />);
+
+    const radiograph = screen.getByTestId("clinical-photo-22000000-0000-0000-0000-000000000015");
+    expect(within(radiograph).getByText("Radiograph")).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("Filter by category"), "RADIOGRAPH");
+    expect(screen.getByText("2026-08-20_radiograph_tooth-36_01.jpg")).toBeVisible();
+    expect(screen.queryByText("2026-08-15_diagnostic_01.png")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Filter by category"), "DIAGNOSTIC");
+    expect(screen.getByText("2026-08-15_diagnostic_01.png")).toBeVisible();
+    expect(screen.queryByText("2026-08-20_radiograph_tooth-36_01.jpg")).not.toBeInTheDocument();
   });
 
   it("keeps critical write actions out of read-only mode", () => {

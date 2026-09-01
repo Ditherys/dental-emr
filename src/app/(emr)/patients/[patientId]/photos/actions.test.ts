@@ -117,6 +117,26 @@ describe("clinical photo actions", () => {
     expect(JSON.stringify(await confirmClinicalPhotoUploadAction(input))).not.toContain(input.originalClientFilename);
   });
 
+  it("accepts a radiograph under the same clinical-write contract and rejects an unknown category", async () => {
+    const input = {
+      ...baseUpload,
+      fileId,
+      expectedVersion: 1,
+      category: "RADIOGRAPH",
+      displayFilename: "2026-08-30_radiograph_tooth-36_01.jpg",
+      originalClientFilename: "camera.jpg",
+      captureAt: "2026-08-30T10:00:00+08:00",
+      toothCodes: ["36"],
+    };
+    await expect(confirmClinicalPhotoUploadAction(input)).resolves.toEqual({ ok: true, photoId, version: 1, processingStatus: "READY" });
+    expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
+    expect(confirmClinicalPhotoUpload).toHaveBeenCalledWith(expect.objectContaining({ category: "RADIOGRAPH" }));
+
+    confirmClinicalPhotoUpload.mockClear();
+    await expect(confirmClinicalPhotoUploadAction({ ...input, category: "MRI" })).resolves.toEqual({ ok: false, code: "INVALID_INPUT" });
+    expect(confirmClinicalPhotoUpload).not.toHaveBeenCalled();
+  });
+
   it("triggers idempotent processing under clinical-write", async () => {
     await expect(processClinicalPhotoAction({ actingBranchId: branchId, photoId })).resolves.toEqual({ ok: true, processed: true });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });

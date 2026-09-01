@@ -77,6 +77,7 @@ const CATEGORY_LABELS: Record<ClinicalPhotoDTO["category"], string> = {
   PROGRESS: "Progress",
   AFTER: "After",
   DIAGNOSTIC: "Diagnostic",
+  RADIOGRAPH: "Radiograph",
   INTRAORAL: "Intraoral",
   EXTRAORAL: "Extraoral",
   OTHER: "Other",

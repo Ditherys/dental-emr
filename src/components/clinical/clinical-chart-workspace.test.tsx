@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -62,7 +62,11 @@ describe("ClinicalChartWorkspace information architecture", () => {
     expect(screen.getByRole("button", { name: "Treatment plan" })).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("shows one chart mode at a time and keeps the progress record and gallery mounted", () => {
+  // Task 14 moved the gallery from an always-open page region into the
+  // toolbar-opened photograph panel, so private clinical images are no longer
+  // rendered underneath every charting session. The progress record stays
+  // mounted; the gallery is asserted through the panel instead.
+  it("shows one chart mode at a time and keeps the progress record mounted", () => {
     renderWorkspace();
 
     expect(screen.getByTestId("chart-panel")).toBeVisible();
@@ -75,7 +79,21 @@ describe("ClinicalChartWorkspace information architecture", () => {
     expect(screen.getByRole("button", { name: "Periodontal" })).toHaveAttribute("aria-pressed", "true");
 
     expect(screen.getByTestId("record-panel")).toBeVisible();
-    expect(screen.getByTestId("gallery-panel")).toBeVisible();
+    expect(screen.queryByTestId("gallery-panel")).not.toBeInTheDocument();
+  });
+
+  it("opens the private photograph panel from the chart toolbar and closes it again", async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Clinical photographs" }));
+
+    const panel = await screen.findByRole("dialog", { name: "Clinical photographs" });
+    expect(within(panel).getByTestId("gallery-panel")).toBeVisible();
+
+    await user.click(within(panel).getByRole("button", { name: "Close photographs" }));
+    await waitFor(() => expect(screen.queryByTestId("gallery-panel")).not.toBeInTheDocument());
   });
 
   it("lets the chart breakout span the viewport without the profile content limit", () => {
@@ -186,7 +204,6 @@ describe("ClinicalChartWorkspace load failures", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     expect(screen.getByTestId("record-panel")).toBeVisible();
-    expect(screen.getByTestId("gallery-panel")).toBeVisible();
   });
 
   it("offers a bounded progress-record retry without hiding the chart or the safety strip", () => {
@@ -202,16 +219,24 @@ describe("ClinicalChartWorkspace load failures", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("offers a bounded photograph retry without hiding the chart or the safety strip", () => {
+  // The retry moved into the photograph panel with the gallery, so a failed
+  // photograph load is reported where the clinician went looking for it and
+  // still never displaces the chart or the safety strip.
+  it("offers a bounded photograph retry without hiding the chart or the safety strip", async () => {
+    const user = userEvent.setup();
     const { onRetry } = renderWorkspace({ galleryLoadFailed: true });
 
     expect(screen.getByRole("region", { name: "Medical safety summary" })).toBeVisible();
     expect(screen.getByTestId("chart-panel")).toBeVisible();
     expect(screen.queryByTestId("gallery-panel")).not.toBeInTheDocument();
 
-    const failure = within(screen.getByTestId("clinical-photo-region")).getByRole("alert");
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Clinical photographs" }));
+
+    const failure = within(await screen.findByTestId("clinical-photo-region")).getByRole("alert");
     expect(failure).toHaveTextContent("photographs could not be loaded");
-    fireEvent.click(within(failure).getByRole("button", { name: "Retry" }));
+    expect(screen.queryByTestId("gallery-panel")).not.toBeInTheDocument();
+    await user.click(within(failure).getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });

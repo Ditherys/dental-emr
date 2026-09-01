@@ -23,6 +23,14 @@ export const CLINICAL_PROGRESS_EVENT_TYPES = [
   "FOLLOW_UP",
   "PERIODONTAL",
   "PHOTO",
+  // Deliberately never produced, settled in Task 14 by the photo domain: a
+  // rename changes a display label, not a clinical fact, so it does not belong
+  // in a clinical progress note. The change is already attributed in the
+  // security audit log as clinical.photo.renamed, which is its correct home;
+  // projecting it here would put a clinical chronology on top of a security
+  // artifact. The member stays so the row contract remains exhaustive over
+  // everything the record could ever say about a photograph, and the pgTAP
+  // suite asserts nothing fabricates it.
   "PHOTO_RENAME",
   "PHOTO_ARCHIVE",
   "CHARGE",

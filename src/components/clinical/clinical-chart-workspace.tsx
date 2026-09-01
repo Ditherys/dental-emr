@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 
 import {
   ClinicalChartToolbar,
@@ -10,6 +10,8 @@ import {
 } from "@/components/odontogram/clinical-chart-toolbar";
 import { Button } from "@/components/ui/button";
 import type { ClinicalChartMode } from "@/lib/clinical/types";
+
+import { ClinicalGallerySheet } from "./clinical-gallery-sheet";
 
 function RegionFailure({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
@@ -63,7 +65,7 @@ export function ClinicalChartWorkspace({
   // The chart view belongs to the workspace, not to any one chart mode, so it
   // survives a mode change and a responsive reflow.
   const [view, setView] = useState<ClinicalChartView>(DEFAULT_CLINICAL_CHART_VIEW);
-  const galleryRef = useRef<HTMLDivElement | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   // The chart view is patient-scoped clinical context, not a durable
   // preference. A tooth selected on one patient must never survive into
@@ -75,6 +77,8 @@ export function ClinicalChartWorkspace({
   if (viewPatientId !== patientId) {
     setViewPatientId(patientId);
     setView(DEFAULT_CLINICAL_CHART_VIEW);
+    // An open photograph panel must never survive into another patient's chart.
+    setGalleryOpen(false);
   }
 
   const updateView = useCallback(
@@ -101,11 +105,7 @@ export function ClinicalChartWorkspace({
         view={view}
         onViewChange={updateView}
         onPrint={() => window.print()}
-        onOpenGallery={
-          hasGallery
-            ? () => galleryRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" })
-            : undefined
-        }
+        onOpenGallery={hasGallery ? () => setGalleryOpen(true) : undefined}
       />
 
       <div data-testid="clinical-chart-surface" className="w-full min-w-0">
@@ -131,16 +131,14 @@ export function ClinicalChartWorkspace({
       </div>
 
       {hasGallery && (
-        <div ref={galleryRef} data-testid="clinical-photo-region" className="w-full min-w-0">
-          {galleryLoadFailed ? (
-            <RegionFailure
-              message="The clinical photographs could not be loaded. Retry to load them."
-              onRetry={onRetry}
-            />
-          ) : (
-            gallery
-          )}
-        </div>
+        <ClinicalGallerySheet
+          open={galleryOpen}
+          onOpenChange={setGalleryOpen}
+          loadFailed={galleryLoadFailed}
+          onRetry={onRetry}
+        >
+          {gallery}
+        </ClinicalGallerySheet>
       )}
     </section>
   );
