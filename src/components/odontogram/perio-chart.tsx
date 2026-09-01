@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input";
 import { getCalSeverity, PERIO_SITE_ORDER } from "@/lib/odontogram/perio";
 import type { PerioSite } from "@/lib/odontogram/clinical-codes";
 
+// A measurement nobody recorded is null, not zero: the canonical model keeps
+// "not assessed" distinguishable from "assessed and healthy".
 export type PerioChartMeasurement = {
   toothFdi: string;
   site: PerioSite;
   probingDepthMm: number;
-  gingivalMarginMm: number;
-  calMm: number;
-  bleedingOnProbing?: boolean;
-  suppuration?: boolean;
+  gingivalMarginMm: number | null;
+  calMm: number | null;
+  bleedingOnProbing?: boolean | null;
+  suppuration?: boolean | null;
   toothPresent?: boolean;
   implantContext?: boolean;
 };
@@ -247,12 +249,12 @@ export function PerioChart({
                         className="h-8 w-9 min-h-[32px] px-1 text-center text-xs tabular-nums focus-visible:ring-2 focus-visible:ring-blue-500"
                       />
                     </div>
-                    {measurement ? (
+                    {measurement && measurement.calMm !== null ? (
                       <div className="flex items-center justify-between px-0.5 text-[10px] tabular-nums">
                         <span className={`font-medium ${measurement.calMm >= 6 ? "text-red-600" : measurement.calMm >= 4 ? "text-amber-600" : "text-slate-600"}`} data-testid={`perio-cal-${tooth}-${site}`} title={`${getCalSeverity(measurement.calMm)} severity`} aria-label={`CAL ${measurement.calMm} ${getCalSeverity(measurement.calMm)}`}>
                           CAL {measurement.calMm}<span aria-hidden="true" className="ml-1 text-[9px]">{getCalSeverity(measurement.calMm) === "healthy" ? "H" : getCalSeverity(measurement.calMm) === "moderate" ? "M" : "S"}</span>
                         </span>
-                        {previous ? <span className="text-slate-400">prev {previous.calMm}</span> : null}
+                        {previous && previous.calMm !== null ? <span className="text-slate-400">prev {previous.calMm}</span> : null}
                       </div>
                     ) : <span className="px-0.5 text-[10px] text-slate-400" aria-hidden="true">—</span>}
                     <label className="flex min-h-[28px] items-center gap-1 rounded px-1 py-0.5 text-[10px] text-slate-600 touch-manipulation focus-within:ring-1 focus-within:ring-blue-400">

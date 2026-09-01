@@ -520,6 +520,57 @@ end
 $$;
 
 -- ============================================================================
+-- 7b. Task 9: an omitted measurement is unknown, not zero or false
+--
+-- 20260901010200 dropped the NOT NULL DEFAULT on the gingival margin, bleeding
+-- on probing, suppuration, and plaque presence. Nothing above is weakened: the
+-- assertions in section 4 all pass an explicit gingival margin and still derive
+-- the same CAL. This section pins the new semantics for the rows that omit one,
+-- so a future migration cannot quietly reintroduce a default that turns an
+-- unassessed site into a healthy one.
+-- ============================================================================
+
+do $$
+declare
+  v_exam_id uuid;
+begin
+  select id into v_exam_id
+    from public.periodontal_examinations
+    where organization_id = '22000000-0000-0000-0000-000000000001'::uuid
+    limit 1;
+
+  -- Section 4l inserted the six sites of tooth 21 with no gingival margin.
+  perform extensions.is(
+    (select count(*)::integer from public.periodontal_site_measurements
+      where organization_id = '22000000-0000-0000-0000-000000000001'::uuid
+        and examination_id = v_exam_id and tooth_fdi = '21'
+        and gingival_margin_mm is null and cal_mm is null),
+    6,
+    'an omitted gingival margin stays unknown and leaves derived CAL unknown'
+  );
+
+  perform extensions.is(
+    (select count(*)::integer from public.periodontal_site_measurements
+      where organization_id = '22000000-0000-0000-0000-000000000001'::uuid
+        and examination_id = v_exam_id and tooth_fdi = '21'
+        and bleeding_on_probing is null and suppuration is null),
+    6,
+    'an unassessed site records bleeding and suppuration as unknown, not as absent'
+  );
+
+  -- Section 5a scored plaque explicitly, so those rows keep their booleans.
+  perform extensions.is(
+    (select count(*)::integer from public.periodontal_plaque_measurements
+      where organization_id = '22000000-0000-0000-0000-000000000001'::uuid
+        and examination_id = v_exam_id and tooth_fdi = '16'
+        and plaque_present is not null),
+    4,
+    'an explicitly scored plaque surface still records a true or false answer'
+  );
+end
+$$;
+
+-- ============================================================================
 -- 8. FINAL immutability: child table INSERT/UPDATE/DELETE all rejected
 -- ============================================================================
 

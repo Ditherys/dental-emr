@@ -4185,7 +4185,25 @@ export type Database = {
       }
       periodontal_examinations: {
         Row: {
+          age_years_snapshot: number | null
+          amendment_reason: string | null
+          cigarettes_per_day: number | null
+          classification_override_reason: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          confirmed_diagnosis: string | null
+          confirmed_extent: string | null
+          confirmed_grade: string | null
+          confirmed_measurement_fingerprint: string | null
+          confirmed_provider_id: string | null
+          confirmed_stage: string | null
           created_at: string
+          derived_diagnosis: string | null
+          derived_extent: string | null
+          derived_grade: string | null
+          derived_measurement_fingerprint: string | null
+          derived_stage: string | null
+          diabetes_status: string | null
           encounter_id: string
           examination_kind: string
           examined_at: string | null
@@ -4194,18 +4212,40 @@ export type Database = {
           finalized_at: string | null
           finalized_by: string | null
           finalized_provider_id: string | null
+          hba1c_percent: number | null
           id: string
           notes: string | null
           organization_id: string
           patient_id: string
           predecessor_examination_id: string | null
+          radiographic_bone_loss_percent: number | null
           recorded_at: string
+          smoking_status: string | null
           status: string
+          teeth_lost_to_periodontitis: number | null
           updated_at: string
           version: number
         }
         Insert: {
+          age_years_snapshot?: number | null
+          amendment_reason?: string | null
+          cigarettes_per_day?: number | null
+          classification_override_reason?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_diagnosis?: string | null
+          confirmed_extent?: string | null
+          confirmed_grade?: string | null
+          confirmed_measurement_fingerprint?: string | null
+          confirmed_provider_id?: string | null
+          confirmed_stage?: string | null
           created_at?: string
+          derived_diagnosis?: string | null
+          derived_extent?: string | null
+          derived_grade?: string | null
+          derived_measurement_fingerprint?: string | null
+          derived_stage?: string | null
+          diabetes_status?: string | null
           encounter_id: string
           examination_kind?: string
           examined_at?: string | null
@@ -4214,18 +4254,40 @@ export type Database = {
           finalized_at?: string | null
           finalized_by?: string | null
           finalized_provider_id?: string | null
+          hba1c_percent?: number | null
           id?: string
           notes?: string | null
           organization_id: string
           patient_id: string
           predecessor_examination_id?: string | null
+          radiographic_bone_loss_percent?: number | null
           recorded_at?: string
+          smoking_status?: string | null
           status?: string
+          teeth_lost_to_periodontitis?: number | null
           updated_at?: string
           version?: number
         }
         Update: {
+          age_years_snapshot?: number | null
+          amendment_reason?: string | null
+          cigarettes_per_day?: number | null
+          classification_override_reason?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          confirmed_diagnosis?: string | null
+          confirmed_extent?: string | null
+          confirmed_grade?: string | null
+          confirmed_measurement_fingerprint?: string | null
+          confirmed_provider_id?: string | null
+          confirmed_stage?: string | null
           created_at?: string
+          derived_diagnosis?: string | null
+          derived_extent?: string | null
+          derived_grade?: string | null
+          derived_measurement_fingerprint?: string | null
+          derived_stage?: string | null
+          diabetes_status?: string | null
           encounter_id?: string
           examination_kind?: string
           examined_at?: string | null
@@ -4234,17 +4296,28 @@ export type Database = {
           finalized_at?: string | null
           finalized_by?: string | null
           finalized_provider_id?: string | null
+          hba1c_percent?: number | null
           id?: string
           notes?: string | null
           organization_id?: string
           patient_id?: string
           predecessor_examination_id?: string | null
+          radiographic_bone_loss_percent?: number | null
           recorded_at?: string
+          smoking_status?: string | null
           status?: string
+          teeth_lost_to_periodontitis?: number | null
           updated_at?: string
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "perio_exam_organization_confirmed_provider_fk"
+            columns: ["organization_id", "confirmed_provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["organization_id", "id"]
+          },
           {
             foreignKeyName: "periodontal_examinations_organization_encounter_fk"
             columns: ["organization_id", "encounter_id"]
@@ -4344,27 +4417,39 @@ export type Database = {
       periodontal_plaque_measurements: {
         Row: {
           examination_id: string
+          gingival_index: number | null
           id: string
+          modified_bleeding_index: number | null
+          modified_plaque_index: number | null
           organization_id: string
-          plaque_present: boolean
+          plaque_index: number | null
+          plaque_present: boolean | null
           recorded_at: string
           surface: string
           tooth_fdi: string
         }
         Insert: {
           examination_id: string
+          gingival_index?: number | null
           id?: string
+          modified_bleeding_index?: number | null
+          modified_plaque_index?: number | null
           organization_id: string
-          plaque_present?: boolean
+          plaque_index?: number | null
+          plaque_present?: boolean | null
           recorded_at?: string
           surface: string
           tooth_fdi: string
         }
         Update: {
           examination_id?: string
+          gingival_index?: number | null
           id?: string
+          modified_bleeding_index?: number | null
+          modified_plaque_index?: number | null
           organization_id?: string
-          plaque_present?: boolean
+          plaque_index?: number | null
+          plaque_present?: boolean | null
           recorded_at?: string
           surface?: string
           tooth_fdi?: string
@@ -4388,47 +4473,47 @@ export type Database = {
       }
       periodontal_site_measurements: {
         Row: {
-          bleeding_on_probing: boolean
+          bleeding_on_probing: boolean | null
           cal_mm: number | null
           examination_id: string
-          gingival_margin_mm: number
+          gingival_margin_mm: number | null
           id: string
           implant_context: boolean
           organization_id: string
           probing_depth_mm: number
           recorded_at: string
           site: string
-          suppuration: boolean
+          suppuration: boolean | null
           tooth_fdi: string
           tooth_present: boolean
         }
         Insert: {
-          bleeding_on_probing?: boolean
+          bleeding_on_probing?: boolean | null
           cal_mm?: number | null
           examination_id: string
-          gingival_margin_mm?: number
+          gingival_margin_mm?: number | null
           id?: string
           implant_context?: boolean
           organization_id: string
           probing_depth_mm: number
           recorded_at?: string
           site: string
-          suppuration?: boolean
+          suppuration?: boolean | null
           tooth_fdi: string
           tooth_present?: boolean
         }
         Update: {
-          bleeding_on_probing?: boolean
+          bleeding_on_probing?: boolean | null
           cal_mm?: number | null
           examination_id?: string
-          gingival_margin_mm?: number
+          gingival_margin_mm?: number | null
           id?: string
           implant_context?: boolean
           organization_id?: string
           probing_depth_mm?: number
           recorded_at?: string
           site?: string
-          suppuration?: boolean
+          suppuration?: boolean | null
           tooth_fdi?: string
           tooth_present?: boolean
         }
@@ -4451,38 +4536,56 @@ export type Database = {
       }
       periodontal_tooth_measurements: {
         Row: {
+          cej_visible: boolean | null
           context_inferred: boolean
           examination_id: string
+          gingival_phenotype: string | null
+          gingival_thickness_mm: number | null
           id: string
           implant_context: boolean
+          keratinized_gingiva_mm: number | null
+          miller_recession_class: string | null
           mobility_miller: string | null
           notes: string | null
           organization_id: string
           recorded_at: string
+          root_concavity: boolean | null
           tooth_fdi: string
           tooth_present: boolean
         }
         Insert: {
+          cej_visible?: boolean | null
           context_inferred?: boolean
           examination_id: string
+          gingival_phenotype?: string | null
+          gingival_thickness_mm?: number | null
           id?: string
           implant_context?: boolean
+          keratinized_gingiva_mm?: number | null
+          miller_recession_class?: string | null
           mobility_miller?: string | null
           notes?: string | null
           organization_id: string
           recorded_at?: string
+          root_concavity?: boolean | null
           tooth_fdi: string
           tooth_present?: boolean
         }
         Update: {
+          cej_visible?: boolean | null
           context_inferred?: boolean
           examination_id?: string
+          gingival_phenotype?: string | null
+          gingival_thickness_mm?: number | null
           id?: string
           implant_context?: boolean
+          keratinized_gingiva_mm?: number | null
+          miller_recession_class?: string | null
           mobility_miller?: string | null
           notes?: string | null
           organization_id?: string
           recorded_at?: string
+          root_concavity?: boolean | null
           tooth_fdi?: string
           tooth_present?: boolean
         }

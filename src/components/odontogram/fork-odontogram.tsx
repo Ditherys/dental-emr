@@ -201,6 +201,8 @@ function toPeriodontal(dto: PatientOdontogramDTO): PeriodontalChartInput[] {
   }
   for (const site of latest.sites) {
     if (!site.tooth_present) continue;
+    // An unknown CAL is not evidence of disease and must not raise an alert.
+    if (site.cal_mm === null) continue;
     if (getCalSeverity(site.cal_mm) === "healthy") continue;
     forTooth(Number(site.tooth_fdi)).perioAlert = true;
   }

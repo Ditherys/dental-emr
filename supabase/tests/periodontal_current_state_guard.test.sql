@@ -175,6 +175,19 @@ select extensions.is(
   'natural tooth save writes exactly one periodontal audit row'
 );
 
+-- Task 9 made the gingival margin, bleeding on probing, and suppuration
+-- nullable so an unassessed site is distinguishable from a healthy one. The
+-- existing save boundary coalesces its own inputs and is unchanged by that: a
+-- payload that omits them still records an explicit answer, so no already
+-- shipped write path silently became "unknown".
+select extensions.ok(
+  (select gingival_margin_mm = 0 and bleeding_on_probing = false and suppuration = false
+     from public.periodontal_site_measurements
+    where examination_id = 'e6130000-0000-0000-0000-000000000003'::uuid
+      and tooth_fdi = '15' and site = 'B'),
+  'the existing save boundary still writes explicit values rather than unknowns'
+);
+
 reset role;
 
 with test_failures as (

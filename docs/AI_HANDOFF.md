@@ -1,464 +1,303 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 8 (review fixes, round 1)
+# AI Handoff - Unified Clinical Chart workspace, Task 9
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the second commit of Task 8. It applies the round-1 review
-findings on top of `c1b9713`; the sections below describe the task as it now
-stands, with the review-fix sections at the end.
-
-## Task 8 - Fold treatment planning into the chart mode (2026-09-01)
+## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
 ### Bounded slice implemented
 
-- `public.add_treatment_plan_discussion_v2` - the provider-free plan discussion
-  boundary. It derives the treating provider from the signed-in actor with
-  `private.require_active_actor_provider` and accepts no provider argument at
-  all. The superseded five-argument signature, which accepted a client-supplied
-  `p_treating_provider_id`, is revoked from every browser role.
-- **The inherited requirement**: `public.complete_treatment_case` now obtains the
-  managed clinical visit from `public.start_or_resume_clinical_visit` and binds
-  `encounter_id` on the clinical entry, the bridge and the implant components it
-  materializes. Before this commit a plan-linked completion produced a clinical
-  entry with `encounter_id` null, and `public.tooth_clinical_entries` refuses
-  every UPDATE, so it could never be bound afterwards.
-- `TreatmentPlanMode` - the Treatment plan chart mode. The chart keeps the whole
-  workspace row; the plan context is a dense native list below it, with a phone
-  sheet for the focused tooth. It projects each plan item's clinician-authored
-  tooth and surfaces into a per-tooth proposal marker on the chart itself,
-  deliberately dashed so it can never be read as recorded status, and writes no
-  clinical row.
-- `PlannedTreatmentForm` - the composer's Planned treatment form. It appends one
-  DRAFT plan line per selected tooth through the reviewed plan boundary and
-  changes no canonical clinical record.
-- The composer opens on Planned treatment in the Treatment plan mode
-  (`chartMode` -> `defaultKind`), and `PLANNED_TREATMENT` is no longer a signpost.
-- The separate treatment-plan page/table presentation is unmounted:
-  `TreatmentPlanSection` is no longer rendered by any chart mode. Task 17 owns
-  deleting the file, so it is only stripped of its provider presentation here.
+Schema, constraints, triggers, indexes, domain types and tests only. **No RPC
+was added, no grant changed, and no UI was built.** Task 10 (calculations),
+Task 11 (draft/autosave/finalize/amend/compare RPCs) and Task 12 (workspace UI)
+build on this and are deliberately absent.
+
+The five existing periodontal tables were **extended**, never duplicated:
+
+- **Unknown became representable.** `periodontal_site_measurements.gingival_margin_mm`,
+  `bleeding_on_probing`, `suppuration` and `periodontal_plaque_measurements.plaque_present`
+  lost their `NOT NULL DEFAULT 0/false`. A site nobody assessed was previously
+  indistinguishable from a healthy site. Derived `cal_mm` is a generated column,
+  so an unknown margin now yields an unknown CAL instead of silently reporting
+  the probing depth as the attachment level.
+- **Surface indices with applicability.** The plaque table gained
+  `plaque_index` (Silness-Loe), `gingival_index` (Loe-Silness),
+  `modified_plaque_index` and `modified_bleeding_index` (Mombelli), each bounded
+  0-3. A table check refuses both families on one surface; a constraint trigger
+  on **both** the surface and the tooth table refuses each family against the
+  wrong implant context, reading the authoritative flag from the tooth row
+  rather than duplicating it.
+- **Tooth and implant properties.** `keratinized_gingiva_mm` (0-15),
+  `gingival_thickness_mm` (0.1-9.9), `gingival_phenotype` (THIN/THICK),
+  `miller_recession_class` (I-IV), `cej_visible`, `root_concavity`. The last
+  three are refused in an implant context - an implant has no root, no
+  cemento-enamel junction and no interdental attachment to classify Miller
+  recession against. Miller mobility was already refused there.
+- **Examination risk inputs.** `age_years_snapshot` (0-130), `smoking_status`
+  (NEVER/FORMER/CURRENT), `cigarettes_per_day` (0-100, current smokers only),
+  `diabetes_status` (NONE/TYPE_1/TYPE_2/OTHER), `hba1c_percent` (3.0-20.0),
+  `teeth_lost_to_periodontitis` (0-32), `radiographic_bone_loss_percent` (0-100).
+- **Derived versus clinician-confirmed classification.** `derived_*` and
+  `confirmed_*` diagnosis / stage / grade / extent are separate columns and
+  never overwrite one another. A confirmation must name its user, its
+  tenant-safe provider, its time and its fingerprint; a confirmation that
+  departs from the derived result requires a bounded non-empty
+  `classification_override_reason`. Health, gingivitis, peri-implant health and
+  peri-implant mucositis are never staged or graded.
+- **Fingerprint provenance that cannot be forged.**
+  `private.periodontal_measurement_digest(uuid,uuid)` is the single definition of
+  "the measurements of this examination" - a SHA-256 hex digest over the four
+  child tables, nulls rendered as `~` so `(3, null, 2)` and `(3, 2)` cannot
+  collide, aggregate order pinned to the `C` collation. An AFTER constraint
+  trigger refuses any `derived_`/`confirmed_measurement_fingerprint` that is not
+  the true digest at write time. It runs only when a fingerprint column changes,
+  so an ordinary later edit costs nothing.
+- **Amendment lineage.** `amendment_reason` is bounded, non-empty, accepted only
+  with a predecessor, and **mandatory once the amendment is FINAL**. A DRAFT
+  amendment may still be autosaved without one; the authoritative record that
+  replaces finalized clinical history may not exist unexplained.
+- **`public.amend_periodontal_examination` and
+  `private.enforce_periodontal_tooth_context` were repaired in place** (same
+  signatures, no grant change) so the amendment clone and the inferred-context
+  merge carry every new column. Without that, an amendment would have silently
+  discarded the whole expansion - the exact silent overwrite the amendment path
+  exists to prevent.
 
 ### Why
 
-Treatment planning lived on a separate page with its own table, its own provider
-list and its own completion panel, and the chart could not propose anything at
-all. Two authorization defects came with that: the plan discussion boundary let
-the browser choose whose clinical authorship a discussion carried, and the
-plan-linked completion path created clinical entries with no encounter, so a
-treatment performed against a plan had no visit or provider attribution in the
-chronology Task 13 will project.
+The periodontal tables carried six-site probing, a signed margin, BOP,
+suppuration, O'Leary plaque, Miller mobility and Glickman furcation, and nothing
+else. Task 10 cannot compute a 2018 stage or grade from that, Task 11 has no
+classification to version, and Task 12 has no peri-implant record to render.
+Two defects also had to be closed first: an unassessed measurement was recorded
+as a healthy one, and an amendment could replace a finalized examination without
+saying why.
 
 ### Specifications relied on
 
-- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-8-brief.md`
+- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-9-brief.md`
   and `global-constraints.md`.
-- `CLAUDE.md` / `AGENTS.md`: no client-supplied organization, provider, actor or
-  encounter; provider derived with `private.require_active_actor_provider`;
-  receptionists may not create clinical records or plans; owners may treat only
-  with an active provider link at the acting branch;
-  `security definer set search_path = ''`; narrow grants; negative authorization
-  tests in the same checkpoint; guarded forward-only migrations; no inline
-  styles; no JS hover/focus handlers; 44px touch targets.
-- ADR-025 (owner full access), ADR-026 (billing ledger), ADR-030.
+- `CLAUDE.md` / `AGENTS.md`: RLS on every exposed tenant table; tenant-safe
+  composite foreign keys; narrow grants; negative authorization tests in the
+  same checkpoint; guarded forward-only migrations; signed/finalized clinical
+  history preserved by versioning/amendment, never silent overwrite; no client
+  supplied organization, branch, patient, encounter or provider.
+- ADR-028 (renderer domain boundary), ADR-030 (longitudinal record revamp).
 
 ### Migration numbering
 
-The brief named `20260901010108`/`010109`; both sort before the applied
-`20260901010136`, so `db:migrate:local` would have refused them. The controller
-overrode the allocation to `20260901010140`/`010141`, and the current maximum was
-re-verified as `20260901010136` immediately before writing them. Round 1 added
-`20260901010142`, `010143` and `010144`, allocated from the then-current maximum
-`20260901010141` verified in the local `schema_migrations` table.
+The controller allocated `20260901010200`/`010201` and the current maximum was
+independently re-verified as `20260901010144` in the local `schema_migrations`
+table before the files were written. The allocation was correct and was used
+unchanged.
 
 ### Files added
 
-- `supabase/migrations/20260901010140_treatment_plan_actor_provider.sql`
-- `supabase/migrations/20260901010141_treatment_plan_actor_provider_grants.sql`
-- `supabase/tests/treatment_plan_actor_provider.test.sql` (51 assertions after
-  round 1; 34 in the first commit)
-- `src/components/odontogram/treatment-plan-mode.tsx` (+test)
-- `src/components/odontogram/planned-treatment-form.tsx` (+test)
+- `supabase/migrations/20260901010200_full_periodontal_model.sql`
+- `supabase/migrations/20260901010201_full_periodontal_model_grants.sql`
+- `supabase/tests/periodontal_full_chart.test.sql` (111 assertions)
 
 ### Files changed
 
-- `src/lib/treatment-plan/schema.ts` - `treatingProviderId` removed from the
-  strict discussion input, so a supplied provider is a parse failure.
-- `src/lib/treatment-plan/service.ts` (+test) - calls
-  `add_treatment_plan_discussion_v2` with no provider argument.
-- `src/app/(emr)/patients/[patientId]/treatment-plan-actions.test.ts` - the
-  provider/organization/author refusal case.
-- `src/components/odontogram/clinical-record-composer.tsx` (+test) - mounts the
-  planned-treatment form behind `planContext`, and opens on `defaultKind`.
-- `src/components/odontogram/tooth-record-drawer.tsx` - threads `chartMode` and
-  `planContext` into the composer.
-- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` - same two props.
-- `src/app/(emr)/patients/[patientId]/clinical-section.tsx` - the
-  `TREATMENT_PLAN` chart node is now `TreatmentPlanMode` wrapping the chart.
-- `src/app/(emr)/patients/[patientId]/treatment-plan-section.tsx` (+test) -
-  `initialProviders` and the provider-name presentation removed; the discussion
-  list now says the authorship is the signed-in dentist's.
+- `supabase/tests/periodontal_charting.test.sql` - new section 7b only; nothing
+  weakened (see below).
+- `supabase/tests/periodontal_current_state_guard.test.sql` - one assertion
+  added; nothing weakened.
+- `scripts/remote-database-test-guard.mjs` - the new suite registered.
+- `scripts/remote-database-test-guard.test.mjs`,
+  `scripts/migration-privilege-lint.test.mjs` - inventory expectations
+  (109 suites; 321 migration files; 486 created functions).
+- `src/lib/odontogram/perio.ts` (+`perio.test.ts`) - canonical bounds, value
+  domains, `deriveCal`, and validators for surface indices, tooth/implant
+  properties, risk inputs and classification.
+- `src/lib/odontogram/schema.ts` - the periodontal DTO now models nullable
+  margin/CAL/BOP/suppuration/plaque, and the canonical value-domain enums are
+  exported.
+- `src/lib/odontogram/types.ts` - the value-domain types re-exported.
+- `src/components/odontogram/perio-chart.tsx`,
+  `perio-workspace.tsx`, `fork-odontogram.tsx` - the minimum required to keep
+  compiling against a nullable measurement. An unknown CAL renders as "-" and
+  raises no periodontal alert.
 - `src/types/database.generated.ts` - regenerated (`npm run db:types:local`).
-- `scripts/approved-final-grants.mjs`, `scripts/remote-database-test-guard.mjs`
-  and the three script test files - registry, suite registration, inventory.
-- `supabase/tests/treatment_plan_rpcs.test.sql`,
-  `supabase/tests/document_treatment_plan.test.sql`,
-  `supabase/tests/clinical_record_composer.test.sql` - see "Existing test
-  assertions changed".
-- Round 1 additionally changed `src/components/odontogram/measured-tooth.tsx`,
-  `measured-chart.tsx` (+test), `fork-odontogram.tsx`,
-  `planned-treatment-form.tsx` (+test), `treatment-plan-mode.tsx` (+test),
-  `tooth-record-drawer.test.tsx`, `src/lib/treatment-plan/schema.ts`,
-  `service.ts` (+test), `scripts/run-local-database-tests.mjs` and
-  `supabase/tests/treatment_plans.test.sql` - see "Review fixes applied in this
-  commit (round 1)".
 
 ### Files deleted
 
-None. `treatment-plan-section.tsx` and `plan-mode-panel.tsx` remain; Task 17 owns
-their removal.
+None.
 
 ### Security and tenancy decisions
 
-- **No provider input anywhere on the plan path.**
-  `addTreatmentPlanDiscussionInputSchema` is `.strict()` and has no
-  `treatingProviderId`; the RPC has no provider parameter; pgTAP asserts that no
-  argument name of `add_treatment_plan_discussion_v2` contains "provider".
-- **OWNER-with-provider and Provider A are distinct identities.** pgTAP records
-  one discussion as the dentist and one as an owner who holds their own active
-  provider link, and asserts the two rows carry different `treating_provider_id`
-  values. An owner with no provider link is refused `42501`.
-- **The superseded signature is unreachable.** `20260901010140` revokes execute
-  on `public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)` from
-  `public`, `anon`, `authenticated` and `service_role`. The registry entry
-  records `supersededFrom: "20260901010140_treatment_plan_actor_provider.sql"` -
-  the object migration that **revokes**, never the grants file.
-- **A receptionist may not plan or execute.** pgTAP proves `42501` for the plan
-  discussion, `create_treatment_plan` and `complete_treatment_case`.
-- **Immutability.** pgTAP proves an ACKNOWLEDGED plan refuses retitling, another
-  item and re-presentation with `P0001 invalid state`, and that a direct UPDATE
-  is refused by the immutable trigger with `23514`. Discussions stay append-only
-  on any status. `PlannedTreatmentForm` refuses to author into a non-DRAFT plan
-  in the browser as well, and `TreatmentPlanMode` offers no lifecycle action once
-  the plan is acknowledged.
-- **No canonical change before execution.** pgTAP proves that authoring a plan
-  item creates no `tooth_clinical_entries` row and opens no clinical encounter.
-  The planned-treatment form writes only through
-  `add_treatment_plan_item_centavos`.
-- **Execution binds the visit.** pgTAP proves a plan-linked completion opens
-  exactly one managed OPEN visit for the acting provider on the Philippine
-  clinical date, that the resulting clinical entry's `encounter_id` is that
-  visit, that it carries the derived treating provider, and that no plan-linked
-  entry is left with a null encounter.
-- **Lock ordering.** `record_treatment_event_v2` takes seed 3, then the visit's
-  seed 1 and seed 0, and only then delegates. `complete_treatment_case`
-  therefore obtains its visit **before** its own completion request lock, so
-  every caller takes the visit identity lock before the completion request lock
-  and no cycle is constructible. No new advisory-lock seed was introduced. The
-  first revision also took `for key share` on the case row ahead of those locks
-  and later upgraded it to `for update`, which deadlocked; round 1 removed that
-  row lock, leaving exactly one `procedure_cases` lock in the function, proved by
-  a migration guard and by
-  `supabase/tests/treatment_case_completion_concurrency.local.mjs`.
+- **No grant changed, and none was needed.** Task 9 adds no browser-callable
+  function. `20260901010201` therefore issues no `GRANT` and no `REVOKE`, is
+  **not** registered as a grant-terminal in `scripts/approved-final-grants.mjs`
+  (registering an empty terminal would add a boundary pivot where the boundary
+  did not move), and instead **asserts** the boundary fail-closed: it refuses to
+  apply if any periodontal table holds a browser/service DML privilege, if RLS
+  is off on any of them, if either new private helper became callable, or if any
+  of the four periodontal boundary functions lost `SECURITY DEFINER` /
+  `search_path = ''`.
+- **Tenant-safe foreign key.** `confirmed_provider_id` is constrained by
+  `perio_exam_organization_confirmed_provider_fk` on
+  `(organization_id, confirmed_provider_id) -> providers(organization_id, id)`.
+  pgTAP proves a provider from another organization is refused `23503`.
+- **The private helpers are unreachable.** `private.periodontal_measurement_digest`,
+  `private.enforce_perio_classification_fingerprint` and
+  `private.validate_perio_surface_index_context` are revoked from `public`,
+  `anon`, `authenticated` and `service_role` adjacent to creation, and all three
+  carry `set search_path = ''`.
+- **FINAL immutability is a trigger, not application code.**
+  `private.protect_finalized_perio_examination` and
+  `private.reject_finalized_perio_child_mutation` reject the whole row and carry
+  no column list, so they already covered every column added here. The suite
+  proves that for the new columns rather than assuming it: a FINAL examination
+  refuses a new risk input, a new confirmed classification and a fingerprint
+  rewrite (`P0001`), and its children refuse a suppuration edit, a surface-index
+  edit and a new tooth-property row (`P0001`).
+- **Amendment lineage is constraints, not application code.**
+  `perio_exam_amendment_reason_bounded_check`,
+  `perio_exam_amendment_reason_scope_check` and
+  `perio_exam_final_amendment_reason_check`, plus the pre-existing tenant-safe
+  predecessor FK, the FINAL-predecessor/same-patient constraint trigger, and the
+  pre-existing partial unique index
+  `periodontal_examinations_one_amendment_idx` which already makes the chain
+  non-forking.
+- **Classification override is a constraint.**
+  `perio_exam_override_reason_required_check` refuses a confirmation that
+  differs from the derived classification without a reason. The reason stays on
+  the RLS-protected row and is never copied into an audit event.
 
-### Negative authorization cases covered (pgTAP, all `throws_ok`)
+### Negative authorization and integrity cases covered (pgTAP)
 
-Owner with no active provider link (`42501`), receptionist discussion
-(`42501`), receptionist plan creation (`42501`), receptionist plan execution
-(`42501`), foreign-tenant dentist at another organization's branch (`42501`),
-a plan belonging to another organization (`42501`), blank context (`22023`),
-over-long context (`22023`), over-long notes (`22023`), acknowledged-plan
-retitle / item append / re-present (`P0001 invalid state`), a stale plan version
-(`P0001 stale version`), a direct UPDATE of an acknowledged plan (`23514`), and
-the superseded provider-accepting signature being unreachable from the browser
-(`42501 permission denied for function add_treatment_plan_discussion`, in
-`treatment_plan_rpcs.test.sql`).
+Receptionist creating a periodontal examination (`42501 not authorized`);
+a dentist from another organization against a foreign patient (`42501`); an
+owner **with** an active provider link succeeding and being attributed to their
+own provider; an owner **without** one opening a draft but being refused
+finalization (`23514 periodontal_examinations_finalized_state_check`); a
+confirming provider from another organization (`23503`); every new measurement
+bound (`23514`, named constraint); the natural-tooth index family on an implant
+and the peri-implant family on a natural tooth, from **both** write orders
+(`23514`, trigger message); Miller class / CEJ / root concavity on an implant
+(`23514`); furcation on an implant (`23514`); a seventh row on an existing
+tooth/site pair (`23505`); a forked supersession chain (`23505`); a blank
+amendment reason, a reason without a predecessor, and a FINAL amendment without
+one (`23514`); a diagnosis outside the canonical set, a stage outside I-IV, a
+staged gingivitis, a derived classification without its fingerprint, a
+malformed fingerprint, a forged derived fingerprint and a forged confirmation
+fingerprint (`23514`); and every FINAL immutability case (`P0001`).
 
 ### Existing test assertions changed, and why
 
-- `clinical_record_composer.test.sql`: the named set of browser-reachable
-  functions that record a tooth entry **bound to the managed visit** was
-  `record_treatment_event_v2,record_visit_tooth_findings`. It is now
-  `complete_treatment_case,record_treatment_event_v2,record_visit_tooth_findings`.
-  The old comment excluded `complete_treatment_case` on the stated ground that it
-  opens no visit; it now does, which is exactly the guarantee the assertion
-  states, so it joins the set rather than sitting beside it. Nothing was
-  weakened - a fourth such writer still fails by name.
-- `treatment_plan_rpcs.test.sql`: provider A1 gains a `linked_user_id` and a
-  `provider_branches` row, because plan authorship now requires an active
-  provider link. The grant assertion swaps the v1 clause for v2 and additionally
-  asserts v1 is denied to `authenticated`, and `anon`/`service_role` denied on
-  v2. The empty-search-path definer count goes 14 -> 15 (v2 added; v1 kept). The
-  two discussion calls use v2. The "foreign-org treating provider is rejected"
-  case targeted a parameter that no longer exists; it became the stronger
-  statement that the browser cannot reach the old signature at all.
-- `document_treatment_plan.test.sql`: same provider-link fixture, and its one
-  discussion call uses v2.
-- `clinical-record-composer.test.tsx`: the signpost loop was
-  `["Planned treatment", "Photo"]` and is now `["Photo"]`, because Planned
-  treatment now mounts a real form. A new test asserts the form mounts and that
-  it says what is missing when there is no plan.
-- `treatment-plan-section.test.tsx`: `initialProviders` removed; the discussion
-  assertion now proves the provider display name is **absent** and the derived
-  authorship line present. Two discussion payload assertions dropped
-  `treatingProviderId: null`, which the strict schema now refuses.
-- `service.test.ts`: the discussion contract targets
-  `add_treatment_plan_discussion_v2`; two cases were **added** proving a
-  well-formed provider id and a `createdBy` are both refused.
-- `migration-privilege-lint.test.mjs`: 314 -> 316 files, 481 -> 482 functions,
-  359 -> 360 security-definer.
-- `boundary-privilege-invariant.test.mjs`: the v1 discussion signature left the
-  effective-final fixture and v2 replaced it; approved-key count unchanged at
-  265.
-- `remote-database-test-guard.test.mjs`: the new suite added to the expected list.
+**No existing assertion was weakened, deleted or altered.** Two suites gained
+assertions:
+
+- `periodontal_charting.test.sql`: a new section 7b asserts that the six sites
+  of tooth 21, inserted in section 4l with no gingival margin, now carry a null
+  margin and a null CAL, that their BOP and suppuration are null, and that the
+  four explicitly scored plaque surfaces from section 5a still carry a boolean.
+  Every pre-existing assertion, including the CAL derivation cases, passes
+  unchanged because they all pass an explicit margin.
+- `periodontal_current_state_guard.test.sql`: one assertion added proving the
+  existing `save_periodontal_measurements` boundary still writes explicit
+  `0/false` rather than unknowns, so no already-shipped write path silently
+  became "not assessed".
+
+The two script inventory tests were updated for the new counts, which is
+mechanical.
 
 ### Commands run and observed results (local only)
 
 - **RED gate, before implementation.**
-  `psql < supabase/tests/treatment_plan_actor_provider.test.sql` -
-  **`ERROR: function "public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)" does not exist`.**
-  `npx vitest run` over the four brief-named unit files - **4 files failed, 3
-  failed / 29 passed**: the two new component suites failed to resolve
-  (`Failed to resolve import "./planned-treatment-form"` and
-  `"./treatment-plan-mode"`), `service.test.ts` failed on the extra
-  `p_treating_provider_id` argument, and the action test returned `{ ok: true }`
-  where `INVALID_INPUT` was expected.
-- `npm run db:migrate:local` - applied `20260901010140` and `20260901010141`.
-  The first attempt **failed closed** on the migration's own final guard
-  (`complete_treatment_case visit binding did not reach every materialization
-  path`, SQLSTATE 55000) because the expected occurrence count was wrong; the
-  count was corrected and nothing had been applied.
+  `docker exec -i supabase_db_local psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/periodontal_full_chart.test.sql`
+  - the boundary assertions 1-3 passed against the unchanged schema and the run
+  then **aborted with
+  `ERROR: function "private.periodontal_measurement_digest(uuid,uuid)" does not exist`**,
+  every following statement reporting
+  `ERROR: current transaction is aborted`.
+- `npm run db:migrate:local` - applied `20260901010200` and `20260901010201`.
+  The **first attempt failed closed** on the migration's own guard
+  (`amend_periodontal_examination exam clone target not found exactly once`,
+  SQLSTATE 55000): `20260828020400` is a CRLF file, so the stored function body
+  carries CR characters no LF anchor could match. Both sides are now normalized
+  to LF before matching and the anchors are counted by exact substring, never by
+  regex. **Proved by replay**: the schema was torn down and the migration
+  applied again from a deliberately CRLF-converted copy of both files, which
+  succeeded and left both repaired bodies carrying the new columns.
 - `npm run db:types:local` - **`Updated src/types/database.generated.ts.`**
-- `npm run security:migrations` - **passed**; 316 files, 3024 statements, 1313
-  privilege statements, 89 grant-terminals, 397 approved final privileges.
-- `npm run test:unit -- <the four brief files>` - **4 files, 48/48 passed.**
+- `npm run security:migrations` - **passed**; 321 files, 3099 statements, 1318
+  privilege statements, 90 grant-terminals, 398 approved final privileges
+  (unchanged - this task grants nothing).
+- `npm run test:unit -- src/lib/odontogram/perio.test.ts src/lib/odontogram/schema.test.ts`
+  - **2 files, 31/31 passed.**
 - `npm run typecheck` - **passed, no output.**
-- `npm run lint` - **0 errors**, the same 3 pre-existing warnings
-  (`treatment-plan-section.tsx`, `lib/treatment-plan/schema.ts` x2).
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
 - `npm run test:db:local` - **halts at `treatment_plans.test.sql`**, the first of
   the three verified pre-existing failures. Everything before it passes,
-  including `clinical_record_composer`, `clinical_treatment_events_v2`,
-  `odontogram_relationship_workflows_v2`, `document_treatment_plan`,
-  `treatment_item_execution`, `treatment_plan_rpcs` and the new
+  including `periodontal_charting`, `periodontal_full_chart`,
+  `odontogram_permission_contract`, `odontogram_revamp_relationship_perio`,
+  `odontogram_rpcs_v2`, `clinical_rpcs`, `clinical_record_composer` and
   `treatment_plan_actor_provider`.
-- Every suite after the halt point run directly: **all P1_TEST_PASS except
-  `seed_security_fixtures` (assertion 27) and `procedure_installment_schedules`**
-  - the other two documented pre-existing failures. `treatment_plans.test.sql`
-  fails on the same untouched pre-existing assertion (extra `notes`/`priority`/
-  `sequence_no`/`surfaces` columns on `treatment_plan_items`). In the first
-  commit it was assertion 7 and the file was not touched at all; round 1 added
-  the reviewed amendment columns to the `treatment_plans` column contract and two
-  new assertions, so the same pre-existing failure is now numbered 9. Its cause
-  is unchanged.
-- Suites run directly: `treatment_plan_actor_provider` **34 assertions,
-  P1_TEST_PASS**; plus `odontogram_atomic_completion_revamp`,
-  `clinical_treatment_events_v2`, `clinical_record_composer`,
-  `treatment_item_execution`, `treatment_plan_rpcs`,
-  `treatment_plan_estimated_fee_contract`, `document_treatment_plan`,
-  `procedure_cases_and_plan_details`, `unified_clinical_visit`,
-  `current_managed_visit`, `odontogram_relationship_workflows_v2`,
-  `clinical_permission_contract` - **all P1_TEST_PASS**.
-- Concurrency tests run directly with the runner's own wiring:
-  `treatment_item_execution_concurrency`, `clinical_visit_resume_concurrency`,
-  `odontogram_implant_idempotency_concurrency`, `billing_allocation_concurrency`,
-  `odontogram_lineage_concurrency` - **all PASS.** No new `.local.mjs` test was
-  added, so none was registered.
+- **Every one of the 109 pgTAP suites run directly**: 106 `P1_TEST_PASS`; the
+  only failures are the three documented pre-existing ones -
+  `treatment_plans.test.sql`, `seed_security_fixtures.test.sql` and
+  `procedure_installment_schedules.test.sql`.
 - `npx vitest run scripts/` - **13 files, 287/287 passed.**
-- `npm run test:unit` (whole suite) - **1943/1954 passed, 11 failed** in 5 files:
-  `src/lib/booking/service.test.ts` and `src/app/api/public/booking/route.test.ts`
-  (the documented pre-existing time bomb), plus `fork-package`,
-  `fork-print-chart` and `perio-workspace`, the documented parallel-load flakes,
-  which **pass when the three are run together alone (14/14)**.
-- `git diff --check` - clean.
+- `npm run test:unit` (whole suite) - the pre-existing booking failures and the
+  documented parallel-load flakes only. `perio-workspace.test.tsx`, which this
+  task touched, **passes 7/7 when run alone**; it times out only under parallel
+  load, exactly as recorded for Task 8.
+- `git diff --check` - clean (only the repository's usual LF/CRLF notices).
 
 ### Not run, and why
 
-- Playwright E2E, responsive and accessibility device verification, Cloud TEST,
-  hosted database tests and advisors: hosted access is not authorized for this
-  work. This checkpoint may be described only as locally implemented and locally
-  verified.
-- `npm run build`: not required by the task gate and not run.
+- No `.local.mjs` concurrency test was added, so none was registered or run for
+  this task. This checkpoint introduces no new advisory lock and no new
+  concurrent write path.
+- Playwright, responsive/accessibility device verification, Cloud TEST, hosted
+  database tests and advisors: hosted access is not authorized. This checkpoint
+  may be described only as locally implemented and locally verified.
+- `npm run build`: not in the task gate and not run.
 
 ### Known residual risks and open questions
 
-- **`public.complete_treatment_case` keeps its `authenticated` grant, and
-  `completeTreatmentAction` still exists.** The chart no longer uses either: plan
-  execution goes through Task 6's `record_treatment_event_v2`, which delegates.
-  The attribution hole is closed regardless, because the function now binds the
-  visit on every path. Revoking the grant and deleting the action would touch
-  `odontogram_atomic_completion_revamp.test.sql` and the atomic-completion
-  registry entry, both outside this brief's file list, so it is **flagged for the
-  controller** rather than done here.
-- **`plan-mode-panel.tsx` and `plan-mode-panel.test.tsx` are unmodified.** The
-  brief lists them as Modify, but the component is already provider-free and
-  performs no write itself; it is now unmounted because `TreatmentPlanSection` is.
-  Changing it would have been change for its own sake.
-- **A replayed direct `complete_treatment_case` call resumes or opens a managed
-  visit before returning the stored result.** That is the price of taking the
-  visit before the completion request lock, which is what makes the lock order
-  identical for every caller. The caller is an authorized treating dentist at
-  that branch, for whom an open managed visit is the normal state.
-- **The plan overlay is a real per-tooth chart marker** (corrected in round 1).
-  The first revision showed only a row of chips below the chart, on the argument
-  that painting a proposal would invent clinical detail. The review checked that
-  premise against the schema and it did not hold: a plan item carries the
-  clinician's own `tooth_code` and `surfaces`. `MeasuredTooth` now takes an
-  optional `proposal` and marks the tooth with a dashed outline, a count badge
-  and `data-proposed*` attributes, announced as "proposed treatment ... not yet
-  performed". It is still never a `PLANNED` tooth clinical entry and writes
-  nothing, and the current-status chart shows no marker for the same projection.
-  The checked-in anatomy node tree and its generator were not touched.
-- **Multi-tooth authoring is a loop of single-item calls, not one transaction.**
-  A failure part-way leaves the earlier lines committed and reports which write
-  failed. The plan version is not bumped by an item append, so every line in a
-  batch legitimately carries the same expected version. Round 1 removed the
-  client-supplied sequence base, so two lines can no longer collide on a
-  sequence number even when a second submission lands before a revalidation.
-- **Plan freshness depends on `router.refresh()`.** `TreatmentPlanMode` re-reads
-  the plan detail when the server list's `itemCount` changes, so a new line
-  appears after the route revalidates rather than immediately.
-- Geometry remains unverified until the hosted gate: jsdom applies no Tailwind,
-  so the full-width chart, the `md:hidden` phone sheet and the 44px targets are
-  proved only as an authored class contract.
+- **The currently granted `public.amend_periodontal_examination` cannot produce
+  a FINAL amendment.** It creates the DRAFT correctly and now clones the full
+  expanded record, but it has no parameter for the amendment reason, so
+  `finalize_periodontal_examination` on that draft is refused by
+  `perio_exam_final_amendment_reason_check`. This is deliberate and fail-closed:
+  a supersession of finalized clinical history must say why. **Task 11 owns the
+  reason-carrying amend boundary and must close this gap.** Revoking and
+  re-granting the amend signature here would have churned a browser boundary in
+  a task that adds none.
+- **`create_periodontal_examination` and `finalize_periodontal_examination`
+  still use `private.resolve_actor_provider`, not
+  `private.require_active_actor_provider`.** They therefore allow an actor with
+  no provider link to open a draft, and the branch is not checked when resolving
+  the provider. The schema stops the worst case - such a draft cannot be
+  finalized, proved by pgTAP - but the global constraint asks for
+  `require_active_actor_provider` on every clinical write. **Flagged for the
+  controller; Task 11 owns those RPCs.**
+- **The plaque table is now a surface-record table.** It is still named
+  `periodontal_plaque_measurements`. Renaming it would be a destructive
+  migration for no functional gain; the table comment states what it holds.
+- **The classification block is not cloned into an amendment.** A corrected
+  measurement set must be re-derived and re-confirmed, and the predecessor's
+  fingerprint would not match the successor's measurements. The examination-level
+  risk snapshot **is** cloned, because the patient's risk at that visit is
+  unchanged.
+- **`perio_exam_org_encounter_idx` and `perio_exam_org_patient_draft_idx` are
+  added for reads Task 11 and Task 12 will perform.** They are unused today.
+- **No second single-successor index was created.** `20260828020508` already
+  created `periodontal_examinations_one_amendment_idx` on exactly
+  `(organization_id, predecessor_examination_id) where predecessor_examination_id
+  is not null`. The suite now asserts it by name so it cannot be dropped
+  silently. The redundant non-unique
+  `periodontal_examinations_organization_predecessor_idx` from `20260828020200`
+  was left alone as out of scope.
+- **The digest depends on the `C` collation being available** for its aggregate
+  ordering. It is a per-database provenance value and is never compared across
+  databases.
 
 ### Next bounded task
 
-Task 9 of the plan. Do not start it until this review round is accepted.
-`20260901010145` onward are free.
-
-## Review fixes applied in this commit (round 1)
-
-Round 1 returned no Critical, two Important and five Minor findings, plus one
-controller-added Important. All eight are fixed; two items were ledgered as
-deferred.
-
-1. **The new `for key share` on `procedure_cases` created a lock-upgrade
-   deadlock (Important).** `20260901010140` read the case patient with
-   `for key share` ahead of the completion advisory lock, and the same function
-   takes `for update` on that row moments later. Two transactions both holding
-   KEY SHARE and both requesting FOR UPDATE deadlock, so a double-submitted
-   completion returned `40P01` where it used to serialize and replay.
-   `20260901010142` drops the lock from that lookup: the patient only identifies
-   the visit, and the authoritative case row is re-read under `for update`
-   anyway. The migration additionally asserts that **exactly one**
-   `procedure_cases` row lock survives in the repaired body. The
-   visit-before-request-lock ordering from `20260901010140` is preserved.
-2. **The Treatment plan mode did not change the chart overlays (Important).**
-   The reviewer checked the data premise against the schema and it did not hold:
-   `treatment_plan_items` carries `tooth_code` and `surfaces`, and
-   `get_treatment_plan_detail` already projects both, so a per-tooth proposal
-   marker projects clinician-authored data rather than inventing a clinical
-   detail. `MeasuredTooth` gained an optional `proposal` marker
-   (`data-proposed`, `data-proposed-count`, `data-proposed-priority`,
-   `data-proposed-surfaces`, a dashed outline that is never the solid
-   border/ring recorded status and selection use, and its own aria phrasing
-   "proposed treatment ... not yet performed"). `TreatmentPlanMode` projects the
-   map and hands it down through the chart render prop. **No
-   `tooth_clinical_entries` row is written**, and the current-status chart shows
-   no marker for the same projection.
-3. **A plan version captured no reason and no predecessor (Important,
-   controller-added).** `public.treatment_plans` gains `supersedes_plan_id` and
-   `amendment_reason`, a tenant-safe composite FK, a bounded-reason check, a
-   reason-required check, and a partial unique index so one plan cannot be
-   forked into two successors. `public.create_treatment_plan_v2` is the boundary
-   that writes them: the pair is accepted only together, the predecessor is
-   revalidated against the derived tenant and the same patient, and the
-   predecessor row is never mutated. `get_treatment_plan_detail` returns both so
-   a captured reason can be read, and `TreatmentPlanMode` requires a reason
-   before replacing a plan on record.
-4. **A required Clinical date that was never persisted (Minor).** Removed from
-   `PlannedTreatmentForm` entirely, with a comment saying why a proposal has no
-   date. The composer no longer passes the shared date to this kind.
-5. **Multi-tooth authoring reused a stale sequence base (Minor).** The form no
-   longer sends `sequenceNo` at all; the reviewed RPC already assigns the
-   sequence from the server-assigned `line_no` when the client supplies none, so
-   the race is removed at its source. pgTAP proves two appends with no client
-   sequence take `2:2` and `3:3` and never share one.
-6. **The `chartMode` -> `defaultKind` wiring was untested (Minor).** Two drawer
-   tests now assert the composer opens on Planned treatment with
-   `chartMode="TREATMENT_PLAN"` and on Finding otherwise, checking `aria-pressed`
-   and the mounted form.
-7. **`readFailureMessage` was reused for write failures (Minor).** A separate
-   `writeFailureMessage` distinguishes `STALE_VERSION`, `INVALID_STATE`,
-   `INVALID_INPUT` and `NOT_AUTHORIZED`, and says nothing was saved rather than
-   telling the clinician to refresh a read.
-8. **Deferred by the controller, not fixed:** a later-day replay of a direct
-   completion opens a managed visit and emits one `clinical.encounter.opened`
-   audit; `TreatmentPlanSection` and `PlanModePanel` are now unreferenced dead
-   code owned by Task 17.
-
-### Files added this round
-
-- `supabase/migrations/20260901010142_treatment_plan_amendment_and_case_lock_repair.sql`
-- `supabase/migrations/20260901010143_treatment_plan_amendment_grants.sql`
-- `supabase/migrations/20260901010144_treatment_plan_amendment_audit_metadata_repair.sql`
-- `supabase/tests/treatment_case_completion_concurrency.local.mjs`
-
-### Existing test assertions changed this round, and why
-
-- `treatment_plans.test.sql`: assertion 1 listed the approved `treatment_plans`
-  columns and was **passing**; the two reviewed amendment columns are added to
-  that list, and two assertions were **added** proving the single-successor index
-  and the three new constraints exist. The pre-existing failure (the
-  `treatment_plan_items` extra-columns assertion) is untouched and moved from
-  number 7 to number 9 only because two assertions now precede it.
-- `treatment_plan_actor_provider.test.sql`: 34 -> 51 assertions. Nothing was
-  changed; the amendment, server-sequencing and boundary-shape cases were added.
-- `measured-chart.test.tsx`: two tests added; the shared harness gained an
-  optional `proposals` prop. No assertion changed.
-- `tooth-record-drawer.test.tsx`: two tests added. No assertion changed.
-- `planned-treatment-form.test.tsx`: the Sequence and Clinical date assertions
-  were removed **because the controls were removed**, and replaced by two
-  stronger ones - no `sequenceNo` is ever submitted, and no clinical date control
-  is offered.
-- `treatment-plan-mode.test.tsx`: the chart render prop now receives a context
-  object, so two assertions read `.plan` from it; five tests were added
-  (proposal projection, explained amendment, refused unexplained amendment,
-  recorded reason display, write-failure wording).
-- `service.test.ts`: the create contract targets `create_treatment_plan_v2`;
-  three cases were **added** for the amendment pair.
-- `migration-privilege-lint.test.mjs`: 316 -> 319 files, 482 -> 483 functions,
-  360 -> 361 security-definer.
-- `boundary-privilege-invariant.test.mjs`: the new signature added to the
-  effective-final fixture; approved-key count 265 -> 266.
-
-### Round-1 commands and observed results
-
-- **RED probe for finding 1.** With the pre-fix `for key share` restored into the
-  live function body inside a throwaway session, the new concurrency test fails
-  with **`ERROR: deadlock detected`** (one process waiting for an ExclusiveLock
-  on the visit identity advisory lock, the other for a ShareLock on the first
-  process's transaction). With `20260901010142` applied it passes. The fixed body
-  was restored immediately and verified to hold exactly one `procedure_cases`
-  row lock.
-- **RED for finding 3.** `public.create_treatment_plan_v2(...)` did not exist;
-  the extended pgTAP suite failed with
-  **`ERROR: function public.create_treatment_plan_v2(...) does not exist`**.
-- **A second guard fired for real.** `20260901010144`'s own occurrence guard
-  refused the first attempt (`create_treatment_plan_v2 must keep
-  supersedes_plan_id ...`, SQLSTATE 55000) because the expected count was wrong;
-  nothing was applied and the guard was corrected.
-- `npm run db:migrate:local` - applied `20260901010142`, `010143` and `010144`.
-- `npm run db:types:local` - regenerated.
-- `npm run security:migrations` - **passed**; 319 files, 3040 statements, 1315
-  privilege statements, 90 grant-terminals, 398 approved final privileges.
-- `npm run test:unit -- <the four brief files>` - **4 files, 55/55 passed.**
-- `npm run typecheck` - **passed, no output.**
-- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
-- `npm run test:db:local` - **halts at `treatment_plans.test.sql`** as before.
-- Run directly: `treatment_plan_actor_provider` **51 assertions, P1_TEST_PASS**;
-  plus `treatment_plan_rpcs`, `document_treatment_plan`,
-  `treatment_plan_estimated_fee_contract`, `procedure_cases_and_plan_details`,
-  `odontogram_atomic_completion_revamp`, `clinical_treatment_events_v2`,
-  `clinical_record_composer`, `treatment_item_execution`, `schema`,
-  `foundation_rls`, `owner_full_access`, and every suite after the halt point -
-  all **P1_TEST_PASS** except the three documented pre-existing failures.
-- Concurrency, run directly: the new `treatment_case_completion_concurrency`
-  plus `treatment_item_execution_concurrency`,
-  `clinical_visit_resume_concurrency`,
-  `odontogram_implant_idempotency_concurrency`, `billing_allocation_concurrency`
-  and `odontogram_lineage_concurrency` - **all PASS.** The new test is registered
-  in `scripts/run-local-database-tests.mjs`.
-- `npx vitest run scripts/` - **13 files, 287/287 passed.**
-- `npm run test:unit` (whole suite) - **1956/1965 passed, 9 failed**: the same 7
-  pre-existing booking failures plus `fork-package` and `fork-print-chart`, the
-  documented parallel-load flakes, which **pass when run together alone (7/7)**.
-- `git diff --check` - clean.
+Task 10 of the plan - port the pure periodontal calculation and classification
+logic onto this model. Do not start it until this checkpoint is reviewed.
+`20260901010202` onward are free.

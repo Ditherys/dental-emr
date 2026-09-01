@@ -320,6 +320,7 @@ describe("registered database suites", () => {
       "patient_referrals_foundation.test.sql",
       "periodontal_charting.test.sql",
       "periodontal_current_state_guard.test.sql",
+      "periodontal_full_chart.test.sql",
       "postdated_cheques.test.sql",
       "procedure_cases_and_plan_details.test.sql",
       "procedure_foundation.test.sql",

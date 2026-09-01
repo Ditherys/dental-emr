@@ -50,7 +50,7 @@ export interface PerioWorkspaceProps {
       tooth_fdi: string;
       site: PerioSite;
       probing_depth_mm: number;
-      gingival_margin_mm: number;
+      gingival_margin_mm?: number;
       bleeding_on_probing?: boolean;
       suppuration?: boolean;
       tooth_present?: boolean;
@@ -192,9 +192,12 @@ export function PerioWorkspace({
           tooth_fdi: measurement.toothFdi,
           site: measurement.site,
           probing_depth_mm: measurement.probingDepthMm,
-          gingival_margin_mm: measurement.gingivalMarginMm,
-          bleeding_on_probing: measurement.bleedingOnProbing,
-          suppuration: measurement.suppuration,
+          // An unknown value is omitted rather than sent. The existing save
+          // boundary cannot yet persist "not assessed"; the periodontal
+          // workspace boundary carries unknowns end to end.
+          gingival_margin_mm: measurement.gingivalMarginMm ?? undefined,
+          bleeding_on_probing: measurement.bleedingOnProbing ?? undefined,
+          suppuration: measurement.suppuration ?? undefined,
           tooth_present: measurement.toothPresent,
           implant_context: measurement.implantContext,
         })),

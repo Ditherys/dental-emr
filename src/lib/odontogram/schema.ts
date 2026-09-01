@@ -314,6 +314,28 @@ export const voidCurrentImplantComponentInputSchema = z.object({
 
 export const perioExaminationKindSchema = z.enum(["INITIAL", "RE-EVALUATION", "MAINTENANCE"]);
 
+// Canonical periodontal value domains. Each enum mirrors a CHECK constraint in
+// supabase/migrations/20260901010200_full_periodontal_model.sql so the browser
+// and the database cannot drift apart on what a legal value is.
+export const perioGingivalPhenotypeSchema = z.enum(["THIN", "THICK"]);
+export const perioMillerRecessionClassSchema = z.enum(["I", "II", "III", "IV"]);
+export const perioSmokingStatusSchema = z.enum(["NEVER", "FORMER", "CURRENT"]);
+export const perioDiabetesStatusSchema = z.enum(["NONE", "TYPE_1", "TYPE_2", "OTHER"]);
+export const perioDiagnosisSchema = z.enum([
+  "HEALTH",
+  "GINGIVITIS",
+  "PERIODONTITIS",
+  "NECROTIZING_PERIODONTAL_DISEASE",
+  "PERIODONTITIS_AS_MANIFESTATION_OF_SYSTEMIC_DISEASE",
+  "PERI_IMPLANT_HEALTH",
+  "PERI_IMPLANT_MUCOSITIS",
+  "PERI_IMPLANTITIS",
+]);
+export const perioStageSchema = z.enum(["I", "II", "III", "IV"]);
+export const perioGradeSchema = z.enum(["A", "B", "C"]);
+export const perioExtentSchema = z.enum(["LOCALIZED", "GENERALIZED", "MOLAR_INCISOR"]);
+export const perioMeasurementFingerprintSchema = z.string().regex(/^[0-9a-f]{64}$/);
+
 export const createPeriodontalExaminationInputSchema = z.object({
   actingBranchId: databaseUuid,
   patientId: databaseUuid,
@@ -572,25 +594,29 @@ export const dentalImplantChainDataSchema = z.object({
   components: z.array(dentalImplantChainComponentDataSchema).min(1).max(4),
 }).strict();
 
+// An unrecorded measurement projects as null, never as 0 or false: the database
+// dropped the NOT NULL DEFAULT on these columns in 20260901010200 so that a site
+// nobody assessed is distinguishable from a healthy one. Derived CAL is null
+// whenever the gingival margin is.
 export const periodontalSiteDataSchema = z.object({
   id: databaseUuid,
   tooth_fdi: toothCodeSchema,
   site: z.enum(["MB", "B", "DB", "ML", "L", "DL"]),
   probing_depth_mm: z.number().int().min(1).max(15),
-  gingival_margin_mm: z.number().int().min(-10).max(20),
-  bleeding_on_probing: z.boolean(),
-  suppuration: z.boolean(),
+  gingival_margin_mm: z.number().int().min(-10).max(20).nullable(),
+  bleeding_on_probing: z.boolean().nullable(),
+  suppuration: z.boolean().nullable(),
   tooth_present: z.boolean(),
   implant_context: z.boolean(),
   recorded_at: isoTimestamp,
-  cal_mm: z.number().int().min(-9).max(35),
+  cal_mm: z.number().int().min(-9).max(35).nullable(),
 }).strict();
 
 export const periodontalPlaqueDataSchema = z.object({
   id: databaseUuid,
   tooth_fdi: toothCodeSchema,
   surface: z.enum(["MESIAL", "DISTAL", "BUCCAL", "LINGUAL"]),
-  plaque_present: z.boolean(),
+  plaque_present: z.boolean().nullable(),
   recorded_at: isoTimestamp,
 }).strict();
 

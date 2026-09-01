@@ -26,6 +26,15 @@ import type {
   listToothConditionsInputSchema,
   periodontalExaminationDataSchema,
   periodontalSaveRowSchema,
+  perioDiabetesStatusSchema,
+  perioDiagnosisSchema,
+  perioExtentSchema,
+  perioGingivalPhenotypeSchema,
+  perioGradeSchema,
+  perioMeasurementFingerprintSchema,
+  perioMillerRecessionClassSchema,
+  perioSmokingStatusSchema,
+  perioStageSchema,
   recordCurrentBridgeInputSchema,
   recordCurrentImplantComponentInputSchema,
   recordToothClinicalEntryInputSchema,
@@ -113,6 +122,19 @@ export type LegacyReconciliationFlagDTO = z.infer<typeof legacyReconciliationFla
 export type TreatmentExecutionDTO = z.infer<typeof treatmentExecutionDataSchema>;
 
 export type PeriodontalSaveResult = z.infer<typeof periodontalSaveRowSchema>;
+
+// Canonical periodontal and peri-implant value domains. These mirror the
+// database CHECK constraints so the workspace, the calculations, and the
+// projections all name the same set.
+export type PeriodontalGingivalPhenotype = z.infer<typeof perioGingivalPhenotypeSchema>;
+export type PeriodontalMillerRecessionClass = z.infer<typeof perioMillerRecessionClassSchema>;
+export type PeriodontalSmokingStatus = z.infer<typeof perioSmokingStatusSchema>;
+export type PeriodontalDiabetesStatus = z.infer<typeof perioDiabetesStatusSchema>;
+export type PeriodontalDiagnosis = z.infer<typeof perioDiagnosisSchema>;
+export type PeriodontalStage = z.infer<typeof perioStageSchema>;
+export type PeriodontalGrade = z.infer<typeof perioGradeSchema>;
+export type PeriodontalExtent = z.infer<typeof perioExtentSchema>;
+export type PeriodontalMeasurementFingerprint = z.infer<typeof perioMeasurementFingerprintSchema>;
 
 export type TreatmentExecutionTransitionResult = z.infer<typeof treatmentExecutionTransitionRowSchema>;
 export type TreatmentExecutionCompleteResult = z.infer<typeof treatmentExecutionCompleteRowSchema>;
