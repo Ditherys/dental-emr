@@ -41,6 +41,8 @@ import {
   updateDraftPlanBridgeDesignInputSchema,
   updateDraftPlanImplantDesignInputSchema,
   findingInputSchema,
+  treatmentEventInputSchema,
+  treatmentEventRowSchema,
   visitClinicalNoteInputSchema,
   visitClinicalNoteRowSchema,
   visitToothFindingsRowSchema,
@@ -221,6 +223,60 @@ export async function recordVisitClinicalNote(input: unknown) {
     encounterId: row.encounter_id,
     noteId: row.note_id,
     version: row.version,
+  };
+}
+
+/**
+ * The one treatment-event write.
+ *
+ * A single RPC performs the whole transaction: the managed visit, the procedure
+ * case, the one immutable charge, the dated clinical record, the exact finding
+ * resolution, and any payment, allocation or installment schedule. There is
+ * deliberately no check-then-write across separate calls here, because a
+ * partial success would leave money and clinical history disagreeing.
+ */
+export async function recordTreatmentEvent(input: unknown) {
+  const value = treatmentEventInputSchema.parse(input);
+  const row = treatmentEventRowSchema.parse(await callRpc("record_treatment_event_v2" as FunctionName, {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_procedure_id: value.procedureId,
+    p_plan_item_id: value.planItemId,
+    p_existing_case_id: value.existingCaseId,
+    p_expected_case_version: value.expectedCaseVersion,
+    p_event_kind: value.eventKind,
+    p_service_date: value.serviceDate,
+    p_resolved_finding_ids: value.resolvedFindingIds,
+    p_clinical_detail: value.clinicalDetail,
+    p_charge_amount_centavos: value.chargeAmountCentavos,
+    p_immediate_payment: value.immediatePayment,
+    p_installment_schedule: value.installmentSchedule,
+    p_idempotency_key: value.idempotencyKey,
+  }));
+  return {
+    // The patient revalidated by the action is the one the caller routed to;
+    // the server independently proved it belongs to the derived tenant before
+    // writing anything.
+    patientId: value.patientId,
+    procedureCaseId: row.procedure_case_id,
+    caseStatus: row.case_status,
+    caseVersion: row.case_version,
+    encounterId: row.encounter_id,
+    clinicalDate: row.clinical_date,
+    serviceDate: row.service_date,
+    eventId: row.event_id,
+    eventKind: row.event_kind,
+    chargeId: row.charge_id,
+    chargeConfirmed: row.charge_confirmed,
+    chargeAmountCentavos: row.charge_amount_centavos,
+    paidCentavos: row.paid_centavos,
+    balanceCentavos: row.balance_centavos,
+    clinicalEntryIds: row.clinical_entry_ids,
+    resolvedFindingIds: row.resolved_finding_ids,
+    paymentId: row.payment_id,
+    paymentAllocationId: row.payment_allocation_id,
+    installmentScheduleId: row.installment_schedule_id,
+    replayed: row.replayed,
   };
 }
 

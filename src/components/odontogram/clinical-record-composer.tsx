@@ -8,6 +8,14 @@ import { cn } from "@/lib/utils";
 
 import { ClinicalNoteForm } from "./clinical-note-form";
 import { FindingForm } from "./finding-form";
+import {
+  TreatmentEventForm,
+  type ExistingProcedureCaseChoice,
+  type ResolvableFinding,
+  type TreatmentPaymentMethodChoice,
+  type TreatmentPlanItemChoice,
+  type TreatmentProcedureChoice,
+} from "./treatment-event-form";
 
 const RECORD_KINDS: ReadonlyArray<{ value: ClinicalRecordKind; label: string }> = Object.freeze([
   { value: "FINDING", label: "Finding" },
@@ -26,10 +34,25 @@ const RECORD_KINDS: ReadonlyArray<{ value: ClinicalRecordKind; label: string }> 
  */
 const PENDING_KIND_OWNERS: Readonly<Partial<Record<ClinicalRecordKind, string>>> = {
   PLANNED_TREATMENT: "the treatment plan workflow",
-  TREATMENT_EVENT: "the confirmed procedure workflow",
   BRIDGE: "the bridge relationship workflow",
   IMPLANT: "the implant relationship workflow",
   PHOTO: "the clinical photograph workflow",
+};
+
+/**
+ * Everything a treatment event needs beyond the tooth selection: the procedure
+ * catalogue, the patient's resolvable findings, the plan items and open cases it
+ * may join, and the payment methods a same-visit payment may use. The composer
+ * cannot invent any of it, so the treatment form mounts only once a caller
+ * supplies it.
+ */
+export type TreatmentComposerContext = {
+  patientIdentifier: string;
+  procedures: readonly TreatmentProcedureChoice[];
+  activeFindings: readonly ResolvableFinding[];
+  planItems: readonly TreatmentPlanItemChoice[];
+  openCases: readonly ExistingProcedureCaseChoice[];
+  paymentMethods: readonly TreatmentPaymentMethodChoice[];
 };
 
 export function composerToothSummary(toothCodes: readonly string[]): string {
@@ -47,6 +70,8 @@ export type ClinicalRecordComposerProps = {
   defaultClinicalDate: string;
   onRecorded: () => void | Promise<void>;
   onCancel: () => void;
+  /** Supplied by the workspace when the treatment catalogue is available. */
+  treatmentContext?: TreatmentComposerContext;
 };
 
 /**
@@ -64,9 +89,11 @@ export function ClinicalRecordComposer({
   defaultClinicalDate,
   onRecorded,
   onCancel,
+  treatmentContext,
 }: ClinicalRecordComposerProps): React.ReactElement {
   const [kind, setKind] = React.useState<ClinicalRecordKind>("FINDING");
   const [clinicalDate, setClinicalDate] = React.useState(defaultClinicalDate);
+  const treatmentReady = Boolean(treatmentContext && treatmentContext.procedures.length > 0);
   const pendingOwner = PENDING_KIND_OWNERS[kind];
 
   return (
@@ -110,6 +137,35 @@ export function ClinicalRecordComposer({
           onClinicalDateChange={setClinicalDate}
           onRecorded={onRecorded}
         />
+      )}
+
+      {kind === "TREATMENT_EVENT" && treatmentContext && treatmentReady && (
+        <TreatmentEventForm
+          key="TREATMENT_EVENT"
+          patientId={patientId}
+          branchId={branchId}
+          patientIdentifier={treatmentContext.patientIdentifier}
+          toothCodes={toothCodes}
+          serviceDate={clinicalDate}
+          onServiceDateChange={setClinicalDate}
+          procedures={treatmentContext.procedures}
+          activeFindings={treatmentContext.activeFindings}
+          planItems={treatmentContext.planItems}
+          openCases={treatmentContext.openCases}
+          paymentMethods={treatmentContext.paymentMethods}
+          onRecorded={onRecorded}
+        />
+      )}
+
+      {kind === "TREATMENT_EVENT" && !treatmentReady && (
+        <p
+          data-testid="composer-treatment-unavailable"
+          role="status"
+          className="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground"
+        >
+          A treatment is recorded against a procedure and its actual cost, and no procedure catalogue is
+          available in this workspace yet. Nothing can be charged from here until it is.
+        </p>
       )}
 
       {kind === "NOTE" && (

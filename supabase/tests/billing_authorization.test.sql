@@ -51,6 +51,23 @@ select extensions.is(
 
 select extensions.ok(has_function_privilege('authenticated','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute') and not has_function_privilege('anon','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute') and not has_function_privilege('service_role','public.create_procedure_installment_schedule(uuid,uuid,jsonb,text)','execute'), 'schedule RPC is browser-authenticated only');
 
+-- The treatment-event boundary confirms procedure charges and allocates
+-- payments, so it is held to the same browser boundary as the billing RPCs it
+-- delegates to.
+select extensions.ok(
+  has_function_privilege('authenticated','public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)','execute')
+  and not has_function_privilege('anon','public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)','execute')
+  and not has_function_privilege('service_role','public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)','execute')
+  and not has_function_privilege('public','public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)','execute'),
+  'the treatment-event charge boundary is browser-authenticated only'
+);
+select extensions.ok(
+  (select proc.prosecdef and proc.proconfig = array['search_path=""']::text[]
+   from pg_proc as proc
+   where proc.oid = 'public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)'::regprocedure),
+  'the treatment-event charge boundary is a SECURITY DEFINER with an empty search path'
+);
+
 select extensions.ok(
   not exists (
     select 1

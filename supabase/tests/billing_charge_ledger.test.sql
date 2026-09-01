@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(14);
+select extensions.plan(16);
 
 select extensions.has_table('public', 'charges', 'charges are persisted separately from estimates');
 select extensions.has_table('public', 'payment_methods', 'payment methods are relational organization records');
@@ -33,6 +33,29 @@ select extensions.ok(
   ),
   'no billing ledger table grants any base DML to browser roles'
 );
+-- A confirmed charge amount is immutable. Nothing that confirms a charge may
+-- rewrite one, and the table itself refuses even a privileged update, so a
+-- correction has to become an adjustment or a void.
+select extensions.ok(
+  exists (
+    select 1 from pg_trigger as trigger
+    where trigger.tgrelid = 'public.charges'::regclass
+      and trigger.tgname = 'charges_append_only'
+      and not trigger.tgisinternal
+  ),
+  'charges are append-only at the table, not merely by convention in the RPCs'
+);
+select extensions.is(
+  (select count(*)::integer
+   from pg_proc as proc
+   join pg_namespace as namespace on namespace.oid = proc.pronamespace
+   where namespace.nspname = 'public'
+     and has_function_privilege('authenticated', proc.oid, 'execute')
+     and proc.prosrc ~* 'update[[:space:]]+public\.charges[[:space:]]'),
+  0,
+  'no browser-reachable function updates a posted charge row'
+);
+
 -- The default-method hook must be idempotent under replay.
 insert into public.organizations (id, legal_name, business_name, slug)
 values ('a2b10000-0000-0000-0000-000000000001', 'B2 Synthetic Inc.', 'B2 Synthetic', 'b2-synthetic')

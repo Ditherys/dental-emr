@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   recordVisitToothFindingsAction: vi.fn(),
   recordVisitClinicalNoteAction: vi.fn(),
+  recordTreatmentEventAction: vi.fn(),
   routerRefresh: vi.fn(),
 }));
 
@@ -16,6 +17,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.routerRef
 vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({
   recordVisitToothFindingsAction: mocks.recordVisitToothFindingsAction,
   recordVisitClinicalNoteAction: mocks.recordVisitClinicalNoteAction,
+  recordTreatmentEventAction: mocks.recordTreatmentEventAction,
 }));
 
 import { ClinicalRecordComposer } from "./clinical-record-composer";
@@ -46,6 +48,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.recordVisitToothFindingsAction.mockResolvedValue({ ok: true });
   mocks.recordVisitClinicalNoteAction.mockResolvedValue({ ok: true });
+  mocks.recordTreatmentEventAction.mockResolvedValue({ ok: true });
 });
 
 describe("ClinicalRecordComposer shell", () => {
@@ -120,12 +123,43 @@ describe("ClinicalRecordComposer shell", () => {
     const user = userEvent.setup();
     renderComposer();
 
-    for (const kind of ["Planned treatment", "Treatment performed", "Bridge", "Implant", "Photo"]) {
+    for (const kind of ["Planned treatment", "Bridge", "Implant", "Photo"]) {
       await user.click(screen.getByRole("button", { name: kind }));
       const notice = screen.getByTestId("composer-unavailable");
       expect(notice).toHaveTextContent(/not available/i);
       expect(screen.queryByRole("button", { name: /^Record / })).not.toBeInTheDocument();
     }
+  });
+
+  it("mounts the treatment form for a treatment event once a procedure catalogue is supplied", async () => {
+    const user = userEvent.setup();
+    renderComposer({
+      treatmentContext: {
+        patientIdentifier: "SYN-1 · Synthetic Patient",
+        procedures: [{ procedureId: "d1000000-0000-0000-0000-000000000001", name: "Synthetic filling" }],
+        activeFindings: [],
+        planItems: [],
+        openCases: [],
+        paymentMethods: [{ paymentMethodId: "d2000000-0000-0000-0000-000000000002", name: "Cash" }],
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: "Treatment performed" }));
+
+    expect(screen.getByRole("form", { name: /record treatment performed/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/actual cost/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("composer-unavailable")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("composer-treatment-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("says why a treatment cannot be recorded when no procedure catalogue is available", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+
+    await user.click(screen.getByRole("button", { name: "Treatment performed" }));
+
+    expect(screen.getByTestId("composer-treatment-unavailable")).toHaveTextContent(/no procedure catalogue/i);
+    expect(screen.queryByLabelText(/actual cost/i)).not.toBeInTheDocument();
   });
 
   it("cancels back to the drawer summary without writing anything", async () => {

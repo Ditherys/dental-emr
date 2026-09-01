@@ -420,3 +420,109 @@ export function allowedSurfacesForToothCodes(toothCodes: readonly string[]): rea
     toothCodes.every((toothCode) => allowedSurfacesForToothCode(toothCode).includes(surface)),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Treatment-event vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * The bounded treatment vocabulary `record_treatment_event_v2` accepts.
+ *
+ * Each entry is the `code` of the submitted clinical detail. It maps to the
+ * canonical `tooth_clinical_entries.clinical_code` on the server, and the
+ * database's own `tooth_clinical_entry_details` CHECK constraints plus the
+ * feature-code foreign key decide which of them may carry a detail row at all.
+ * Bridges and implant component chains stay with their own relationship
+ * workflows; `IMPLANT` here is the canonical treatment entry on a tooth, not a
+ * component graph.
+ */
+export const TREATMENT_EVENT_CODES = [
+  "RESTORATION",
+  "ROOT_CANAL",
+  "TOOTH_STATE",
+  "SEALANT",
+  "IMPLANT",
+  "ORTHODONTIC",
+  "OTHER",
+] as const;
+
+export type TreatmentEventCode = (typeof TREATMENT_EVENT_CODES)[number];
+
+/** Treatments recorded against named surfaces rather than the whole tooth. */
+export const SURFACE_BEARING_TREATMENT_CODES = [
+  "RESTORATION",
+  "SEALANT",
+] as const satisfies readonly TreatmentEventCode[];
+
+const SURFACE_BEARING_TREATMENT_SET = new Set<string>(SURFACE_BEARING_TREATMENT_CODES);
+
+export function treatmentRequiresSurfaces(code: string): boolean {
+  return SURFACE_BEARING_TREATMENT_SET.has(code);
+}
+
+/** `OTHER` may name surfaces; every other whole-tooth treatment may not. */
+export function treatmentAllowsSurfaces(code: string): boolean {
+  return SURFACE_BEARING_TREATMENT_SET.has(code) || code === "OTHER";
+}
+
+/**
+ * The restoration, canal, appliance and movement vocabularies the database
+ * actually accepts on a treatment detail row.
+ *
+ * These are deliberately separate from the renderer vocabularies above: the
+ * renderer's materials omit amalgam, composite and GIC, and its endo states
+ * include a `none` the CHECK constraint rejects. Naming them apart keeps the
+ * chart's presentation vocabulary and the ledger-bearing clinical vocabulary
+ * from drifting into each other.
+ */
+export const TREATMENT_RESTORATION_TYPES = ["none", "crown", "inlay", "onlay", "veneer", "bridge"] as const;
+export const TREATMENT_RESTORATION_MATERIALS = [
+  "none",
+  "emax",
+  "gold",
+  "gradia",
+  "zircon",
+  "metal",
+  "metal-ceramic",
+  "telescope",
+  "temporary",
+  "amalgam",
+  "composite",
+  "gic",
+] as const;
+export const TREATMENT_ROOT_CANAL_STATES = [
+  "endo-medical-filling",
+  "endo-filling",
+  "endo-filling-incomplete",
+  "endo-glass-pin",
+  "endo-metal-pin",
+] as const;
+export const TREATMENT_ORTHODONTIC_APPLIANCES = ["BRACKET", "BAND"] as const;
+export const TREATMENT_ORTHODONTIC_MOVEMENTS = ["DRIFT", "INTRUSION", "EXTRUSION", "ROTATION"] as const;
+
+/**
+ * Which active findings a given treatment can plausibly resolve.
+ *
+ * This narrows what the composer offers so a clinician cannot casually close an
+ * unrelated finding; the server independently re-checks that every named
+ * finding is open, active, unresolved, and on a tooth the event actually
+ * treats. There is deliberately no "everything" shortcut and no
+ * "mark tooth healthy" action: a finding is resolved by the treatment that
+ * actually addressed it, one at a time.
+ */
+export const RESOLVABLE_FINDING_CODES_BY_TREATMENT: Readonly<
+  Record<TreatmentEventCode, readonly ClinicalFindingCode[]>
+> = Object.freeze({
+  RESTORATION: ["CARIES", "FRACTURE", "RESTORATION", "OTHER"],
+  ROOT_CANAL: ["CARIES", "FRACTURE", "OTHER"],
+  TOOTH_STATE: ["CARIES", "FRACTURE", "OTHER"],
+  SEALANT: ["CARIES", "OTHER"],
+  IMPLANT: ["MISSING"],
+  ORTHODONTIC: ["OTHER"],
+  OTHER: [...CLINICAL_FINDING_CODES],
+});
+
+export function findingIsResolvableBy(treatmentCode: string, findingCode: string): boolean {
+  const allowed = RESOLVABLE_FINDING_CODES_BY_TREATMENT[treatmentCode as TreatmentEventCode];
+  return allowed !== undefined && (allowed as readonly string[]).includes(findingCode);
+}

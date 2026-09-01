@@ -23,6 +23,7 @@ import {
   resolveLegacyOdontogramEntryInputSchema,
   savePeriodontalMeasurementsInputSchema,
   transitionTreatmentPlanItemExecutionInputSchema,
+  treatmentEventInputSchema,
   updateDraftPlanBridgeDesignInputSchema,
   updateDraftPlanImplantDesignInputSchema,
   voidCurrentBridgeInputSchema,
@@ -45,6 +46,7 @@ import {
   recordCurrentBridge,
   recordCurrentImplantComponent,
   recordToothClinicalEntry,
+  recordTreatmentEvent,
   recordVisitClinicalNote,
   recordVisitToothFindings,
   resolveLegacyOdontogramEntry,
@@ -124,6 +126,34 @@ export async function recordVisitClinicalNoteAction(input: unknown): Promise<Odo
     const value = visitClinicalNoteInputSchema.parse(input);
     await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
     const mutation = await recordVisitClinicalNote(value);
+    revalidateAuthoritativePatient(mutation.patientId);
+    return { ok: true };
+  } catch (error) { return result(error); }
+}
+
+/**
+ * The treatment-event action.
+ *
+ * It stays a Zod, authorization and error-mapping adapter: it never reads state
+ * to decide what to write, and it never issues a second server action to finish
+ * the first. Every clinical and financial invariant, including the immutability
+ * of a confirmed charge, is enforced inside the single RPC transaction.
+ */
+export async function recordTreatmentEventAction(input: unknown): Promise<OdontogramMutationResult> {
+  const invalidResult = invalid(treatmentEventInputSchema, input); if (invalidResult) return invalidResult;
+  try {
+    const value = treatmentEventInputSchema.parse(input);
+    await requirePermission({ permission: "patient.clinical.write", branchId: value.branchId });
+    // A charge is confirmed only when an amount is submitted; a follow-up that
+    // preserves the original charge must not demand billing authority it does
+    // not use.
+    if (value.chargeAmountCentavos !== null) {
+      await requirePermission({ permission: "billing.charge", branchId: value.branchId });
+    }
+    if (value.immediatePayment !== null || value.installmentSchedule !== null) {
+      await requirePermission({ permission: "payment.record", branchId: value.branchId });
+    }
+    const mutation = await recordTreatmentEvent(value);
     revalidateAuthoritativePatient(mutation.patientId);
     return { ok: true };
   } catch (error) { return result(error); }

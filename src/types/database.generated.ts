@@ -9974,6 +9974,25 @@ export type Database = {
           version: number
         }[]
       }
+      record_treatment_event_v2: {
+        Args: {
+          p_branch_id: string
+          p_charge_amount_centavos: number
+          p_clinical_detail: Json
+          p_event_kind: string
+          p_existing_case_id: string
+          p_expected_case_version: number
+          p_idempotency_key: string
+          p_immediate_payment: Json
+          p_installment_schedule: Json
+          p_patient_id: string
+          p_plan_item_id: string
+          p_procedure_id: string
+          p_resolved_finding_ids: string[]
+          p_service_date: string
+        }
+        Returns: Json
+      }
       record_visit_clinical_note: {
         Args: {
           p_branch_id: string

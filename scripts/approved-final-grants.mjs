@@ -494,6 +494,12 @@ const CLINICAL_RECORD_COMPOSER_RPCS_MIGRATION =
   "20260901010102_clinical_record_composer_rpcs.sql";
 const CLINICAL_RECORD_COMPOSER_RPCS_GRANTS_MIGRATION =
   "20260901010103_clinical_record_composer_rpcs_grants.sql";
+// The treatment-event boundary. Its object migration creates a new function and
+// revokes nothing that any registered grant carries, so no entry below needs a
+// supersede pivot; had it revoked one, the pivot would have to name that
+// revoking object migration, never this grants file.
+const CLINICAL_TREATMENT_EVENTS_V2_GRANTS_MIGRATION =
+  "20260901010121_clinical_treatment_events_v2_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -900,6 +906,19 @@ const clinicalRecordComposerGrants = Object.freeze([
     columns: [],
     reason:
       "The only browser-callable visit-note write in the clinical chart workspace. It derives organization, actor and treating provider server-side under an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, validates the patient against the derived tenant, obtains its encounter from public.start_or_resume_clinical_visit, and authors a bounded DRAFT through the existing public.create_clinical_note boundary so finalized-note immutability and the amendment path are untouched. AMENDMENT is refused, a replayed request key returns the original note, and no encounter, organization, provider or actor may be supplied by a client.",
+  },
+]);
+
+const clinicalTreatmentEventGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object:
+      "public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only browser-callable treatment-event write. It derives organization, actor, treating provider and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, and obtains its encounter from public.start_or_resume_clinical_visit so no treatment exists without a managed visit. One transaction creates or locks the procedure case, records the dated entry per treated tooth, links only findings that are open, active, unresolved and on a treated tooth, and confirms at most one charge: a new case requires one, an already-charged case refuses a replacement, and a plan-linked first charge is delegated to public.complete_treatment_case so the immutable materialization contract is inherited rather than restated. billing.charge is required only when an amount is confirmed and payment.record only when money is submitted; payment is recorded and allocated to this case charge alone through the reviewed billing boundary, and installments remain expectations while the allocation ledger stays the balance authority. No confirmed charge is ever updated, a replayed request key returns the stored result, and no organization, provider, actor, encounter or visit date may be supplied by a client.",
   },
 ]);
 
@@ -1829,6 +1848,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CURRENT_MANAGED_VISIT_PROJECTION_GRANTS_MIGRATION,
     grants: currentManagedVisitProjectionGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_TREATMENT_EVENTS_V2_GRANTS_MIGRATION,
+    grants: clinicalTreatmentEventGrants,
   }),
 ]);
 

@@ -76,5 +76,16 @@ select extensions.throws_ok($$select * from public.complete_treatment_case('fa30
 reset role;
 select extensions.is((select count(*)::integer from public.charges c join public.procedure_cases pc on pc.charge_id=c.id where pc.id='faa00000-0000-0000-0000-000000000002'),0,'failed completion leaves no charge or clinical materialization');
 select extensions.is((select current_state from public.treatment_plan_item_executions where item_id='fa900000-0000-0000-0000-000000000001'),'COMPLETED','linked plan execution is completed atomically');
+-- Task 6's treatment-event boundary must reuse this completion path for a
+-- plan-linked charge, not re-implement its immutable-design validation. If it
+-- ever grew its own copy of the contract rules there would be two places to keep
+-- in sync and one of them would eventually stop refusing design drift.
+select extensions.ok(
+  (select proc.prosrc ~ 'public[.]complete_treatment_case'
+      and proc.prosrc !~ 'completion does not match immutable item design'
+   from pg_proc as proc
+   where proc.oid = 'public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)'::regprocedure),
+  'the treatment-event boundary delegates plan-linked completion here instead of duplicating its contract checks'
+);
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$') select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;
 rollback;

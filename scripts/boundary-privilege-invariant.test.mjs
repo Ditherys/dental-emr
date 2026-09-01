@@ -215,6 +215,7 @@ const APPROVED_FINAL_PRIVILEGES = [
     // composer's creation.
     "public.record_visit_tooth_findings(uuid,uuid,text[],text,text[],text,date,text,uuid)",
     "public.record_visit_clinical_note(uuid,uuid,text,text,uuid)",
+    "public.record_treatment_event_v2(uuid,uuid,uuid,uuid,uuid,integer,text,date,uuid[],jsonb,bigint,jsonb,jsonb,uuid)",
     "public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)",
     "public.void_tooth_clinical_entry(uuid,uuid,integer,text)",
     "public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)",
@@ -1454,7 +1455,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(263);
+    expect(approved.size).toBe(264);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

@@ -7,6 +7,7 @@ const {
   recordCurrentImplantComponent,
   recordVisitToothFindings,
   recordVisitClinicalNote,
+  recordTreatmentEvent,
 } = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   revalidatePath: vi.fn(),
@@ -14,6 +15,7 @@ const {
   recordCurrentImplantComponent: vi.fn(),
   recordVisitToothFindings: vi.fn(),
   recordVisitClinicalNote: vi.fn(),
+  recordTreatmentEvent: vi.fn(),
 }));
 
 vi.mock("@/lib/authorization", () => ({ AuthorizationError: class AuthorizationError extends Error {}, requirePermission }));
@@ -24,10 +26,12 @@ vi.mock("@/lib/odontogram/service", () => ({
   recordCurrentImplantComponent,
   recordVisitToothFindings,
   recordVisitClinicalNote,
+  recordTreatmentEvent,
 }));
 
 import {
   recordCurrentImplantComponentAction,
+  recordTreatmentEventAction,
   recordVisitClinicalNoteAction,
   recordVisitToothFindingsAction,
   transitionTreatmentPlanItemExecutionAction,
@@ -48,6 +52,19 @@ beforeEach(() => {
   recordCurrentImplantComponent.mockResolvedValue({ componentId: itemId, patientId: authoritativePatientId, version: 1 });
   recordVisitToothFindings.mockResolvedValue({ patientId: authoritativePatientId, encounterId, clinicalDate: "2026-09-01", recordedCount: 1 });
   recordVisitClinicalNote.mockResolvedValue({ patientId: authoritativePatientId, encounterId, noteId, version: 1 });
+  recordTreatmentEvent.mockResolvedValue({
+    patientId: authoritativePatientId,
+    procedureCaseId: itemId,
+    caseStatus: "OPEN",
+    caseVersion: 2,
+    encounterId,
+    chargeId: noteId,
+    chargeConfirmed: true,
+    chargeAmountCentavos: "250000",
+    paidCentavos: "0",
+    balanceCentavos: "250000",
+    replayed: false,
+  });
 });
 
 describe("provider-free implant action boundary", () => {
@@ -155,5 +172,95 @@ describe("clinical record composer action boundary", () => {
     await expect(recordVisitClinicalNoteAction({ ...noteInput, encounterId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
     await expect(recordVisitClinicalNoteAction({ ...noteInput, noteType: "AMENDMENT" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
     expect(recordVisitClinicalNote).not.toHaveBeenCalled();
+  });
+});
+
+describe("treatment event action boundary", () => {
+  const performed = {
+    patientId,
+    branchId,
+    procedureId: itemId,
+    planItemId: null,
+    existingCaseId: null,
+    expectedCaseVersion: null,
+    eventKind: "PERFORMED",
+    serviceDate: "2026-09-01",
+    resolvedFindingIds: [] as string[],
+    clinicalDetail: {
+      toothCodes: ["16"],
+      surfaces: ["O"],
+      detail: { code: "RESTORATION", restorationType: "none", material: "composite", marginalLeakage: false },
+    },
+    chargeAmountCentavos: 250000,
+    immediatePayment: null,
+    installmentSchedule: null,
+    idempotencyKey,
+  };
+
+  it("requires clinical write and billing charge, then revalidates the server-resolved patient", async () => {
+    await expect(recordTreatmentEventAction(performed)).resolves.toEqual({ ok: true });
+
+    expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
+    expect(requirePermission).toHaveBeenCalledWith({ permission: "billing.charge", branchId });
+    expect(recordTreatmentEvent).toHaveBeenCalledWith(performed);
+    expect(revalidatePath).toHaveBeenCalledWith(`/patients/${authoritativePatientId}`, "page");
+    expect(revalidatePath).not.toHaveBeenCalledWith(`/patients/${patientId}`, "page");
+  });
+
+  it("requires payment.record only when money is submitted", async () => {
+    await expect(recordTreatmentEventAction({
+      ...performed,
+      immediatePayment: { paymentMethodId: noteId, amountCentavos: 100000, paymentDate: "2026-09-01" },
+    })).resolves.toEqual({ ok: true });
+
+    expect(requirePermission).toHaveBeenCalledWith({ permission: "payment.record", branchId });
+  });
+
+  it("does not demand billing.charge for a follow-up that confirms no charge", async () => {
+    await expect(recordTreatmentEventAction({
+      ...performed,
+      eventKind: "FOLLOW_UP",
+      existingCaseId: itemId,
+      expectedCaseVersion: 3,
+      chargeAmountCentavos: null,
+    })).resolves.toEqual({ ok: true });
+
+    expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
+    expect(requirePermission).not.toHaveBeenCalledWith({ permission: "billing.charge", branchId });
+  });
+
+  it("refuses browser-supplied organization, provider, creator and encounter identity", async () => {
+    for (const forged of [
+      { organizationId: authoritativePatientId },
+      { treatingProviderId: itemId },
+      { createdBy: itemId },
+      { providerDisplay: "Dr Synthetic" },
+      { encounterId },
+    ]) {
+      await expect(recordTreatmentEventAction({ ...performed, ...forged })).resolves.toMatchObject({
+        ok: false,
+        code: "INVALID_INPUT",
+      });
+    }
+    expect(recordTreatmentEvent).not.toHaveBeenCalled();
+  });
+
+  it("refuses a replacement charge on an existing case before any server call", async () => {
+    await expect(recordTreatmentEventAction({
+      ...performed,
+      eventKind: "FOLLOW_UP",
+      existingCaseId: itemId,
+      expectedCaseVersion: 3,
+      chargeAmountCentavos: 250000,
+    })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    expect(recordTreatmentEvent).not.toHaveBeenCalled();
+  });
+
+  it("maps an authorization denial to a safe code without leaking the database message", async () => {
+    const { AuthorizationError } = await import("@/lib/authorization");
+    requirePermission.mockRejectedValueOnce(new AuthorizationError("PERMISSION_DENIED"));
+
+    await expect(recordTreatmentEventAction(performed)).resolves.toEqual({ ok: false, code: "NOT_AUTHORIZED" });
+    expect(recordTreatmentEvent).not.toHaveBeenCalled();
   });
 });

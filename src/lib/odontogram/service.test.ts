@@ -23,6 +23,7 @@ import {
   recordCurrentBridge,
   recordCurrentImplantComponent,
   recordToothClinicalEntry,
+  recordTreatmentEvent,
   recordVisitClinicalNote,
   recordVisitToothFindings,
   resolveLegacyOdontogramEntry,
@@ -756,5 +757,172 @@ describe("clinical record composer service boundary", () => {
       content: "Synthetic visit note",
       idempotencyKey: "c3000000-0000-0000-0000-000000000003",
     })).rejects.toEqual(new OdontogramServiceError("INVALID_INPUT"));
+  });
+});
+
+describe("treatment event service boundary", () => {
+  const caseId = "cc000000-0000-0000-0000-00000000000c";
+  const findingId = "cd000000-0000-0000-0000-00000000000d";
+  const methodId = "ce000000-0000-0000-0000-00000000000e";
+  const key = "cf000000-0000-0000-0000-00000000000f";
+
+  const performed = {
+    patientId,
+    branchId,
+    procedureId: itemId,
+    planItemId: null,
+    existingCaseId: null,
+    expectedCaseVersion: null,
+    eventKind: "PERFORMED" as const,
+    serviceDate: "2026-09-01",
+    resolvedFindingIds: [findingId],
+    clinicalDetail: {
+      toothCodes: ["16"],
+      surfaces: ["O"],
+      detail: { code: "RESTORATION", restorationType: "none", material: "composite", marginalLeakage: false },
+    },
+    chargeAmountCentavos: 250000,
+    immediatePayment: null,
+    installmentSchedule: null,
+    idempotencyKey: key,
+  };
+
+  const serverResult = {
+    procedure_case_id: caseId,
+    case_status: "OPEN",
+    case_version: 2,
+    encounter_id: encounterId,
+    clinical_date: "2026-09-01",
+    service_date: "2026-09-01",
+    event_id: entryId,
+    event_kind: "PERFORMED",
+    charge_id: chargeId,
+    charge_confirmed: true,
+    charge_amount_centavos: "250000",
+    paid_centavos: "0",
+    balance_centavos: "250000",
+    clinical_entry_ids: [entryId],
+    resolved_finding_ids: [findingId],
+    payment_id: null,
+    payment_allocation_id: null,
+    installment_schedule_id: null,
+    replayed: false,
+  };
+
+  beforeEach(() => {
+    rpc.mockReset();
+  });
+
+  it("issues exactly one RPC and returns the server-resolved case, charge and balance", async () => {
+    rpc.mockResolvedValueOnce({ data: serverResult, error: null });
+
+    await expect(recordTreatmentEvent(performed)).resolves.toEqual({
+      patientId,
+      procedureCaseId: caseId,
+      caseStatus: "OPEN",
+      caseVersion: 2,
+      encounterId,
+      clinicalDate: "2026-09-01",
+      serviceDate: "2026-09-01",
+      eventId: entryId,
+      eventKind: "PERFORMED",
+      chargeId,
+      chargeConfirmed: true,
+      chargeAmountCentavos: "250000",
+      paidCentavos: "0",
+      balanceCentavos: "250000",
+      clinicalEntryIds: [entryId],
+      resolvedFindingIds: [findingId],
+      paymentId: null,
+      paymentAllocationId: null,
+      installmentScheduleId: null,
+      replayed: false,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("record_treatment_event_v2", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+      p_procedure_id: itemId,
+      p_plan_item_id: null,
+      p_existing_case_id: null,
+      p_expected_case_version: null,
+      p_event_kind: "PERFORMED",
+      p_service_date: "2026-09-01",
+      p_resolved_finding_ids: [findingId],
+      p_clinical_detail: performed.clinicalDetail,
+      p_charge_amount_centavos: 250000,
+      p_immediate_payment: null,
+      p_installment_schedule: null,
+      p_idempotency_key: key,
+    });
+    // One RPC only: the visit, case, charge, payment and schedule are one
+    // server-side transaction, never a check-then-write across calls.
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("never forwards a browser-supplied organization, provider, actor, or encounter", async () => {
+    for (const forged of [
+      { organizationId: patientId },
+      { treatingProviderId: providerId },
+      { createdBy: recordedBy },
+      { providerDisplay: "Dr Synthetic" },
+      { encounterId },
+      { actingBranchId: branchId },
+    ]) {
+      await expect(recordTreatmentEvent({ ...performed, ...forged })).rejects.toBeInstanceOf(z.ZodError);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("refuses a new case that claims an expected version, and a follow-up that claims a charge", async () => {
+    await expect(recordTreatmentEvent({ ...performed, expectedCaseVersion: 3 })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(recordTreatmentEvent({
+      ...performed,
+      eventKind: "FOLLOW_UP",
+      existingCaseId: caseId,
+      expectedCaseVersion: 3,
+      chargeAmountCentavos: 250000,
+      planItemId: null,
+    })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("refuses a zero, negative, or non-integer confirmed amount", async () => {
+    for (const amount of [0, -1, 250000.5, 100000000000]) {
+      await expect(recordTreatmentEvent({ ...performed, chargeAmountCentavos: amount })).rejects.toBeInstanceOf(z.ZodError);
+    }
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("forwards an immediate payment and an installment schedule unchanged", async () => {
+    rpc.mockResolvedValueOnce({
+      data: { ...serverResult, payment_id: chargeId, payment_allocation_id: entryId, installment_schedule_id: caseId, paid_centavos: "100000", balance_centavos: "150000" },
+      error: null,
+    });
+
+    const immediatePayment = { paymentMethodId: methodId, amountCentavos: 100000, paymentDate: "2026-09-01", reference: "OR-1" };
+    const installmentSchedule = [{ dueDate: "2026-10-01", expectedCentavos: "150000" }];
+
+    await expect(recordTreatmentEvent({ ...performed, immediatePayment, installmentSchedule })).resolves.toMatchObject({
+      paidCentavos: "100000",
+      balanceCentavos: "150000",
+      installmentScheduleId: caseId,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("record_treatment_event_v2", expect.objectContaining({
+      p_immediate_payment: immediatePayment,
+      p_installment_schedule: installmentSchedule,
+    }));
+  });
+
+  it("maps treatment-event RPC failures to safe codes", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(recordTreatmentEvent(performed)).rejects.toEqual(new OdontogramServiceError("NOT_AUTHORIZED"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "22023", message: "charge already confirmed" } });
+    await expect(recordTreatmentEvent(performed)).rejects.toEqual(new OdontogramServiceError("INVALID_INPUT"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
+    await expect(recordTreatmentEvent(performed)).rejects.toEqual(new OdontogramServiceError("STALE_VERSION"));
   });
 });

@@ -6,8 +6,16 @@ import { databaseUuid } from "@/lib/validation/database-uuid";
 
 import {
   CLINICAL_FINDING_CODES,
+  TREATMENT_EVENT_CODES,
+  TREATMENT_ORTHODONTIC_APPLIANCES,
+  TREATMENT_ORTHODONTIC_MOVEMENTS,
+  TREATMENT_RESTORATION_MATERIALS,
+  TREATMENT_RESTORATION_TYPES,
+  TREATMENT_ROOT_CANAL_STATES,
   allowedSurfacesForToothCode,
   isWholeToothFindingCode,
+  treatmentAllowsSurfaces,
+  treatmentRequiresSurfaces,
 } from "./clinical-codes";
 
 const isoTimestamp = z.iso.datetime({ offset: true });
@@ -765,5 +773,202 @@ export const visitClinicalNoteRowSchema = z
     encounter_id: databaseUuid,
     note_id: databaseUuid,
     version: z.number().int().positive(),
+  })
+  .strict();
+
+// ---------------------------------------------------------------------------
+// Treatment-event contract (task 6)
+//
+// The public action boundary accepts route context, the clinical facts, the
+// confirmed amount, optional money, and a request key. Organization, treating
+// provider, actor, encounter and the visit's own clinical date are derived
+// inside `record_treatment_event_v2`, which obtains its encounter from
+// `start_or_resume_clinical_visit` and delegates every charge, payment,
+// allocation and installment write to the reviewed billing boundary.
+// `.strict()` makes any forged attribution field a parse failure rather than an
+// ignored extra property.
+// ---------------------------------------------------------------------------
+
+export const treatmentEventKindSchema = z.enum(["STARTED", "PERFORMED", "FOLLOW_UP", "COMPLETED"]);
+export const treatmentEventCodeSchema = z.enum(TREATMENT_EVENT_CODES);
+
+const restorationDetailSchema = z.object({
+  code: z.literal("RESTORATION"),
+  restorationType: z.enum(TREATMENT_RESTORATION_TYPES),
+  material: z.enum(TREATMENT_RESTORATION_MATERIALS),
+  marginalLeakage: z.boolean(),
+}).strict();
+
+const rootCanalDetailSchema = z.object({
+  code: z.literal("ROOT_CANAL"),
+  state: z.enum(TREATMENT_ROOT_CANAL_STATES),
+}).strict();
+
+const orthodonticDetailSchema = z.object({
+  code: z.literal("ORTHODONTIC"),
+  appliance: z.enum(TREATMENT_ORTHODONTIC_APPLIANCES),
+  movement: z.enum(TREATMENT_ORTHODONTIC_MOVEMENTS).nullable(),
+}).strict();
+
+const otherTreatmentDetailSchema = z.object({
+  code: z.literal("OTHER"),
+  controlledCode: boundedText(1, 100),
+}).strict();
+
+/** An extraction is the canonical EXTRACTION entry, modelled as a tooth state. */
+const extractionDetailSchema = z.object({
+  code: z.literal("TOOTH_STATE"),
+  state: z.literal("EXTRACTION_WOUND"),
+}).strict();
+
+const markerTreatmentDetailSchema = z.object({
+  code: z.enum(["SEALANT", "IMPLANT"]),
+}).strict();
+
+export const treatmentEventDetailSchema = z.discriminatedUnion("code", [
+  restorationDetailSchema,
+  rootCanalDetailSchema,
+  orthodonticDetailSchema,
+  otherTreatmentDetailSchema,
+  extractionDetailSchema,
+  markerTreatmentDetailSchema,
+]);
+
+export const treatmentClinicalDetailSchema = z
+  .object({
+    toothCodes: z.array(fdiToothCodeSchema).min(1).max(32),
+    surfaces: z.array(toothClinicalSurfaceSchema).max(7).optional(),
+    detail: treatmentEventDetailSchema,
+    note: boundedClinicalNoteSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const surfaces = value.surfaces ?? [];
+    if (new Set(value.toothCodes).size !== value.toothCodes.length) {
+      ctx.addIssue({ code: "custom", path: ["toothCodes"], message: "duplicate tooth code" });
+    }
+    if (new Set(surfaces).size !== surfaces.length) {
+      ctx.addIssue({ code: "custom", path: ["surfaces"], message: "duplicate surface" });
+    }
+    if (treatmentRequiresSurfaces(value.detail.code) && surfaces.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["surfaces"], message: "at least one surface is required" });
+    }
+    if (!treatmentAllowsSurfaces(value.detail.code) && surfaces.length > 0) {
+      ctx.addIssue({ code: "custom", path: ["surfaces"], message: "whole-tooth treatment claims no surface" });
+    }
+    for (const toothCode of value.toothCodes) {
+      const allowed = allowedSurfacesForToothCode(toothCode);
+      for (const surface of surfaces) {
+        if (!allowed.includes(surface)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["surfaces"],
+            message: `surface ${surface} does not exist on tooth ${toothCode}`,
+          });
+        }
+      }
+    }
+  });
+
+export const immediatePaymentSchema = z
+  .object({
+    paymentMethodId: databaseUuid,
+    amountCentavos: z.number().int().min(1).max(99999999999),
+    paymentDate: isoDateSchema,
+    reference: boundedText(1, 80).optional(),
+  })
+  .strict();
+
+export const installmentScheduleSchema = z
+  .array(
+    z
+      .object({
+        dueDate: isoDateSchema,
+        // Expectations cross the RPC boundary as decimal strings so a large
+        // centavo amount never travels through a lossy JavaScript number.
+        expectedCentavos: z.string().regex(/^[1-9][0-9]{0,10}$/),
+      })
+      .strict(),
+  )
+  .min(1)
+  .max(120);
+
+export const treatmentEventInputSchema = z
+  .object({
+    patientId: databaseUuid,
+    branchId: databaseUuid,
+    procedureId: databaseUuid,
+    planItemId: databaseUuid.nullable(),
+    existingCaseId: databaseUuid.nullable(),
+    expectedCaseVersion: z.number().int().positive().nullable(),
+    eventKind: treatmentEventKindSchema,
+    serviceDate: isoDateSchema,
+    resolvedFindingIds: z.array(databaseUuid).max(32),
+    clinicalDetail: treatmentClinicalDetailSchema,
+    chargeAmountCentavos: z.number().int().min(1).max(99999999999).nullable(),
+    immediatePayment: immediatePaymentSchema.nullable(),
+    installmentSchedule: installmentScheduleSchema.nullable(),
+    idempotencyKey: databaseUuid,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (new Set(value.resolvedFindingIds).size !== value.resolvedFindingIds.length) {
+      ctx.addIssue({ code: "custom", path: ["resolvedFindingIds"], message: "duplicate finding" });
+    }
+    if (value.existingCaseId === null) {
+      // A new case is opened here, always carries its one confirmed charge, and
+      // never claims a version or a plan item: a plan item's case is opened by
+      // the plan workflow and completed through the immutable-design boundary.
+      if (value.eventKind === "FOLLOW_UP") {
+        ctx.addIssue({ code: "custom", path: ["eventKind"], message: "a follow-up requires an existing case" });
+      }
+      if (value.expectedCaseVersion !== null) {
+        ctx.addIssue({ code: "custom", path: ["expectedCaseVersion"], message: "a new case has no expected version" });
+      }
+      if (value.planItemId !== null) {
+        ctx.addIssue({ code: "custom", path: ["planItemId"], message: "a plan item case is opened by the plan workflow" });
+      }
+      if (value.chargeAmountCentavos === null) {
+        ctx.addIssue({ code: "custom", path: ["chargeAmountCentavos"], message: "a new case requires a confirmed charge" });
+      }
+      return;
+    }
+    if (value.eventKind === "STARTED" || value.eventKind === "PERFORMED") {
+      ctx.addIssue({ code: "custom", path: ["eventKind"], message: "an existing case accepts a follow-up or a completion" });
+    }
+    if (value.expectedCaseVersion === null) {
+      ctx.addIssue({ code: "custom", path: ["expectedCaseVersion"], message: "an existing case requires its expected version" });
+    }
+    // A confirmed charge is never replaced. The only charge an existing case may
+    // receive is its first one, through a plan-linked completion.
+    if (value.chargeAmountCentavos !== null && (value.planItemId === null || value.eventKind !== "COMPLETED")) {
+      ctx.addIssue({ code: "custom", path: ["chargeAmountCentavos"], message: "an existing case charge cannot be replaced" });
+    }
+    if (value.installmentSchedule !== null && value.chargeAmountCentavos === null) {
+      ctx.addIssue({ code: "custom", path: ["installmentSchedule"], message: "an installment schedule requires a confirmed charge" });
+    }
+  });
+
+export const treatmentEventRowSchema = z
+  .object({
+    procedure_case_id: databaseUuid,
+    case_status: z.enum(["OPEN", "COMPLETED", "CANCELLED"]),
+    case_version: z.number().int().positive(),
+    encounter_id: databaseUuid,
+    clinical_date: isoDateSchema,
+    service_date: isoDateSchema,
+    event_id: databaseUuid.nullable(),
+    event_kind: treatmentEventKindSchema,
+    charge_id: databaseUuid.nullable(),
+    charge_confirmed: z.boolean(),
+    charge_amount_centavos: z.string().nullable(),
+    paid_centavos: z.string().nullable(),
+    balance_centavos: z.string().nullable(),
+    clinical_entry_ids: z.array(databaseUuid),
+    resolved_finding_ids: z.array(databaseUuid),
+    payment_id: databaseUuid.nullable(),
+    payment_allocation_id: databaseUuid.nullable(),
+    installment_schedule_id: databaseUuid.nullable(),
+    replayed: z.boolean(),
   })
   .strict();

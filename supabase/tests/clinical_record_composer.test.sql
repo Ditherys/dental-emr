@@ -102,16 +102,27 @@ select extensions.ok(
   ),
   'the superseded provider-free direct entry path is revoked from authenticated'
 );
+-- The original assertion counted the browser-reachable paths that record a
+-- tooth entry BOUND TO THE MANAGED VISIT, and expected one. Task 6 added a
+-- second legitimate visit-bound writer, so the count becomes a named set: the
+-- guarantee is unchanged and strengthened, because a third such writer now
+-- fails by name rather than merely by count.
+--
+-- `complete_treatment_case` and `amend_tooth_clinical_entry` also insert tooth
+-- entries and are browser-reachable, but neither opens a visit and neither did
+-- before this task: completion runs inside a case the plan workflow opened, and
+-- an amendment succeeds an existing entry. They are outside this assertion, as
+-- they were outside the original one.
 select extensions.is(
-  (select count(*)::integer
+  (select string_agg(proc.proname::text, ',' order by proc.proname::text)
    from pg_proc as proc
    join pg_namespace as namespace on namespace.oid = proc.pronamespace
    where namespace.nspname = 'public'
-     and proc.prosrc ~* 'insert into public\.tooth_clinical_entries'
+     and proc.prosrc ~* 'insert into public[.]tooth_clinical_entries'
      and proc.prosrc ~* 'start_or_resume_clinical_visit'
      and has_function_privilege('authenticated', proc.oid, 'execute')),
-  1,
-  'exactly one browser-reachable path records a tooth entry bound to the managed visit'
+  'record_treatment_event_v2,record_visit_tooth_findings',
+  'the browser-reachable paths that record a tooth entry bound to the managed visit are exactly the composer finding and treatment-event boundaries'
 );
 
 -- Positive path: one dentist records a two-tooth surface finding.
