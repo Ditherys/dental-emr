@@ -56,6 +56,12 @@ const payload: PerioComparisonPayload = {
     confirmed_stage: "III",
     confirmed_grade: "B",
     confirmed_extent: "GENERALIZED",
+    examined_provider_id: "00000000-0000-4000-a000-0000000000d1",
+    examined_provider_name: "Ana R Santos",
+    finalized_provider_id: "00000000-0000-4000-a000-0000000000d1",
+    finalized_provider_name: "Ana R Santos",
+    branch_id: "00000000-0000-4000-a000-0000000000b1",
+    branch_name: "Main Branch",
   },
   right: {
     id: timeline[1].id,
@@ -69,6 +75,12 @@ const payload: PerioComparisonPayload = {
     confirmed_stage: "III",
     confirmed_grade: "B",
     confirmed_extent: "LOCALIZED",
+    examined_provider_id: "00000000-0000-4000-a000-0000000000d2",
+    examined_provider_name: "Ben T Cruz",
+    finalized_provider_id: null,
+    finalized_provider_name: null,
+    branch_id: "00000000-0000-4000-a000-0000000000b2",
+    branch_name: "Satellite Branch",
   },
   left_derived: { diagnosis: "PERIODONTITIS", stage: "III", grade: "B", extent: "GENERALIZED", bop_percent: 40, complete: true },
   right_derived: { diagnosis: "PERIODONTITIS", stage: "III", grade: "B", extent: "LOCALIZED", bop_percent: null, complete: false },
@@ -174,6 +186,44 @@ describe("PeriodontalComparison", () => {
     expect(screen.getByTestId("perio-compare-left")).toHaveTextContent(/GENERALIZED/);
     expect(screen.getByTestId("perio-compare-right")).toHaveTextContent(/2026-06-05/);
     expect(screen.getByTestId("perio-compare-right")).toHaveTextContent(/LOCALIZED/);
+  });
+
+  it("labels who examined each side and where", () => {
+    renderComparison({ result: payload });
+    expect(screen.getByTestId("perio-compare-left")).toHaveTextContent("Ana R Santos");
+    expect(screen.getByTestId("perio-compare-left")).toHaveTextContent("Main Branch");
+    expect(screen.getByTestId("perio-compare-right")).toHaveTextContent("Ben T Cruz");
+    expect(screen.getByTestId("perio-compare-right")).toHaveTextContent("Satellite Branch");
+  });
+
+  it("reports an examination with no finalizing provider as unrecorded rather than borrowing the examiner", () => {
+    renderComparison({ result: payload });
+    const right = screen.getByTestId("perio-compare-right");
+    expect(right).toHaveTextContent(/finalized by\s*not recorded/i);
+    expect(right.textContent ?? "").not.toMatch(/Finalized by\s*Ben T Cruz/);
+  });
+
+  it("warns when the two examinations were not charted by the same clinician at the same branch", () => {
+    renderComparison({ result: payload });
+    const warning = screen.getByTestId("perio-compare-attribution-warning");
+    expect(warning).toHaveTextContent(/not charted by the same clinician/i);
+    expect(warning).toHaveTextContent(/operator-dependent/i);
+  });
+
+  it("raises no attribution warning when both sides share a clinician and a branch", () => {
+    renderComparison({
+      result: {
+        ...payload,
+        right: {
+          ...payload.right!,
+          examined_provider_id: payload.left!.examined_provider_id,
+          examined_provider_name: payload.left!.examined_provider_name,
+          branch_id: payload.left!.branch_id,
+          branch_name: payload.left!.branch_name,
+        },
+      },
+    });
+    expect(screen.queryByTestId("perio-compare-attribution-warning")).toBeNull();
   });
 
   it("reports an unassessed bleeding share on one side as not assessed", () => {

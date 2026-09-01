@@ -174,6 +174,17 @@ describe("PeriodontalMeasurementGrid", () => {
     expect(screen.getByRole("combobox", { name: /tooth 16 buccal furcation/i })).toBeInTheDocument();
   });
 
+  it("does not offer an implant the three findings the schema refuses on one", () => {
+    renderGrid([tooth("16", { implantContext: true })]);
+    // perio_tooth_implant_property_check: an implant has no CEJ, so there is no
+    // attachment to classify Miller recession against.
+    expect(screen.getByRole("combobox", { name: /tooth 16 miller recession class/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /tooth 16 cej visible/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /tooth 16 root concavity/i })).toBeDisabled();
+    // Keratinized mucosa width and thickness remain valid peri-implant readings.
+    expect(screen.getByRole("spinbutton", { name: /tooth 16 keratinized gingiva/i })).toBeEnabled();
+  });
+
   it("disables the periodontal measurements of a tooth recorded as absent", () => {
     renderGrid([tooth("16", { present: false })]);
     expect(screen.getByRole("spinbutton", { name: /tooth 16 mesio-buccal probing depth/i })).toBeDisabled();

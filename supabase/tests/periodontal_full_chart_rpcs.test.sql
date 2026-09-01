@@ -797,6 +797,41 @@ select extensions.ok(
   'comparison full outer joins the two site sets and reports an absent counterpart as unknown rather than zero'
 );
 
+-- Task 12. Attribution on the comparison header. Two examinations charted by
+-- different clinicians, or at different branches, are not straightforwardly
+-- comparable, and the screen can only say so if the projection carries who and
+-- where. Every one of these is nullable and must stay null when it is genuinely
+-- unknown rather than being coalesced to a placeholder.
+select extensions.ok(
+  (select comparison.payload -> 'left' ->> 'examined_provider_id'
+            = 'ea600000-0000-0000-0000-000000000001'
+     and comparison.payload -> 'left' ->> 'examined_provider_name' is not null
+     and comparison.payload -> 'left' ->> 'branch_id'
+            = 'ea300000-0000-0000-0000-000000000001'
+     and comparison.payload -> 'left' ->> 'branch_name' is not null
+     and comparison.payload -> 'right' ->> 'branch_id'
+            = 'ea300000-0000-0000-0000-000000000001'
+   from public.compare_periodontal_examinations_v2(
+     'ea500000-0000-0000-0000-000000000001'::uuid,
+     'ea300000-0000-0000-0000-000000000001'::uuid,
+     (select examination_id from perio_rpc_scratch where label = 'draft'),
+     'ea800000-0000-0000-0000-00000000000c'::uuid) as comparison),
+  'the comparison header names the examining provider and the branch each examination belongs to'
+);
+
+-- An examination that was never finalized has no finalizing provider, and the
+-- header reports that as unknown rather than naming the examiner instead.
+select extensions.ok(
+  (select comparison.payload -> 'right' -> 'finalized_provider_id' = 'null'::jsonb
+     and comparison.payload -> 'right' -> 'finalized_provider_name' = 'null'::jsonb
+   from public.compare_periodontal_examinations_v2(
+     'ea500000-0000-0000-0000-000000000001'::uuid,
+     'ea300000-0000-0000-0000-000000000001'::uuid,
+     (select examination_id from perio_rpc_scratch where label = 'draft'),
+     'ea800000-0000-0000-0000-00000000000c'::uuid) as comparison),
+  'an examination with no finalizing provider reports that attribution as unknown rather than borrowing the examiner'
+);
+
 select extensions.throws_ok(
   pg_catalog.format(
     $$select * from public.compare_periodontal_examinations_v2(
@@ -1409,6 +1444,154 @@ select extensions.ok(
      'ea8d0000-0000-0000-0000-00000000000d'::uuid) as derivation),
   'the buccal and oral fallback is reached with no tooth carrying a known interdental attachment level at all'
 );
+
+-- ===========================================================================
+-- 8. Unknown is writable in BOTH directions (task 12)
+--
+-- Tasks 9 to 11 made NULL the single representation of unknown on the way IN:
+-- nullable columns with no defaults, a null-propagating cal_mm, aggregates that
+-- count only the sites that exist, and a boundary that refuses to coalesce an
+-- omitted reading to zero or false. None of that let a clinician put a value
+-- BACK to unknown, so unknown was only ever an initial state: a probing depth
+-- mistyped onto a site nobody probed, or a bleeding answer given for the wrong
+-- site, was permanent even on a DRAFT.
+--
+-- The distinction the boundary already draws is key PRESENCE, not value. An
+-- absent key says nothing about the column and preserves it; an explicit null
+-- says "this is not known" and clears it. This section proves the second half
+-- end to end - through the RPC and against the stored rows - rather than only
+-- at the browser schema.
+--
+-- Only genuinely nullable columns participate. probing_depth_mm, tooth_present,
+-- implant_context and furcation grade are NOT NULL, so withdrawing one of those
+-- is a deletion, and no boundary deletes.
+-- ===========================================================================
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000014','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+-- Everything that will be withdrawn is recorded first, across all three child
+-- shapes that carry nullable columns plus the examination's own risk inputs.
+select extensions.is(
+  (select save.version from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-000000000014'::uuid, 1,
+     $withdraw_a${"sites":[{"tooth_fdi":"17","site":"MB","probing_depth_mm":4,"gingival_margin_mm":2,"bleeding_on_probing":true,"suppuration":true}],
+        "plaque":[{"tooth_fdi":"17","surface":"BUCCAL","plaque_present":true,"plaque_index":2,"gingival_index":1}],
+        "tooth":[{"tooth_fdi":"17","keratinized_gingiva_mm":3,"gingival_phenotype":"THIN","mobility_miller":"M1","cej_visible":true,"root_concavity":true,"miller_recession_class":"II"}],
+        "risk":{"age_years_snapshot":50,"smoking_status":"CURRENT","cigarettes_per_day":12,"radiographic_bone_loss_percent":20}}$withdraw_a$::jsonb,
+     'ea900000-0000-0000-0000-000000000060'::uuid) as save),
+  2,
+  'the readings that are about to be withdrawn are recorded first'
+);
+
+reset role;
+
+select extensions.ok(
+  (select site.gingival_margin_mm = 2 and site.cal_mm = 6
+     and site.bleeding_on_probing and site.suppuration
+   from public.periodontal_site_measurements as site
+   where site.examination_id = 'ea800000-0000-0000-0000-000000000014'::uuid
+     and site.tooth_fdi = '17' and site.site = 'MB'),
+  'the site reading, including its derived attachment level, is on the record before the withdrawal'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+-- An EXPLICIT null on every nullable column. The probing depth is re-sent
+-- unchanged because it is NOT NULL and is the row's identity, not a withdrawal.
+--
+-- smoking_status and cigarettes_per_day are cleared in the SAME statement on
+-- purpose: perio_exam_cigarettes_current_smoker_check requires a cigarette
+-- count to belong to a current smoker, so clearing the status alone would be
+-- refused. One UPDATE sets both, and the constraint is satisfied.
+select extensions.is(
+  (select save.saved_sites + save.saved_plaque + save.saved_tooth
+   from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-000000000014'::uuid, 2,
+     $withdraw_b${"sites":[{"tooth_fdi":"17","site":"MB","probing_depth_mm":4,"gingival_margin_mm":null,"bleeding_on_probing":null,"suppuration":null}],
+        "plaque":[{"tooth_fdi":"17","surface":"BUCCAL","plaque_present":null,"plaque_index":null,"gingival_index":null}],
+        "tooth":[{"tooth_fdi":"17","keratinized_gingiva_mm":null,"gingival_phenotype":null,"mobility_miller":null,"cej_visible":null,"root_concavity":null,"miller_recession_class":null}],
+        "risk":{"age_years_snapshot":null,"smoking_status":null,"cigarettes_per_day":null,"radiographic_bone_loss_percent":null}}$withdraw_b$::jsonb,
+     'ea900000-0000-0000-0000-000000000061'::uuid) as save),
+  3,
+  'an explicit null is a write: the site, surface and tooth rows are each updated exactly once'
+);
+
+reset role;
+
+select extensions.ok(
+  (select site.gingival_margin_mm is null and site.cal_mm is null
+     and site.bleeding_on_probing is null and site.suppuration is null
+     and site.probing_depth_mm = 4
+   from public.periodontal_site_measurements as site
+   where site.examination_id = 'ea800000-0000-0000-0000-000000000014'::uuid
+     and site.tooth_fdi = '17' and site.site = 'MB'),
+  'an explicit null clears a recorded gingival margin, bleeding and suppuration, and the derived attachment level goes unknown with them'
+);
+
+select extensions.ok(
+  (select surface.plaque_present is null and surface.plaque_index is null
+     and surface.gingival_index is null
+   from public.periodontal_plaque_measurements as surface
+   where surface.examination_id = 'ea800000-0000-0000-0000-000000000014'::uuid
+     and surface.tooth_fdi = '17' and surface.surface = 'BUCCAL'),
+  'an explicit null clears a recorded plaque assessment and its surface indices'
+);
+
+select extensions.ok(
+  (select tooth.keratinized_gingiva_mm is null and tooth.gingival_phenotype is null
+     and tooth.mobility_miller is null and tooth.cej_visible is null
+     and tooth.root_concavity is null and tooth.miller_recession_class is null
+     and tooth.tooth_present
+   from public.periodontal_tooth_measurements as tooth
+   where tooth.examination_id = 'ea800000-0000-0000-0000-000000000014'::uuid
+     and tooth.tooth_fdi = '17'),
+  'an explicit null clears every recorded tooth finding while the NOT NULL presence flag is left alone'
+);
+
+select extensions.ok(
+  (select exam.age_years_snapshot is null and exam.smoking_status is null
+     and exam.cigarettes_per_day is null and exam.radiographic_bone_loss_percent is null
+   from public.periodontal_examinations as exam
+   where exam.id = 'ea800000-0000-0000-0000-000000000014'::uuid),
+  'an explicit null clears a recorded risk input, and a current-smoker cigarette count clears with the status it belongs to'
+);
+
+-- The no-op guard still holds for nulls. Re-sending the same explicit nulls
+-- must write nothing at all, or every reopened chart would rewrite its own
+-- unknowns and task 9's reset triggers would withdraw a standing confirmation
+-- for no reason.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select save.saved_sites + save.saved_plaque + save.saved_tooth
+   from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-000000000014'::uuid, 3,
+     $withdraw_c${"sites":[{"tooth_fdi":"17","site":"MB","probing_depth_mm":4,"gingival_margin_mm":null,"bleeding_on_probing":null,"suppuration":null}],
+        "plaque":[{"tooth_fdi":"17","surface":"BUCCAL","plaque_present":null,"plaque_index":null,"gingival_index":null}],
+        "tooth":[{"tooth_fdi":"17","keratinized_gingiva_mm":null,"gingival_phenotype":null,"mobility_miller":null,"cej_visible":null,"root_concavity":null,"miller_recession_class":null}]}$withdraw_c$::jsonb,
+     'ea900000-0000-0000-0000-000000000062'::uuid) as save),
+  0,
+  'withdrawing what is already unknown writes nothing, so the no-op guard survives explicit nulls'
+);
+
+reset role;
 
 with test_failures as (
   select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$'

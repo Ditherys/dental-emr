@@ -473,6 +473,12 @@ export function PeriodontalMeasurementGrid({
               const absent = tooth.present === false;
               const implant = tooth.implantContext === true;
               const locked = readOnly || absent;
+              // perio_tooth_implant_property_check: an implant has no cemento-
+              // enamel junction, so there is no attachment to classify Miller
+              // recession against and no CEJ or root concavity to record. The
+              // database refuses all three on an implant; the grid does not
+              // offer them rather than letting the write fail.
+              const naturalOnly = locked || implant;
               const status = absent
                 ? "absent"
                 : tooth.present === null
@@ -719,7 +725,7 @@ export function PeriodontalMeasurementGrid({
                       label={`Tooth ${tooth.toothFdi} Miller recession class`}
                       value={tooth.millerRecessionClass}
                       options={PERIO_MILLER_RECESSION_CLASSES}
-                      disabled={locked}
+                      disabled={naturalOnly}
                       allowUnknown
                       onChange={(next) => onToothChange(tooth.toothFdi, "millerRecessionClass", next)}
                     />
@@ -730,7 +736,7 @@ export function PeriodontalMeasurementGrid({
                       toothFdi={tooth.toothFdi}
                       label={`Tooth ${tooth.toothFdi} CEJ visible`}
                       value={tooth.cejVisible}
-                      disabled={locked}
+                      disabled={naturalOnly}
                       onChange={(next) => onToothChange(tooth.toothFdi, "cejVisible", next)}
                       onNavigate={toggleNav}
                     />
@@ -741,7 +747,7 @@ export function PeriodontalMeasurementGrid({
                       toothFdi={tooth.toothFdi}
                       label={`Tooth ${tooth.toothFdi} root concavity`}
                       value={tooth.rootConcavity}
-                      disabled={locked}
+                      disabled={naturalOnly}
                       onChange={(next) => onToothChange(tooth.toothFdi, "rootConcavity", next)}
                       onNavigate={toggleNav}
                     />

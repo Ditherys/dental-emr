@@ -70,6 +70,24 @@ function Side({
           </p>
           <dl className="mt-1 space-y-0.5 text-xs">
             <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Examined by</dt>
+              <dd className="font-medium">
+                {header.examined_provider_name === null ? <NotRecorded /> : header.examined_provider_name}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Finalized by</dt>
+              <dd className="font-medium">
+                {header.finalized_provider_name === null ? <NotRecorded /> : header.finalized_provider_name}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="text-muted-foreground">Branch</dt>
+              <dd className="font-medium">
+                {header.branch_name === null ? <NotRecorded /> : header.branch_name}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Signed classification</dt>
               <dd className="font-medium">
                 {header.confirmed_diagnosis === null ? (
@@ -209,10 +227,16 @@ export function PeriodontalComparison({
             <Side testId="perio-compare-left" title="Earlier" header={result.left} derived={result.left_derived} />
             <Side testId="perio-compare-right" title="Later" header={result.right} derived={result.right_derived} />
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Provider and branch attribution is not carried by the comparison projection; open either examination to
-            read who recorded it and where.
-          </p>
+          {result.left &&
+            result.right &&
+            (result.left.examined_provider_id !== result.right.examined_provider_id ||
+              result.left.branch_id !== result.right.branch_id) && (
+              <p data-testid="perio-compare-attribution-warning" className="mt-1 border-l-2 border-warning/60 py-1 pl-2 text-[11px]">
+                These two examinations were not charted by the same clinician at the same branch. Probing is
+                operator-dependent, so read a change between them as a change in the record, not necessarily a change
+                in the patient.
+              </p>
+            )}
 
           <div className="mt-2 -mx-1 overflow-x-auto px-1">
             <table className="w-full min-w-[640px] text-left text-xs">

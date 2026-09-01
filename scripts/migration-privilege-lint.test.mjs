@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(333);
+    expect(result.checked.files).toBe(334);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -341,7 +341,13 @@ describe("the active migration chain", () => {
       created.filter((statement) => statement.objectClass === objectClass).length;
 
     expect(count("table")).toBe(128);
-    expect(count("function")).toBe(503);
+    // 504 with 20260901010246, which re-declares the private periodontal
+    // comparison helper with CREATE OR REPLACE. It creates no NEW object: the
+    // count is of function DECLARATIONS across the corpus, and one applied
+    // helper is now declared twice. It is SECURITY INVOKER, so the definer
+    // count below does not move, and it revokes every browser role adjacent to
+    // the replacement, so no privilege moves either.
+    expect(count("function")).toBe(504);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only

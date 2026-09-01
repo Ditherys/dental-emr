@@ -145,6 +145,16 @@ export default async function PatientPage({
 
   const canReadClinical = hasSharedPatientPermission(state, "patient.clinical.read");
   const canWriteClinical = hasSharedPatientPermission(state, "patient.clinical.write");
+  // Correcting a finalized clinical record is its own permission, not a
+  // consequence of being able to write one. The affordance must match the
+  // authority: a control the server will refuse teaches clinicians to distrust
+  // the interface, and the server refusing is the safety net, not the design.
+  // Branch-scoped, mirroring exactly what amendPeriodontalExaminationV2Action
+  // asks the server for. patient.clinical.correct is deliberately NOT part of
+  // PatientPermissionCode: that narrow set is the bounded cross-branch patient
+  // delegation of ADR-019, and widening it to carry a correction right would
+  // change the delegation surface, not just this screen.
+  const canCorrectClinical = hasPermission(state, "patient.clinical.correct", actingBranchId);
   const canEdit = hasSharedPatientPermission(state, "patient.demographics.write");
   const canGenerateDocuments = hasPermission(state, "document.generate", actingBranchId);
   const canManageIntake = hasPermission(state, "intake.manage", actingBranchId);
@@ -328,6 +338,7 @@ export default async function PatientPage({
       filesUnavailable={filesUnavailable}
       canReadClinical={canReadClinical}
       canWriteClinical={canWriteClinical}
+      canCorrectClinical={canCorrectClinical}
       clinicalVisit={clinicalVisit}
       initialClinicalEncounters={clinicalEncounters}
       initialMedicalRecords={medicalRecords}

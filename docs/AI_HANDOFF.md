@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 12
+# AI Handoff - Unified Clinical Chart workspace, Task 12 (round 2)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -7,7 +7,7 @@ Task 9 (canonical periodontal data model) is complete across `5dce284`,
 `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 (pure
 periodontal calculations, graphics and classification) is complete across
 `4053739` and `4836ae9`. Task 11 (versioned RPCs and the action boundary) is
-complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is this commit.
+complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is `49c5385` and this commit.
 
 ## Task 12 - The complete periodontal and peri-implant workspace (2026-09-02)
 
@@ -299,29 +299,18 @@ security acceptance remain release gates.
 
 ### Known residual risks and open questions
 
-1. **Unknown cannot be written back.** `perioSiteBatchRowSchema`,
-   `perioToothBatchRowSchema`, `perioPlaqueBatchRowSchema` and
-   `perioRiskInputSchema` use `.optional()`, which rejects an explicit `null`,
-   so a recorded measurement cannot be returned to unknown. The SQL boundary
-   already supports it - it keys on `entry.value ? 'gingival_margin_mm'`, so a
-   JSON null would set NULL - which means the fix is `.nullish()` on the nullable
-   columns plus a pgTAP assertion that a null-valued key nulls the column. Until
-   then the UI refuses the clear rather than diverging from the record. A
-   recorded site row still cannot be deleted at all; that needs a boundary that
-   does not exist yet.
+1. **Unknown could not be written back.** RESOLVED in round 2 for every
+   nullable column; see the round-2 section below. A recorded site row still
+   cannot be deleted at all, and a probing depth cannot be withdrawn, because
+   both are NOT NULL and no boundary deletes.
 2. **`perio-workspace.tsx` and `perio-chart.tsx` are now mounted by no route.**
    They are still exported and still tested (10 assertions). They were repaired
    rather than deleted because deleting tested code unilaterally is not this
    task's call. The controller should decide whether Task 17 removes them.
-3. **`canCorrect` defaults to `canWriteClinical`.** `page.tsx` does not compute
-   `patient.clinical.correct`, so a writer without it sees `Amend this
-   examination` and is refused by the server with `NOT_AUTHORIZED`. Threading the
-   real permission through `page.tsx` and the patient workspace is a small
-   follow-up; `ClinicalSection` already accepts `canCorrectClinical`.
-4. **The comparison projection carries no provider or branch.** The brief asks
-   for provider and branch labels; `private.periodontal_examination_summary`
-   returns neither, and inventing them was refused. The panel labels dates, kind,
-   version and signed classification, and says where attribution can be read.
+3. **`canCorrect` defaulted to `canWriteClinical`.** RESOLVED in round 2;
+   see the round-2 section below.
+4. **The comparison projection carried no provider or branch.** RESOLVED in
+   round 2 by `20260901010246`; see the round-2 section below.
 5. **The summary reflects the SAVED record, not the draft on screen.** That is
    deliberate - the classification must come from the server - but it means the
    statistics lag by one autosave. A note on screen says so.
@@ -351,6 +340,212 @@ security acceptance remain release gates.
   and leak no clinical content on a failure path.
 - The removal in `odontogram-section.tsx`: that nothing else depended on the
   deleted projections.
+
+## Round 2 - the controller's rulings on the four concerns (2026-09-02)
+
+Three concerns were authorized for work; one judgement call was accepted as-is.
+This section covers the second commit; `49c5385` is the first.
+
+### Ruling 1 - unknown is now writable in BOTH directions
+
+**A Task 11 contract was extended, deliberately, and it is declared here rather
+than left for a reviewer to discover.**
+
+`src/lib/odontogram/schema.ts` marked every nullable measurement `.optional()`,
+which in Zod rejects an explicit `null`. The SQL boundary has always keyed on
+`entry.value ? 'column'` - key PRESENCE, not value - so an absent key preserves
+the column and an explicit null clears it. Only the browser half was missing, so
+`NULL` was one-directional: a probing depth mistyped onto a site nobody probed,
+or a bleeding answer given for the wrong site, was permanent even on a DRAFT.
+Unknown was an initial state rather than a value.
+
+Changed to `.nullish()` on the genuinely nullable columns only:
+
+- sites: `gingival_margin_mm`, `bleeding_on_probing`, `suppuration`
+- plaque: `plaque_present`, `plaque_index`, `gingival_index`,
+  `modified_plaque_index`, `modified_bleeding_index`
+- tooth: `mobility_miller`, `notes`, `keratinized_gingiva_mm`,
+  `gingival_thickness_mm`, `gingival_phenotype`, `miller_recession_class`,
+  `cej_visible`, `root_concavity`
+- risk: all seven
+
+**Not** changed: `probing_depth_mm`, `tooth_present`, `implant_context` and
+furcation `grade` are NOT NULL in the canonical schema, so withdrawing one of
+them is a row deletion and no boundary deletes. Those four remain refused at the
+point of edit, with the refusal message rewritten to say why.
+
+No migration was needed. Proved end to end rather than at the schema boundary,
+in `supabase/tests/periodontal_full_chart_rpcs.test.sql` section 8, eight new
+assertions against a dedicated third DRAFT so no existing version arithmetic
+moves:
+
+```
+ok 83 - the readings that are about to be withdrawn are recorded first
+ok 84 - the site reading, including its derived attachment level, is on the record before the withdrawal
+ok 85 - an explicit null is a write: the site, surface and tooth rows are each updated exactly once
+ok 86 - an explicit null clears a recorded gingival margin, bleeding and suppuration, and the derived attachment level goes unknown with them
+ok 87 - an explicit null clears a recorded plaque assessment and its surface indices
+ok 88 - an explicit null clears every recorded tooth finding while the NOT NULL presence flag is left alone
+ok 89 - an explicit null clears a recorded risk input, and a current-smoker cigarette count clears with the status it belongs to
+ok 90 - withdrawing what is already unknown writes nothing, so the no-op guard survives explicit nulls
+```
+
+Assertion 90 is the one that matters most after 86: the no-op guard survives, so
+a reopened chart does not rewrite its own unknowns and Task 9's reset triggers do
+not withdraw a standing confirmation for nothing.
+
+`perio_exam_cigarettes_current_smoker_check` requires a cigarette count to belong
+to a current smoker, so clearing the status alone would be refused by the
+database with an error a clinician cannot act on. `onRiskChange` clears
+`cigarettes_per_day` in the same statement whenever `smoking_status` stops being
+`CURRENT`; assertion 89 covers it in SQL and a unit test asserts the batch shape.
+
+The batch diff now sends a field whenever it DIFFERS from the baseline, null
+included, and still never re-sends an unchanged one. A site or surface with no
+baseline row sends no null at all, because the INSERT already stores unknown as
+NULL.
+
+### Ruling 4 - provider and branch on the comparison projection
+
+Migration `20260901010246_periodontal_comparison_attribution.sql`, allocated from
+the verified ceiling `20260901010245`. Additive and confined to ONE function
+body: `private.periodontal_examination_summary(uuid, uuid)` gains
+`examined_provider_id`, `examined_provider_name`, `finalized_provider_id`,
+`finalized_provider_name`, `branch_id` and `branch_name`.
+
+`public.compare_periodontal_examinations_v2` is **not** replaced: it already
+embeds the helper's whole jsonb under `left` and `right`, so the new keys reach
+the payload without touching the boundary, its authorization, its FULL OUTER JOIN
+or its null deltas. No table, column, constraint, index, policy or trigger
+changes. The migration creates no new object, grants nothing, and is not a
+grant-terminal.
+
+It uses `CREATE OR REPLACE` rather than the text-surgery guarded replace of
+20260901010244 and 20260901010245. Those exist to preserve browser grants on an
+applied SECURITY DEFINER boundary while patching it in place; this helper is
+`private`, holds no grant at all, and is rewritten wholesale, so surgery on its
+text would buy nothing. The guards that matter are kept and asserted: the
+function must already exist with this exact signature before replacement, and it
+must still be revoked from public, anon, authenticated and service_role
+afterwards. The display name uses the same `concat_ws` form as every other
+provider projection in the repository.
+
+Every attribution field stays NULL when genuinely unknown. Two new pgTAP
+assertions:
+
+```
+ok 48 - the comparison header names the examining provider and the branch each examination belongs to
+ok 49 - an examination with no finalizing provider reports that attribution as unknown rather than borrowing the examiner
+```
+
+The UI renders all three lines and, when the two sides differ in clinician or
+branch, warns that probing is operator-dependent so a change may be a change in
+the record rather than in the patient.
+
+### Ruling 3 - the amend affordance matches the authority
+
+`page.tsx` now computes `canCorrectClinical` and threads it through
+`patient-workspace.tsx` to `ClinicalSection`, which no longer defaults it to
+`canWriteClinical`. It uses
+`hasPermission(state, "patient.clinical.correct", actingBranchId)` - branch
+scoped, mirroring exactly what `amendPeriodontalExaminationV2Action` asks the
+server for. `patient.clinical.correct` is deliberately NOT added to
+`PatientPermissionCode`: that narrow set is ADR-019's bounded cross-branch
+patient delegation, and widening it would change the delegation surface rather
+than this screen.
+
+### Ruling 2 - accepted, no action
+
+`perio-workspace.tsx` / `perio-chart.tsx` stay repaired rather than deleted.
+
+### One more defect found during the round-2 diff review
+
+`needsToothRow` in `buildPeriodontalBatch` was **permanently inert**. It tested
+`!baseline.has(code)`, but `rowsFromPayload` seeds a blank row for every tooth in
+the dentition, so `has` is always true. A surface index or furcation grade
+charted on a tooth with no `periodontal_tooth_measurements` row would have been
+written with nothing for the implant-context trigger to check against. It now
+reads the two NOT NULL columns, which are non-null in the projection exactly when
+a stored row exists. RED before the fix:
+
+```
+x writes a minimal tooth row first for a tooth that has none but is gaining a surface index
+AssertionError: expected undefined to deeply equal [ { tooth_fdi: '15' } ]
+```
+
+A second test asserts no tooth row is added when the tooth already has one.
+
+Separately, the grid now disables Miller recession class, CEJ visible and root
+concavity on an implant, because `perio_tooth_implant_property_check` refuses all
+three there. Keratinized mucosa width and thickness stay available.
+
+### Round 2 files
+
+Added: `supabase/migrations/20260901010246_periodontal_comparison_attribution.sql`.
+
+Changed: `src/lib/odontogram/schema.ts`, `src/lib/odontogram/service.test.ts`,
+`supabase/tests/periodontal_full_chart_rpcs.test.sql`,
+`scripts/migration-privilege-lint.test.mjs` (function declarations 503 to 504 -
+`CREATE OR REPLACE` re-declares one applied helper; it is SECURITY INVOKER so the
+definer count does not move, and it revokes every browser role adjacent to the
+replacement so no privilege moves),
+`src/app/(emr)/patients/[patientId]/page.tsx`, `.../patient-workspace.tsx`,
+`.../clinical-section.tsx`, and the five periodontal components plus four of
+their suites.
+
+### Round 2 tests run and observed results
+
+```
+npm run db:migrate:local    -> Applying migration 20260901010246..., then 20260901010246 present
+npm run db:types:local      -> Updated src/types/database.generated.ts (no diff: the helper is
+                               private and the boundary signature is unchanged)
+npm run security:migrations -> passed (334 files, 92 terminals, 404 approved)
+npm run typecheck           -> clean, no output
+npm run lint                -> 0 errors, 3 warnings (all pre-existing, untouched files)
+npm run test:unit -- <the six periodontal suites>       -> 6 files, 80 tests passed
+npm run test:unit -- service, perio-actions, clinical-section,
+                     odontogram-section, patient-workspace -> 5 files, 102 tests passed
+npx vitest run scripts/     -> 13 files, 288 tests passed
+npm run test:db:local       -> halts at supabase/tests/treatment_plans.test.sql (pre-existing)
+```
+
+Run **directly**, because the gate halts before some of them:
+
+```
+psql < supabase/tests/periodontal_full_chart_rpcs.test.sql       -> P1_TEST_PASS (90 assertions)
+psql < supabase/tests/periodontal_full_chart.test.sql            -> P1_TEST_PASS
+psql < supabase/tests/periodontal_current_state_guard.test.sql   -> P1_TEST_PASS
+psql < supabase/tests/periodontal_charting.test.sql              -> P1_TEST_PASS
+psql < supabase/tests/odontogram_permission_contract.test.sql    -> P1_TEST_PASS
+psql < supabase/tests/approved_grant_registry_integrity.test.sql -> P1_TEST_PASS
+```
+
+Red-green held. The schema fix was reproduced first by reverting `.nullish()`:
+
+```
+ZodError: Invalid input: expected number, received null
+        Invalid input: expected boolean, received null
+```
+
+Playwright was not run; hosted E2E remains unauthorized and both E2E specs remain
+PENDING.
+
+**Environment note for the next agent.** This machine has two `supabase_db_*`
+containers. The gate resolves `supabase_db_local`; `supabase_db_dental-emr-isolated`
+is a stale stack whose schema stops at `20260830010109`. A direct `docker exec`
+against the wrong one reports every Task 9-11 function as missing. Use the
+container the runner resolves.
+
+### Round 2 residual risks
+
+1. A recorded site row still cannot be DELETED, only cleared field by field, and
+   a probing depth cannot be withdrawn. That is a boundary gap, not a UI choice,
+   and it is now the only remaining one-directional case.
+2. Switching a tooth from natural to implant after natural surface indices were
+   recorded will be refused by `perio_plaque_index_family_check`. The action
+   returns a typed code; the UI does not yet pre-empt it.
+3. The comparison attribution is per examination, not per measurement: a chart
+   two clinicians both touched reports only the examining provider on the record.
 
 ### Next bounded task
 

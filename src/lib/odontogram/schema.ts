@@ -426,40 +426,52 @@ export const createPeriodontalDraftInputSchema = z.object({
   idempotencyKey: databaseUuid,
 }).strict();
 
+// Unknown is a first-class value in BOTH directions.
+//
+// An OMITTED key means "say nothing about this column": the SQL boundary keys
+// every one of these on `entry.value ? 'column'`, so an absent key preserves
+// whatever is stored. An EXPLICIT null means "this is not known", and clears
+// the column. Without the second half, unknown would only ever be an initial
+// state - a mistyped reading on a site nobody probed could never be taken back
+// on a DRAFT, and the null-carrying model Tasks 9 to 11 built would be
+// one-directional.
+//
+// Only genuinely nullable columns take a null. probing_depth_mm, tooth_present,
+// implant_context and furcation grade are NOT NULL in the schema, so they stay
+// `.optional()`: withdrawing one of those is a deletion, and no boundary
+// deletes.
 const perioSiteBatchRowSchema = z.object({
   tooth_fdi: toothCodeSchema,
   site: z.enum(["MB", "B", "DB", "ML", "L", "DL"]),
   probing_depth_mm: z.number().int().min(1).max(15),
-  // Optional means "not measured". It is never sent as 0 to mean unknown, and
-  // the SQL boundary stores the absence as NULL.
-  gingival_margin_mm: z.number().int().min(-10).max(20).optional(),
-  bleeding_on_probing: z.boolean().optional(),
-  suppuration: z.boolean().optional(),
+  gingival_margin_mm: z.number().int().min(-10).max(20).nullish(),
+  bleeding_on_probing: z.boolean().nullish(),
+  suppuration: z.boolean().nullish(),
   implant_context: z.boolean().optional(),
 }).strict();
 
 const perioPlaqueBatchRowSchema = z.object({
   tooth_fdi: toothCodeSchema,
   surface: z.enum(["MESIAL", "DISTAL", "BUCCAL", "LINGUAL"]),
-  plaque_present: z.boolean().optional(),
-  plaque_index: z.number().int().min(0).max(3).optional(),
-  gingival_index: z.number().int().min(0).max(3).optional(),
-  modified_plaque_index: z.number().int().min(0).max(3).optional(),
-  modified_bleeding_index: z.number().int().min(0).max(3).optional(),
+  plaque_present: z.boolean().nullish(),
+  plaque_index: z.number().int().min(0).max(3).nullish(),
+  gingival_index: z.number().int().min(0).max(3).nullish(),
+  modified_plaque_index: z.number().int().min(0).max(3).nullish(),
+  modified_bleeding_index: z.number().int().min(0).max(3).nullish(),
 }).strict();
 
 const perioToothBatchRowSchema = z.object({
   tooth_fdi: toothCodeSchema,
   tooth_present: z.boolean().optional(),
   implant_context: z.boolean().optional(),
-  mobility_miller: z.enum(["M0", "M1", "M2", "M3"]).optional(),
-  notes: z.string().max(2000).optional(),
-  keratinized_gingiva_mm: z.number().min(0).max(15).optional(),
-  gingival_thickness_mm: z.number().min(0.1).max(9.9).optional(),
-  gingival_phenotype: perioGingivalPhenotypeSchema.optional(),
-  miller_recession_class: perioMillerRecessionClassSchema.optional(),
-  cej_visible: z.boolean().optional(),
-  root_concavity: z.boolean().optional(),
+  mobility_miller: z.enum(["M0", "M1", "M2", "M3"]).nullish(),
+  notes: z.string().max(2000).nullish(),
+  keratinized_gingiva_mm: z.number().min(0).max(15).nullish(),
+  gingival_thickness_mm: z.number().min(0.1).max(9.9).nullish(),
+  gingival_phenotype: perioGingivalPhenotypeSchema.nullish(),
+  miller_recession_class: perioMillerRecessionClassSchema.nullish(),
+  cej_visible: z.boolean().nullish(),
+  root_concavity: z.boolean().nullish(),
 }).strict();
 
 const perioFurcationBatchRowSchema = z.object({
@@ -469,13 +481,13 @@ const perioFurcationBatchRowSchema = z.object({
 }).strict();
 
 const perioRiskInputSchema = z.object({
-  age_years_snapshot: z.number().int().min(0).max(130).optional(),
-  smoking_status: perioSmokingStatusSchema.optional(),
-  cigarettes_per_day: z.number().int().min(0).max(100).optional(),
-  diabetes_status: perioDiabetesStatusSchema.optional(),
-  hba1c_percent: z.number().min(3).max(20).optional(),
-  teeth_lost_to_periodontitis: z.number().int().min(0).max(32).optional(),
-  radiographic_bone_loss_percent: z.number().int().min(0).max(100).optional(),
+  age_years_snapshot: z.number().int().min(0).max(130).nullish(),
+  smoking_status: perioSmokingStatusSchema.nullish(),
+  cigarettes_per_day: z.number().int().min(0).max(100).nullish(),
+  diabetes_status: perioDiabetesStatusSchema.nullish(),
+  hba1c_percent: z.number().min(3).max(20).nullish(),
+  teeth_lost_to_periodontitis: z.number().int().min(0).max(32).nullish(),
+  radiographic_bone_loss_percent: z.number().int().min(0).max(100).nullish(),
 }).strict();
 
 export const perioMeasurementBatchSchema = z.object({

@@ -276,7 +276,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       loadFailed={loadFailed}
       chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
     />,
-    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical ?? canWriteClinical} />,
+    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} />,
   };
 
   return <section id="clinical" className="border-t py-6">

@@ -182,6 +182,15 @@ export type PerioExaminationSummaryHeader = {
   confirmed_stage: PerioStage | null;
   confirmed_grade: PerioGrade | null;
   confirmed_extent: PerioExtent | null;
+  // Attribution. Every one of these is genuinely nullable: an examination whose
+  // provider link was never established is not attributable, and the header
+  // says so rather than naming somebody.
+  examined_provider_id: string | null;
+  examined_provider_name: string | null;
+  finalized_provider_id: string | null;
+  finalized_provider_name: string | null;
+  branch_id: string | null;
+  branch_name: string | null;
 };
 
 export type PerioComparisonSiteRow = {

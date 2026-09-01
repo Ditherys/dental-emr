@@ -1007,6 +1007,74 @@ describe("versioned periodontal workflow service boundary", () => {
     expect(args).not.toHaveProperty("p_acting_branch_id");
   });
 
+  it("carries an explicit null through to the boundary, so a recorded reading can be withdrawn", async () => {
+    // An OMITTED key says nothing about the column and preserves it; an
+    // EXPLICIT null says the value is not known and clears it. The SQL boundary
+    // has always keyed on `entry.value ? 'column'`, but the browser schema
+    // rejected null, so unknown was only ever an initial state and a reading
+    // charted onto the wrong site was permanent even on a draft.
+    rpc.mockResolvedValueOnce({
+      data: [{
+        examination_id: examinationId, patient_id: patientId, version: 2,
+        saved_sites: 1, saved_plaque: 1, saved_tooth: 1, saved_furcation: 0,
+      }],
+      error: null,
+    });
+
+    await savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: {
+        sites: [{
+          tooth_fdi: "16", site: "MB", probing_depth_mm: 3,
+          gingival_margin_mm: null, bleeding_on_probing: null, suppuration: null,
+        }],
+        plaque: [{ tooth_fdi: "16", surface: "BUCCAL", plaque_present: null, plaque_index: null }],
+        tooth: [{ tooth_fdi: "16", keratinized_gingiva_mm: null, gingival_phenotype: null }],
+        risk: { smoking_status: null, cigarettes_per_day: null },
+      },
+      idempotencyKey,
+    });
+
+    const [, args] = rpc.mock.calls[0];
+    const batch = args.p_measurement_batch as {
+      sites: Record<string, unknown>[];
+      plaque: Record<string, unknown>[];
+      tooth: Record<string, unknown>[];
+      risk: Record<string, unknown>;
+    };
+    expect(batch.sites[0]).toEqual({
+      tooth_fdi: "16", site: "MB", probing_depth_mm: 3,
+      gingival_margin_mm: null, bleeding_on_probing: null, suppuration: null,
+    });
+    expect(batch.plaque[0]).toEqual({
+      tooth_fdi: "16", surface: "BUCCAL", plaque_present: null, plaque_index: null,
+    });
+    expect(batch.tooth[0]).toEqual({
+      tooth_fdi: "16", keratinized_gingiva_mm: null, gingival_phenotype: null,
+    });
+    expect(batch.risk).toEqual({ smoking_status: null, cigarettes_per_day: null });
+  });
+
+  it("still refuses a null on a NOT NULL column, because withdrawing one is a deletion", async () => {
+    await expect(savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { sites: [{ tooth_fdi: "16", site: "MB", probing_depth_mm: null }] },
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(Error);
+
+    await expect(savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { furcation: [{ tooth_fdi: "16", entrance: "buccal", grade: null }] },
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(Error);
+  });
+
   it("refuses a batch above the row bound before any round trip", async () => {
     const sites = Array.from({ length: 201 }, () => ({ tooth_fdi: "16", site: "MB", probing_depth_mm: 3 }));
     await expect(savePeriodontalMeasurementsV2({

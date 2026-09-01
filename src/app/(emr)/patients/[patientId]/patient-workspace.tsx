@@ -93,6 +93,7 @@ type Props = {
   filesUnavailable?: boolean;
   canReadClinical?: boolean;
   canWriteClinical?: boolean;
+  canCorrectClinical?: boolean;
   /** Read-only managed visit summary derived on the server; null when unknown. */
   clinicalVisit?: ClinicalVisitState | null;
   initialClinicalEncounters?: ClinicalEncounter[];
@@ -145,6 +146,7 @@ export function PatientWorkspace({
   filesUnavailable,
   canReadClinical = false,
   canWriteClinical = false,
+  canCorrectClinical = false,
   clinicalVisit = null,
   initialClinicalEncounters = [],
   initialMedicalRecords = [],
@@ -502,6 +504,7 @@ export function PatientWorkspace({
               patientId={patient.patientId}
               actingBranchId={actingBranchId}
               canWriteClinical={canWriteClinical}
+              canCorrectClinical={canCorrectClinical}
               printPatientName={patientDisplayName(patient)}
               printBranchName={actingBranchName}
               printProviderName="Signed-in dentist"

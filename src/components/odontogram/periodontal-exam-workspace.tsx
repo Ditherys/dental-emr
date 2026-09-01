@@ -62,9 +62,9 @@ export type PerioBatchSiteRow = {
   tooth_fdi: string;
   site: PerioSite;
   probing_depth_mm: number;
-  gingival_margin_mm?: number;
-  bleeding_on_probing?: boolean;
-  suppuration?: boolean;
+  gingival_margin_mm?: number | null;
+  bleeding_on_probing?: boolean | null;
+  suppuration?: boolean | null;
   implant_context?: boolean;
 };
 
@@ -72,23 +72,23 @@ export type PerioBatchToothRow = {
   tooth_fdi: string;
   tooth_present?: boolean;
   implant_context?: boolean;
-  mobility_miller?: string;
-  keratinized_gingiva_mm?: number;
-  gingival_thickness_mm?: number;
-  gingival_phenotype?: string;
-  miller_recession_class?: string;
-  cej_visible?: boolean;
-  root_concavity?: boolean;
+  mobility_miller?: string | null;
+  keratinized_gingiva_mm?: number | null;
+  gingival_thickness_mm?: number | null;
+  gingival_phenotype?: string | null;
+  miller_recession_class?: string | null;
+  cej_visible?: boolean | null;
+  root_concavity?: boolean | null;
 };
 
 export type PerioBatchPlaqueRow = {
   tooth_fdi: string;
   surface: PerioPlaqueSurfaceCode;
-  plaque_present?: boolean;
-  plaque_index?: number;
-  gingival_index?: number;
-  modified_plaque_index?: number;
-  modified_bleeding_index?: number;
+  plaque_present?: boolean | null;
+  plaque_index?: number | null;
+  gingival_index?: number | null;
+  modified_plaque_index?: number | null;
+  modified_bleeding_index?: number | null;
 };
 
 export type PerioBatchFurcationRow = {
@@ -102,7 +102,7 @@ export type PerioMeasurementBatch = {
   plaque?: PerioBatchPlaqueRow[];
   tooth?: PerioBatchToothRow[];
   furcation?: PerioBatchFurcationRow[];
-  risk?: Partial<Record<keyof PerioRiskPayload, number | string>>;
+  risk?: Partial<Record<keyof PerioRiskPayload, number | string | null>>;
 };
 
 export type PerioWorkspaceOutcome =
@@ -271,17 +271,28 @@ export function buildPeriodontalBatch(
       if (!now || now.probingDepthMm === null) continue;
       const row: PerioBatchSiteRow = { tooth_fdi: code, site, probing_depth_mm: now.probingDepthMm };
       let changed = now.probingDepthMm !== (was?.probingDepthMm ?? null);
-      if (now.gingivalMarginMm !== null && now.gingivalMarginMm !== (was?.gingivalMarginMm ?? null)) {
-        row.gingival_margin_mm = now.gingivalMarginMm;
-        changed = true;
+      // A field is sent when it DIFFERS from the baseline, whether the new
+      // value is a reading or an explicit null. Null is a withdrawal the
+      // boundary understands through key presence; an unchanged field is still
+      // never re-sent. A site that has no baseline row at all sends no null,
+      // because the INSERT already stores unknown as NULL.
+      if (was !== undefined || now.gingivalMarginMm !== null) {
+        if (now.gingivalMarginMm !== (was?.gingivalMarginMm ?? null)) {
+          row.gingival_margin_mm = now.gingivalMarginMm;
+          changed = true;
+        }
       }
-      if (now.bleedingOnProbing !== null && now.bleedingOnProbing !== (was?.bleedingOnProbing ?? null)) {
-        row.bleeding_on_probing = now.bleedingOnProbing;
-        changed = true;
+      if (was !== undefined || now.bleedingOnProbing !== null) {
+        if (now.bleedingOnProbing !== (was?.bleedingOnProbing ?? null)) {
+          row.bleeding_on_probing = now.bleedingOnProbing;
+          changed = true;
+        }
       }
-      if (now.suppuration !== null && now.suppuration !== (was?.suppuration ?? null)) {
-        row.suppuration = now.suppuration;
-        changed = true;
+      if (was !== undefined || now.suppuration !== null) {
+        if (now.suppuration !== (was?.suppuration ?? null)) {
+          row.suppuration = now.suppuration;
+          changed = true;
+        }
       }
       if (changed) sites.push(row);
     }
@@ -302,7 +313,7 @@ export function buildPeriodontalBatch(
     ][]) {
       const now = current[field];
       const was = base[field];
-      if (now !== null && now !== was) {
+      if (now !== was) {
         (toothRow as Record<string, unknown>)[key] = now;
         toothChanged = true;
       }
@@ -319,7 +330,7 @@ export function buildPeriodontalBatch(
         keyof PerioBatchPlaqueRow,
       ][]) {
         const value = now[field];
-        if (value !== null && value !== (was?.[field] ?? null)) {
+        if ((was !== undefined || value !== null) && value !== (was?.[field] ?? null)) {
           (row as Record<string, unknown>)[key] = value;
           changed = true;
         }
@@ -337,18 +348,26 @@ export function buildPeriodontalBatch(
     // so a tooth this batch writes those for and that has no row yet gets a
     // minimal one. A site does not need it: the site row carries its own
     // presence flag.
+    //
+    // "Has a stored row" is read off the two NOT NULL columns, not off
+    // `baseline.has(code)`: the baseline map is seeded with a blank row for
+    // every tooth in the dentition, so `has` is always true and would make this
+    // guard permanently inert. `tooth_present` and `implant_context` are NOT
+    // NULL in the schema, so they are non-null in the projection exactly when a
+    // row exists.
+    const baselineHasToothRow = base.present !== null || base.implantContext !== null;
     const needsToothRow =
       !toothChanged &&
-      !baseline.has(code) &&
+      !baselineHasToothRow &&
       (plaque.some((row) => row.tooth_fdi === code) || furcation.some((row) => row.tooth_fdi === code));
     if (toothChanged || needsToothRow) tooth.push(toothRow);
   }
 
-  const risk: Partial<Record<keyof PerioRiskPayload, number | string>> = {};
+  const risk: Partial<Record<keyof PerioRiskPayload, number | string | null>> = {};
   let riskChanged = false;
   for (const key of Object.keys(draftRisk) as (keyof PerioRiskPayload)[]) {
     const now = draftRisk[key];
-    if (now !== null && now !== baselineRisk[key]) {
+    if (now !== baselineRisk[key]) {
       risk[key] = now;
       riskChanged = true;
     }
@@ -614,9 +633,14 @@ export function PeriodontalExamWorkspace({
     setStatus((current) => (current === "SAVING" ? current : "PENDING"));
   }, []);
 
+  // Unknown is writable in both directions for every NULLABLE column: an
+  // explicit null is sent and clears the stored value. The four columns below
+  // are NOT NULL in the canonical schema, so withdrawing one of them would be a
+  // row deletion, and no boundary deletes. Those, and only those, are refused
+  // at the point of edit rather than silently dropped from the batch.
   const refuseWithdrawal = React.useCallback((what: string) => {
     setRefusal(
-      `${what} is already on the record and cannot be withdrawn from a draft: the save boundary can write a measurement, not un-write one. Correct it to the right value, or finalize and amend the record.`,
+      `${what} is recorded as a NOT NULL value and cannot be withdrawn from a draft: removing it would delete the row, and no periodontal boundary deletes. Correct it to the right value, or finalize and amend the record.`,
     );
   }, []);
 
@@ -637,8 +661,8 @@ export function PeriodontalExamWorkspace({
   const onSiteChange = React.useCallback(
     (toothFdi: string, site: PerioSite, field: PerioGridSiteField, value: number | boolean | null) => {
       const persisted = baseline.get(toothFdi)?.sites[site]?.[field] ?? null;
-      if (value === null && persisted !== null) {
-        refuseWithdrawal(`Tooth ${toothFdi} ${site} ${field === "probingDepthMm" ? "probing depth" : "reading"}`);
+      if (value === null && persisted !== null && field === "probingDepthMm") {
+        refuseWithdrawal(`The probing depth at tooth ${toothFdi} ${site}`);
         return;
       }
       setRefusal(null);
@@ -658,8 +682,8 @@ export function PeriodontalExamWorkspace({
   const onToothChange = React.useCallback(
     (toothFdi: string, field: PerioGridToothField, value: string | number | boolean | null) => {
       const persisted = (baseline.get(toothFdi)?.[field] ?? null) as unknown;
-      if (value === null && persisted !== null) {
-        refuseWithdrawal(`Tooth ${toothFdi} ${field}`);
+      if (value === null && persisted !== null && (field === "present" || field === "implantContext")) {
+        refuseWithdrawal(`The recorded ${field === "present" ? "presence" : "natural or implant context"} of tooth ${toothFdi}`);
         return;
       }
       setRefusal(null);
@@ -677,11 +701,6 @@ export function PeriodontalExamWorkspace({
       field: PerioGridSurfaceField,
       value: number | boolean | null,
     ) => {
-      const persisted = baseline.get(toothFdi)?.surfaces[surface]?.[field] ?? null;
-      if (value === null && persisted !== null) {
-        refuseWithdrawal(`Tooth ${toothFdi} ${surface} ${field}`);
-        return;
-      }
       setRefusal(null);
       mutate(toothFdi, (row) => {
         const reading = row.surfaces[surface] ?? {
@@ -694,14 +713,16 @@ export function PeriodontalExamWorkspace({
         row.surfaces[surface] = { ...reading, [field]: value } as typeof reading;
       });
     },
-    [baseline, mutate, refuseWithdrawal],
+    // Every surface column is nullable, so a withdrawal here is an ordinary
+    // write and there is nothing to refuse against the baseline.
+    [mutate],
   );
 
   const onFurcationChange = React.useCallback(
     (toothFdi: string, entrance: PerioFurcationEntrance, grade: number | null) => {
       const persisted = baseline.get(toothFdi)?.furcation[entrance] ?? null;
       if (grade === null && persisted !== null) {
-        refuseWithdrawal(`Tooth ${toothFdi} ${entrance} furcation grade`);
+        refuseWithdrawal(`The ${entrance} furcation grade at tooth ${toothFdi}`);
         return;
       }
       setRefusal(null);
@@ -714,15 +735,20 @@ export function PeriodontalExamWorkspace({
 
   const onRiskChange = React.useCallback(
     (field: keyof PerioRiskPayload, value: string | number | null) => {
-      if (value === null && baselineRisk[field] !== null) {
-        refuseWithdrawal(`The recorded ${field.replaceAll("_", " ")}`);
-        return;
-      }
       setRefusal(null);
-      setDraftRisk((current) => ({ ...current, [field]: value }) as PerioRiskPayload);
+      setDraftRisk((current) => {
+        const next = { ...current, [field]: value } as PerioRiskPayload;
+        // perio_exam_cigarettes_current_smoker_check requires a cigarette count
+        // to belong to a current smoker. Leaving a stale count behind when the
+        // status stops being CURRENT would be refused by the database with an
+        // error the clinician cannot act on, and the count would be a claim
+        // about a status no longer recorded. It clears with the status.
+        if (field === "smoking_status" && value !== "CURRENT") next.cigarettes_per_day = null;
+        return next;
+      });
       touch();
     },
-    [baselineRisk, refuseWithdrawal, touch],
+    [touch],
   );
 
   const startExamination = async () => {

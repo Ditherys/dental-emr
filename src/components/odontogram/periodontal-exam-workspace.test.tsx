@@ -269,6 +269,92 @@ describe("PeriodontalExamWorkspace", () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
   }, 20000);
 
+  it("withdraws a recorded gingival margin by sending an explicit null", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    renderWorkspace(draftPayload(), api);
+
+    const gm = screen.getByRole("spinbutton", { name: /tooth 16 mesio-buccal gingival margin/i }) as HTMLInputElement;
+    expect(gm.value).toBe("1");
+    await user.clear(gm);
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { sites?: Array<Record<string, unknown>> };
+    };
+    expect(call.batch.sites).toEqual([
+      { tooth_fdi: "16", site: "MB", probing_depth_mm: 3, gingival_margin_mm: null },
+    ]);
+    expect(screen.queryByTestId("perio-withdraw-refused")).toBeNull();
+  }, 20000);
+
+  it("never sends an explicit null for a reading that was never on the record", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    renderWorkspace(draftPayload(), api);
+
+    // Tooth 16 DL has no site row at all. Charting only a depth must not carry
+    // a withdrawal for the margin, bleeding and suppuration nobody recorded.
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 disto-lingual probing depth/i }), "4");
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { sites?: Array<Record<string, unknown>> };
+    };
+    expect(call.batch.sites).toEqual([{ tooth_fdi: "16", site: "DL", probing_depth_mm: 4 }]);
+  }, 20000);
+
+  it("writes a minimal tooth row first for a tooth that has none but is gaining a surface index", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    // Tooth 15 has no periodontal_tooth_measurements row in the projection, so
+    // a surface index for it would have nothing to check its implant context
+    // against.
+    renderWorkspace(draftPayload(), api);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /tooth 15 buccal plaque index/i }), "2");
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { tooth?: Array<Record<string, unknown>>; plaque?: Array<Record<string, unknown>> };
+    };
+    expect(call.batch.tooth).toEqual([{ tooth_fdi: "15" }]);
+    expect(call.batch.plaque).toEqual([{ tooth_fdi: "15", surface: "BUCCAL", plaque_index: 2 }]);
+  }, 20000);
+
+  it("adds no tooth row for a surface index on a tooth that already has one", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    renderWorkspace(draftPayload(), api);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /tooth 16 buccal plaque index/i }), "2");
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { tooth?: Array<Record<string, unknown>> };
+    };
+    expect(call.batch.tooth ?? []).toEqual([]);
+  }, 20000);
+
+  it("clears a recorded cigarette count with the smoking status it belongs to", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    const payload = draftPayload();
+    payload.examination = {
+      ...payload.examination!,
+      risk: { ...payload.examination!.risk, smoking_status: "CURRENT", cigarettes_per_day: 15 },
+    };
+    renderWorkspace(payload, api);
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /smoking status/i }), "");
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { risk?: Record<string, unknown> };
+    };
+    expect(call.batch.risk).toEqual({ smoking_status: null, cigarettes_per_day: null });
+  }, 20000);
+
   it("refuses to withdraw a probing depth already on the record and says why", async () => {
     const user = userEvent.setup();
     const api = handlers();
