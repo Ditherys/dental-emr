@@ -48,7 +48,11 @@ charting tasks cannot proceed without a managed, idempotent visit.
   incidental. Nothing else in the contract changes.
 - `supabase/migrations/20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql`
   (review round 1) — re-grants the single authenticated EXECUTE after the
-  revoke-adjacent-to-CREATE-OR-REPLACE required by the privilege lint.
+  revoke-adjacent-to-CREATE-OR-REPLACE required by the privilege lint. The
+  grant registry's `supersededFrom` pivot therefore names `...010110` (the file
+  that REVOKEs), not `...010111` (the file that re-grants); naming the latter
+  would leave the grant expected at the one boundary where the catalog no longer
+  holds it and would fail R6-D replay there (fixed in review round 2).
 - `supabase/tests/unified_clinical_visit.test.sql` (42 pgTAP assertions)
 - `supabase/tests/clinical_visit_resume_concurrency.local.mjs`
 
@@ -157,6 +161,12 @@ All local only, on Docker Desktop `supabase_db_local`.
 
 ### Not run, and why
 
+- R6-D boundary-privilege file-mode replay
+  (`supabase/verification/r6d/README.md`): requires the disposable hosted Cloud
+  TEST project, which is not authorized for this work. It is the only test that
+  positively proves the `supersededFrom` pivot, so it remains **UNRUN** and is
+  deferred to the Cloud TEST gate. It is in no local command
+  (`verify`, `test:db`, `test:db:local`) and in no CI job.
 - `npm run build`, Playwright E2E, Cloud TEST, database advisors, hosted auth
   verification: out of scope for this checkpoint and unauthorized locally.
 - No hosted or production command was run. This work may be described only as
@@ -167,6 +177,11 @@ All local only, on Docker Desktop `supabase_db_local`.
 - Three pre-existing local database-gate failures block a clean
   `npm run test:db:local`; none is caused by this checkpoint, and none is owned
   by Task 1.
+- `assertSupersedeReferencesResolve` in `scripts/approved-final-grants.mjs` only
+  checks that a `supersededFrom` file exists, so it cannot catch a pivot that
+  names the wrong file. That off-by-one is only caught by hosted R6-D replay.
+  Worth a static check that the named file actually revokes the object; not
+  added here because it changes a shared security script.
 - `createClinicalEncounter` in `src/lib/clinical/service.ts` is retained but now
   fails closed; it is marked superseded in code and should be removed with the
   other superseded paths. Its unit test no longer pins the argument shape of the

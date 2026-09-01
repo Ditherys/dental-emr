@@ -476,6 +476,12 @@ const CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION =
   "20260901010001_clinical_encounter_actor_provider_grants.sql";
 const UNIFIED_CLINICAL_VISIT_LIFECYCLE_GRANTS_MIGRATION =
   "20260901010101_unified_clinical_visit_lifecycle_grants.sql";
+// The object migration that CREATE OR REPLACEs the lifecycle function and, being
+// adjacent to that creation, REVOKEs the authenticated grant. This is the file
+// that revokes, so it is the supersede pivot below — not the grants file that
+// re-grants one boundary later.
+const UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_MIGRATION =
+  "20260901010110_unified_clinical_visit_lifecycle_lock_seed.sql";
 const UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION =
   "20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
@@ -834,9 +840,13 @@ const unifiedClinicalVisitLifecycleGrants = Object.freeze([
     privilege: "execute",
     columns: [],
     // The lock-seed replacement revokes adjacent to CREATE OR REPLACE, so this
-    // registered grant stops existing at that migration and is re-granted by the
-    // terminal below. The object signature and the boundary are unchanged.
-    supersededFrom: UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION,
+    // registered grant stops existing when THAT object migration applies, and the
+    // terminal below re-grants it one boundary later. The pivot must name the
+    // revoking file: naming the re-granting file instead would leave this grant
+    // expected at the boundary after the revoke, where the catalog no longer holds
+    // it, and boundary replay would fail there. The object signature and the final
+    // boundary are unchanged.
+    supersededFrom: UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_MIGRATION,
     reason: CLINICAL_VISIT_LIFECYCLE_GRANT_REASON,
   },
 ]);
