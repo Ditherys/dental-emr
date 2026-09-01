@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.generated";
 
 import { OdontogramServiceError, mapOdontogramRpcError } from "./errors";
+import { parseClinicalProgressRecord } from "./progress-record";
 import {
   amendCurrentBridgeInputSchema,
   amendCurrentImplantComponentInputSchema,
@@ -16,6 +17,7 @@ import {
   completeTreatmentPlanItemWithChargeInputSchema,
   correctTreatmentPlanItemExecutionInputSchema,
   comparePeriodontalExaminationsInputSchema,
+  clinicalProgressRecordInputSchema,
   createPeriodontalDraftInputSchema,
   createPeriodontalExaminationInputSchema,
   createPlanBridgeDesignInputSchema,
@@ -37,6 +39,7 @@ import {
   periodontalSaveRowSchema,
   periodontalSaveV2RowSchema,
   periodontalWorkspaceInputSchema,
+  projectionPayloadRowSchema,
   recordCurrentBridgeInputSchema,
   recordCurrentImplantComponentInputSchema,
   recordToothClinicalEntryInputSchema,
@@ -762,6 +765,23 @@ export async function getPeriodontalWorkspace(input: unknown) {
     p_examination_id: value.examinationId ?? null,
   })));
   return row.payload;
+}
+
+/**
+ * The one authorized read behind the chronological progress record. It sends
+ * only route-context identifiers and a bounded page; organization, actor,
+ * provider attribution, event existence, ordering and every financial value are
+ * derived inside the RPC.
+ */
+export async function getClinicalProgressRecord(input: unknown) {
+  const value = clinicalProgressRecordInputSchema.parse(input);
+  const row = projectionPayloadRowSchema.parse(firstRow(await callRpc("get_clinical_progress_record_v1", {
+    p_patient_id: value.patientId,
+    p_branch_id: value.actingBranchId,
+    p_limit: value.limit ?? null,
+    p_offset: value.offset ?? null,
+  })));
+  return parseClinicalProgressRecord(row.payload);
 }
 
 export async function comparePeriodontalExaminations(input: unknown) {

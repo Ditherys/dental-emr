@@ -200,7 +200,6 @@ describe("OdontogramSection O7", () => {
               actingBranchId="00000000-0000-4000-a000-0000000000aa"
               canWriteClinical
               initialOdontogram={{ ...mockDto, patientId }}
-              renderProgressRecord={false}
             />
           ),
           TREATMENT_PLAN: <p data-testid="plan-panel">Treatment plan</p>,

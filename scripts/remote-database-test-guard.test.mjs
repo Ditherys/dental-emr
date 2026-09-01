@@ -269,6 +269,7 @@ describe("registered database suites", () => {
       "calendar_sync_rpcs.test.sql",
       "clinical_permission_contract.test.sql",
       "clinical_photographs.test.sql",
+      "clinical_progress_record.test.sql",
       "clinical_record_composer.test.sql",
       "clinical_rpcs.test.sql",
       "clinical_schema.test.sql",

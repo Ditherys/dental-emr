@@ -1,19 +1,126 @@
 import { describe, expect, it } from "vitest";
 
-import { progressEventsFromAccount } from "./progress-record";
+import {
+  clinicalProgressAmountLabel,
+  clinicalProgressDateLabel,
+  clinicalProgressEventLabel,
+  clinicalProgressTimeLabel,
+  clinicalProgressToothLabel,
+  parseClinicalProgressRecord,
+} from "./progress-record";
 
-describe("progressEventsFromAccount", () => {
-  it("projects only authorized charge and payment facts without leaking IDs", () => {
-    const events = progressEventsFromAccount([
-      { event_type: "CHARGE", entity_id: "charge-1", occurred_at: "2026-08-30T01:00:00+00:00", amount_centavos: 5000000, procedure_id: "procedure-1", status: "POSTED", note: "Orthodontic treatment" },
-      { event_type: "PAYMENT", entity_id: "payment-1", occurred_at: "2026-08-30T02:00:00+00:00", amount_centavos: 2500000, procedure_id: "procedure-1", status: "POSTED", note: null },
-      { event_type: "ADJUSTMENT", entity_id: "adjustment-1", occurred_at: "2026-08-30T03:00:00+00:00", amount_centavos: 100, procedure_id: null, status: "POSTED", note: "Not timeline-visible" },
-    ]);
+const row = (overrides: Record<string, unknown> = {}) => ({
+  eventId: "tooth_clinical_entry:00000000-0000-4000-a000-000000000001",
+  occurredAt: "2026-08-30T01:00:00+00:00",
+  eventType: "FINDING",
+  procedureCaseId: null,
+  procedureLabel: "CARIES",
+  toothCodes: [11],
+  providerDisplay: "Alba Reyes",
+  description: "Synthetic finding",
+  chargeMinor: null,
+  paidMinor: null,
+  balanceMinor: null,
+  currency: "PHP",
+  sourceKind: "tooth_clinical_entry",
+  sourceId: "00000000-0000-4000-a000-000000000001",
+  ...overrides,
+});
 
-    expect(events).toHaveLength(2);
-    expect(events[0]).toMatchObject({ eventType: "CHARGE", chargeCentavos: "5000000", paymentCentavos: null, actorDisplay: "Account ledger", procedureDisplay: "Procedure account activity" });
-    expect(events[1]).toMatchObject({ eventType: "PAYMENT", chargeCentavos: null, paymentCentavos: "2500000" });
-    expect(events[0].procedureDisplay).not.toContain("procedure-1");
-    expect(events[0].actorDisplay).not.toContain("charge-1");
+const payload = (rows: unknown[], overrides: Record<string, unknown> = {}) => ({
+  rows,
+  limit: 100,
+  offset: 0,
+  hasMore: false,
+  financialVisible: true,
+  ...overrides,
+});
+
+describe("parseClinicalProgressRecord", () => {
+  it("parses the canonical server projection into typed rows", () => {
+    const record = parseClinicalProgressRecord(payload([row()]));
+
+    expect(record.rows).toHaveLength(1);
+    expect(record.rows[0]).toMatchObject({
+      eventType: "FINDING",
+      toothCodes: [11],
+      providerDisplay: "Alba Reyes",
+      currency: "PHP",
+      sourceKind: "tooth_clinical_entry",
+    });
+    expect(record.financialVisible).toBe(true);
+    expect(record.hasMore).toBe(false);
+  });
+
+  it("preserves the server ordering rather than re-sorting in the browser", () => {
+    // Deliberately equal instants. The server has already tie-broken them; a
+    // browser-side sort would be a second, competing ordering authority.
+    const record = parseClinicalProgressRecord(
+      payload([
+        row({ eventId: "b", sourceId: "00000000-0000-4000-a000-00000000000b" }),
+        row({ eventId: "a", sourceId: "00000000-0000-4000-a000-00000000000a" }),
+      ]),
+    );
+
+    expect(record.rows.map((entry) => entry.eventId)).toEqual(["b", "a"]);
+  });
+
+  it("fails closed on an event type the contract does not contain", () => {
+    expect(() => parseClinicalProgressRecord(payload([row({ eventType: "SOMETHING_NEW" })]))).toThrow();
+  });
+
+  it("fails closed on a payload that is not a progress record at all", () => {
+    expect(() => parseClinicalProgressRecord({ rows: "not an array" })).toThrow();
+    expect(() => parseClinicalProgressRecord(null)).toThrow();
+  });
+
+  it("keeps a settled zero distinct from money that was never present", () => {
+    const record = parseClinicalProgressRecord(
+      payload([
+        row({ eventId: "settled", chargeMinor: 150000, paidMinor: 150000, balanceMinor: 0 }),
+        row({ eventId: "clinical" }),
+      ]),
+    );
+
+    expect(record.rows[0].balanceMinor).toBe(0);
+    expect(record.rows[1].balanceMinor).toBeNull();
+  });
+
+  it("carries a withheld-money record through without inventing zeros", () => {
+    const record = parseClinicalProgressRecord(payload([row()], { financialVisible: false }));
+
+    expect(record.financialVisible).toBe(false);
+    expect(record.rows[0].chargeMinor).toBeNull();
+    expect(record.rows[0].paidMinor).toBeNull();
+    expect(record.rows[0].balanceMinor).toBeNull();
+  });
+});
+
+describe("clinical progress formatting", () => {
+  it("renders an absent amount as nothing and a zero as a zero", () => {
+    expect(clinicalProgressAmountLabel(null)).toBe("");
+    expect(clinicalProgressAmountLabel(0)).toBe("₱0.00");
+    expect(clinicalProgressAmountLabel(150000)).toBe("₱1,500.00");
+    expect(clinicalProgressAmountLabel(-2500)).toBe("−₱25.00");
+  });
+
+  it("renders dates and times in the clinic's own timezone", () => {
+    // 2026-08-30T17:30:00Z is 2026-08-31 01:30 in Manila. A UTC rendering would
+    // put this treatment on the wrong day.
+    expect(clinicalProgressDateLabel("2026-08-30T17:30:00+00:00")).toBe("31 Aug 2026");
+    expect(clinicalProgressTimeLabel("2026-08-30T17:30:00+00:00")).toBe("01:30");
+  });
+
+  it("labels every event type in the contract without leaking the raw token", () => {
+    expect(clinicalProgressEventLabel("PHOTO_ARCHIVE")).toBe("Photograph archived");
+    expect(clinicalProgressEventLabel("FOLLOW_UP")).toBe("Follow-up");
+    expect(clinicalProgressEventLabel("CHARGE")).toBe("Charge posted");
+    expect(clinicalProgressEventLabel("ALLOCATION")).toBe("Payment applied");
+    expect(clinicalProgressEventLabel("PERIODONTAL")).not.toContain("_");
+  });
+
+  it("says nothing rather than dash-filling a record with no tooth", () => {
+    expect(clinicalProgressToothLabel([])).toBeNull();
+    expect(clinicalProgressToothLabel([11, 26])).toBe("11, 26");
   });
 });

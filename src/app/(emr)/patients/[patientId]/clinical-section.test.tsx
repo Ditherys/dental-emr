@@ -64,6 +64,7 @@ function renderSection(overrides: { canWriteClinical?: boolean; encounters?: Cli
     initialEncounters={overrides.encounters ?? [openEncounter]}
     initialMedicalRecords={overrides.medicalRecords ?? [condition]}
     initialProviders={[provider]}
+    clinicalProgressRecord={{ rows: [], limit: 200, offset: 0, hasMore: false, financialVisible: false }}
   />);
 }
 

@@ -49,6 +49,8 @@ import {
 } from "./actions";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 
+import type { ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
+
 import { ClinicalSection } from "./clinical-section";
 import { ContactsSection, RelationshipsSection } from "./patient-contacts-relationships";
 import { PatientDemographics } from "./patient-demographics";
@@ -107,6 +109,8 @@ type Props = {
   initialProviders?: ProviderListItem[];
   clinicalLoadFailed?: boolean;
   clinicalProvidersUnavailable?: boolean;
+  clinicalProgressRecord?: ClinicalProgressRecord | null;
+  clinicalProgressUnavailable?: boolean;
   initialClinicalPhotos?: ClinicalPhotoDTO[];
   clinicalPhotosUnavailable?: boolean;
   canManageIntake?: boolean;
@@ -165,6 +169,8 @@ export function PatientWorkspace({
   intakeLoadFailed,
   consentTemplates = [],
   consentTemplatesUnavailable = false,
+  clinicalProgressRecord = null,
+  clinicalProgressUnavailable = false,
   canReadBilling = false,
   canPostCharge = false,
   canRecordPayment = false,
@@ -525,7 +531,7 @@ export function PatientWorkspace({
               initialProviders={initialProviders}
               providersUnavailable={clinicalProvidersUnavailable}
               loadFailed={clinicalLoadFailed}
-              recordLoadFailed={clinicalLoadFailed || accountLoadFailed}
+              recordLoadFailed={clinicalProgressUnavailable}
               galleryLoadFailed={clinicalPhotosUnavailable}
               gallery={
                 <ClinicalPhotoGallery
@@ -543,7 +549,7 @@ export function PatientWorkspace({
                 />
               }
               canReadBilling={canReadBilling}
-              initialAccountRows={canReadBilling ? initialAccountRows : []}
+              clinicalProgressRecord={clinicalProgressRecord}
               initialProcedureSummaries={initialProcedureSummaries}
             />
             <PhotoUploadDialog

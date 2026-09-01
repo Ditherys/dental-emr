@@ -8,7 +8,6 @@ import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odont
 import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
 import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
-import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
 import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
@@ -49,8 +48,6 @@ type Props = {
   initialProgressEvents?: { patientId: string; events: ProgressEventDTO[] };
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
-  /** False when the Clinical chart workspace owns the chronological record region. */
-  renderProgressRecord?: boolean;
   loadFailed?: boolean;
 };
 
@@ -69,7 +66,6 @@ export function OdontogramSection({
   initialProgressEvents,
   procedureCases: suppliedProcedureCases,
   recordFollowup,
-  renderProgressRecord = true,
   loadFailed,
 }: Props): React.ReactElement {
   const hasMismatchedInitialDto = Boolean(initialOdontogram && initialOdontogram.patientId !== patientId);
@@ -263,8 +259,6 @@ export function OdontogramSection({
         onRecordDirectTreatment={() => setDrawerOpen(true)}
         onOpenFollowup={() => setFollowupOpen(true)}
       />
-
-      {renderProgressRecord && <ProgressRecordTable events={progressEvents} />}
 
       <ToothRecordDrawer
         open={drawerOpen && selectedFdiForCurrentPatient !== null}

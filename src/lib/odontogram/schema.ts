@@ -563,6 +563,16 @@ export const comparePeriodontalExaminationsInputSchema = z.object({
   rightExaminationId: databaseUuid,
 }).strict();
 
+// The bounds mirror get_clinical_progress_record_v1 so a bad page is refused
+// before a round trip. They are NOT where the rule lives: the RPC re-checks
+// both and raises 22023 regardless of what reaches it.
+export const clinicalProgressRecordInputSchema = z.object({
+  patientId: databaseUuid,
+  actingBranchId: databaseUuid,
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).max(10000).optional(),
+}).strict();
+
 // ---------------------------------------------------------------------------
 // Execution schemas
 // ---------------------------------------------------------------------------
@@ -694,6 +704,9 @@ export const periodontalAmendmentRowSchema = z.object({
 export const periodontalProjectionRowSchema = z.object({
   payload: z.unknown(),
 }).strict();
+
+/** The single-row jsonb envelope every read projection returns. */
+export const projectionPayloadRowSchema = periodontalProjectionRowSchema;
 
 export const treatmentExecutionTransitionRowSchema = z.object({
   item_id: databaseUuid,

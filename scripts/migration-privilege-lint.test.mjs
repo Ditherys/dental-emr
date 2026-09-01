@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(334);
+    expect(result.checked.files).toBe(336);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -347,7 +347,12 @@ describe("the active migration chain", () => {
     // helper is now declared twice. It is SECURITY INVOKER, so the definer
     // count below does not move, and it revokes every browser role adjacent to
     // the replacement, so no privilege moves either.
-    expect(count("function")).toBe(504);
+    //
+    // 507 with 20260901010300, which adds three genuinely new functions: the
+    // progress-record projection boundary and its two private derivation
+    // helpers. Only the boundary is SECURITY DEFINER, so the definer count
+    // below moves by exactly one.
+    expect(count("function")).toBe(507);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -355,7 +360,7 @@ describe("the active migration chain", () => {
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(368);
+    ).toBe(369);
     expect(
       created.filter(
         (statement) =>

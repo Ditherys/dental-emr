@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, ClinicalVisitState, MedicalRecord } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
-import { progressEventsFromAccount, progressEventsFromOdontogram, type PatientAccountRowDTO } from "@/lib/odontogram/progress-record";
+import { progressEventsFromOdontogram, type ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 
@@ -76,7 +76,9 @@ type Props = {
   galleryLoadFailed?: boolean;
   canReadBilling?: boolean;
   initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
-  initialAccountRows?: readonly PatientAccountRowDTO[];
+  /** The canonical server projection. The browser assembles no chronology and
+   *  computes no money of its own. */
+  clinicalProgressRecord?: ClinicalProgressRecord | null;
 };
 
 type NoteDialogState = { mode: "create"; encounterId: string } | { mode: "edit"; encounterId: string; note: ClinicalNote } | null;
@@ -107,7 +109,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedClinicalChange, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedClinicalChange, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, clinicalProgressRecord = null }: Props) {
   void _initialToothConditions;
   // Plan printing moves with the plan page Task 17 removes; the prop stays on the
   // route contract until then.
@@ -264,12 +266,12 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
   const childDialogOpen = Boolean(noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
   const dialogOpen = Boolean(treatmentHistoryOpen || medicalHistoryOpen || childDialogOpen);
   const historyError = error && !childDialogOpen ? <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p> : null;
-  const progressEvents = [
-    ...(initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : []),
-    ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : []),
-  ];
+  // The odontogram print sheet still assembles its own chronology from the
+  // chart DTO; that is task 16's slice. The progress record below the chart is
+  // the server projection and nothing else.
+  const progressEvents = initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : [];
   const chart: Record<ClinicalChartMode, ReactNode> = {
-    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />,
+    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />,
     TREATMENT_PLAN: <TreatmentPlanMode
       patientId={patientId}
       actingBranchId={actingBranchId}
@@ -277,7 +279,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       initialPlans={initialTreatmentPlans}
       procedures={clinicalComposerContext?.patientId === patientId ? clinicalComposerContext.procedures : []}
       loadFailed={loadFailed}
-      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
+      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
     />,
     PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={onUnsavedClinicalChange} />,
   };
@@ -302,10 +304,12 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       />}
       medicalSafety={<MedicalSafetySummary records={initialMedicalRecords} />}
       chart={chart}
-      record={<ProgressRecordTable events={progressEvents} />}
+      record={clinicalProgressRecord ? <ProgressRecordTable record={clinicalProgressRecord} /> : null}
       gallery={gallery}
       chartLoadFailed={loadFailed}
-      recordLoadFailed={recordLoadFailed ?? loadFailed}
+      // A missing record is a failed record. The region offers a bounded retry
+      // rather than rendering nothing, which would read as "no history".
+      recordLoadFailed={(recordLoadFailed ?? loadFailed) || clinicalProgressRecord === null}
       galleryLoadFailed={galleryLoadFailed}
       onRetry={() => router.refresh()}
     />

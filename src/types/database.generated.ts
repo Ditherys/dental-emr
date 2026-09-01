@@ -9103,6 +9103,17 @@ export type Database = {
           version: number
         }[]
       }
+      get_clinical_progress_record_v1: {
+        Args: {
+          p_branch_id: string
+          p_limit?: number
+          p_offset?: number
+          p_patient_id: string
+        }
+        Returns: {
+          payload: Json
+        }[]
+      }
       get_current_managed_visit: {
         Args: { p_branch_id: string; p_patient_id: string }
         Returns: {

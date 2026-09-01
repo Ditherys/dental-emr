@@ -833,6 +833,17 @@ const FULL_PERIODONTAL_RPCS_GRANTS_MIGRATION =
 const FULL_PERIODONTAL_PROJECTION_GRANTS_MIGRATION =
   "20260901010243_full_periodontal_projection_grants.sql";
 
+// ---------------------------------------------------------------------------
+// The chronological clinical progress record (task 13)
+// ---------------------------------------------------------------------------
+
+// The object migration 20260901010300 revokes no registered grant. It creates
+// one index, two private helpers and one new browser boundary, so no entry
+// below needs a supersede pivot. Had it revoked one, the pivot would have to
+// name that revoking object migration, never this grants file.
+const CLINICAL_PROGRESS_RECORD_PROJECTION_GRANTS_MIGRATION =
+  "20260901010301_clinical_progress_record_projection_grants.sql";
+
 const treatmentPlanAmendmentGrants = Object.freeze([
   {
     grantee: "authenticated",
@@ -902,6 +913,18 @@ const fullPeriodontalProjectionGrants = Object.freeze([
     columns: [],
     reason:
       "The read-only periodontal comparison projection. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, and refuses as unauthorized any examination that is not this tenant's and this patient's, so naming a foreign examination widens nothing. The two six-site charts are full outer joined, so examinations with different tooth sets compare honestly and a site charted on only one side reports the missing counterpart and its delta as unknown rather than as zero. It writes nothing at all.",
+  },
+]);
+
+const clinicalProgressRecordProjectionGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_clinical_progress_record_v1(uuid,uuid,integer,integer)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The one authorized chronological progress record, and the reason a clinician can read a patient's history at all without granting a browser role any table privilege. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, refuses a foreign patient as unauthorized rather than reporting it absent, and accepts no organization identifier from a client. It unions the append-only clinical and ledger sources into one chronology ordered oldest first and tie-broken on (source_kind, source_id), which is total across the union, so two events at the same instant are always returned in the same order. Every money value is derived at read time from one procedure case's charge, its non-reversed adjustments and its net allocations through private.charge_adjusted_amount and private.charge_net_allocated; no balance is stored, no patient-level balance is computed, and each row's balance is exactly its own charge minus its own paid, so settling one procedure case cannot move another's numbers. The ledger rows and the three money fields additionally require billing.read at the same branch, so a dental assistant sees the complete clinical chronology with the money withheld and a receptionist, who holds billing.read but no clinical permission, is refused outright. The page is bounded in both size and offset in SQL as well as at the action boundary. It writes nothing at all - no row, no state change and no audit event - so reading a patient's history never opens an encounter and no clinical content can reach the audit log through it.",
   },
 ]);
 
@@ -2097,6 +2120,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: FULL_PERIODONTAL_PROJECTION_GRANTS_MIGRATION,
     grants: fullPeriodontalProjectionGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_PROGRESS_RECORD_PROJECTION_GRANTS_MIGRATION,
+    grants: clinicalProgressRecordProjectionGrants,
   }),
 ]);
 

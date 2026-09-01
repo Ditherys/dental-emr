@@ -148,6 +148,7 @@ insert into approved_grant_objects (signature) values
   ('public.get_clinical_encounter_detail(uuid,uuid)'),
   ('public.get_clinical_photo_derivative(uuid,uuid,uuid,text)'),
   ('public.get_clinical_photo_source_upload(uuid,uuid,uuid)'),
+  ('public.get_clinical_progress_record_v1(uuid,uuid,integer,integer)'),
   ('public.get_current_managed_visit(uuid,uuid)'),
   ('public.get_document_snapshot(uuid,uuid)'),
   ('public.get_file_metadata(uuid,uuid)'),
@@ -300,7 +301,7 @@ insert into approved_grant_objects (signature) values
 
 select extensions.is(
   (select pg_catalog.count(*)::integer from approved_grant_objects),
-  257,
+  258,
   'the approved-grant registry projection carries every unmarked function grant'
 );
 

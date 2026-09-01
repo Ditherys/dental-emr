@@ -8,7 +8,7 @@ import type { ClinicalVisitState } from "@/lib/clinical/types";
 import { ClinicalPhotoServiceError, listClinicalPhotos } from "@/lib/clinical-media/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
-import { OdontogramServiceError, getClinicalComposerContext, getPatientOdontogram } from "@/lib/odontogram/service";
+import { OdontogramServiceError, getClinicalComposerContext, getClinicalProgressRecord, getPatientOdontogram } from "@/lib/odontogram/service";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { getPatient } from "@/lib/patients/data";
@@ -182,6 +182,8 @@ export default async function PatientPage({
   const toothConditions: ToothCondition[] = [];
   let initialOdontogram: PatientOdontogramDTO | null = null;
   let clinicalComposerContext: ClinicalComposerContext | null = null;
+  let clinicalProgressRecord: Awaited<ReturnType<typeof getClinicalProgressRecord>> | null = null;
+  let clinicalProgressUnavailable = false;
   let treatmentPlans: Awaited<ReturnType<typeof listTreatmentPlans>> = [];
   let clinicalLoadFailed = false;
   let clinicalProviders: Awaited<ReturnType<typeof listProviders>> = [];
@@ -275,6 +277,18 @@ export default async function PatientPage({
       if (!(error instanceof OdontogramServiceError || error instanceof AuthorizationError)) throw error;
       clinicalComposerContext = null;
     }
+    // The one authorized read behind the chronological record. It is kept
+    // separate from the chart read so a refused or failed chronology leaves the
+    // odontogram intact, and the workspace offers a bounded retry instead of
+    // showing a partial history as though it were the whole one. No
+    // organization identifier is sent; the RPC derives everything, including
+    // whether this actor may see money at all.
+    try {
+      clinicalProgressRecord = await getClinicalProgressRecord({ patientId, actingBranchId, limit: 200 });
+    } catch (error) {
+      if (!(error instanceof OdontogramServiceError || error instanceof AuthorizationError)) throw error;
+      clinicalProgressUnavailable = true;
+    }
     try {
       initialClinicalPhotos = await listClinicalPhotos({ actingBranchId, patientId });
     } catch (error) {
@@ -349,6 +363,8 @@ export default async function PatientPage({
       canGenerateDocuments={canGenerateDocuments}
       initialProviders={clinicalProviders}
       clinicalLoadFailed={clinicalLoadFailed}
+      clinicalProgressRecord={clinicalProgressRecord}
+      clinicalProgressUnavailable={clinicalProgressUnavailable}
       clinicalProvidersUnavailable={clinicalProvidersUnavailable}
       initialClinicalPhotos={initialClinicalPhotos}
       clinicalPhotosUnavailable={clinicalPhotosUnavailable}
