@@ -16,6 +16,8 @@ export const PERIO_SITE_ORDER: readonly PerioSite[] = PERIO_SITES;
 // is a convenience layer and the database remains the authority.
 export const PERIO_SURFACE_INDEX_MIN = 0;
 export const PERIO_SURFACE_INDEX_MAX = 3;
+// Keratinized tissue width and gingival thickness are numeric(3,1) columns: the
+// band is charted to half a millimetre, so 0.5 is a real reading and 0.55 is not.
 export const PERIO_KERATINIZED_GINGIVA_MIN_MM = 0;
 export const PERIO_KERATINIZED_GINGIVA_MAX_MM = 15;
 export const PERIO_GINGIVAL_THICKNESS_MIN_MM = 0.1;
@@ -236,9 +238,16 @@ function isUnknownIntegerInRange(value: unknown, min: number, max: number): bool
   return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
 }
 
-function isUnknownNumberInRange(value: unknown, min: number, max: number): boolean {
+/**
+ * A `numeric(3,1)` column silently rounds 7.44 to 7.4, so accepting it here
+ * would let the browser report a value the database never stored. The scale is
+ * part of the contract, not an implementation detail of the column type.
+ */
+function isUnknownScale1NumberInRange(value: unknown, min: number, max: number): boolean {
   if (value === undefined || value === null) return true;
-  return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+  if (typeof value !== "number" || !Number.isFinite(value)) return false;
+  if (value < min || value > max) return false;
+  return Math.abs(value * 10 - Math.round(value * 10)) < 1e-9;
 }
 
 function isUnknownMember<T extends string>(value: unknown, allowed: readonly T[]): boolean {
@@ -315,11 +324,11 @@ export function validatePerioToothProperties(input: {
 }): ValidationResult<PeriodontalToothProperties> {
   const errors: ValidationError[] = [];
 
-  if (!isUnknownIntegerInRange(input.keratinizedGingivaMm, PERIO_KERATINIZED_GINGIVA_MIN_MM, PERIO_KERATINIZED_GINGIVA_MAX_MM)) {
-    errors.push({ field: "keratinizedGingivaMm", message: `keratinized tissue width must be integer ${PERIO_KERATINIZED_GINGIVA_MIN_MM}..${PERIO_KERATINIZED_GINGIVA_MAX_MM} mm or unknown` });
+  if (!isUnknownScale1NumberInRange(input.keratinizedGingivaMm, PERIO_KERATINIZED_GINGIVA_MIN_MM, PERIO_KERATINIZED_GINGIVA_MAX_MM)) {
+    errors.push({ field: "keratinizedGingivaMm", message: `keratinized tissue width must be ${PERIO_KERATINIZED_GINGIVA_MIN_MM}..${PERIO_KERATINIZED_GINGIVA_MAX_MM} mm to one decimal place, or unknown` });
   }
-  if (!isUnknownNumberInRange(input.gingivalThicknessMm, PERIO_GINGIVAL_THICKNESS_MIN_MM, PERIO_GINGIVAL_THICKNESS_MAX_MM)) {
-    errors.push({ field: "gingivalThicknessMm", message: `gingival thickness must be ${PERIO_GINGIVAL_THICKNESS_MIN_MM}..${PERIO_GINGIVAL_THICKNESS_MAX_MM} mm or unknown; a measured thickness is never zero` });
+  if (!isUnknownScale1NumberInRange(input.gingivalThicknessMm, PERIO_GINGIVAL_THICKNESS_MIN_MM, PERIO_GINGIVAL_THICKNESS_MAX_MM)) {
+    errors.push({ field: "gingivalThicknessMm", message: `gingival thickness must be ${PERIO_GINGIVAL_THICKNESS_MIN_MM}..${PERIO_GINGIVAL_THICKNESS_MAX_MM} mm to one decimal place, or unknown; a measured thickness is never zero` });
   }
   if (!isUnknownMember(input.gingivalPhenotype, PERIO_GINGIVAL_PHENOTYPES)) {
     errors.push({ field: "gingivalPhenotype", message: `gingival phenotype must be one of ${PERIO_GINGIVAL_PHENOTYPES.join(", ")} or unknown` });
@@ -371,8 +380,8 @@ export function validatePerioRiskInputs(input: {
   if (!isUnknownMember(input.diabetesStatus, PERIO_DIABETES_STATUSES)) {
     errors.push({ field: "diabetesStatus", message: `diabetes status must be one of ${PERIO_DIABETES_STATUSES.join(", ")} or unknown` });
   }
-  if (!isUnknownNumberInRange(input.hba1cPercent, PERIO_HBA1C_MIN_PERCENT, PERIO_HBA1C_MAX_PERCENT)) {
-    errors.push({ field: "hba1cPercent", message: `HbA1c must be ${PERIO_HBA1C_MIN_PERCENT}..${PERIO_HBA1C_MAX_PERCENT} percent or unknown` });
+  if (!isUnknownScale1NumberInRange(input.hba1cPercent, PERIO_HBA1C_MIN_PERCENT, PERIO_HBA1C_MAX_PERCENT)) {
+    errors.push({ field: "hba1cPercent", message: `HbA1c must be ${PERIO_HBA1C_MIN_PERCENT}..${PERIO_HBA1C_MAX_PERCENT} percent to one decimal place, or unknown` });
   }
   if (!isUnknownIntegerInRange(input.teethLostToPeriodontitis, PERIO_TEETH_LOST_MIN, PERIO_TEETH_LOST_MAX)) {
     errors.push({ field: "teethLostToPeriodontitis", message: `teeth lost to periodontitis must be integer ${PERIO_TEETH_LOST_MIN}..${PERIO_TEETH_LOST_MAX} or unknown` });

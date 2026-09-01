@@ -1,7 +1,11 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 9
+# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 1)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
+
+This checkpoint is the second commit of Task 9. It applies the round-1 review
+findings on top of `5dce284`; the sections below describe the task as it now
+stands, with the review-fix sections at the end.
 
 ## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
@@ -258,23 +262,38 @@ mechanical.
 
 ### Known residual risks and open questions
 
-- **The currently granted `public.amend_periodontal_examination` cannot produce
-  a FINAL amendment.** It creates the DRAFT correctly and now clones the full
-  expanded record, but it has no parameter for the amendment reason, so
-  `finalize_periodontal_examination` on that draft is refused by
-  `perio_exam_final_amendment_reason_check`. This is deliberate and fail-closed:
-  a supersession of finalized clinical history must say why. **Task 11 owns the
-  reason-carrying amend boundary and must close this gap.** Revoking and
-  re-granting the amend signature here would have churned a browser boundary in
-  a task that adds none.
+- **`public.amend_periodontal_examination(uuid,uuid,uuid)` is now revoked from
+  every browser and service role** (round 1, finding 3). It accepts no amendment
+  reason, so the DRAFT it creates can never be finalized - and that
+  unfinalizable DRAFT permanently consumes the predecessor's only successor
+  slot, because both the RPC's own duplicate guard and
+  `periodontal_examinations_one_amendment_idx` key on
+  `(organization_id, predecessor_examination_id)` regardless of status and no
+  delete path exists for a DRAFT examination. One click of Amend would have made
+  that examination unamendable forever.
+- **Requirement recorded for Task 11**: `amend_periodontal_examination_v2` must
+  accept a bounded amendment reason **and must be able to ADOPT or DISCARD a
+  pre-existing reason-less DRAFT successor**, not merely insert a new row. Any
+  predecessor amended before the revoke already has one, and an unconditional
+  insert would fail for it.
+- **The Amend control in `PerioWorkspace` now fails closed rather than
+  poisoning.** The shipped path
+  (`service.ts` -> `perio-actions.ts` -> `odontogram-section.tsx` -> `onAmend`)
+  still exists; the server action catches the `42501` and returns a mapped
+  not-authorized result. Task 12 rebuilds that surface.
 - **`create_periodontal_examination` and `finalize_periodontal_examination`
   still use `private.resolve_actor_provider`, not
-  `private.require_active_actor_provider`.** They therefore allow an actor with
-  no provider link to open a draft, and the branch is not checked when resolving
-  the provider. The schema stops the worst case - such a draft cannot be
-  finalized, proved by pgTAP - but the global constraint asks for
-  `require_active_actor_provider` on every clinical write. **Flagged for the
-  controller; Task 11 owns those RPCs.**
+  `private.require_active_actor_provider`. The schema does NOT contain this.**
+  The first commit claimed it did; round 1 disproved that and the claim is
+  withdrawn. `finalize_periodontal_examination` sets
+  `finalized_provider_id = coalesce(v_provider_id, v_exam.examined_provider_id,
+  v_provider_id)`, so an actor with **no** provider link can finalize a DRAFT
+  somebody else opened and the record is attributed to **that other clinician's**
+  provider id. `resolve_actor_provider` also ignores the acting branch and
+  `provider_branches.is_active` entirely. The pgTAP case only covers the narrow
+  situation where the provider-less actor opened the draft himself with a null
+  `examined_provider_id`. Pre-existing; **Task 11 owns those RPCs and must fix
+  this.**
 - **The plaque table is now a surface-record table.** It is still named
   `periodontal_plaque_measurements`. Renaming it would be a destructive
   migration for no functional gain; the table comment states what it holds.
@@ -299,5 +318,133 @@ mechanical.
 ### Next bounded task
 
 Task 10 of the plan - port the pure periodontal calculation and classification
-logic onto this model. Do not start it until this checkpoint is reviewed.
-`20260901010202` onward are free.
+logic onto this model. Do not start it until this review round is accepted.
+`20260901010202`-`20260901010205` are reserved by Task 11's brief;
+`20260901010212` onward are free.
+
+## Review fixes applied in this commit (round 1)
+
+Round 1 returned no Critical, three Important and six Minor findings. Three
+Important and three Minor are fixed here; three Minor were ledgered by the
+controller for Task 11 and deliberately not touched.
+
+1. **A FINAL examination could permanently carry a fingerprint that never
+   matched its measurements (Important).** The verification fired only when a
+   fingerprint column itself changed and only on the examination row, so writing
+   a true digest on a DRAFT, editing a child measurement and then finalizing
+   produced an immutable record whose provenance was a lie. `20260901010210`
+   closes it in the schema in two independent layers: statement-level triggers
+   on all four child tables plus a row-level trigger on the examination withdraw
+   the **whole** classification block - derived, confirmed, confirmer and
+   override reason - whenever anything the digest covers changes; and
+   finalization now re-verifies both fingerprints unconditionally on the
+   DRAFT -> FINAL transition.
+2. **The digest omitted the examination-level risk inputs (Important).**
+   `age_years_snapshot`, `smoking_status`, `cigarettes_per_day`,
+   `diabetes_status`, `hba1c_percent`, `teeth_lost_to_periodontitis` and
+   `radiographic_bone_loss_percent` are staging and grading determinants and are
+   mutable on a DRAFT, yet changing one left the fingerprint valid. They are now
+   a fifth segment of the canonical digest. **Consequence for Task 11**: a SET
+   expression sees the pre-update row while the AFTER verification sees the
+   post-update row, so the risk inputs and a fingerprint must not be written in
+   the same UPDATE. Write the risk inputs, then derive.
+3. **The shipped amend path was a reachable dead end that poisoned the
+   predecessor (Important).** `public.amend_periodontal_examination(uuid,uuid,uuid)`
+   is reachable from shipped browser code and accepts no amendment reason, so
+   the DRAFT it creates can never be finalized **and permanently consumes the
+   predecessor's only successor slot**. Its browser grant is revoked, the
+   registry records `supersededFrom` naming the revoking object migration, and
+   the Task 11 requirement is written down: the replacement must be able to
+   **adopt or discard** a pre-existing reason-less DRAFT successor.
+4. **`keratinized_gingiva_mm` widened to `numeric(3,1)` (Minor).** The band is
+   charted to 0.5 mm and the adjacent `gingival_thickness_mm` was already
+   `numeric(3,1)`.
+5. **Browser/database precision drift closed (Minor).** The validators claimed
+   to mirror the CHECK constraints but accepted an HbA1c of 7.44 that
+   `numeric(3,1)` silently rounds to 7.4. `isUnknownScale1NumberInRange` now
+   enforces the scale for HbA1c, gingival thickness and keratinized width.
+6. **`confirmed_by ... on delete set null` documented (Minor).** A column comment
+   records that deleting a confirming user cannot succeed while a confirmation
+   stands, that this mirrors the pre-existing `examined_by`/`finalized_by`
+   pattern, and that it fails closed rather than quietly losing an author.
+
+### A claim from the first commit that did not survive, and is withdrawn
+
+The first commit said the schema blocked the worst provider-less case. It does
+not. `finalize_periodontal_examination` sets
+`finalized_provider_id = coalesce(v_provider_id, v_exam.examined_provider_id,
+v_provider_id)`, so an actor with no provider link can finalize a DRAFT somebody
+else opened and the record is attributed to that other clinician's provider id;
+`resolve_actor_provider` also ignores the acting branch and
+`provider_branches.is_active`. The pgTAP case only covers the narrow situation
+where the provider-less actor opened the draft himself. Pre-existing, Task 11
+owns it, and the mitigation is not carried forward.
+
+### Files added this round
+
+- `supabase/migrations/20260901010210_periodontal_classification_staleness_repair.sql`
+- `supabase/migrations/20260901010211_periodontal_classification_staleness_repair_grants.sql`
+
+### Existing test assertions changed this round, and why
+
+- `odontogram_permission_contract.test.sql`: the "authenticated receives every
+  reviewed O5/O8 signature" assertion listed
+  `amend_periodontal_examination(uuid,uuid,uuid)`, which is now revoked. The
+  clause was **replaced by a stronger assertion**, mirroring how the same file
+  already handles the superseded `record_tooth_clinical_entry_v3` and the two v3
+  relationship writers: the boundary is denied to `authenticated`, `anon`,
+  `service_role` and `public`. Nothing was weakened.
+- `periodontal_full_chart.test.sql`: 111 -> 118 assertions. Nothing changed; the
+  staleness, digest-coverage, precision and revoke cases were added.
+- `scripts/boundary-privilege-invariant.test.mjs`: the revoked signature left the
+  effective-final fixture with a comment saying why; approved-key count
+  266 -> 265.
+- `scripts/migration-privilege-lint.test.mjs`: 321 -> 323 files, 486 -> 491
+  created functions. The security-definer count is unchanged at 361 - none of
+  the new helpers is `SECURITY DEFINER`.
+
+### A pre-existing defect this round surfaced, unrelated to Task 9
+
+`supabase/tests/clinical_treatment_events_v2.test.sql` assertion 80 fails
+between 16:00 and 24:00 UTC. `public.post_charge` sets
+`v_service_date := statement_timestamp()::date` - the **UTC** date - while the
+test, and the rest of the clinical stack, use
+`timezone('Asia/Manila', statement_timestamp())::date`. For a Philippine clinic
+every charge posted after 00:00 Manila is dated to the previous day in the
+ledger. `post_charge` is untouched by Task 9 and no periodontal object is on that
+path. Flagged for the controller; it belongs to the billing domain (ADR-026).
+
+### Round-1 commands and observed results
+
+- **RED probe for finding 1**, isolated so the failure prints:
+  `not ok 1 - a new measurement resets the derived fingerprint` and
+  `ok 2 - RED probe: the stored fingerprint no longer matches its measurements` -
+  the defect reproduced exactly as described.
+- **RED for the suite**: `periodontal_full_chart.test.sql` aborted at
+  `ERROR: trigger "perio_site_reset_classification_update" for table
+  "periodontal_site_measurements" does not exist`.
+- `npm run db:migrate:local` - applied `20260901010210` and `20260901010211`.
+- `npm run db:types:local` - regenerated; **no diff**, because `numeric(3,1)` and
+  `smallint` both map to `number`.
+- `npm run security:migrations` - **passed**; 323 files, 3135 statements, 1324
+  privilege statements, 90 grant-terminals, 398 approved final privileges.
+- `npm run test:unit -- src/lib/odontogram/perio.test.ts src/lib/odontogram/schema.test.ts`
+  - **2 files, 33/33 passed.**
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npx vitest run scripts/` - **13 files, 287/287 passed.**
+- `npm run test:db:local` - **54 suites pass, then halts at
+  `clinical_treatment_events_v2.test.sql`** for the unrelated UTC/Manila reason
+  above. Earlier today, before 16:00 UTC, the same command halted at
+  `treatment_plans.test.sql` after 83 suites. Both periodontal suites, the new
+  suite and `odontogram_permission_contract` pass in that run.
+- `periodontal_full_chart.test.sql` run directly - **118 assertions,
+  P1_TEST_PASS.** `periodontal_charting`, `periodontal_current_state_guard`,
+  `odontogram_permission_contract`, `odontogram_revamp_relationship_perio`,
+  `odontogram_rpcs_v2` and `clinical_rpcs` - all **P1_TEST_PASS**.
+- A first attempt to run every suite directly **while `test:db:local` was still
+  running** produced three spurious failures from lock contention
+  (`ERROR: deadlock detected` in `calendar_sync_rpcs`, plus `foundation_rls` and
+  `clinical_treatment_events_v2`). Re-run serially, `foundation_rls` passes and
+  the calendar suite passes. That first run is not evidence and is recorded here
+  only so the discarded output is not mistaken for a result.

@@ -577,7 +577,12 @@ const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_CONCURRENCY_GRANTS_MIGRATION = 
 const PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_ORDERING_GRANTS_MIGRATION = "20260830010411_installment_schedule_lifecycle_ordering_grants.sql";
 const ODONTOGRAM_DTO_FEATURE_DETAIL_GRANTS_MIGRATION = "20260830010417_odontogram_dto_feature_detail_projection_grants.sql";
 const ATOMIC_CASE_COMPLETION_GRANTS_MIGRATION = "20260830010419_atomic_case_completion_grants.sql";
-const TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION = "20260830010424_treatment_plan_completion_context_grants.sql";
+const TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION = "20260830010424_treatment_plan_completion_context_grants.sql";// The object migration that REVOKES the browser grant on the reason-less
+// three-argument periodontal amend boundary. It is the supersede pivot recorded
+// below; a grants file is never the pivot. No replacement exists yet, so no
+// entry carries `supersededBy`: task 11 owns amend_periodontal_examination_v2.
+const PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION =
+  "20260901010210_periodontal_classification_staleness_repair.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -632,6 +637,12 @@ const odontogramO5O8TerminalGrants = Object.freeze([
   ...(object === "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)" ? {
     supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
     supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+  // The reason-less amend boundary creates a DRAFT that can never be finalized
+  // and that permanently consumes the predecessor's only successor slot. The
+  // pivot names the OBJECT migration that revokes, never a grants file, and
+  // there is no `supersededBy` because task 11 owns the replacement.
+  } : object === "public.amend_periodontal_examination(uuid,uuid,uuid)" ? {
+    supersededFrom: PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION,
   } : ["public.record_current_bridge(uuid,uuid,jsonb,uuid,timestamptz,uuid)", "public.record_current_implant_component(uuid,uuid,jsonb,uuid,timestamptz,uuid)"].includes(object) ? { supersededFrom: "20260830010303_odontogram_revamp_terminal_repair_grants.sql" } : {}),
   reason:
     "Final O5/O8 browser boundary after explicit forward replacement. Each SECURITY DEFINER function derives tenant and patient from trusted rows, checks live branch permission, preserves append-only history, bounds returned aggregates, and keeps all tenant tables RLS-locked with zero browser table grants.",
@@ -691,7 +702,9 @@ const odontogramO5Grants = Object.freeze([
           supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
           supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
         }
-      : {}),
+      : object === "public.amend_periodontal_examination(uuid,uuid,uuid)"
+        ? { supersededFrom: PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION }
+        : {}),
   reason:
     "O5 odontogram clinical boundary (ADR-028). Derives organization_id from an active acting branch (status='active'), binds actor via auth.uid(), gates on patient.clinical permissions (read/write plus elevated patient.clinical.correct for legacy resolution, bridge/implant/perio correction and nonterminal execution correction), validates patient membership via FOR KEY SHARE, uses optimistic versions, caps projections at 200 rows / bounded batches, and emits one atomic CLINICAL audit event per mutation. Base tables remain RLS-locked with zero policies.",
 })));

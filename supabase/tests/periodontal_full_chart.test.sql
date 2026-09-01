@@ -814,6 +814,288 @@ select extensions.is(
 );
 
 -- ===========================================================================
+-- 10b. A stored fingerprint can never outlive the measurements it covers
+--
+-- Review round 1, finding 1. The fingerprint check alone fired only when a
+-- fingerprint column itself changed, so: write a true digest on a DRAFT, edit a
+-- child measurement, finalize - and the immutable record carries provenance that
+-- is a lie. Any change to the measurements the digest covers now resets the
+-- whole classification block, and finalization re-verifies unconditionally as a
+-- second, independent layer.
+-- ===========================================================================
+
+insert into public.periodontal_examinations (id, organization_id, patient_id, encounter_id, examination_kind, status) values
+  ('e980000b-0000-0000-0000-00000000000b','e9200000-0000-0000-0000-000000000001','e9500000-0000-0000-0000-000000000001','e9700000-0000-0000-0000-000000000001','INITIAL','DRAFT');
+
+insert into public.periodontal_site_measurements (organization_id, examination_id, tooth_fdi, site, probing_depth_mm, gingival_margin_mm) values
+  ('e9200000-0000-0000-0000-000000000001','e980000b-0000-0000-0000-00000000000b','16','B',6,2);
+
+do $$
+declare
+  v_org uuid := 'e9200000-0000-0000-0000-000000000001';
+  v_exam uuid := 'e980000b-0000-0000-0000-00000000000b';
+  v_before text;
+  v_after text;
+begin
+  -- Helper: write a complete, truthful derived classification.
+  create temporary table if not exists perio_reset_probe (label text) on commit drop;
+
+  -- 1. A NEW child measurement resets the classification.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS', derived_stage = 'III', derived_grade = 'B',
+         derived_extent = 'LOCALIZED',
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is not null
+       from public.periodontal_examinations where id = v_exam),
+    'a truthful derived classification is stored on the draft'
+  );
+
+  insert into public.periodontal_site_measurements (organization_id, examination_id, tooth_fdi, site, probing_depth_mm)
+  values (v_org, v_exam, '16', 'MB', 5);
+
+  perform extensions.ok(
+    (select derived_diagnosis is null and derived_stage is null and derived_grade is null
+        and derived_extent is null and derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'inserting a site measurement resets the derived classification and its fingerprint'
+  );
+
+  -- 2. An UPDATE of an existing child measurement resets it.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  update public.periodontal_site_measurements
+     set probing_depth_mm = 7
+   where organization_id = v_org and examination_id = v_exam and tooth_fdi = '16' and site = 'MB';
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'updating a site measurement resets the derived fingerprint'
+  );
+
+  -- 3. A DELETE of a child measurement resets it.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  delete from public.periodontal_site_measurements
+   where organization_id = v_org and examination_id = v_exam and tooth_fdi = '16' and site = 'MB';
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'deleting a site measurement resets the derived fingerprint'
+  );
+
+  -- 4. The other three child tables reset it too.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  insert into public.periodontal_plaque_measurements (organization_id, examination_id, tooth_fdi, surface, plaque_present)
+  values (v_org, v_exam, '16', 'BUCCAL', true);
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'a surface record resets the derived fingerprint'
+  );
+
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  update public.periodontal_tooth_measurements
+     set mobility_miller = 'M1'
+   where organization_id = v_org and examination_id = v_exam and tooth_fdi = '16';
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'a tooth property change resets the derived fingerprint'
+  );
+
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  insert into public.periodontal_furcation_measurements (organization_id, examination_id, tooth_fdi, entrance, grade)
+  values (v_org, v_exam, '16', 'buccal', 2);
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'a furcation record resets the derived fingerprint'
+  );
+
+  -- 5. A confirmed classification is reset by the same event, in full.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam),
+         confirmed_diagnosis = 'PERIODONTITIS',
+         confirmed_stage = null, confirmed_grade = null, confirmed_extent = null,
+         confirmed_at = statement_timestamp(),
+         confirmed_by = 'e9100000-0000-0000-0000-000000000001',
+         confirmed_provider_id = 'e9600000-0000-0000-0000-000000000001',
+         confirmed_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  update public.periodontal_site_measurements
+     set suppuration = true
+   where organization_id = v_org and examination_id = v_exam and tooth_fdi = '16' and site = 'B';
+  perform extensions.ok(
+    (select confirmed_at is null and confirmed_by is null and confirmed_provider_id is null
+        and confirmed_diagnosis is null and confirmed_measurement_fingerprint is null
+        and classification_override_reason is null
+       from public.periodontal_examinations where id = v_exam),
+    'a measurement change also withdraws the clinician confirmation, in full'
+  );
+
+  -- 6. Review round 1, finding 2: the exam-level staging and grading inputs are
+  -- part of the canonical measurement set, so changing one changes the digest
+  -- and resets the classification.
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+
+  v_before := private.periodontal_measurement_digest(v_org, v_exam);
+  update public.periodontal_examinations
+     set radiographic_bone_loss_percent = 62
+   where id = v_exam;
+  v_after := private.periodontal_measurement_digest(v_org, v_exam);
+
+  perform extensions.isnt(
+    v_after, v_before,
+    'the canonical digest changes when a radiographic bone-loss input changes'
+  );
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'changing a staging or grading risk input resets the derived classification'
+  );
+
+  v_before := private.periodontal_measurement_digest(v_org, v_exam);
+  update public.periodontal_examinations
+     set smoking_status = 'CURRENT', cigarettes_per_day = 15
+   where id = v_exam;
+  perform extensions.isnt(
+    private.periodontal_measurement_digest(v_org, v_exam), v_before,
+    'the canonical digest changes when the smoking risk input changes'
+  );
+
+  v_before := private.periodontal_measurement_digest(v_org, v_exam);
+  update public.periodontal_examinations
+     set hba1c_percent = 8.1, teeth_lost_to_periodontitis = 6, age_years_snapshot = 52
+   where id = v_exam;
+  perform extensions.isnt(
+    private.periodontal_measurement_digest(v_org, v_exam), v_before,
+    'the canonical digest changes when the HbA1c, tooth-loss or age inputs change'
+  );
+end
+$$;
+
+-- A site edit reaches the reset through two paths: the site table's own trigger,
+-- and private.enforce_periodontal_tooth_context writing the tooth row. Prove the
+-- site trigger is live in its own right, so a future change to the tooth-context
+-- trigger cannot silently remove the protection.
+alter table public.periodontal_tooth_measurements disable trigger perio_tooth_reset_classification_insert;
+alter table public.periodontal_tooth_measurements disable trigger perio_tooth_reset_classification_update;
+alter table public.periodontal_tooth_measurements disable trigger perio_tooth_reset_classification_delete;
+
+do $$
+declare
+  v_org uuid := 'e9200000-0000-0000-0000-000000000001';
+  v_exam uuid := 'e980000b-0000-0000-0000-00000000000b';
+begin
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  update public.periodontal_site_measurements
+     set bleeding_on_probing = true
+   where organization_id = v_org and examination_id = v_exam and tooth_fdi = '16' and site = 'B';
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is null
+       from public.periodontal_examinations where id = v_exam),
+    'the site table''s own reset trigger withdraws the classification without help from the tooth-context path'
+  );
+end
+$$;
+
+alter table public.periodontal_tooth_measurements enable trigger perio_tooth_reset_classification_insert;
+alter table public.periodontal_tooth_measurements enable trigger perio_tooth_reset_classification_update;
+alter table public.periodontal_tooth_measurements enable trigger perio_tooth_reset_classification_delete;
+
+-- The second, independent layer. The reset trigger is disabled here only to
+-- construct a stale fingerprint that the normal path can no longer produce, so
+-- the finalization check is proved to stand on its own. The risk-input path is
+-- used because it needs exactly one trigger disabled: a child-measurement edit
+-- reaches the reset through both the child table and the tooth-context trigger's
+-- own write, which is belt and braces rather than a single point of failure.
+alter table public.periodontal_examinations disable trigger periodontal_examinations_reset_stale_classification;
+
+do $$
+declare
+  v_org uuid := 'e9200000-0000-0000-0000-000000000001';
+  v_exam uuid := 'e980000b-0000-0000-0000-00000000000b';
+begin
+  update public.periodontal_examinations
+     set derived_diagnosis = 'PERIODONTITIS',
+         derived_stage = null, derived_grade = null, derived_extent = null,
+         derived_measurement_fingerprint = private.periodontal_measurement_digest(v_org, v_exam)
+   where id = v_exam;
+  update public.periodontal_examinations
+     set radiographic_bone_loss_percent = 88
+   where id = v_exam;
+  perform extensions.ok(
+    (select derived_measurement_fingerprint is not null
+        and derived_measurement_fingerprint
+            <> private.periodontal_measurement_digest(v_org, v_exam)
+       from public.periodontal_examinations where id = v_exam),
+    'with the reset trigger disabled, a stale fingerprint can be constructed for the test'
+  );
+end
+$$;
+
+select extensions.throws_ok(
+  $$update public.periodontal_examinations
+      set status = 'FINAL',
+          examined_at = statement_timestamp(),
+          examined_by = 'e9100000-0000-0000-0000-000000000001',
+          examined_provider_id = 'e9600000-0000-0000-0000-000000000001',
+          finalized_at = statement_timestamp(),
+          finalized_by = 'e9100000-0000-0000-0000-000000000001',
+          finalized_provider_id = 'e9600000-0000-0000-0000-000000000001'
+    where id = 'e980000b-0000-0000-0000-00000000000b'$$,
+  '23514',
+  'derived measurement fingerprint does not match the examination measurements',
+  'finalization refuses a stale fingerprint even when the reset layer is bypassed'
+);
+
+alter table public.periodontal_examinations enable trigger periodontal_examinations_reset_stale_classification;
+
+-- Review round 1, finding 4: keratinized tissue width is charted to 0.5 mm.
+select extensions.lives_ok(
+  $$update public.periodontal_tooth_measurements set keratinized_gingiva_mm = 2.5
+    where examination_id = 'e980000b-0000-0000-0000-00000000000b' and tooth_fdi = '16'$$,
+  'keratinized tissue width accepts a half-millimetre reading'
+);
+
+select extensions.is(
+  (select keratinized_gingiva_mm::text from public.periodontal_tooth_measurements
+    where examination_id = 'e980000b-0000-0000-0000-00000000000b' and tooth_fdi = '16'),
+  '2.5',
+  'the half-millimetre keratinized reading is stored, not rounded away'
+);
+
+-- ===========================================================================
 -- 11. Read indexes
 -- ===========================================================================
 
@@ -822,6 +1104,51 @@ select extensions.has_index('public','periodontal_examinations','perio_exam_org_
 select extensions.has_index('public','periodontal_examinations','perio_exam_org_patient_draft_idx','the resumable draft examination read is indexed');
 select extensions.has_index('public','periodontal_examinations','periodontal_examinations_organization_patient_recorded_idx','the patient timeline read is indexed');
 select extensions.has_index('public','periodontal_examinations','periodontal_examinations_organization_patient_final_idx','the finalized patient timeline read is indexed');
+
+-- ===========================================================================
+-- 11b. The reason-less amend path is unreachable from the browser
+--
+-- Review round 1, finding 3. public.amend_periodontal_examination(uuid,uuid,uuid)
+-- has no amendment-reason parameter, so the DRAFT it creates can never be
+-- finalized - and worse, that DRAFT permanently consumes the predecessor's only
+-- successor slot, because both the RPC's own duplicate guard and
+-- periodontal_examinations_one_amendment_idx key on
+-- (organization_id, predecessor_examination_id) regardless of status, and no
+-- delete path exists for a DRAFT examination. 20260901010210 revokes it.
+-- ===========================================================================
+
+select extensions.ok(
+  not has_function_privilege('authenticated','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('anon','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('service_role','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('public','public.amend_periodontal_examination(uuid,uuid,uuid)','execute'),
+  'the reason-less three-argument amend boundary is unreachable from every browser and service role'
+);
+
+select extensions.ok(
+  has_function_privilege('authenticated','public.create_periodontal_examination(uuid,uuid,uuid,text)','execute')
+  and has_function_privilege('authenticated','public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)','execute')
+  and has_function_privilege('authenticated','public.finalize_periodontal_examination(uuid,uuid,integer)','execute'),
+  'revoking the amend path leaves the other three periodontal boundaries reachable'
+);
+
+-- The requirement this pins for task 11: a DRAFT successor occupies the slot
+-- exactly as a FINAL one would, so amend_periodontal_examination_v2 must be able
+-- to ADOPT or DISCARD a pre-existing reason-less DRAFT successor. Creating a new
+-- row unconditionally would fail for any predecessor amended before the revoke.
+select extensions.ok(
+  (select status from public.periodontal_examinations
+    where id = 'e9800000-0000-0000-0000-000000000007') = 'DRAFT',
+  'the successor occupying the single-successor slot is only a DRAFT'
+);
+
+select extensions.throws_ok(
+  $$insert into public.periodontal_examinations (organization_id, patient_id, encounter_id, examination_kind, status, predecessor_examination_id, amendment_reason)
+    values ('e9200000-0000-0000-0000-000000000001','e9500000-0000-0000-0000-000000000001','e9700000-0000-0000-0000-000000000001','AMENDMENT','DRAFT','e9800000-0000-0000-0000-000000000003','A later, properly explained amendment.')$$,
+  '23505',
+  'duplicate key value violates unique constraint "periodontal_examinations_one_amendment_idx"',
+  'a DRAFT successor blocks a later explained amendment, so task 11 must adopt or discard it rather than insert'
+);
 
 -- ===========================================================================
 -- 12. Negative authorization at the browser boundary

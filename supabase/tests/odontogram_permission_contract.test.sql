@@ -54,7 +54,6 @@ select extensions.ok(
   and has_function_privilege('authenticated','public.create_periodontal_examination(uuid,uuid,uuid,text)','execute')
   and has_function_privilege('authenticated','public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)','execute')
   and has_function_privilege('authenticated','public.finalize_periodontal_examination(uuid,uuid,integer)','execute')
-  and has_function_privilege('authenticated','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
   and has_function_privilege('authenticated','public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)','execute')
   and has_function_privilege('authenticated','public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)','execute')
   and has_function_privilege('authenticated','public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)','execute'),
@@ -81,6 +80,20 @@ select extensions.ok(
 select extensions.ok(
   not has_function_privilege('authenticated','public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)','execute'),
   'authenticated is denied the retired five-argument implant v3 overload'
+);
+
+-- The three-argument periodontal amend boundary accepts no amendment reason, so
+-- the DRAFT it creates can never be finalized, and that unfinalizable DRAFT
+-- permanently consumes the predecessor's only successor slot because
+-- periodontal_examinations_one_amendment_idx keys on the predecessor regardless
+-- of status. Task 9 revoked it rather than leave a reachable path that makes an
+-- examination unamendable forever. Its replacement is task 11's.
+select extensions.ok(
+  not has_function_privilege('authenticated','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('anon','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('service_role','public.amend_periodontal_examination(uuid,uuid,uuid)','execute')
+  and not has_function_privilege('public','public.amend_periodontal_examination(uuid,uuid,uuid)','execute'),
+  'the reason-less periodontal amend boundary is unreachable from every browser and service role'
 );
 
 -- Task 7 retired both six-argument v3 relationship writers. They open no

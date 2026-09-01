@@ -124,6 +124,16 @@ describe("periodontal tooth and implant properties", () => {
     expect(validatePerioToothProperties({ implantContext: false, gingivalPhenotype: "MEDIUM" }).ok).toBe(false);
     expect(validatePerioToothProperties({ implantContext: false, millerRecessionClass: "V" }).ok).toBe(false);
   });
+
+  // The band is charted to half a millimetre and the column is numeric(3,1).
+  it("accepts a half-millimetre keratinized reading and refuses finer precision", () => {
+    const half = validatePerioToothProperties({ implantContext: false, keratinizedGingivaMm: 2.5 });
+    expect(half.ok).toBe(true);
+    expect(half.value?.keratinizedGingivaMm).toBe(2.5);
+    expect(validatePerioToothProperties({ implantContext: false, keratinizedGingivaMm: 2.55 }).ok).toBe(false);
+    expect(validatePerioToothProperties({ implantContext: false, gingivalThicknessMm: 1.25 }).ok).toBe(false);
+    expect(validatePerioToothProperties({ implantContext: false, gingivalThicknessMm: 1.2 }).ok).toBe(true);
+  });
 });
 
 describe("periodontal risk inputs", () => {
@@ -149,6 +159,13 @@ describe("periodontal risk inputs", () => {
   it("records cigarettes per day only for a current smoker", () => {
     expect(validatePerioRiskInputs({ smokingStatus: "FORMER", cigarettesPerDay: 10 }).ok).toBe(false);
     expect(validatePerioRiskInputs({ smokingStatus: "CURRENT", cigarettesPerDay: 10 }).ok).toBe(true);
+  });
+
+  // numeric(3,1) silently rounds 7.44 to 7.4, so accepting it in the browser
+  // would report a value the database never stored.
+  it("refuses an HbA1c the database column could not store exactly", () => {
+    expect(validatePerioRiskInputs({ hba1cPercent: 7.4 }).ok).toBe(true);
+    expect(validatePerioRiskInputs({ hba1cPercent: 7.44 }).ok).toBe(false);
   });
 
   it("treats an uncaptured risk input as unknown", () => {

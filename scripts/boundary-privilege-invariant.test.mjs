@@ -236,7 +236,10 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.create_periodontal_examination(uuid,uuid,uuid,text)",
     "public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)",
     "public.finalize_periodontal_examination(uuid,uuid,integer)",
-    "public.amend_periodontal_examination(uuid,uuid,uuid)",
+    // `amend_periodontal_examination` is deliberately absent: it accepts no
+    // amendment reason, so the DRAFT it creates can never be finalized and
+    // permanently consumes the predecessor's only successor slot. Its browser
+    // grant was revoked adjacent to the task 9 staleness repair.
     "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
     "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)",
     "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
@@ -1457,7 +1460,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(266);
+    expect(approved.size).toBe(265);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {
