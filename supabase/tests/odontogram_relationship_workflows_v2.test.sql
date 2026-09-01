@@ -66,7 +66,15 @@ insert into public.charges (id, organization_id, patient_id, branch_id, provider
   ('f7800000-0000-0000-0000-000000000005','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000001',9000000,current_date,'rel-bridge-charge-2','f7100000-0000-0000-0000-000000000001'),
   ('f7800000-0000-0000-0000-000000000006','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-3','f7100000-0000-0000-0000-000000000001'),
   ('f7800000-0000-0000-0000-000000000007','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-4','f7100000-0000-0000-0000-000000000001'),
-  ('f7800000-0000-0000-0000-000000000008','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-a2','f7100000-0000-0000-0000-000000000001');
+  ('f7800000-0000-0000-0000-000000000008','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000002','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-a2','f7100000-0000-0000-0000-000000000001'),
+  ('f7800000-0000-0000-0000-000000000009','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-5','f7100000-0000-0000-0000-000000000001'),
+  ('f7800000-0000-0000-0000-00000000000a','f7200000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','f7300000-0000-0000-0000-000000000001','f7600000-0000-0000-0000-000000000001','f7700000-0000-0000-0000-000000000002',12000000,current_date,'rel-implant-charge-6','f7100000-0000-0000-0000-000000000001');
+
+-- An explicit synthetic payment method, so the projection's payment.record gate
+-- is proved against a row that certainly exists rather than passing vacuously
+-- against an empty table.
+insert into public.payment_methods (id, organization_id, code, name, active) values
+  ('f7c00000-0000-0000-0000-000000000001','f7200000-0000-0000-0000-000000000001','REL_SYNTH_CASH','Synthetic counter cash',true);
 
 -- A foreign-tenant implant abutment. A staged chain in organization A must never
 -- be able to attach to it.
@@ -554,6 +562,105 @@ select extensions.ok(
 );
 
 -- ---------------------------------------------------------------------------
+-- Voiding a mis-recorded implant leaves the tooth correctable
+-- ---------------------------------------------------------------------------
+--
+-- A void is an append-only row in public.dental_implant_component_voids;
+-- public.void_current_implant_component never sets voided_at on the sealed
+-- component. A liveness test that reads only voided_at therefore treats a voided
+-- fixture as live and traps the correction path for good.
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f7100000-0000-0000-0000-000000000001',true);
+
+insert into rel_result (seq, payload)
+select 30, pg_catalog.to_jsonb(result)
+from public.record_visit_implant_component_v2(
+  'f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001',
+  '[{"tooth_fdi":"27","ordinal":1,"component_kind":"FIXTURE"}]'::jsonb,
+  (timezone('Asia/Manila', statement_timestamp()))::date - 5,
+  'f7800000-0000-0000-0000-000000000009',
+  'Fixture recorded at the wrong position.',
+  'rel-void-fixture'
+) as result;
+
+-- Voiding needs patient.clinical.correct, which the dentist role does not carry;
+-- the owner does. It needs no provider link, because it records no treatment.
+select set_config('request.jwt.claim.sub','f7100000-0000-0000-0000-000000000002',true);
+select extensions.ok(
+  (select component_id is not null from public.void_current_implant_component(
+    'f7300000-0000-0000-0000-000000000001',
+    ((select payload->>'component_id' from rel_result where seq=30))::uuid,
+    1,
+    'Recorded on the wrong tooth position.'
+  )),
+  'an authorized corrector may void a mis-recorded implant fixture'
+);
+
+select set_config('request.jwt.claim.sub','f7100000-0000-0000-0000-000000000001',true);
+
+-- A voided component is not a live parent.
+select extensions.throws_ok(
+  format($q$select public.record_visit_implant_component_v2('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001','[{"tooth_fdi":"27","ordinal":1,"component_kind":"ABUTMENT","depends_on_component_id":"%s"}]'::jsonb,(timezone('Asia/Manila', statement_timestamp()))::date,'f7800000-0000-0000-0000-00000000000a',null,'rel-voided-parent')$q$,
+    (select payload->>'component_id' from rel_result where seq=30)),
+  '22023','invalid implant chain',
+  'a staged component may not attach to a voided fixture'
+);
+
+-- Nor is it offered as one.
+insert into rel_result (seq, payload)
+select 31, public.get_clinical_composer_context('f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001');
+select extensions.ok(
+  (select (payload->'implant_tip_by_tooth'->'27') is null from rel_result where seq=31),
+  'the voided tooth is not offered as a staged-continuation tip'
+);
+select extensions.ok(
+  (select (payload->'implant_stage_by_tooth'->'27') is null from rel_result where seq=31),
+  'the voided tooth reports no implant stage'
+);
+
+-- The proving case: the correct fixture can be recorded on the same tooth.
+insert into rel_result (seq, payload)
+select 32, pg_catalog.to_jsonb(result)
+from public.record_visit_implant_component_v2(
+  'f7300000-0000-0000-0000-000000000001','f7500000-0000-0000-0000-000000000001',
+  '[{"tooth_fdi":"27","ordinal":1,"component_kind":"FIXTURE"}]'::jsonb,
+  (timezone('Asia/Manila', statement_timestamp()))::date,
+  'f7800000-0000-0000-0000-00000000000a',
+  'Correct fixture recorded after the void.',
+  'rel-revoid-fixture'
+) as result;
+
+reset role;
+
+select extensions.ok(
+  (select (payload->>'component_id') is not null from rel_result where seq=32)
+  and (select payload->>'component_id' from rel_result where seq=32)
+      <> (select payload->>'component_id' from rel_result where seq=30),
+  'recording the correct fixture after a void succeeds and is a new component'
+);
+select extensions.is(
+  (select count(*)::text from public.dental_implant_components as component
+   where component.organization_id='f7200000-0000-0000-0000-000000000001'
+     and component.tooth_fdi='27'),
+  '2',
+  'the voided fixture is preserved in history beside its replacement'
+);
+select extensions.is(
+  (select count(*)::text from public.dental_implant_component_voids as void_event
+   where void_event.organization_id='f7200000-0000-0000-0000-000000000001'),
+  '1',
+  'exactly one of the two fixtures on that tooth carries a void event'
+);
+select extensions.ok(
+  (select void_event.component_id::text = (select payload->>'component_id' from rel_result where seq=30)
+   from public.dental_implant_component_voids as void_event
+   where void_event.organization_id='f7200000-0000-0000-0000-000000000001'),
+  'the void event names the mis-recorded fixture, not its replacement'
+);
+
+-- ---------------------------------------------------------------------------
 -- The composer context projection: what makes the shared forms reachable
 -- ---------------------------------------------------------------------------
 
@@ -629,6 +736,16 @@ select extensions.is(
   (select pg_catalog.jsonb_array_length(payload->'payment_methods') from rel_result where seq=20),
   0,
   'a caller without payment.record is offered no payment method'
+);
+-- The gate only means something if the same read returns methods to someone who
+-- does hold payment.record, against a payment method that certainly exists.
+select extensions.ok(
+  (select pg_catalog.jsonb_array_length(payload->'payment_methods') > 0 from rel_result where seq=5),
+  'a caller holding payment.record is offered the payment methods'
+);
+select extensions.ok(
+  (select payload->'payment_methods' @> '[{"name":"Synthetic counter cash"}]'::jsonb from rel_result where seq=5),
+  'the synthetic payment method reaches the caller who may take payment'
 );
 select extensions.is(
   (select pg_catalog.jsonb_array_length(payload->'procedures') from rel_result where seq=20),

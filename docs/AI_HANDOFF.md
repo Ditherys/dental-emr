@@ -1,11 +1,11 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 7 (review fixes)
+# AI Handoff - Unified Clinical Chart workspace, Task 7 (review fixes, round 2)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the second commit of Task 7. It applies the round-1 review
-findings on top of `dfbfca1`; the sections below describe the task as it now
-stands, with a dedicated review-fix section at the end.
+This checkpoint is the third commit of Task 7. It applies the round-2 review
+findings on top of `8833d10`; the sections below describe the task as it now
+stands, with both review-fix sections at the end.
 
 ## Task 7 - Contextual bridge and implant records, and the projection that makes the composer usable (2026-09-01)
 
@@ -78,7 +78,13 @@ The controller confirmed this choice after the fact and re-allocated Task 8.
 - `supabase/migrations/20260901010135_visit_implant_chain_volatility.sql`
   (the staged-chain normalizer must be `volatile` to hold a `FOR KEY SHARE` row
   lock; `20260901010134` is applied and was not edited)
-- `supabase/tests/odontogram_relationship_workflows_v2.test.sql` (66 assertions)
+- `supabase/migrations/20260901010136_implant_void_liveness_repair.sql`
+  (review round 2: implant liveness now reads
+  `public.dental_implant_component_voids` in the trigger, the normalizer and all
+  three implant projections, because `voided_at` is never populated; and
+  `20260901010135`'s overstated `FOR KEY SHARE` comment is corrected in the
+  function body)
+- `supabase/tests/odontogram_relationship_workflows_v2.test.sql` (76 assertions)
 - `src/lib/odontogram/composer-context.ts` - the client-safe shape of the
   projection, declared explicitly so a client component never imports the
   `server-only` service module.
@@ -307,11 +313,26 @@ All local only. The review round re-ran every gate; see "Review-fix commands" be
   predecessor, which is how amendment works; two concurrent amendments of the
   same fixture remain governed by the existing optimistic version, not by this
   trigger.
-- **The staged-continuation parent is pinned, not re-derived.**
+- **What the staged-continuation row lock actually buys, stated accurately.**
   `private.normalize_visit_implant_chain` takes `FOR KEY SHARE` on the named
-  component, so it cannot be voided or superseded between validation and the
-  insert that depends on it. That is why the function is `volatile`; a `stable`
-  function may not take a row lock.
+  parent component. That is the same lock an FK reference takes: it stops the row
+  being deleted or its key changed. It does **not** stop a void (which appends a
+  row to `dental_implant_component_voids`) or a supersede (which inserts a
+  different row) — an earlier revision of this file and of `20260901010135`
+  claimed otherwise and was wrong. Liveness is enforced by the void-event
+  predicate, not by the lock. The lock is still why the function must be
+  `volatile`; a `stable` function may not take a row lock.
+- **Liveness is read from the void-event table, never from `voided_at`.**
+  `public.void_current_implant_component` records a void as an append-only row in
+  `public.dental_implant_component_voids` and deliberately does not mutate the
+  sealed component, so `dental_implant_components.voided_at` is never populated.
+  The trigger, the normalizer and all three implant projections in
+  `get_clinical_composer_context` consult the void-event table. The redundant
+  `voided_at is null` clause is retained because it is the pre-existing
+  repository convention and stays correct if the column is ever populated. The
+  same never-populated predicate is used elsewhere in the repository — for
+  example `private.validate_bridge_unit_support` — and that wider sweep is
+  ledgered, not fixed here.
 - **The implant chain payload shape changed, and the old one was broken.** The
   previous `implant-workflow.tsx` submitted `depends_on_component_id`, which
   `private.normalize_implant_chain` ignores; any chain longer than one component
@@ -447,7 +468,87 @@ ledgered as deferred by the controller. All the rest are fixed.
   three are run together alone (14/14)**.
 - `git diff --check` — clean.
 
+### Review fixes applied in round 2
+
+Round 2 returned one new Important — introduced by the round-1 trigger — plus
+three smaller items, two sharing its root cause. All four are fixed; two further
+items were ledgered as deferred.
+
+1. **The one-fixture-per-tooth trigger permanently blocked the
+   void-then-re-record correction path (Important, introduced in round 1).**
+   `public.void_current_implant_component` records a void as an append-only row
+   in `public.dental_implant_component_voids` and deliberately does not mutate
+   the sealed component, so `dental_implant_components.voided_at` is **never
+   populated**. The trigger tested liveness with `voided_at is null` alone, which
+   is therefore always true, so a voided fixture still blocked the tooth —
+   through every insert path, with no amendment route, because
+   `public.amend_current_implant_component` refuses a voided predecessor. A
+   mis-recorded implant became permanently uncorrectable on that tooth: worse
+   than the browser-only guard it replaced, because it trapped legitimate
+   clinical correction. `20260901010136` makes the trigger also require that no
+   void event names the component.
+2. **A staged component could attach to a voided parent, and the projection
+   offered it (Minor, same root cause).** The same predicate is added to
+   `private.normalize_visit_implant_chain` and to all three implant reads in
+   `public.get_clinical_composer_context` — bridge support, the implant stage per
+   tooth, and the staged-continuation tip — so the projection cannot disagree
+   with itself about whether a component is live.
+3. **The `payment.record` half of the money gate was vacuous (Minor).** The suite
+   seeded no payment method of its own, so the assistant's empty list would have
+   held identically with the gate removed. An explicit synthetic method is now
+   seeded, and the suite asserts the dentist's projection contains it by name
+   while the assistant's stays empty.
+4. **An overstated lock claim is corrected (Minor).** `FOR KEY SHARE` does not
+   prevent a void (an append to another table) or a supersede (an insert of a
+   different row); it takes the same lock an FK reference takes. The in-body
+   comment in `private.normalize_visit_implant_chain` and the wording in this
+   handoff now say what the lock actually buys. No code change was needed for the
+   fix's stated purpose.
+5. **Deferred by the controller, not fixed:** `ATTACHMENT` is accepted by the
+   boundary but the composer cannot emit it (`CHAIN_ORDER` stops at `CROWN`),
+   reachable only through amendment; and the never-populated `voided_at`
+   predicate is a pre-existing repository-wide convention — also used by
+   `private.validate_bridge_unit_support` — whose wider sweep is out of scope
+   here. No **new** bare use of that predicate was added.
+
+### Round-2 commands and observed results
+
+- **RED probe for the Important finding.** The suite, with the pre-repair
+  predicate restored inside its own throwaway transaction, fails with
+  **`ERROR: tooth already carries a current implant fixture`** at the
+  re-record step. With `20260901010136` applied it passes.
+- `npm run db:migrate:local` — applied `20260901010136`; re-run reports
+  **`Local database is up to date.`** Verified directly from `pg_proc.prosrc`
+  that the trigger and the normalizer each reference
+  `dental_implant_component_voids` once, the composer projection three times, and
+  that the overstated comment no longer appears.
+- `npm run db:types:local` — regenerated; no signature changed.
+- `npm run security:migrations` — **passed**; 314 files, 3016 statements, 1310
+  privilege statements, 88 grant-terminals, 396 approved final privileges.
+- `npm run test:unit -- <the five brief files>` — **5 files, 66/66 passed.**
+- `npm run typecheck` — **passed, no output.**
+- `npm run lint` — **0 errors**, the same 3 pre-existing warnings.
+- `npm run test:db:local` — **halts at `treatment_plans.test.sql`** as before;
+  every odontogram and clinical suite before it passes.
+- Run directly: `odontogram_relationship_workflows_v2` **76 assertions,
+  P1_TEST_PASS**; plus `odontogram_relationships`, `odontogram_rpcs_v2`,
+  `odontogram_permission_contract`, `odontogram_revamp_rpcs`,
+  `odontogram_revamp_permission_contract`, `odontogram_atomic_completion_revamp`,
+  `clinical_record_composer`, `clinical_treatment_events_v2`,
+  `billing_charge_ledger`, `billing_authorization`,
+  `procedure_cases_and_plan_details`, `treatment_item_execution` — all
+  **P1_TEST_PASS**.
+- Concurrency, run directly: `odontogram_implant_idempotency_concurrency`,
+  `clinical_visit_resume_concurrency`, `odontogram_lineage_concurrency`,
+  `treatment_item_execution_concurrency` — **all PASS.**
+- `npx vitest run scripts/` — **13 files, 287/287 passed** (migration file count
+  313 -> 314).
+- `npm run test:unit` (whole suite) — **1926/1936 passed, 10 failed**: the same 7
+  pre-existing booking failures, plus `perio-workspace` and `fork-print-chart`,
+  the documented parallel-load flakes, which **pass when run alone (12/12)**.
+- `git diff --check` — clean.
+
 ### Next bounded task
 
 Task 8 of the plan. Do not start it until this review round is accepted.
-`20260901010136` onward are free.
+`20260901010137` onward are free.
