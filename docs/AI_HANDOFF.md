@@ -1,7 +1,11 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 4
+# AI Handoff - Unified Clinical Chart workspace, Task 4 (review fixes)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
+
+This checkpoint is the second commit of Task 4. It applies the review findings
+from round 1 on top of `7394851`; the sections below describe the task as it now
+stands, with a dedicated review-fix section at the end.
 
 ## Task 4 - Chart toolbar and intentional responsive compositions (2026-09-01)
 
@@ -70,7 +74,10 @@ primary tooth - and therefore no tooth to click to record the first one.
   view-publication and gallery-action coverage. No assertion removed.
 - `src/components/odontogram/measured-chart.tsx` - adds the optional
   `dentition` prop (`AUTO` | `PERMANENT` | `MIXED` | `PRIMARY`), the
-  container-query quadrant-block grid, and `@container` on its own root.
+  `ChartViewportChoice` region type (`AUTO` on top of the plan's stable
+  `ClinicalChartViewport`), the container-query quadrant-block grid, the
+  CSS-only `AUTO` region default, and `@container` on its own root.
+- `playwright.config.ts` - adds the `desktop-1920` responsive project.
 - `src/components/odontogram/measured-chart.test.tsx` - adds desktop,
   permanent, primary, mixed and edentulous composition coverage.
 - `src/components/odontogram/fork-odontogram.tsx` - consumes the workspace chart
@@ -141,6 +148,50 @@ This is a view concern only. `viewportFdiTeeth` produces the display list; the
 canonical projection is not written to. `measured-chart.test.tsx` proves it: for
 a projection holding only tooth 11, `dentition="MIXED"` renders and selects
 tooth 51 while `[...projection.teeth.keys()]` stays `[11]`.
+
+### Review fixes applied in this commit
+
+Round 1 returned three Important and four Minor findings. All seven are fixed.
+
+1. **Selection desynchronisation (Important).** `closeInspector` cleared the
+   section's own `selectedFdi` while the chart's selection lived in the shared
+   workspace view, so after one close the chart still painted the tooth as
+   selected but `Open inspector` was disabled and the only clinical write path
+   was unreachable. There is now **one selection owner**: the section derives
+   the inspector's tooth from `useClinicalChartView().selectedFdi`, and
+   `closeInspector` closes the overlay without touching selection.
+2. **Missing tablet and phone region defaults (Important).** The brief's
+   per-device defaults were previously dropped because the obvious
+   implementation is `window.innerWidth` branching, which the frontend rules
+   forbid. That conflict should have been escalated rather than resolved
+   silently. Per the controller's ruling it is now implemented **CSS-only**: the
+   region default is `AUTO`, the chart renders the whole dentition, and its own
+   container queries display one quadrant below `@md` and the upper arch below
+   `@4xl`. An explicit region choice drops those classes entirely. The generated
+   stylesheet was inspected to confirm the rules exist, not just the class
+   strings.
+3. **Responsive claims were class-string assertions only (Important).** The
+   class assertions are kept but are now explicitly labelled in each test as
+   proving only that the contract was authored. The load-bearing unit evidence
+   is rendered structure - the region narrowing 32 -> 16 -> 8 teeth. Real
+   geometry is verified only by the Playwright spec, which now also covers 1920
+   through a new `desktop-1920` project.
+4. **Vacuous hover/drag test (Minor).** React never emits `onmouse*` DOM
+   attributes, so the old attribute walk could not fail. Replaced with a source
+   assertion plus a behavioural one: `mouseOver` / `mouseEnter` / `dragStart` on
+   a region button change nothing, and only a click does.
+5. **Primary arch under the touch minimum (Minor).** A 10-tooth primary arch was
+   `@md:grid-cols-10`, about 41px per tooth in a 28rem container. It is now
+   `grid-cols-5 @2xl:grid-cols-10`.
+6. **Selection wiped on chart-mode change (Minor).** `ForkOdontogram` cleared
+   selection in a mount effect, so a mode round trip discarded it. The clear now
+   lives in the section, guarded by a previous-patient ref, so it fires on a
+   real patient change only.
+7. **E2E tautology (Minor).** `focus()` then `toBeFocused()` replaced a real
+   colour-independence assertion. The spec now asserts that selection and
+   clinical state are exposed through `data-selected`, `aria-pressed`,
+   `data-current` / `data-planned` and the accessible name, so nothing clinical
+   is conveyed by colour alone.
 
 ### Composition decisions
 
@@ -224,16 +275,29 @@ All local only.
   section, specialty list, photo dialogs, perio workspace, fork package). The
   same suite on `HEAD` with this work stashed fails 10 tests in the same way.
   Re-run in smaller batches the suspects pass: the six app-route files together
-  40/40, the four odontogram files 35/36. This is machine contention, not a
-  regression, and it is the same pattern recorded for Tasks 2 and 3.
+  40/40, the four odontogram files 35/36.
+
+  **This diff contributes to the rise from 10 to 15, and the mechanism is
+  known.** Before the split, the 3.75 MB generated node tree was transformed by
+  Vite once at module-import time. It is now behind a dynamic `import()`, so
+  that transform happens *during* test execution, while five test files sit in
+  `waitFor` polls waiting for it. That adds real CPU contention inside the
+  5000ms windows of unrelated files running in parallel. The failure class
+  pre-exists and no failing test is caused by a behavioural regression, but the
+  honest description is "pre-existing flake, made more likely by this diff's
+  load profile", not simply "pre-existing". A shared `testTimeout` increase in
+  `vitest.config.ts` is the likely fix and is deferred to the final review.
 
 ### Not run, and why
 
 - Playwright E2E, responsive and accessibility device verification, Cloud TEST,
   hosted database tests and advisors: hosted access is not authorized for this
-  work. `e2e/odontogram-responsive-accessibility.spec.ts` was updated but not
-  discovered or executed. This may be described only as locally implemented and
-  locally verified.
+  work. `e2e/odontogram-responsive-accessibility.spec.ts` and the new
+  `desktop-1920` Playwright project were written but not discovered or executed.
+  This may be described only as locally implemented and locally verified.
+- `node --test scripts/remote-database-test-guard.test.mjs`: that file is a
+  Vitest suite, so the Node test runner cannot execute it. Run through the
+  project runner instead - 30/30 passed.
 - No database command was run: this checkpoint contains no migration, policy,
   grant or RPC change.
 
@@ -248,10 +312,19 @@ All local only.
   clicks `Open inspector`. This is deliberately transitional - Task 5 owns the
   record drawer, and auto-opening the current modal overlay would cover the
   chart-level actions.
-- The responsive composition is asserted structurally (rendered teeth, order,
-  grid contract, absence of scroll containers, 44px classes). jsdom cannot
-  compute container queries, so real device verification remains a Cloud TEST
-  gate.
+- **Geometry is unverified until the hosted gate.** jsdom applies no Tailwind
+  and resolves no container query. The unit suite proves rendered structure
+  (which teeth exist, their order, how many a region renders, that the class
+  contract was authored). It does **not** prove 44px targets, the `AUTO` region
+  bands, or the absence of page overflow. Those live only in
+  `e2e/odontogram-responsive-accessibility.spec.ts`, which is written and not
+  run. The generated stylesheet was inspected at build time to confirm the
+  container-query rules are emitted, which is stronger than a class-name check
+  but still not a rendered measurement.
+- In the `AUTO` region the narrowed-away teeth are `display:none`, so they are
+  not announced either. They remain mounted and one explicit region click brings
+  them back; nothing leaves the canonical record. This is the composition the
+  brief specifies.
 - `fork-odontogram.tsx` keeps its own notation select when mounted outside the
   workspace. That branch exists only for the print preview and focused tests;
   Task 17 deletes the wrapper.

@@ -222,13 +222,6 @@ export function ForkOdontogram({
   const view = useClinicalChartView();
   const { setView } = view;
 
-  // Selection is transient and patient-scoped. The view outlives one chart, so
-  // a patient change must not leave another patient's tooth summarised in the
-  // toolbar.
-  React.useEffect(() => {
-    setView({ selectedFdi: [] });
-  }, [patientKey, setView]);
-
   const projection = React.useMemo(() => {
     try {
       return projectPatientChart(toPatientChartDTO(dto));

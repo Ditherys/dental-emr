@@ -6,10 +6,9 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { projectPatientChart, type PatientChartDTO } from "@/lib/odontogram/chart-projection";
-import type { ClinicalChartViewport } from "@/lib/clinical/types";
 import type { ClinicalEntry } from "@/lib/odontogram/state";
 
-import { MeasuredChart, resolveSelection, type ChartDentition } from "./measured-chart";
+import { MeasuredChart, resolveSelection, type ChartDentition, type ChartViewportChoice } from "./measured-chart";
 
 afterEach(cleanup);
 
@@ -46,14 +45,14 @@ function Harness({
   initial = [] as readonly number[],
   onChange,
   readOnly = false,
-  viewport = "QUADRANT_1" as ClinicalChartViewport,
+  viewport = "QUADRANT_1" as ChartViewportChoice,
   dentition,
 }: {
   projection?: ReturnType<typeof projectPatientChart>;
   initial?: readonly number[];
   onChange?: (next: readonly number[]) => void;
   readOnly?: boolean;
-  viewport?: ClinicalChartViewport;
+  viewport?: ChartViewportChoice;
   dentition?: ChartDentition;
 }) {
   const [selected, setSelected] = React.useState<readonly number[]>(initial);
@@ -274,6 +273,13 @@ describe("MeasuredChart", () => {
 
     // 4 teeth per row on a phone, one quadrant per row on a tablet, the whole
     // arch on a desktop. Order and every tooth are preserved at each step.
+    //
+    // NOTE ON WHAT THIS PROVES. jsdom applies no Tailwind and resolves no
+    // container query, so the class assertions below prove only that the
+    // responsive contract was authored. The rendered tooth list underneath them
+    // is real structure. Actual geometry — column widths, 44px targets, page
+    // overflow — is verified only by
+    // e2e/odontogram-responsive-accessibility.spec.ts at the hosted gate.
     const upper = screen.getByRole("group", { name: "Upper permanent teeth" });
     expect(upper.className).toContain("grid-cols-4");
     expect(upper.className).toContain("@md:grid-cols-8");
@@ -281,6 +287,64 @@ describe("MeasuredChart", () => {
     expect([...upper.querySelectorAll<HTMLElement>("[data-fdi]")].map((node) => node.dataset.fdi)).toEqual([
       "18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28",
     ]);
+  }, 30_000);
+
+  it("narrows the rendered chart to the clinician's explicit region", () => {
+    // Rendered structure, not a class string: the region control changes how
+    // many teeth actually exist in the chart.
+    const full = render(<Harness viewport="FULL" dentition="PERMANENT" />);
+    expect(full.container.querySelectorAll("[data-fdi]")).toHaveLength(32);
+    full.unmount();
+
+    const upper = render(<Harness viewport="UPPER" dentition="PERMANENT" />);
+    expect(upper.container.querySelectorAll("[data-fdi]")).toHaveLength(16);
+    expect(upper.container.querySelector('[data-fdi="48"]')).toBeNull();
+    upper.unmount();
+
+    const quadrant = render(<Harness viewport="QUADRANT_1" dentition="PERMANENT" />);
+    expect(quadrant.container.querySelectorAll("[data-fdi]")).toHaveLength(8);
+    expect(quadrant.container.querySelector('[data-fdi="21"]')).toBeNull();
+  }, 60_000);
+
+  it("resolves the AUTO region in CSS so a phone lands on a quadrant and a tablet on one arch", () => {
+    render(<Harness viewport="AUTO" dentition="PERMANENT" />);
+
+    // Every tooth stays mounted; the container queries decide which region is
+    // displayed, and no JavaScript measures a width. An explicit region choice
+    // brings the rest back, so nothing is unreachable.
+    expect(document.querySelectorAll("[data-fdi]")).toHaveLength(32);
+    expect(screen.getByTestId("measured-chart")).toHaveAttribute("data-viewport", "AUTO");
+
+    const upper = screen.getByRole("group", { name: "Upper permanent teeth" });
+    const lower = screen.getByRole("group", { name: "Lower permanent teeth" });
+    // Below @md only the row's first quadrant paints: a phone lands on one quadrant.
+    expect(upper.className).toContain("@max-md:[&>*:nth-child(n+9)]:hidden");
+    expect(lower.className).toContain("@max-md:[&>*:nth-child(n+9)]:hidden");
+    // Below @4xl the lower arch is not painted: a tablet lands on the upper arch.
+    expect(lower.className).toContain("@max-4xl:hidden");
+    expect(upper.className).not.toContain("@max-4xl:hidden");
+    expect(upper).toHaveAttribute("data-arch", "upper");
+    expect(lower).toHaveAttribute("data-arch", "lower");
+  }, 30_000);
+
+  it("drops the responsive default once the clinician chooses a region explicitly", () => {
+    render(<Harness viewport="FULL" dentition="PERMANENT" />);
+
+    expect(screen.getByTestId("measured-chart")).toHaveAttribute("data-viewport", "FULL");
+    for (const label of ["Upper permanent teeth", "Lower permanent teeth"]) {
+      expect(screen.getByRole("group", { name: label }).className).not.toContain("@max-");
+    }
+  }, 30_000);
+
+  it("keeps a primary arch above the touch minimum before widening to ten columns", () => {
+    render(<Harness viewport="UPPER" dentition="PRIMARY" />);
+
+    const row = screen.getByRole("group", { name: "Upper primary teeth" });
+    expect(document.querySelectorAll("[data-fdi]")).toHaveLength(10);
+    expect(row.className).toContain("grid-cols-5");
+    expect(row.className).toContain("@2xl:grid-cols-10");
+    // Ten columns inside a 28rem container would put each tooth under 44px.
+    expect(row.className).not.toContain("@md:grid-cols-10");
   }, 30_000);
 
   it("sizes a narrowed region to its own tooth count rather than the full arch", () => {

@@ -33,10 +33,21 @@ import { MeasuredTooth, type SelectionModifiers } from "./measured-tooth";
  */
 export type ChartDentition = "AUTO" | "PERMANENT" | "MIXED" | "PRIMARY";
 
+/**
+ * The region the clinician asked for. `AUTO` is the default and is resolved in
+ * CSS, not in JavaScript: the full dentition is rendered, and container queries
+ * land a phone on one quadrant and a tablet on one arch. Any explicit region
+ * overrides that at every width.
+ *
+ * `ClinicalChartViewport` stays the plan's stable contract; `AUTO` is a chart
+ * presentation state on top of it and never reaches a projection or a service.
+ */
+export type ChartViewportChoice = ClinicalChartViewport | "AUTO";
+
 export type AnatomicalChartProps = {
   projection: PatientChartProjection;
   notation: NumberingSystem;
-  viewport: ClinicalChartViewport;
+  viewport: ChartViewportChoice;
   /** Defaults to `AUTO`: the chart infers the dentition from the canonical record. */
   dentition?: ChartDentition;
   selectedFdi: readonly number[];
@@ -83,18 +94,36 @@ export function resolveSelection(
 }
 
 /**
- * Teeth per row at each container step: four on a phone, one quadrant on a
- * tablet, the whole arch on a desktop. Every break lands on a quadrant
+ * Teeth per row at each container step. Every break lands on a quadrant
  * boundary, so a narrower screen reflows the arch into quadrant blocks instead
- * of squeezing 32 teeth into one row or hiding them behind a scroll container.
- * The step is chosen from the row's own tooth count, never from a measured
- * window width.
+ * of squeezing teeth into one row or hiding them behind a scroll container. The
+ * step is chosen from the row's own tooth count, never from a measured window
+ * width, and every step keeps a tooth wider than the 44px touch minimum at the
+ * container width that step starts at.
  */
 function columnClass(count: number): string {
   if (count <= 5) return "grid-cols-5";
   if (count <= 8) return "grid-cols-4 @md:grid-cols-8";
-  if (count <= 10) return "grid-cols-5 @md:grid-cols-10";
+  // A 10-tooth primary arch only reaches 10 columns at @2xl; ten columns inside
+  // a 28rem container would put each tooth under 44px.
+  if (count <= 10) return "grid-cols-5 @2xl:grid-cols-10";
   return "grid-cols-4 @md:grid-cols-8 @4xl:grid-cols-[repeat(16,minmax(0,1fr))]";
+}
+
+/**
+ * The `AUTO` region default, expressed entirely in container queries.
+ *
+ * Below `@md` the row shows its first quadrant only, so a phone lands on a
+ * quadrant. Below `@4xl` the lower rows are hidden, so a tablet lands on the
+ * upper arch. A desktop shows everything. No JavaScript measures a width, and
+ * any explicit region choice drops these classes entirely.
+ */
+function autoRegionClass(arch: ArchRow, quadrantSize: number): string {
+  const quadrantOnly =
+    quadrantSize === 5
+      ? "@max-md:[&>*:nth-child(n+6)]:hidden"
+      : "@max-md:[&>*:nth-child(n+9)]:hidden";
+  return arch === "lower" ? `${quadrantOnly} @max-4xl:hidden` : quadrantOnly;
 }
 
 function ToothRow({
@@ -106,6 +135,8 @@ function ToothRow({
   multiSelect,
   onActivate,
   label,
+  arch,
+  auto,
 }: {
   teeth: readonly number[];
   chart: ReadonlyMap<number, RendererToothProjection>;
@@ -115,14 +146,24 @@ function ToothRow({
   multiSelect: boolean;
   onActivate: (fdi: number, modifiers: SelectionModifiers) => void;
   label: string;
+  arch: ArchRow;
+  auto: boolean;
 }): React.ReactElement | null {
   if (teeth.length === 0) return null;
+  const quadrantSize = teeth.length <= 10 ? 5 : 8;
   return (
     <div
-      className={`grid gap-1 ${columnClass(teeth.length)}`}
+      className={[
+        "grid gap-1",
+        columnClass(teeth.length),
+        auto ? autoRegionClass(arch, quadrantSize) : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       role="group"
       aria-label={label}
       data-row={label}
+      data-arch={arch}
     >
       {teeth.map((fdi) => {
         const tooth = chart.get(fdi);
@@ -165,10 +206,15 @@ export function MeasuredChart({
       : dentition === "PERMANENT"
         ? false
         : projectionHasPrimaryDentition(projection);
+  // `AUTO` renders the whole dentition and lets container queries narrow it, so
+  // the clinician lands on a quadrant or an arch without any width measurement
+  // and without a tooth ever leaving the accessibility tree.
+  const auto = viewport === "AUTO";
+  const resolvedViewport: ClinicalChartViewport = auto ? "FULL" : viewport;
   const ordered = React.useMemo(() => {
-    const teeth = viewportFdiTeeth(viewport, { includePrimary });
+    const teeth = viewportFdiTeeth(resolvedViewport, { includePrimary });
     return dentition === "PRIMARY" ? teeth.filter(isPrimary) : teeth;
-  }, [dentition, includePrimary, viewport]);
+  }, [dentition, includePrimary, resolvedViewport]);
   const chart = React.useMemo(() => projectRendererChart(projection, ordered, "front"), [ordered, projection]);
   const selected = React.useMemo(() => new Set(selectedFdi), [selectedFdi]);
 
@@ -181,11 +227,11 @@ export function MeasuredChart({
     [onSelectionChange, ordered, selectedFdi],
   );
 
-  const rows: ReadonlyArray<{ key: string; label: string; teeth: readonly number[] }> = [
-    { key: "upper-permanent", label: "Upper permanent teeth", teeth: ordered.filter((fdi) => archRowFor(fdi) === "upper" && !isPrimary(fdi)) },
-    { key: "upper-primary", label: "Upper primary teeth", teeth: ordered.filter((fdi) => archRowFor(fdi) === "upper" && isPrimary(fdi)) },
-    { key: "lower-primary", label: "Lower primary teeth", teeth: ordered.filter((fdi) => archRowFor(fdi) === "lower" && isPrimary(fdi)) },
-    { key: "lower-permanent", label: "Lower permanent teeth", teeth: ordered.filter((fdi) => archRowFor(fdi) === "lower" && !isPrimary(fdi)) },
+  const rows: ReadonlyArray<{ key: string; label: string; arch: ArchRow; teeth: readonly number[] }> = [
+    { key: "upper-permanent", label: "Upper permanent teeth", arch: "upper", teeth: ordered.filter((fdi) => archRowFor(fdi) === "upper" && !isPrimary(fdi)) },
+    { key: "upper-primary", label: "Upper primary teeth", arch: "upper", teeth: ordered.filter((fdi) => archRowFor(fdi) === "upper" && isPrimary(fdi)) },
+    { key: "lower-primary", label: "Lower primary teeth", arch: "lower", teeth: ordered.filter((fdi) => archRowFor(fdi) === "lower" && isPrimary(fdi)) },
+    { key: "lower-permanent", label: "Lower permanent teeth", arch: "lower", teeth: ordered.filter((fdi) => archRowFor(fdi) === "lower" && !isPrimary(fdi)) },
   ];
 
   return (
@@ -230,6 +276,8 @@ export function MeasuredChart({
           <ToothRow
             key={row.key}
             label={row.label}
+            arch={row.arch}
+            auto={auto}
             teeth={row.teeth}
             chart={chart}
             notation={notation}

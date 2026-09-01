@@ -51,9 +51,9 @@ describe("ClinicalChartToolbar composition", () => {
     renderToolbar({ onPrint: vi.fn(), onOpenGallery: vi.fn() });
 
     const toolbar = screen.getByRole("toolbar", { name: "Clinical chart controls" });
-    // Three modes, seven regions, one More trigger. Every infrequent action is
+    // Three modes, eight regions, one More trigger. Every infrequent action is
     // behind More rather than adding another permanently visible button.
-    expect(within(toolbar).getAllByRole("button")).toHaveLength(11);
+    expect(within(toolbar).getAllByRole("button")).toHaveLength(12);
     expect(within(toolbar).queryByRole("button", { name: "Print chart" })).not.toBeInTheDocument();
     expect(within(toolbar).queryByRole("button", { name: "Chart help" })).not.toBeInTheDocument();
     expect(within(toolbar).queryByRole("button", { name: "Clinical photographs" })).not.toBeInTheDocument();
@@ -62,6 +62,9 @@ describe("ClinicalChartToolbar composition", () => {
   it("keeps every toolbar control touch-safe", () => {
     renderToolbar();
 
+    // jsdom applies no Tailwind: this proves the 44px contract was authored on
+    // every control, not that anything renders at 44px. The measurement is
+    // asserted only by e2e/odontogram-responsive-accessibility.spec.ts.
     const toolbar = screen.getByRole("toolbar", { name: "Clinical chart controls" });
     for (const control of [...within(toolbar).getAllByRole("button"), ...within(toolbar).getAllByRole("combobox")]) {
       expect(control.className).toContain("min-h-11");
@@ -115,11 +118,16 @@ describe("ClinicalChartToolbar controls", () => {
     expect(onViewChange).toHaveBeenCalledWith({ dentition: "MIXED" });
   });
 
-  it("changes the rendered region from the toolbar", () => {
+  it("defaults to the responsive region and lets the clinician override it", () => {
     const { onViewChange } = renderToolbar();
+
+    expect(screen.getByRole("button", { name: "Fit to screen" })).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Lower arch" }));
     expect(onViewChange).toHaveBeenCalledWith({ viewport: "LOWER" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Fit to screen" }));
+    expect(onViewChange).toHaveBeenLastCalledWith({ viewport: "AUTO" });
   });
 
   it("summarises the current selection in canonical FDI", () => {
@@ -210,6 +218,6 @@ describe("clinical chart view state", () => {
 
   it("falls back to a bounded local view when no workspace provides one", () => {
     render(<Probe />);
-    expect(screen.getByTestId("probe")).toHaveTextContent("FDI/AUTO/FULL/");
+    expect(screen.getByTestId("probe")).toHaveTextContent("FDI/AUTO/AUTO/");
   });
 });

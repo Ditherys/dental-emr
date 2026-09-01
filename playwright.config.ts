@@ -101,5 +101,12 @@ export default defineConfig({
       grep: responsiveMatrix,
       use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } },
     },
+    // Wide desktop. The dental chart is the first surface whose composition is
+    // specified at 1920 as well as 1440, so the matrix has to cover it.
+    {
+      name: "desktop-1920",
+      grep: responsiveMatrix,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1920, height: 1080 } },
+    },
   ],
 });

@@ -2,24 +2,26 @@
 
 import * as React from "react";
 
-import type { ClinicalChartViewport } from "@/lib/clinical/types";
 import { cn } from "@/lib/utils";
+
+import type { ChartViewportChoice } from "./measured-chart";
 
 /**
  * The bounded visual range of the chart.
  *
- * Arch and quadrant are explicit clinician choices, not a viewport guess: the
- * chart reflows by itself at every width, and this control only narrows what is
- * drawn. It never narrows what the server authorizes and never changes the
- * canonical projection.
+ * `Fit to screen` is the default and is resolved entirely in CSS by the chart's
+ * own container queries — a phone lands on a quadrant, a tablet on the upper
+ * arch, a desktop on both arches. Every other option is an explicit clinician
+ * choice that holds at any width. Nothing here narrows what the server
+ * authorizes, and nothing changes the canonical projection.
  */
 export type ChartViewportControlsProps = {
-  viewport: ClinicalChartViewport;
-  onViewportChange: (viewport: ClinicalChartViewport) => void;
+  viewport: ChartViewportChoice;
+  onViewportChange: (viewport: ChartViewportChoice) => void;
 };
 
 type RegionOption = {
-  value: ClinicalChartViewport;
+  value: ChartViewportChoice;
   /** Compact label for a dense toolbar. */
   label: string;
   /** The accessible name a clinician hears. */
@@ -27,6 +29,7 @@ type RegionOption = {
 };
 
 const ARCH_REGIONS: readonly RegionOption[] = Object.freeze([
+  { value: "AUTO", label: "Fit", name: "Fit to screen" },
   { value: "FULL", label: "Both", name: "Both arches" },
   { value: "UPPER", label: "Upper", name: "Upper arch" },
   { value: "LOWER", label: "Lower", name: "Lower arch" },

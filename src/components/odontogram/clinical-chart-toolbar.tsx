@@ -12,12 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { ClinicalChartMode, ClinicalChartViewport } from "@/lib/clinical/types";
+import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { NumberingSystem } from "@/lib/odontogram/dentition";
 import { cn } from "@/lib/utils";
 
 import { ChartViewportControls } from "./chart-viewport-controls";
-import type { ChartDentition } from "./measured-chart";
+import type { ChartDentition, ChartViewportChoice } from "./measured-chart";
 import { OdontogramHelp } from "./odontogram-help";
 
 /**
@@ -29,7 +29,7 @@ import { OdontogramHelp } from "./odontogram-help";
 export type ClinicalChartView = {
   notation: NumberingSystem;
   dentition: ChartDentition;
-  viewport: ClinicalChartViewport;
+  viewport: ChartViewportChoice;
   selectedFdi: readonly number[];
 };
 
@@ -42,7 +42,7 @@ export type ClinicalChartViewState = ClinicalChartView & {
 export const DEFAULT_CLINICAL_CHART_VIEW: ClinicalChartView = Object.freeze({
   notation: "FDI",
   dentition: "AUTO",
-  viewport: "FULL",
+  viewport: "AUTO",
   selectedFdi: Object.freeze([]) as readonly number[],
 });
 

@@ -14,6 +14,7 @@ import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { ToothInspector } from "@/components/odontogram/tooth-inspector";
+import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
@@ -63,12 +64,21 @@ export function OdontogramSection({
   const dto = isCurrentPatientSnapshot ? dtoSnapshot.dto : null;
   const [loading, setLoading] = React.useState(() => !initialDto && !loadFailed);
   const [error, setError] = React.useState<string | null>(null);
-  const [selectedFdi, setSelectedFdi] = React.useState<number | null>(null);
   const [forkDrafts, setForkDrafts] = React.useState<readonly ForkClinicalDraft[]>([]);
   const [perioOpen, setPerioOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [followupOpen, setFollowupOpen] = React.useState(false);
   const [directTreatmentRequested, setDirectTreatmentRequested] = React.useState(false);
+
+  // One selection owner. The chart publishes selection into the workspace chart
+  // view; this section reads the tooth the inspector should show from that same
+  // state, so closing the inspector, switching chart mode, or reopening it can
+  // never leave the chart painted as selected while the section believes
+  // nothing is.
+  const view = useClinicalChartView();
+  const { managed, setView, selectedFdi: viewSelection } = view;
+  const selectedFdi = viewSelection.at(-1) ?? null;
+
   // Render only state whose owner matches the route parameter. Effects clear
   // the old state afterwards, but this synchronous gate prevents a one-frame
   // cross-patient clinical disclosure during a deferred fetch.
@@ -77,9 +87,9 @@ export function OdontogramSection({
     ? initialProgressEvents.events
     : null;
 
-  // Transient state is keyed by patientId — clear selection on patient change.
+  // Transient local state is keyed by patientId. It also runs when the chart
+  // mode remounts this section, which is harmless for overlay state.
   React.useEffect(() => {
-    setSelectedFdi(null);
     setSheetOpen(false);
     setError(null);
     setPerioOpen(false);
@@ -88,17 +98,32 @@ export function OdontogramSection({
     setForkDrafts([]);
   }, [patientId]);
 
+  // The chart view outlives this section, so selection must be cleared on a
+  // real patient change only. A chart-mode round trip remounts this component
+  // with the same patient and must preserve the selection the shared view
+  // exists to hold.
+  const lastPatientRef = React.useRef(patientId);
+  React.useEffect(() => {
+    if (lastPatientRef.current === patientId) return;
+    lastPatientRef.current = patientId;
+    setView({ selectedFdi: [] });
+  }, [patientId, setView]);
+
   const handleSelect = React.useCallback(
     (fdi: number) => {
       const active = document.activeElement as HTMLElement | null;
       if (active?.matches?.("[data-fdi]")) lastFocusedRef.current = active;
-      setSelectedFdi(fdi);
+      // A managed chart already published the full selection, including a
+      // multi-tooth one, before it reported the last tooth. Only an unmanaged
+      // chart — a compatibility mount with no workspace above it — needs this
+      // section to record the selection on its behalf.
+      if (!managed) setView({ selectedFdi: [fdi] });
       // Selection stays on the chart. The inspector is a temporary overlay
       // opened explicitly, at every width, so selecting a tooth never covers
       // the chart-level actions. Task 5 replaces this overlay with the record
       // drawer.
     },
-    [],
+    [managed, setView],
   );
 
   const refetch = React.useCallback(async () => {
@@ -201,8 +226,10 @@ export function OdontogramSection({
 
   const lastFocusedRef = React.useRef<HTMLElement | null>(null);
 
+  // Closing the inspector closes the overlay only. The tooth stays selected, so
+  // the chart, the toolbar summary and `Open inspector` continue to agree and
+  // the clinical write path can be reopened without re-selecting.
   const closeInspector = React.useCallback(() => {
-    setSelectedFdi(null);
     setSheetOpen(false);
     setDirectTreatmentRequested(false);
     // Return focus to the previously selected tooth for keyboard continuity.

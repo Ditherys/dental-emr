@@ -90,9 +90,15 @@ describe("ClinicalChartWorkspace chart controls", () => {
   function ViewProbe() {
     const view = useClinicalChartView();
     return (
-      <p data-testid="view-probe">
-        {view.notation}/{view.dentition}/{view.viewport}
-      </p>
+      <div>
+        <p data-testid="view-probe">
+          {view.notation}/{view.dentition}/{view.viewport}
+        </p>
+        <p data-testid="selection-probe">{view.selectedFdi.join(",")}</p>
+        <button type="button" onClick={() => view.setView({ selectedFdi: [16] })}>
+          Select tooth 16
+        </button>
+      </div>
     );
   }
 
@@ -116,7 +122,7 @@ describe("ClinicalChartWorkspace chart controls", () => {
       },
     });
 
-    expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/AUTO/FULL");
+    expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/AUTO/AUTO");
 
     fireEvent.change(screen.getByLabelText("Dentition"), { target: { value: "MIXED" } });
     fireEvent.click(screen.getByRole("button", { name: "Lower arch" }));
@@ -125,6 +131,29 @@ describe("ClinicalChartWorkspace chart controls", () => {
     // The view is a workspace concern, so it survives a chart-mode change.
     fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
     expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/MIXED/LOWER");
+  });
+
+  it("keeps the tooth selection across a chart-mode round trip that remounts the chart", () => {
+    renderWorkspace({
+      chart: {
+        CURRENT_STATUS: <ViewProbe />,
+        TREATMENT_PLAN: <p data-testid="plan-panel">Treatment plan chart</p>,
+        PERIODONTAL: <p data-testid="perio-panel">Periodontal chart</p>,
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Select tooth 16" }));
+    expect(screen.getByTestId("selection-probe")).toHaveTextContent("16");
+    expect(screen.getByTestId("chart-selection-summary")).toHaveTextContent("Tooth 16 selected");
+
+    // Switching modes unmounts and remounts the chart. The selection belongs to
+    // the workspace, so it must survive that remount.
+    fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
+    expect(screen.getByTestId("plan-panel")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Current status" }));
+
+    expect(screen.getByTestId("selection-probe")).toHaveTextContent("16");
+    expect(screen.getByTestId("chart-selection-summary")).toHaveTextContent("Tooth 16 selected");
   });
 
   it("offers the photograph action only when the workspace actually holds a gallery", async () => {

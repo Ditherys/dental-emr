@@ -341,6 +341,34 @@ describe("OdontogramSection O7", () => {
     expect(screen.getAllByRole("button", { name: /Record finding/i }).length).toBeGreaterThan(0);
   });
 
+  it("keeps the tooth selected after the inspector is closed, so the write path can be reopened", async () => {
+    const user = userEvent.setup();
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
+    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
+
+    await user.click(screen.getAllByRole("button", { name: "Close" })[0]!);
+    await waitFor(() => expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument());
+
+    // Closing the overlay must not desynchronise the chart from the section:
+    // the tooth is still selected, so the only clinical write path is still
+    // reachable without re-selecting a tooth that already looks selected.
+    expect(screen.getByRole("button", { name: "Open inspector" })).toBeEnabled();
+    expect(screen.getByText("Tooth 11 selected")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
+    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
+  });
+
   it("opens the bounded periodontal workspace for a relational draft examination", async () => {
     const user = userEvent.setup();
     const dtoWithPerio: PatientOdontogramDTO = {
