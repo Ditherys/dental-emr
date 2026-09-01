@@ -1,3 +1,4 @@
+import type { PerioIndexId } from "./perio-indices";
 import type {
   ClinicalFeatureCode,
   EndoState,
@@ -93,3 +94,36 @@ export const FEATURE_CONTRACT = {
   ORTHODONTIC: { canonicalTable: "tooth_clinical_entries", rendererLayers: ["ORTHODONTIC"] },
   PERIAPICAL_LESION: { canonicalTable: "tooth_clinical_entries", rendererLayers: ["PERIAPICAL_LESION"] },
 } satisfies Record<ClinicalFeatureCode, FeatureContractRow>;
+
+/**
+ * Where each periodontal index is stored and which abstract overlay layer draws
+ * it. `canonicalTable` is `null` only where nothing canonical stores the value
+ * yet; the contract never claims a column that does not exist.
+ */
+export type PerioOverlayContractRow = {
+  canonicalTable:
+    | "periodontal_site_measurements"
+    | "periodontal_plaque_measurements"
+    | "periodontal_tooth_measurements"
+    | null;
+  rendererLayers: readonly RendererLayer[];
+};
+
+export const PERIO_OVERLAY_CONTRACT = {
+  PD: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_POCKET_DEPTH"] },
+  CAL: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_ATTACHMENT_LEVEL"] },
+  RECESSION: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_RECESSION"] },
+  // Cairo's recession type has no canonical column: the schema records the
+  // Miller class instead, and which recession classification this EMR keeps is
+  // an open clinical-owner question.
+  CAIRO: { canonicalTable: null, rendererLayers: ["PERIO_RECESSION_TYPE"] },
+  KG: { canonicalTable: "periodontal_tooth_measurements", rendererLayers: ["PERIO_KERATINIZED_GINGIVA"] },
+  BOP: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_BLEEDING"] },
+  PLAQUE: { canonicalTable: "periodontal_plaque_measurements", rendererLayers: ["PERIO_PLAQUE"] },
+  PI: { canonicalTable: "periodontal_plaque_measurements", rendererLayers: ["PERIO_PLAQUE_INDEX"] },
+  GI: { canonicalTable: "periodontal_plaque_measurements", rendererLayers: ["PERIO_GINGIVAL_INDEX"] },
+  MPI: { canonicalTable: "periodontal_plaque_measurements", rendererLayers: ["PERIO_MODIFIED_PLAQUE_INDEX"] },
+  MBI: { canonicalTable: "periodontal_plaque_measurements", rendererLayers: ["PERIO_MODIFIED_BLEEDING_INDEX"] },
+  PD_GTE_5: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_POCKET_5MM"] },
+  PD_GTE_6: { canonicalTable: "periodontal_site_measurements", rendererLayers: ["PERIO_POCKET_6MM"] },
+} satisfies Record<PerioIndexId, PerioOverlayContractRow>;

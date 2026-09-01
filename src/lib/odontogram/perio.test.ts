@@ -5,6 +5,8 @@ import {
   PERIO_SITE_ORDER,
   calculateCal,
   deriveCal,
+  isPerioKnown,
+  perioRecessionMm,
   validatePerioClassification,
   validatePerioFurcationMeasurement,
   validatePerioPlaqueMeasurement,
@@ -76,6 +78,20 @@ describe("periodontal unknown measurements", () => {
     expect(deriveCal(6, null)).toBeNull();
     expect(deriveCal(null, 2)).toBeNull();
     expect(calculateCal(6, -2)).toBe(4);
+  });
+
+  it("narrows a known reading without treating an unknown one as false", () => {
+    expect(isPerioKnown(0)).toBe(true);
+    expect(isPerioKnown(false)).toBe(true);
+    expect(isPerioKnown(null)).toBe(false);
+  });
+
+  it("derives recession as the apical part of the margin, and leaves it unknown when the margin is", () => {
+    expect(perioRecessionMm(3)).toBe(3);
+    expect(perioRecessionMm(0)).toBe(0);
+    // A coronal margin is a known absence of recession, not 2 mm of it.
+    expect(perioRecessionMm(-2)).toBe(0);
+    expect(perioRecessionMm(null)).toBeNull();
   });
 });
 

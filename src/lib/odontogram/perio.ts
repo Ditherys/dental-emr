@@ -126,6 +126,22 @@ export type PeriodontalClassification = {
   extent: PerioUnknown<PerioExtent>;
 };
 
+/** Narrow a canonical reading to a recorded one. `0` and `false` are recorded. */
+export function isPerioKnown<T>(value: PerioUnknown<T>): value is T {
+  return value !== null;
+}
+
+/**
+ * Gingival recession, derived from the signed gingival margin: the apical
+ * (positive) part of it. A margin at or coronal to the CEJ is a recorded
+ * absence of recession, so it derives 0 mm; an unrecorded margin derives
+ * unknown, never 0.
+ */
+export function perioRecessionMm(gingivalMarginMm: PerioUnknown<number>): PerioUnknown<number> {
+  if (gingivalMarginMm === null) return null;
+  return Math.max(0, gingivalMarginMm);
+}
+
 export function calculateCal(probingDepthMm: number, gingivalMarginMm: number): number {
   return probingDepthMm + gingivalMarginMm;
 }
