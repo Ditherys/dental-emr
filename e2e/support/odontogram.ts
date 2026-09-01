@@ -77,7 +77,8 @@ export async function openOdontogram(
   patientId: string,
   environment: OdontogramE2EEnvironment,
 ) {
+  // The unified Clinical chart workspace opens in Current status mode, so the
+  // chart is present without a legacy inner tab click.
   await page.goto(odontogramClinicalHref(patientId, environment));
-  await page.getByRole("button", { name: "Odontogram", exact: true }).click();
   await expect(page.getByTestId("fork-odontogram")).toBeVisible();
 }

@@ -35,7 +35,7 @@ vi.mock("@/lib/clinical/service", () => ({
 
 import {
   amendClinicalNoteAction,
-  createClinicalEncounterAction,
+  startClinicalVisitAction,
   createClinicalNoteAction,
   createPatientMedicalRecordAction,
   createPrescriptionAction,
@@ -55,7 +55,8 @@ const recordId = "c5000000-0000-0000-0000-000000000005";
 const prescriptionId = "c6000000-0000-0000-0000-000000000006";
 const providerId = "c7000000-0000-0000-0000-000000000007";
 
-const encounterInput = { actingBranchId: branchId, patientId };
+const idempotencyKey = "c8000000-0000-0000-0000-000000000008";
+const visitInput = { branchId, patientId };
 const noteInput = { actingBranchId: branchId, encounterId, noteType: "PROGRESS", content: "Synthetic progress note." };
 const detail = {
   encounter: { encounterId, branchId, patientId, appointmentId: null, treatingProviderId: providerId, status: "OPEN", createdAt: "2026-08-27T09:00:00+00:00", finalizedAt: null, version: 1 },
@@ -79,17 +80,27 @@ beforeEach(() => {
   getClinicalEncounterDetail.mockResolvedValue(detail);
 });
 
-describe("createClinicalEncounterAction", () => {
-  it("rechecks live clinical-write at the submitted branch before opening the encounter", async () => {
-    await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: true });
+describe("startClinicalVisitAction", () => {
+  it("rechecks live clinical-write at the submitted branch before opening the visit", async () => {
+    await expect(startClinicalVisitAction(visitInput)).resolves.toEqual({ ok: true, resumed: false });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
-    expect(startOrResumeClinicalVisit).toHaveBeenCalledWith({ branchId, patientId, appointmentId: null });
+    expect(startOrResumeClinicalVisit).toHaveBeenCalledWith(visitInput);
     expect(revalidatePath).toHaveBeenCalledWith(`/patients/${patientId}`, "page");
   });
 
-  it("rejects malformed input without reaching authorization or the RPC", async () => {
-    await expect(createClinicalEncounterAction({ ...encounterInput, patientId: "forged" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
-    await expect(createClinicalEncounterAction({ ...encounterInput, organizationId: "foreign-org" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+  it("forwards an idempotency key and reports a resumed visit", async () => {
+    startOrResumeClinicalVisit.mockResolvedValueOnce({ encounterId, clinicalDate: "2026-09-01", status: "OPEN", version: 1, resumed: true });
+    await expect(startClinicalVisitAction({ ...visitInput, idempotencyKey })).resolves.toEqual({ ok: true, resumed: true });
+    expect(startOrResumeClinicalVisit).toHaveBeenCalledWith({ ...visitInput, idempotencyKey });
+  });
+
+  it("rejects malformed and client-supplied authorization input without reaching authorization or the RPC", async () => {
+    await expect(startClinicalVisitAction({ ...visitInput, patientId: "forged" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(startClinicalVisitAction({ ...visitInput, organizationId: "foreign-org" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(startClinicalVisitAction({ ...visitInput, treatingProviderId: providerId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(startClinicalVisitAction({ ...visitInput, createdBy: providerId })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(startClinicalVisitAction({ ...visitInput, providerDisplay: "Dr. Synthetic Dentist" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
+    await expect(startClinicalVisitAction({ ...visitInput, clinicalDate: "2026-09-01" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
     expect(requirePermission).not.toHaveBeenCalled();
     expect(startOrResumeClinicalVisit).not.toHaveBeenCalled();
   });
@@ -98,11 +109,11 @@ describe("createClinicalEncounterAction", () => {
     const { AuthorizationError } = await import("@/lib/authorization");
     const { ClinicalServiceError } = await import("@/lib/clinical/service");
     requirePermission.mockRejectedValueOnce(new AuthorizationError("PERMISSION_DENIED"));
-    await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "NOT_AUTHORIZED" });
+    await expect(startClinicalVisitAction(visitInput)).resolves.toEqual({ ok: false, code: "NOT_AUTHORIZED" });
     startOrResumeClinicalVisit.mockRejectedValueOnce(new ClinicalServiceError("INVALID_STATE"));
-    await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "INVALID_STATE" });
+    await expect(startClinicalVisitAction(visitInput)).resolves.toEqual({ ok: false, code: "INVALID_STATE" });
     startOrResumeClinicalVisit.mockRejectedValueOnce(new Error("unexpected"));
-    await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "FAILED" });
+    await expect(startClinicalVisitAction(visitInput)).resolves.toEqual({ ok: false, code: "FAILED" });
   });
 });
 

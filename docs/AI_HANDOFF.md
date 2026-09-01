@@ -1,198 +1,173 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 1
+# AI Handoff - Unified Clinical Chart workspace, Task 2
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-## Task 1 — Freeze the canonical gap inventory and add a race-safe clinical visit lifecycle (2026-09-01)
+## Task 2 — Build the unified full-width Clinical workspace shell (2026-09-01)
 
 ### Bounded slice implemented
 
-Task 1 of the accepted plan
+Task 2 of the accepted plan
 `docs/superpowers/plans/2026-09-01-unified-clinical-chart-workspace.md`.
-It freezes the verified gap inventory and adds
-`public.start_or_resume_clinical_visit`, the single server-side entry point
-through which every later clinical write obtains its encounter and its provider
-attribution. No workspace UI, renderer, periodontal, or interchange work is in
-this checkpoint.
+It replaces the inner `Records` / `Odontogram` / `Treatment plan` tabs and the
+standalone photo-gallery section with one Clinical chart workspace: heading and
+visit state, an always-visible medical-safety strip, three `aria-pressed` chart
+modes, a full-width chart breakout, and a chronological progress record. It is
+the first consumer of Task 1's `ClinicalVisitState` and `resumed` flag.
+
+No renderer, tooth drawer, record composer, periodontal mount, chronology
+rebuild, migration or RPC work is in this checkpoint. Those are Tasks 4, 5, 12
+and 13.
 
 ### Why
 
-Before this change the browser could open an unbounded number of `OPEN`
-encounters for the same patient, branch, provider and day: `clinical_encounters`
-had no clinical date, no visit identity and no uniqueness, and
-`create_clinical_encounter_v2` created a new encounter on every call.
-`periodontal_examinations.encounter_id` is NOT NULL, so the later periodontal and
-charting tasks cannot proceed without a managed, idempotent visit.
+The clinical record was split across three inner tabs plus a sibling gallery, so
+allergies, the chart, the plan and the progress record were never visible in one
+place, and the chart was squeezed into the patient profile's `max-w-7xl` reading
+width. Task 1 also left `ClinicalVisitState` and the `resumed` flag with no
+consumer and left `Start visit` without the idempotency key the RPC accepts.
 
 ### Specifications relied on
 
-- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-1-brief.md`
+- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-2-brief.md`
   and `global-constraints.md`.
-- ADR-025 (owner full access), ADR-028/029/030 (odontogram boundary, local
-  completion window, longitudinal revamp).
-- `docs/DATABASE_DESIGN.md` tenancy/RLS rules and `docs/SECURITY_ARCHITECTURE.md`
-  grant-narrowing rules as applied by `scripts/approved-final-grants.mjs`.
+- `docs/FRONTEND_ARCHITECTURE.md` composition rules as restated in `CLAUDE.md`
+  (no card grid, no KPI row, no decorative pills, restrained radii, compact and
+  information-forward, desktop/tablet/phone all supported).
+- Task 1's managed visit contract in
+  `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`.
 
 ### Files added
 
-- `docs/ODONTOGRAM_CANONICAL_GAP_INVENTORY.md` — verified-only inventory with the
-  no-drift baseline, gap-to-task mapping, legacy data that must remain readable,
-  revoked mutation boundaries, and the canonical source for every workspace
-  projection.
-- `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`
-- `supabase/migrations/20260901010101_unified_clinical_visit_lifecycle_grants.sql`
-- `supabase/migrations/20260901010110_unified_clinical_visit_lifecycle_lock_seed.sql`
-  (review round 1) — replaces the function so the optional request-key advisory
-  lock hashes into seed 1, a key space disjoint from the seed-0 identity lock, so
-  the take-request-key-lock-first ordering guarantee is structural rather than
-  incidental. Nothing else in the contract changes.
-- `supabase/migrations/20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql`
-  (review round 1) — re-grants the single authenticated EXECUTE after the
-  revoke-adjacent-to-CREATE-OR-REPLACE required by the privilege lint. The
-  grant registry's `supersededFrom` pivot therefore names `...010110` (the file
-  that REVOKEs), not `...010111` (the file that re-grants); naming the latter
-  would leave the grant expected at the one boundary where the catalog no longer
-  holds it and would fail R6-D replay there (fixed in review round 2).
-- `supabase/tests/unified_clinical_visit.test.sql` (42 pgTAP assertions)
-- `supabase/tests/clinical_visit_resume_concurrency.local.mjs`
+- `src/components/clinical/clinical-chart-workspace.tsx` (+ test) — the workspace
+  shell: the single `Clinical chart` landmark, the mode group, the full-width
+  chart surface, the progress-record region, the photograph region, and one
+  bounded `Retry` failure state per region.
+- `src/components/clinical/clinical-visit-header.tsx` (+ test) — visit state and
+  the `Start visit` / `Resume visit` / `Finalize visit` actions.
+- `src/components/clinical/medical-safety-summary.tsx` (+ test) — the
+  conditions / allergies / medications strip.
 
 ### Files changed
 
-- `scripts/approved-final-grants.mjs` — new grant-terminal entry for the
-  lifecycle RPC; `create_clinical_encounter_v2` marked `supersededFrom` /
-  `supersededBy`.
-- `scripts/remote-database-test-guard.mjs`, `scripts/remote-database-test-guard.test.mjs`,
-  `scripts/run-local-database-tests.mjs` — register both new test files.
-- `scripts/migration-privilege-lint.test.mjs`,
-  `scripts/boundary-privilege-invariant.test.mjs` — counters and the final
-  effective-boundary fixture follow the new migration and the revoked grant.
-- `src/lib/clinical/{schema,types,service,service.test}.ts` —
-  `startOrResumeClinicalVisit`, `ClinicalVisitState`, `ClinicalVisitStartResult`,
-  Zod input/return contracts.
-- `src/app/(emr)/patients/[patientId]/clinical-actions.ts` (+ its test) — the
-  existing "open encounter" action now routes through the managed lifecycle so
-  the revoked grant does not leave a dead button.
-- `supabase/tests/{clinical_rpcs,clinical_permission_contract,clinical_schema}.test.sql`
-  — grant boundary, column set, and reception/billing separation updated.
-- `src/types/database.generated.ts` — regenerated, never hand-edited.
+- `src/lib/clinical/types.ts` — adds the plan's `ClinicalChartMode` stable
+  contract next to `ClinicalVisitState`.
+- `src/app/(emr)/patients/[patientId]/clinical-actions.ts` (+ test) —
+  `createClinicalEncounterAction` becomes `startClinicalVisitAction`, validated
+  by `startOrResumeClinicalVisitInputSchema`, forwarding an optional
+  `idempotencyKey` and returning `{ ok: true, resumed }`.
+- `src/app/(emr)/patients/[patientId]/clinical-section.tsx` (+ test) — renders
+  the workspace; legacy encounter table and medical-history management move into
+  a small `More clinical actions` menu (`Medical history`, `Treatment history`).
+- `src/app/(emr)/patients/[patientId]/patient-workspace.tsx` (+ test) — the
+  profile keeps `max-w-7xl`; only the Clinical breakout spans the viewport. The
+  photo gallery is now passed into the workspace instead of rendered as a
+  sibling section.
+- `src/app/(emr)/patients/[patientId]/page.tsx` — derives the read-only
+  `ClinicalVisitState` on the server.
+- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` — optional
+  `renderProgressRecord` so the workspace owns the single chronology region.
+- `e2e/support/odontogram.ts`, `e2e/odontogram-integration.spec.ts` — drop the
+  click on the removed `Odontogram` inner tab; the chart is the default
+  `Current status` mode and the `fork-odontogram` assertions are unchanged.
 
-### Database, security, and tenancy decisions
+### Security and tenancy decisions
 
-- `clinical_encounters` gains nullable `clinical_date date` and
-  `managed_visit boolean not null default false`. Pre-workspace rows keep
-  `managed_visit = false` and `clinical_date = null`; no historical row is
-  reconciled, finalized, deleted or rewritten.
-- `clinical_encounters_managed_visit_date_check` forbids a managed visit without
-  a clinical date.
-- `clinical_encounters_managed_open_visit_key` is a partial unique index over
-  `(organization_id, branch_id, patient_id, treating_provider_id, clinical_date)`
-  `where managed_visit and status = 'OPEN'`, so it can never collide with legacy
-  rows. `clinical_encounters_managed_visit_lookup_idx` is the read path.
-- The RPC is `security definer set search_path = ''` with fully qualified
-  references. It derives the organization from the active acting branch, the
-  actor from `auth.uid()`, the provider from `private.require_active_actor_provider`
-  (unchanged contract), and the clinical date from `Asia/Manila` on the server.
-  It accepts no organization, provider, actor or date from the browser.
-- Concurrency: a transaction-scoped identity advisory lock (seed 0) keyed by
-  tenant/branch/patient/provider/date, `for no key update` on the resumed row,
-  and a `unique_violation` re-select fallback. An optional idempotency key takes
-  a second advisory lock in a **disjoint key space (seed 1)**, always before the
-  identity lock, so lock ordering is consistent by construction and the two
-  cannot deadlock; the key is never part of visit identity.
-- Only the create path writes one `clinical.encounter.opened` audit event with
-  empty allow-listed metadata. A resume writes none. A finalized visit is never
-  reopened — the next call opens a new managed visit.
-- `create_clinical_encounter_v2` execute is revoked from `authenticated`, so
-  `start_or_resume_clinical_visit` is the only browser-callable function whose
-  body inserts into `clinical_encounters` (asserted in two suites). Historical
-  read, finalize and amend grants are untouched. RLS on `clinical_encounters` is
-  unchanged: still enabled with zero policies and zero base-table grants.
+- Opening Clinical creates nothing. The visit summary is a read-only server
+  derivation from data the page already loads; only an explicit `Start visit` or
+  `Resume visit` press reaches `start_or_resume_clinical_visit`.
+- The action boundary accepts only `branchId`, `patientId`, optional
+  `appointmentId` and optional `idempotencyKey` through the strict Task 1 schema.
+  `organizationId`, `treatingProviderId`, `createdBy`, `providerDisplay` and
+  `clinicalDate` are rejected as `INVALID_INPUT` before authorization, and the
+  RPC re-derives organization, provider and clinical date regardless.
+- No UI path reaches the revoked `create_clinical_encounter_v2`; the superseded
+  `Open encounter` dialog is gone and `Start visit` is the only create path.
+- One idempotency key per mounted workspace, generated in the browser with
+  `crypto.randomUUID()`, so a double-pressed `Start visit` serializes on one
+  token server-side. The key is not visit identity.
+- `Finalize visit` continues through the existing confirmation alert dialog and
+  the existing optimistic-version `finalizeClinicalEncounterAction`.
+- When the clinical read failed, the derived visit is `null` and the header says
+  `Visit status unavailable` with no start action, rather than rendering a false
+  `NOT_STARTED`.
+- No migration, RPC, grant or RLS change in this checkpoint.
 
-### Negative authorization cases covered
+### Negative and degradation cases covered (component level)
 
-Owner without an active provider link, receptionist, dental assistant (in the
-existing suite), provider active only at another branch, inactive linked
-provider, foreign-tenant dentist, cross-tenant patient, missing patient,
-foreign-tenant appointment, appointment belonging to another patient. Each is
-asserted to leave the managed encounter set unchanged. `clinical_rpcs.test.sql`
-additionally proves at runtime, as the `authenticated` role, that a fully
-authorized dentist is refused (`42501 permission denied for function`) by the
-superseded `create_clinical_encounter_v2` path. A managed OPEN visit dated
-yesterday is proved not to be resumed today, and that assertion was
-mutation-checked: removing `clinical_date` from the resume predicate fails it. Reception-recorded and
-dentist-allocated payments are proved to create no encounter and no
-encounter-opened audit event, plus a static proof that no payment function body
-references the lifecycle RPC or the encounter table.
+Clinical reader (no `patient.clinical.write`) sees no `Start visit`, no `Add`,
+no `Void`, no `Add note`, no `Finalize`, no `Amend`, and no provider selector
+anywhere. A finalized visit offers no start, resume or finalize action. Chart,
+progress-record and photograph load failures each render a bounded `Retry`
+region that keeps the medical-safety strip visible and removes the failed
+region's content instead of showing stale data as current.
+
+### Existing test assertions changed, and why
+
+- `clinical-section.test.tsx`: the legacy `Clinical` heading assertion becomes
+  `Clinical chart`; assertions that reached the encounter table and the medical
+  history lists directly now open them from `More clinical actions` first,
+  because Task 2 moves both out of the primary layout. The
+  `Open encounter` dialog test becomes a `Start visit` test — same capability,
+  same "no provider selector" assertion, new control. Nothing was removed; the
+  file gained visit-lifecycle, IA and bounded-failure coverage.
+- `clinical-actions.test.ts`: `createClinicalEncounterAction` renamed to
+  `startClinicalVisitAction` with the new input shape, and the over-posting case
+  was widened from `organizationId` alone to also cover `treatingProviderId`,
+  `createdBy`, `providerDisplay` and `clinicalDate`.
+- `patient-workspace.test.tsx`: the `ClinicalSection` mock now renders its
+  `gallery` child, because the gallery moved inside the workspace. The
+  `0 photos · write` assertion is unchanged.
 
 ### Commands run and observed results
 
-All local only, on Docker Desktop `supabase_db_local`.
+All local only.
 
-- `npm run db:start:local` — already running; services reported.
-- `npm run db:migrate:local` — applied both new migrations forward; no reset.
-- `npm run db:types:local` — `Updated src/types/database.generated.ts.`
-- `npm run security:migrations` — passed; 300 files, 83 grant-terminal
-  migrations, 389 approved privileges.
-- `npm run test:unit -- src/lib/clinical/service.test.ts` — 22/22 passed
-  (5 failed before the implementation, as required by TDD).
-- `npm run test:unit -- scripts` — 13 files, 287/287 passed.
-- `npm run test:unit -- src/lib/clinical "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx"` — 6 files, 50/50 passed.
-- `npm run test:unit -- "src/app/(emr)/patients/[patientId]/clinical-actions.test.ts"` — 15/15 passed.
+- `npm run test:unit -- src/components/clinical/clinical-chart-workspace.test.tsx src/components/clinical/medical-safety-summary.test.tsx "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx"`
+  — RED gate before implementation: 3 files failed, 17 failed / 1 passed, the two
+  new component files unresolvable and the legacy `Clinical tabs` nav still
+  present.
+- `npm run test:unit -- src/components/clinical "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx" "src/app/(emr)/patients/[patientId]/patient-workspace.test.tsx" "src/app/(emr)/patients/[patientId]/clinical-actions.test.ts"`
+  — 6 files, 59/59 passed, no warnings.
 - `npm run typecheck` — passed, no output.
-- `npm run lint` — 0 errors, 3 pre-existing warnings.
-- `npm run test:db:local` — `PASS supabase/tests/unified_clinical_visit.test.sql`,
-  `clinical_rpcs`, `clinical_permission_contract`, `clinical_schema` and every
-  earlier suite, then the runner stopped at the **pre-existing** failure in
-  `supabase/tests/treatment_plans.test.sql` (assertion 7, `treatment_plan_items`
-  approved-field set). That failure reproduces on the unmodified baseline commit
-  and is unrelated to this checkpoint.
-- Because that stop prevents the registered `.local.mjs` tests from running,
-  `runClinicalVisitResumeConcurrencyTest` was executed directly against the same
-  container: `PASS supabase/tests/clinical_visit_resume_concurrency.local.mjs`.
-  Two simultaneous sessions released from one patient row lock returned one
-  encounter id and produced exactly one managed encounter and one audit event;
-  the fixture cleaned up completely.
-- Every suite registered after `treatment_plans.test.sql` was also run directly
-  and passed, except two further **pre-existing** issues:
-  `seed_security_fixtures.test.sql` assertion 27 fails on three stale
-  `implant-*@synthetic.test` auth rows left in the local database on 2026-08-30,
-  and `procedure_installment_schedules.test.sql` ends with
-  `select * from extensions.finish()` and emits no `p1_test_result` marker.
+- `npm run lint` — 0 errors, 3 pre-existing warnings in
+  `treatment-plan-section.tsx` and `lib/treatment-plan/schema.ts`.
+- `npm run test:unit` (whole suite), four runs — 1602/1607/1609/1610 of 1612
+  passed. Every failure in every run was `Error: Test timed out` in heavy
+  odontogram fork suites this task does not touch. The same folder run alone,
+  `npm run test:unit -- src/components/odontogram`, passes 45/45; run while
+  another suite was active it failed 10/45. The failures are machine
+  contention, not regressions.
 
 ### Not run, and why
 
-- R6-D boundary-privilege file-mode replay
-  (`supabase/verification/r6d/README.md`): requires the disposable hosted Cloud
-  TEST project, which is not authorized for this work. It is the only test that
-  positively proves the `supersededFrom` pivot, so it remains **UNRUN** and is
-  deferred to the Cloud TEST gate. It is in no local command
-  (`verify`, `test:db`, `test:db:local`) and in no CI job.
-- `npm run build`, Playwright E2E, Cloud TEST, database advisors, hosted auth
-  verification: out of scope for this checkpoint and unauthorized locally.
-- No hosted or production command was run. This work may be described only as
-  locally implemented and locally verified.
+- `npm run build`, Playwright E2E, responsive/accessibility device verification,
+  Cloud TEST, `npm run test:db`, database advisors: no database or grant change
+  in this checkpoint and hosted access is not authorized for this work. This work
+  may be described only as locally implemented and locally verified.
 
 ### Known residual risks and open questions
 
-- Three pre-existing local database-gate failures block a clean
-  `npm run test:db:local`; none is caused by this checkpoint, and none is owned
-  by Task 1.
-- `assertSupersedeReferencesResolve` in `scripts/approved-final-grants.mjs` only
-  checks that a `supersededFrom` file exists, so it cannot catch a pivot that
-  names the wrong file. That off-by-one is only caught by hosted R6-D replay.
-  Worth a static check that the named file actually revokes the object; not
-  added here because it changes a shared security script.
-- `createClinicalEncounter` in `src/lib/clinical/service.ts` is retained but now
-  fails closed; it is marked superseded in code and should be removed with the
-  other superseded paths. Its unit test no longer pins the argument shape of the
-  revoked RPC — only that it fails closed — so it will not mislead that sweep.
-- `public.add_treatment_plan_discussion` still accepts a client-supplied
-  `p_treating_provider_id`. It creates no encounter, so it was deliberately left
-  alone here and is flagged in the gap inventory for a controller ruling.
-- The clinical date is derived from `Asia/Manila` at statement time. A visit
-  opened either side of local midnight is intentionally a different visit.
+- `list_clinical_encounters` does not expose `clinical_date` or `managed_visit`,
+  so the server derivation matches today's encounters on the Manila calendar day
+  of `created_at`. A pre-workspace unmanaged OPEN encounter created today would
+  therefore be shown as the current visit. A later task should add a managed
+  visit read that returns `clinical_date` and `managed_visit` directly.
+- `PERIODONTAL` mode is a bounded seam that points at the chart's existing
+  periodontal entry; Task 12 mounts the real periodontal work surface.
+- The progress-record region uses the same server-derived events the chart was
+  already given, so it inherits the existing behaviour where an in-chart fork
+  save refreshes the chart but not the record until the next route refresh.
+  Task 13 owns the chronology.
+- `Resume visit` calls the same idempotent lifecycle action as `Start visit`.
+  Whether an explicit `Resume visit` control is wanted at all, and whether a
+  finalized same-day visit should offer starting a second visit, are open
+  questions for the controller.
+- `createClinicalEncounter` in `src/lib/clinical/service.ts` and
+  `createClinicalEncounterInputSchema` are now unreferenced by any UI path and
+  remain for Task 17's superseded-path sweep.
 
 ### Next bounded task
 
-Task 2 — build the unified full-width Clinical workspace shell. Do not start it
-until Task 1 is independently reviewed and accepted.
+Task 3 of the plan. Do not start it until Task 2 is independently reviewed and
+accepted.

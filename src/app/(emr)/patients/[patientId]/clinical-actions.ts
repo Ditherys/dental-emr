@@ -19,7 +19,6 @@ import {
 } from "@/lib/clinical/service";
 import {
   amendClinicalNoteInputSchema,
-  createClinicalEncounterInputSchema,
   createClinicalNoteInputSchema,
   createPatientMedicalRecordInputSchema,
   createPrescriptionInputSchema,
@@ -27,21 +26,24 @@ import {
   finalizeClinicalNoteInputSchema,
   finalizePrescriptionInputSchema,
   getClinicalEncounterDetailInputSchema,
+  startOrResumeClinicalVisitInputSchema,
   updateClinicalNoteInputSchema,
   voidPatientMedicalRecordInputSchema,
 } from "@/lib/clinical/schema";
 import type { ClinicalEncounterDetail } from "@/lib/clinical/types";
 
 type ClinicalMutationCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "FAILED";
-export type ClinicalMutationResult = { ok: true } | { ok: false; code: ClinicalMutationCode; fieldErrors?: Record<string, string[]> };
-export type ClinicalDetailResult = { ok: true; detail: ClinicalEncounterDetail } | { ok: false; code: ClinicalMutationCode; fieldErrors?: Record<string, string[]> };
+type ClinicalFailure = { ok: false; code: ClinicalMutationCode; fieldErrors?: Record<string, string[]> };
+export type ClinicalMutationResult = { ok: true } | ClinicalFailure;
+export type ClinicalVisitResult = { ok: true; resumed: boolean } | ClinicalFailure;
+export type ClinicalDetailResult = { ok: true; detail: ClinicalEncounterDetail } | ClinicalFailure;
 
 function invalid(schema: { safeParse(input: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown) {
   const parsed = schema.safeParse(input);
   return parsed.success ? null : { ok: false as const, code: "INVALID_INPUT" as const, fieldErrors: parsed.error?.flatten().fieldErrors };
 }
 
-function result(error: unknown): Extract<ClinicalMutationResult, { ok: false }> {
+function result(error: unknown): ClinicalFailure {
   if (error instanceof AuthorizationError) return { ok: false, code: "NOT_AUTHORIZED" };
   if (error instanceof ClinicalServiceError) return { ok: false, code: error.code };
   return { ok: false, code: "FAILED" };
@@ -55,22 +57,20 @@ async function authorizeRead(branchId: string) {
   await requirePermission({ permission: "patient.clinical.read", branchId });
 }
 
-// Opening an encounter now goes through the managed visit lifecycle, which owns
-// visit identity, the server-derived clinical date, and idempotent resume. The
-// route-context input is unchanged; the RPC re-derives and revalidates the
-// organization, provider, and date regardless of what the browser sends.
-export async function createClinicalEncounterAction(input: unknown): Promise<ClinicalMutationResult> {
-  const invalidResult = invalid(createClinicalEncounterInputSchema, input); if (invalidResult) return invalidResult;
+// Starting and resuming a visit are the same managed lifecycle call: it owns
+// visit identity, the server-derived clinical date, and idempotent resume. Only
+// route context is accepted; the RPC re-derives and revalidates the
+// organization, treating provider, and clinical date regardless of what the
+// browser sends. The optional idempotency key only serializes a duplicated
+// in-flight request and is never part of the visit identity.
+export async function startClinicalVisitAction(input: unknown): Promise<ClinicalVisitResult> {
+  const invalidResult = invalid(startOrResumeClinicalVisitInputSchema, input); if (invalidResult) return invalidResult;
   try {
-    const value = input as { actingBranchId: string; patientId: string; appointmentId?: string | null };
-    await authorizeWrite(value.actingBranchId);
-    await startOrResumeClinicalVisit({
-      branchId: value.actingBranchId,
-      patientId: value.patientId,
-      appointmentId: value.appointmentId ?? null,
-    });
+    const value = input as { branchId: string; patientId: string };
+    await authorizeWrite(value.branchId);
+    const visit = await startOrResumeClinicalVisit(input);
     revalidatePath(`/patients/${value.patientId}`, "page");
-    return { ok: true };
+    return { ok: true, resumed: visit.resumed };
   } catch (error) { return result(error); }
 }
 

@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BranchContextProvider } from "@/components/layout/branch-context";
@@ -43,7 +44,11 @@ vi.mock("./photos/clinical-photo-gallery", () => ({
     <div data-testid="clinical-photo-gallery">{initialPhotos.length} photos · {canWriteClinical ? "write" : "read"}</div>
   ),
 }));
-vi.mock("./clinical-section", () => ({ ClinicalSection: () => <div data-testid="clinical-section" /> }));
+vi.mock("./clinical-section", () => ({
+  ClinicalSection: ({ gallery }: { gallery?: ReactNode }) => (
+    <div data-testid="clinical-section">{gallery}</div>
+  ),
+}));
 vi.mock("./intake-section", () => ({ IntakeSection: () => <div data-testid="intake-section" /> }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
@@ -120,6 +125,22 @@ describe("PatientWorkspace", () => {
     expect(screen.getByTestId("clinical-section")).toBeInTheDocument();
     expect(screen.getByTestId("clinical-photo-gallery")).toHaveTextContent("0 photos · write");
     expect(screen.queryByTestId("intake-section")).not.toBeInTheDocument();
+  });
+
+  it("keeps the photo gallery inside the clinical workspace instead of a standalone section", () => {
+    renderWorkspace({ canReadClinical: true, canWriteClinical: true, section: "clinical" });
+
+    const workspace = screen.getByTestId("clinical-section");
+    expect(within(workspace).getByTestId("clinical-photo-gallery")).toBeInTheDocument();
+  });
+
+  it("lets the clinical breakout span the viewport while the profile keeps its content limit", () => {
+    const { unmount } = renderWorkspace({ canReadClinical: true, canWriteClinical: true, section: "clinical" });
+    expect(screen.getByTestId("clinical-section").closest(".max-w-7xl")).toBeNull();
+    unmount();
+
+    renderWorkspace({ section: "overview" });
+    expect(screen.getByText("Google Search").closest(".max-w-7xl")).not.toBeNull();
   });
 
   it("hides the Intake section without intake.manage", () => {

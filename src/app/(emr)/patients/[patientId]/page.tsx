@@ -4,6 +4,7 @@ import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasPermission, hasSharedPatientPermission } from "@/lib/authorization/policy";
 import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
+import type { ClinicalEncounter, ClinicalVisitState } from "@/lib/clinical/types";
 import { ClinicalPhotoServiceError, listClinicalPhotos } from "@/lib/clinical-media/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
@@ -50,6 +51,41 @@ function requestedBranch(state: AuthorizationState, candidate: string | undefine
     if (canReadAtBranch) return candidate;
   }
   return readableBranch(state);
+}
+
+const manilaDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Manila",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Read-only summary of today's visit for the Clinical chart workspace. It never
+ * opens an encounter: the authoritative clinical date and provider are derived
+ * again server-side by `start_or_resume_clinical_visit` when a visit is actually
+ * started. Returns null when the encounter read failed, so the workspace reports
+ * an unknown visit rather than a false "not started".
+ */
+function deriveClinicalVisitState(
+  encounters: readonly ClinicalEncounter[],
+  providerNames: ReadonlyMap<string, string>,
+  loadFailed: boolean,
+): ClinicalVisitState | null {
+  if (loadFailed) return null;
+  const clinicalDate = manilaDate.format(new Date());
+  const today = encounters.filter((encounter) => manilaDate.format(new Date(encounter.createdAt)) === clinicalDate);
+  const current = today.find((encounter) => encounter.status === "OPEN") ?? today[0];
+  if (!current) {
+    return { encounterId: null, status: "NOT_STARTED", clinicalDate, providerDisplay: null, version: null };
+  }
+  return {
+    encounterId: current.encounterId,
+    status: current.status,
+    clinicalDate,
+    providerDisplay: providerNames.get(current.treatingProviderId) ?? null,
+    version: current.version,
+  };
 }
 
 export default async function PatientPage({
@@ -257,6 +293,14 @@ export default async function PatientPage({
     }
   }
 
+  const clinicalVisit = section === "clinical" && canReadClinical
+    ? deriveClinicalVisitState(
+        clinicalEncounters,
+        new Map(clinicalProviders.map((provider) => [provider.providerId, provider.displayName])),
+        clinicalLoadFailed,
+      )
+    : null;
+
   return (
     <PatientWorkspace
       patient={patient}
@@ -271,6 +315,7 @@ export default async function PatientPage({
       filesUnavailable={filesUnavailable}
       canReadClinical={canReadClinical}
       canWriteClinical={canWriteClinical}
+      clinicalVisit={clinicalVisit}
       initialClinicalEncounters={clinicalEncounters}
       initialMedicalRecords={medicalRecords}
       initialToothConditions={toothConditions}

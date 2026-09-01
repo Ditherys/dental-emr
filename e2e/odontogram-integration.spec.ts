@@ -43,7 +43,6 @@ test("@odontogram a dentist records a clinical finding and it survives a reload"
 
   await expect(inspector).toContainText("CARIES · ACTIVE");
   await page.reload();
-  await page.getByRole("button", { name: "Odontogram", exact: true }).click();
   await expect(page.getByTestId("fork-odontogram")).toBeVisible();
   await expect(page.locator('.tooth-tile.side-view[data-tooth="16"] svg [id="caries-occlusal"]')).toHaveAttribute("data-active", "1");
 });

@@ -43,6 +43,12 @@ export type ListPatientMedicalRecordsInput = z.infer<typeof listPatientMedicalRe
 export type StartOrResumeClinicalVisitInput = z.infer<typeof startOrResumeClinicalVisitInputSchema>;
 
 /**
+ * The three work surfaces of the unified Clinical Chart workspace. The mode is a
+ * presentation concern only: it never widens what the server authorizes.
+ */
+export type ClinicalChartMode = "CURRENT_STATUS" | "TREATMENT_PLAN" | "PERIODONTAL";
+
+/**
  * The Clinical Chart workspace's view of the active visit. `NOT_STARTED` means
  * no managed visit exists yet for the acting branch, patient, provider, and
  * clinical date; the workspace renders read-only until one is opened.

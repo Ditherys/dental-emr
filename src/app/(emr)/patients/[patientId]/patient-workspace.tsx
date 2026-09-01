@@ -34,7 +34,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import type { FileListItem } from "@/lib/files/types";
 import type { PatientReferral } from "@/lib/acquisition/types";
 import type { DuplicateReview, PatientDetail } from "@/lib/patients/types";
-import type { ClinicalEncounter, MedicalRecord } from "@/lib/clinical/types";
+import type { ClinicalEncounter, ClinicalVisitState, MedicalRecord } from "@/lib/clinical/types";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
@@ -91,6 +91,8 @@ type Props = {
   filesUnavailable?: boolean;
   canReadClinical?: boolean;
   canWriteClinical?: boolean;
+  /** Read-only managed visit summary derived on the server; null when unknown. */
+  clinicalVisit?: ClinicalVisitState | null;
   initialClinicalEncounters?: ClinicalEncounter[];
   initialMedicalRecords?: MedicalRecord[];
   initialToothConditions?: ToothCondition[];
@@ -139,6 +141,7 @@ export function PatientWorkspace({
   filesUnavailable,
   canReadClinical = false,
   canWriteClinical = false,
+  clinicalVisit = null,
   initialClinicalEncounters = [],
   initialMedicalRecords = [],
   initialToothConditions = [],
@@ -325,9 +328,13 @@ export function PatientWorkspace({
   const age = ageFromBirthDate(patient.birthDate);
   const primaryContact = patient.contacts.find((contact) => contact.isPrimary) ?? patient.contacts[0];
 
+  // The patient profile keeps its reading width; only the Clinical chart
+  // breakout spans the available viewport.
+  const clinicalBreakout = section === "clinical" && canReadClinical;
+
   return (
-    <main className="mx-auto w-full max-w-7xl">
-      <div className="border-b pb-4">
+    <main className="mx-auto w-full">
+      <div className="mx-auto w-full max-w-7xl border-b pb-4">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">
@@ -397,14 +404,14 @@ export function PatientWorkspace({
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 border-y py-2.5 text-sm text-destructive">
+        <p role="alert" className="mx-auto mt-3 w-full max-w-7xl border-y py-2.5 text-sm text-destructive">
           {error}
         </p>
       )}
 
       <nav
         aria-label="Patient sections"
-        className="flex gap-1 overflow-x-auto border-b text-sm font-medium"
+        className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto border-b text-sm font-medium"
       >
         {sections.map((key) => {
           const active = section === key;
@@ -423,7 +430,7 @@ export function PatientWorkspace({
         })}
       </nav>
 
-      <div className="py-5">
+      <div className={clinicalBreakout ? "w-full py-5" : "mx-auto w-full max-w-7xl py-5"}>
         {section === "overview" && (
           <PatientOverview
             patient={patient}
@@ -484,7 +491,7 @@ export function PatientWorkspace({
             loadFailed={referralsUnavailable}
           />
         )}
-        {section === "clinical" && canReadClinical && (
+        {clinicalBreakout && (
           <>
             <ClinicalSection
               patientId={patient.patientId}
@@ -493,6 +500,7 @@ export function PatientWorkspace({
               printPatientName={patientDisplayName(patient)}
               printBranchName={actingBranchName}
               printProviderName="Signed-in dentist"
+              visit={clinicalVisit}
               initialEncounters={initialClinicalEncounters}
               initialMedicalRecords={initialMedicalRecords}
               initialToothConditions={initialToothConditions}
@@ -502,22 +510,26 @@ export function PatientWorkspace({
               initialProviders={initialProviders}
               providersUnavailable={clinicalProvidersUnavailable}
               loadFailed={clinicalLoadFailed}
+              recordLoadFailed={clinicalLoadFailed || accountLoadFailed}
+              galleryLoadFailed={clinicalPhotosUnavailable}
+              gallery={
+                <ClinicalPhotoGallery
+                  patientId={patient.patientId}
+                  actingBranchId={actingBranchId}
+                  canWriteClinical={canWriteClinical}
+                  initialPhotos={initialClinicalPhotos}
+                  loadFailed={clinicalPhotosUnavailable}
+                  onOpenUpload={canWriteClinical ? () => setPhotoUploadOpen(true) : undefined}
+                  onRefresh={() => router.refresh()}
+                  resolveDerivativeUrl={resolvePhotoDerivative}
+                  onRename={canWriteClinical ? renameClinicalPhoto : undefined}
+                  onPair={canWriteClinical ? pairClinicalPhotos : undefined}
+                  onArchive={canWriteClinical ? archiveClinicalPhoto : undefined}
+                />
+              }
               canReadBilling={canReadBilling}
               initialAccountRows={canReadBilling ? initialAccountRows : []}
               initialProcedureSummaries={initialProcedureSummaries}
-            />
-            <ClinicalPhotoGallery
-              patientId={patient.patientId}
-              actingBranchId={actingBranchId}
-              canWriteClinical={canWriteClinical}
-              initialPhotos={initialClinicalPhotos}
-              loadFailed={clinicalPhotosUnavailable}
-              onOpenUpload={canWriteClinical ? () => setPhotoUploadOpen(true) : undefined}
-              onRefresh={() => router.refresh()}
-              resolveDerivativeUrl={resolvePhotoDerivative}
-              onRename={canWriteClinical ? renameClinicalPhoto : undefined}
-              onPair={canWriteClinical ? pairClinicalPhotos : undefined}
-              onArchive={canWriteClinical ? archiveClinicalPhoto : undefined}
             />
             <PhotoUploadDialog
               open={photoUploadOpen}

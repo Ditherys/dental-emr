@@ -37,6 +37,8 @@ type Props = {
   initialProgressEvents?: { patientId: string; events: ProgressEventDTO[] };
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
+  /** False when the Clinical chart workspace owns the chronological record region. */
+  renderProgressRecord?: boolean;
   loadFailed?: boolean;
 };
 
@@ -51,6 +53,7 @@ export function OdontogramSection({
   initialProgressEvents,
   procedureCases: suppliedProcedureCases,
   recordFollowup,
+  renderProgressRecord = true,
   loadFailed,
 }: Props): React.ReactElement {
   const hasMismatchedInitialDto = Boolean(initialOdontogram && initialOdontogram.patientId !== patientId);
@@ -314,7 +317,7 @@ export function OdontogramSection({
         onOpenFollowup={() => setFollowupOpen(true)}
       />
 
-      <ProgressRecordTable events={progressEvents} />
+      {renderProgressRecord && <ProgressRecordTable events={progressEvents} />}
 
       <Sheet open={sheetOpen && selectedFdiForCurrentPatient !== null} onOpenChange={(open) => { if (!open) closeInspector(); else setSheetOpen(true); }}>
         <SheetContent side="bottom" className="max-h-[85dvh] overflow-auto p-0 sm:max-h-[80dvh] sm:max-w-none" onEscapeKeyDown={closeInspector} onInteractOutside={closeInspector}>

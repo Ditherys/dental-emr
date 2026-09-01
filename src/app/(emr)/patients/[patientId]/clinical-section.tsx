@@ -1,13 +1,18 @@
 "use client";
 
-import { LoaderCircle, Pencil, Plus } from "lucide-react";
+import { Ellipsis, LoaderCircle, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
+import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-workspace";
+import { ClinicalVisitHeader } from "@/components/clinical/clinical-visit-header";
+import { MedicalSafetySummary } from "@/components/clinical/medical-safety-summary";
+import { ProgressRecordTable } from "@/components/odontogram/progress-record-table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, MedicalRecord } from "@/lib/clinical/types";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, ClinicalVisitState, MedicalRecord } from "@/lib/clinical/types";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { progressEventsFromAccount, progressEventsFromOdontogram, type PatientAccountRowDTO } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
@@ -15,7 +20,6 @@ import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 
 import {
   amendClinicalNoteAction,
-  createClinicalEncounterAction,
   createClinicalNoteAction,
   createPatientMedicalRecordAction,
   createPrescriptionAction,
@@ -23,10 +27,12 @@ import {
   finalizeClinicalNoteAction,
   finalizePrescriptionAction,
   getClinicalEncounterDetailAction,
+  startClinicalVisitAction,
   updateClinicalNoteAction,
   voidPatientMedicalRecordAction,
   type ClinicalDetailResult,
   type ClinicalMutationResult,
+  type ClinicalVisitResult,
 } from "./clinical-actions";
 import { OdontogramSection } from "./odontogram-section";
 import { ProcedurePaymentSummaryCard } from "./procedure-payment-summary";
@@ -39,6 +45,7 @@ type Props = {
   printPatientName?: string;
   printBranchName?: string;
   printProviderName?: string;
+  visit?: ClinicalVisitState | null;
   initialEncounters: ClinicalEncounter[];
   initialMedicalRecords: MedicalRecord[];
   initialProviders?: ProviderListItem[];
@@ -48,6 +55,9 @@ type Props = {
   canGenerateDocuments?: boolean;
   providersUnavailable?: boolean;
   loadFailed?: boolean;
+  recordLoadFailed?: boolean;
+  gallery?: ReactNode;
+  galleryLoadFailed?: boolean;
   canReadBilling?: boolean;
   initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
   initialAccountRows?: readonly PatientAccountRowDTO[];
@@ -65,7 +75,7 @@ const RECORD_TYPES: Array<{ value: ClinicalRecordType; label: string }> = [
   { value: "MEDICATION", label: "Medication" },
 ];
 
-function message(result: ClinicalMutationResult | ClinicalDetailResult) {
+function message(result: ClinicalMutationResult | ClinicalDetailResult | ClinicalVisitResult) {
   if (result.ok) return null;
   if (result.code === "NOT_AUTHORIZED") return "Your access or selected branch changed. Refresh the record and try again.";
   if (result.code === "STALE_VERSION") return "This clinical record changed while you were viewing it. Refresh before trying again.";
@@ -81,22 +91,26 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, initialTreatmentPlans = [], canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"records" | "odontogram" | "treatment-plans">("records");
+  const [visitBusy, setVisitBusy] = useState(false);
   const [details, setDetails] = useState<Record<string, ClinicalEncounterDetail>>({});
   const [expandedEncounterId, setExpandedEncounterId] = useState<string | null>(null);
   const [loadingEncounterId, setLoadingEncounterId] = useState<string | null>(null);
-  const [openEncounterDialog, setOpenEncounterDialog] = useState(false);
+  const [treatmentHistoryOpen, setTreatmentHistoryOpen] = useState(false);
+  const [medicalHistoryOpen, setMedicalHistoryOpen] = useState(false);
   const [noteDialog, setNoteDialog] = useState<NoteDialogState>(null);
   const [amendNote, setAmendNote] = useState<{ encounterId: string; note: ClinicalNote } | null>(null);
   const [prescriptionEncounterId, setPrescriptionEncounterId] = useState<string | null>(null);
   const [medicalRecordDialog, setMedicalRecordDialog] = useState<ClinicalRecordType | null>(null);
   const [voidRecord, setVoidRecord] = useState<MedicalRecord | null>(null);
-  const [finalizeEncounter, setFinalizeEncounter] = useState<ClinicalEncounter | null>(null);
+  const [finalizeEncounter, setFinalizeEncounter] = useState<{ encounterId: string; version: number } | null>(null);
+  // One key per mounted workspace: a double-pressed Start visit serializes on the
+  // same token server-side. It is never the visit identity, which the RPC derives.
+  const visitKeyRef = useRef<string | null>(null);
 
   const providersById = new Map(initialProviders.map((provider) => [provider.providerId, provider.displayName]));
   const providerName = (providerId: string) => providersById.get(providerId) ?? "Unknown provider";
@@ -118,15 +132,15 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
     setError(message(result));
   }
 
-  async function openEncounter(data: FormData) {
-    void data;
-    setSaving(true);
+  async function startVisit() {
+    if (!visitKeyRef.current) visitKeyRef.current = crypto.randomUUID();
+    setVisitBusy(true);
     try {
-      const result = await createClinicalEncounterAction({ actingBranchId, patientId });
+      const result = await startClinicalVisitAction({ branchId: actingBranchId, patientId, idempotencyKey: visitKeyRef.current });
       if (!result.ok) { setError(message(result)); return; }
-      setError(null); setOpenEncounterDialog(false); router.refresh();
+      setError(null); router.refresh();
     } catch { setError("The clinical record could not be saved. Review the fields and try again."); }
-    finally { setSaving(false); }
+    finally { setVisitBusy(false); }
   }
 
   async function saveNote(data: FormData) {
@@ -225,30 +239,64 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, p
   }
 
   const expandedDetail = expandedEncounterId ? details[expandedEncounterId] : undefined;
-  const dialogOpen = Boolean(openEncounterDialog || noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
+  const dialogOpen = Boolean(treatmentHistoryOpen || medicalHistoryOpen || noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
+  const progressEvents = [
+    ...(initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : []),
+    ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : []),
+  ];
+  const chart: Record<ClinicalChartMode, ReactNode> = {
+    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />,
+    TREATMENT_PLAN: <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />,
+    PERIODONTAL: <PeriodontalModePanel />,
+  };
 
   return <section id="clinical" className="border-t py-6">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold">Clinical</h2><p className="mt-1 text-sm text-muted-foreground">Encounter notes, dental chart, and medical history.</p></div>{canWriteClinical && <Button type="button" variant="outline" className="min-h-11" onClick={() => setOpenEncounterDialog(true)}><Plus aria-hidden="true" /> Open encounter</Button>}</div>
-    <nav className="mt-3 flex gap-4 overflow-x-auto border-b text-sm font-medium" aria-label="Clinical tabs"><button type="button" onClick={() => setTab("records")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "records" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Records</button><button type="button" onClick={() => setTab("odontogram")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "odontogram" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Odontogram</button><button type="button" onClick={() => setTab("treatment-plans")} className={`shrink-0 border-b-2 px-1 py-3 ${tab === "treatment-plans" ? "border-primary" : "border-transparent text-muted-foreground"}`}>Treatment plan</button></nav>
-    {error && !dialogOpen && <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">{error}</p>}
-    {tab === "odontogram" ? <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} initialProgressEvents={{ patientId, events: [...(initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : []), ...(canReadBilling ? progressEventsFromAccount(initialAccountRows) : [])] }} loadFailed={loadFailed} />
-      : tab === "treatment-plans" ? <TreatmentPlanSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canGenerateDocuments={canGenerateDocuments} initialPlans={initialTreatmentPlans} initialProviders={initialProviders} loadFailed={loadFailed} canReadBilling={canReadBilling} initialProcedureSummaries={initialProcedureSummaries} />
-      : <>
-    {loadFailed ? <p role="alert" className="mt-4 border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
-      <h3 className="mt-5 text-sm font-medium text-muted-foreground">Treatment history</h3>
-      {initialEncounters.length === 0 ? <p className="mt-3 text-sm text-muted-foreground">No encounters recorded.</p> : <>
-        <div className="mt-3 hidden overflow-x-auto border md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/30 text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Opened</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Treating provider</th><th className="px-3 py-2 font-medium">Action</th></tr></thead><tbody>{initialEncounters.map((encounter) => <tr key={encounter.encounterId} className="border-b last:border-0"><td className="px-3 py-3 tabular-nums">{encounter.createdAt.slice(0, 10)}</td><td className="px-3 py-3">{encounter.status}</td><td className="px-3 py-3">{providerName(encounter.treatingProviderId)}</td><td className="px-3 py-3"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></td></tr>)}</tbody></table></div>
-        <ul className="mt-3 divide-y border-y md:hidden">{initialEncounters.map((encounter) => <li key={encounter.encounterId} className="py-3"><div className="flex items-center justify-between gap-3"><p className="font-medium text-sm">{encounter.status} encounter</p><p className="text-xs text-muted-foreground">{encounter.createdAt.slice(0, 10)}</p></div><p className="mt-1 text-sm text-muted-foreground">{providerName(encounter.treatingProviderId)}</p><div className="mt-2"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></div></li>)}</ul>
-      </>}
-      {loadingEncounterId && <p className="mt-3 text-sm text-muted-foreground">Loading encounter…</p>}
-      {expandedDetail && <EncounterDetail detail={expandedDetail} canWriteClinical={canWriteClinical} saving={saving} openNote={(encounterId) => setNoteDialog({ mode: "create", encounterId })} editNote={(encounterId, note) => setNoteDialog({ mode: "edit", encounterId, note })} openAmend={(encounterId, note) => setAmendNote({ encounterId, note })} openPrescriptions={(encounterId) => setPrescriptionEncounterId(encounterId)} finalizeNote={finalizeNote} finalizePrescription={finalizePrescription} requestFinalizeEncounter={setFinalizeEncounter} initialProcedureSummaries={initialProcedureSummaries} canReadBilling={canReadBilling} patientId={patientId} actingBranchId={actingBranchId} />}
-      <h3 className="mt-8 text-sm font-medium text-muted-foreground">Medical history</h3>
-      <div className="mt-3 grid gap-6 md:grid-cols-3">
-        {RECORD_TYPES.map(({ value, label }) => <MedicalRecordList key={value} label={label} records={initialMedicalRecords.filter((record) => record.recordType === value)} canWrite={canWriteClinical} onAdd={() => setMedicalRecordDialog(value)} onVoid={setVoidRecord} />)}
-      </div>
-    </>}
-    </>}
-    {openEncounterDialog && <OpenEncounterDialog saving={saving} error={error} close={() => setOpenEncounterDialog(false)} save={openEncounter} />}
+    {error && !dialogOpen && <p role="alert" className="mb-4 border-y py-3 text-sm text-destructive">{error}</p>}
+    <ClinicalChartWorkspace
+      visitHeader={<ClinicalVisitHeader
+        visit={visit}
+        canWriteClinical={canWriteClinical}
+        busy={visitBusy}
+        onStartVisit={() => void startVisit()}
+        onFinalizeVisit={() => { if (visit?.encounterId && visit.version !== null) setFinalizeEncounter({ encounterId: visit.encounterId, version: visit.version }); }}
+        actions={<DropdownMenu>
+          <DropdownMenuTrigger asChild><Button type="button" variant="outline" className="min-h-11" aria-label="More clinical actions"><Ellipsis aria-hidden="true" /> More</Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => { setError(null); setMedicalHistoryOpen(true); }}>Medical history</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => { setError(null); setTreatmentHistoryOpen(true); }}>Treatment history</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>}
+      />}
+      medicalSafety={<MedicalSafetySummary records={initialMedicalRecords} />}
+      chart={chart}
+      record={<ProgressRecordTable events={progressEvents} />}
+      gallery={gallery}
+      chartLoadFailed={loadFailed}
+      recordLoadFailed={recordLoadFailed ?? loadFailed}
+      galleryLoadFailed={galleryLoadFailed}
+      onRetry={() => router.refresh()}
+    />
+    <Dialog open={medicalHistoryOpen} onOpenChange={(next) => !next && !saving && setMedicalHistoryOpen(false)}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader><DialogTitle>Medical history</DialogTitle><DialogDescription>Conditions, allergies, and medications recorded for this patient.</DialogDescription></DialogHeader>
+        <div className="grid gap-6 md:grid-cols-3">
+          {RECORD_TYPES.map(({ value, label }) => <MedicalRecordList key={value} label={label} records={initialMedicalRecords.filter((record) => record.recordType === value)} canWrite={canWriteClinical} onAdd={() => setMedicalRecordDialog(value)} onVoid={setVoidRecord} />)}
+        </div>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={treatmentHistoryOpen} onOpenChange={(next) => !next && !saving && setTreatmentHistoryOpen(false)}>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader><DialogTitle>Treatment history</DialogTitle><DialogDescription>Earlier encounters with their notes and prescriptions.</DialogDescription></DialogHeader>
+        {loadFailed ? <p role="alert" className="border-y py-3 text-sm text-destructive">Clinical records could not be loaded. Refresh to try again.</p> : <>
+          {initialEncounters.length === 0 ? <p className="text-sm text-muted-foreground">No encounters recorded.</p> : <>
+            <div className="hidden overflow-x-auto border md:block"><table className="w-full text-left text-sm"><thead className="border-b bg-muted/30 text-xs text-muted-foreground"><tr><th className="px-3 py-2 font-medium">Opened</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Treating provider</th><th className="px-3 py-2 font-medium">Action</th></tr></thead><tbody>{initialEncounters.map((encounter) => <tr key={encounter.encounterId} className="border-b last:border-0"><td className="px-3 py-3 tabular-nums">{encounter.createdAt.slice(0, 10)}</td><td className="px-3 py-3">{encounter.status}</td><td className="px-3 py-3">{providerName(encounter.treatingProviderId)}</td><td className="px-3 py-3"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></td></tr>)}</tbody></table></div>
+            <ul className="divide-y border-y md:hidden">{initialEncounters.map((encounter) => <li key={encounter.encounterId} className="py-3"><div className="flex items-center justify-between gap-3"><p className="font-medium text-sm">{encounter.status} encounter</p><p className="text-xs text-muted-foreground">{encounter.createdAt.slice(0, 10)}</p></div><p className="mt-1 text-sm text-muted-foreground">{providerName(encounter.treatingProviderId)}</p><div className="mt-2"><Button type="button" variant="outline" className="min-h-11" onClick={() => toggleEncounter(encounter)}>{expandedEncounterId === encounter.encounterId ? "Close notes" : "View notes"}</Button></div></li>)}</ul>
+          </>}
+          {loadingEncounterId && <p className="text-sm text-muted-foreground">Loading encounter…</p>}
+          {expandedDetail && <EncounterDetail detail={expandedDetail} canWriteClinical={canWriteClinical} saving={saving} openNote={(encounterId) => setNoteDialog({ mode: "create", encounterId })} editNote={(encounterId, note) => setNoteDialog({ mode: "edit", encounterId, note })} openAmend={(encounterId, note) => setAmendNote({ encounterId, note })} openPrescriptions={(encounterId) => setPrescriptionEncounterId(encounterId)} finalizeNote={finalizeNote} finalizePrescription={finalizePrescription} requestFinalizeEncounter={setFinalizeEncounter} initialProcedureSummaries={initialProcedureSummaries} canReadBilling={canReadBilling} patientId={patientId} actingBranchId={actingBranchId} />}
+        </>}
+      </DialogContent>
+    </Dialog>
     {noteDialog && <NoteDialog state={noteDialog} saving={saving} error={error} close={() => setNoteDialog(null)} save={saveNote} />}
     {amendNote && <AmendDialog note={amendNote.note} saving={saving} error={error} close={() => setAmendNote(null)} save={saveAmend} />}
     {prescriptionEncounterId && <PrescriptionDialog saving={saving} error={error} close={() => setPrescriptionEncounterId(null)} save={savePrescription} />}
@@ -297,7 +345,7 @@ function EncounterDetail({ detail, canWriteClinical, saving, openNote, editNote,
   openPrescriptions(encounterId: string): void;
   finalizeNote(encounterId: string, note: ClinicalNote): Promise<void>;
   finalizePrescription(encounterId: string, prescription: { prescriptionId: string; version: number }): Promise<void>;
-  requestFinalizeEncounter(encounter: ClinicalEncounter): void;
+  requestFinalizeEncounter(encounter: { encounterId: string; version: number }): void;
   initialProcedureSummaries?: Record<string, import("@/lib/billing/types").ProcedurePaymentSummary>;
   canReadBilling?: boolean;
   patientId: string;
@@ -321,8 +369,10 @@ function NoteItem({ note, canWrite, saving, edit, amend, finalize }: { note: Cli
   </li>;
 }
 
-function OpenEncounterDialog({ saving, error, close, save }: { saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {
-  return <Dialog open onOpenChange={(next) => !next && !saving && close()}><DialogContent><DialogHeader><DialogTitle>Open encounter</DialogTitle><DialogDescription>Records a new treatment encounter under the signed-in dentist’s provider profile.</DialogDescription></DialogHeader><form action={save} className="grid gap-4">{error && <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p>}<p className="text-sm text-muted-foreground">The treating dentist is recorded automatically from your signed-in account.</p><DialogFooter><Button type="button" variant="outline" onClick={close} disabled={saving}>Cancel</Button><Button type="submit" disabled={saving}>{saving && <LoaderCircle className="animate-spin" aria-hidden="true" />}Open encounter</Button></DialogFooter></form></DialogContent></Dialog>;
+function PeriodontalModePanel() {
+  return <div className="rounded-md border px-3 py-4 text-sm text-muted-foreground">
+    Periodontal charting is entered from the current-status chart. Open <span className="font-medium text-foreground">Open periodontal entry</span> there to record six-site measurements.
+  </div>;
 }
 
 function NoteDialog({ state, saving, error, close, save }: { state: NonNullable<NoteDialogState>; saving: boolean; error: string | null; close(): void; save(data: FormData): Promise<void> }) {
