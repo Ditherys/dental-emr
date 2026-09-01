@@ -10,14 +10,17 @@ import { OdontogramServiceError, mapOdontogramRpcError } from "./errors";
 import {
   amendCurrentBridge,
   amendPeriodontalExamination,
+  amendPeriodontalExaminationV2,
   amendToothClinicalEntry,
   completeTreatmentPlanItemWithCharge,
   correctTreatmentPlanItemExecution,
+  createPeriodontalDraft,
   createPeriodontalExamination,
   createPlanBridgeDesign,
   createPlanImplantDesign,
   createToothCondition,
   finalizePeriodontalExamination,
+  finalizePeriodontalExaminationV2,
   getPatientOdontogram,
   listToothConditions,
   recordCurrentBridge,
@@ -28,6 +31,7 @@ import {
   recordVisitToothFindings,
   resolveLegacyOdontogramEntry,
   savePeriodontalMeasurements,
+  savePeriodontalMeasurementsV2,
   transitionTreatmentPlanItemExecution,
   updateDraftPlanBridgeDesign,
   updateDraftPlanImplantDesign,
@@ -929,5 +933,154 @@ describe("treatment event service boundary", () => {
 
     rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
     await expect(recordTreatmentEvent(performed)).rejects.toEqual(new OdontogramServiceError("STALE_VERSION"));
+  });
+});
+
+describe("versioned periodontal workflow service boundary", () => {
+  const idempotencyKey = "cc000000-0000-0000-0000-00000000000c";
+  const derivedRow = {
+    examination_id: examinationId,
+    patient_id: patientId,
+    version: 3,
+    derived_diagnosis: "GINGIVITIS",
+    confirmed_diagnosis: "GINGIVITIS",
+    overridden: false,
+  };
+
+  beforeEach(() => {
+    rpc.mockReset();
+  });
+
+  it("sends no organization, provider, author or encounter when opening a draft", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ examination_id: examinationId, patient_id: patientId, encounter_id: encounterId, version: 1, resumed: false }],
+      error: null,
+    });
+
+    await expect(createPeriodontalDraft({
+      actingBranchId: branchId,
+      patientId,
+      examinationKind: "INITIAL",
+      idempotencyKey,
+    })).resolves.toEqual({
+      examinationId,
+      patientId,
+      encounterId,
+      version: 1,
+      resumed: false,
+    });
+
+    const [, args] = rpc.mock.calls[0];
+    expect(Object.keys(args).sort()).toEqual([
+      "p_acting_branch_id",
+      "p_examination_kind",
+      "p_examined_at",
+      "p_idempotency_key",
+      "p_patient_id",
+    ]);
+  });
+
+  it("keeps an omitted measurement absent from the batch rather than sending an invented zero", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{
+        examination_id: examinationId, patient_id: patientId, version: 2,
+        saved_sites: 1, saved_plaque: 0, saved_tooth: 0, saved_furcation: 0,
+      }],
+      error: null,
+    });
+
+    await savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { sites: [{ tooth_fdi: "16", site: "MB", probing_depth_mm: 3 }] },
+      idempotencyKey,
+    });
+
+    const [, args] = rpc.mock.calls[0];
+    const site = (args.p_measurement_batch as { sites: Record<string, unknown>[] }).sites[0];
+    expect(site).not.toHaveProperty("gingival_margin_mm");
+    expect(site).not.toHaveProperty("bleeding_on_probing");
+    expect(site).not.toHaveProperty("suppuration");
+    // The acting branch is route context for the action's own permission check;
+    // the RPC re-derives it from the examination and is never told.
+    expect(args).not.toHaveProperty("p_acting_branch_id");
+  });
+
+  it("refuses a batch above the row bound before any round trip", async () => {
+    const sites = Array.from({ length: 201 }, () => ({ tooth_fdi: "16", site: "MB", probing_depth_mm: 3 }));
+    await expect(savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { sites },
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unknown batch section before any round trip", async () => {
+    await expect(savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { sites: [], unexpected: [] },
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps a stale autosave to a typed conflict without carrying measurement content", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "stale version" } });
+    await expect(savePeriodontalMeasurementsV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 1,
+      batch: { sites: [{ tooth_fdi: "16", site: "MB", probing_depth_mm: 9 }] },
+      idempotencyKey,
+    })).rejects.toEqual(new OdontogramServiceError("STALE_VERSION"));
+  });
+
+  it("returns the server-recomputed diagnosis alongside the confirmed one", async () => {
+    rpc.mockResolvedValueOnce({ data: [derivedRow], error: null });
+
+    await expect(finalizePeriodontalExaminationV2({
+      actingBranchId: branchId,
+      examinationId,
+      expectedVersion: 2,
+      confirmation: { diagnosis: "GINGIVITIS" },
+      idempotencyKey,
+    })).resolves.toEqual({
+      examinationId,
+      patientId,
+      version: 3,
+      derivedDiagnosis: "GINGIVITIS",
+      confirmedDiagnosis: "GINGIVITIS",
+      overridden: false,
+    });
+  });
+
+  it("refuses an amendment reason that is only whitespace before any round trip", async () => {
+    await expect(amendPeriodontalExaminationV2({
+      actingBranchId: branchId,
+      predecessorExaminationId: examinationId,
+      reason: "   ",
+      idempotencyKey,
+    })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("reports whether an amendment adopted an existing successor", async () => {
+    rpc.mockResolvedValueOnce({
+      data: [{ examination_id: entryId, patient_id: patientId, encounter_id: encounterId, version: 8, adopted: true }],
+      error: null,
+    });
+
+    await expect(amendPeriodontalExaminationV2({
+      actingBranchId: branchId,
+      predecessorExaminationId: examinationId,
+      reason: "The distal probing depths were transcribed from the wrong quadrant.",
+      idempotencyKey,
+    })).resolves.toMatchObject({ examinationId: entryId, adopted: true, version: 8 });
   });
 });

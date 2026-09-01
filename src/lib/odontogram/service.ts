@@ -10,28 +10,39 @@ import {
   amendCurrentBridgeInputSchema,
   amendCurrentImplantComponentInputSchema,
   amendPeriodontalExaminationInputSchema,
+  amendPeriodontalExaminationV2InputSchema,
   amendToothClinicalEntryInputSchema,
   bridgeMutationRowSchema,
   completeTreatmentPlanItemWithChargeInputSchema,
   correctTreatmentPlanItemExecutionInputSchema,
+  comparePeriodontalExaminationsInputSchema,
+  createPeriodontalDraftInputSchema,
   createPeriodontalExaminationInputSchema,
   createPlanBridgeDesignInputSchema,
   createPlanImplantDesignInputSchema,
   createToothConditionInputSchema,
   finalizePeriodontalExaminationInputSchema,
+  finalizePeriodontalExaminationV2InputSchema,
   getPatientOdontogramInputSchema,
   implantMutationRowSchema,
   legacyResolutionRowSchema,
   listToothConditionsInputSchema,
   odontogramEntityPatientRowSchema,
   patientOdontogramRowSchema,
+  periodontalAmendmentRowSchema,
+  periodontalDraftRowSchema,
   periodontalExaminationMutationRowSchema,
+  periodontalFinalizeRowSchema,
+  periodontalProjectionRowSchema,
   periodontalSaveRowSchema,
+  periodontalSaveV2RowSchema,
+  periodontalWorkspaceInputSchema,
   recordCurrentBridgeInputSchema,
   recordCurrentImplantComponentInputSchema,
   recordToothClinicalEntryInputSchema,
   resolveLegacyOdontogramEntryInputSchema,
   savePeriodontalMeasurementsInputSchema,
+  savePeriodontalMeasurementsV2InputSchema,
   toothClinicalEntryMutationRowSchema,
   toothConditionMutationRowSchema,
   toothConditionRowSchema,
@@ -662,6 +673,106 @@ export async function amendPeriodontalExamination(input: unknown) {
   })));
   const patientId = await resolveMutationPatient(value.actingBranchId, "PERIODONTAL_EXAMINATION", row.examination_id);
   return { examinationId: row.examination_id, patientId, version: row.version };
+}
+
+// ---------------------------------------------------------------------------
+// Periodontal v2 — the versioned examination workflows
+//
+// Each boundary returns its own authoritative patient, so the caller revalidates
+// the patient the server resolved rather than one the browser claimed. None of
+// them accepts an organization, provider, author or encounter.
+// ---------------------------------------------------------------------------
+
+export async function createPeriodontalDraft(input: unknown) {
+  const value = createPeriodontalDraftInputSchema.parse(input);
+  const row = periodontalDraftRowSchema.parse(firstRow(await callRpc("create_periodontal_draft_v2", {
+    p_acting_branch_id: value.actingBranchId,
+    p_patient_id: value.patientId,
+    p_examination_kind: value.examinationKind,
+    p_examined_at: value.examinedAt ?? null,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    examinationId: row.examination_id,
+    patientId: row.patient_id,
+    encounterId: row.encounter_id,
+    version: row.version,
+    resumed: row.resumed,
+  };
+}
+
+export async function savePeriodontalMeasurementsV2(input: unknown) {
+  const value = savePeriodontalMeasurementsV2InputSchema.parse(input);
+  const row = periodontalSaveV2RowSchema.parse(firstRow(await callRpc("save_periodontal_measurements_v2", {
+    p_examination_id: value.examinationId,
+    p_expected_version: value.expectedVersion,
+    p_measurement_batch: value.batch,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    examinationId: row.examination_id,
+    patientId: row.patient_id,
+    version: row.version,
+    savedSites: row.saved_sites,
+    savedPlaque: row.saved_plaque,
+    savedTooth: row.saved_tooth,
+    savedFurcation: row.saved_furcation,
+  };
+}
+
+export async function finalizePeriodontalExaminationV2(input: unknown) {
+  const value = finalizePeriodontalExaminationV2InputSchema.parse(input);
+  const row = periodontalFinalizeRowSchema.parse(firstRow(await callRpc("finalize_periodontal_examination_v2", {
+    p_examination_id: value.examinationId,
+    p_expected_version: value.expectedVersion,
+    p_confirmation: value.confirmation,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    examinationId: row.examination_id,
+    patientId: row.patient_id,
+    version: row.version,
+    derivedDiagnosis: row.derived_diagnosis,
+    confirmedDiagnosis: row.confirmed_diagnosis,
+    overridden: row.overridden,
+  };
+}
+
+export async function amendPeriodontalExaminationV2(input: unknown) {
+  const value = amendPeriodontalExaminationV2InputSchema.parse(input);
+  const row = periodontalAmendmentRowSchema.parse(firstRow(await callRpc("amend_periodontal_examination_v2", {
+    p_predecessor_examination_id: value.predecessorExaminationId,
+    p_reason: value.reason,
+    p_idempotency_key: value.idempotencyKey,
+  })));
+  return {
+    examinationId: row.examination_id,
+    patientId: row.patient_id,
+    encounterId: row.encounter_id,
+    version: row.version,
+    adopted: row.adopted,
+  };
+}
+
+export async function getPeriodontalWorkspace(input: unknown) {
+  const value = periodontalWorkspaceInputSchema.parse(input);
+  const row = periodontalProjectionRowSchema.parse(firstRow(await callRpc("get_periodontal_workspace_v2", {
+    p_patient_id: value.patientId,
+    p_branch_id: value.actingBranchId,
+    p_examination_id: value.examinationId ?? null,
+  })));
+  return row.payload;
+}
+
+export async function comparePeriodontalExaminations(input: unknown) {
+  const value = comparePeriodontalExaminationsInputSchema.parse(input);
+  const row = periodontalProjectionRowSchema.parse(firstRow(await callRpc("compare_periodontal_examinations_v2", {
+    p_patient_id: value.patientId,
+    p_branch_id: value.actingBranchId,
+    p_left_examination_id: value.leftExaminationId,
+    p_right_examination_id: value.rightExaminationId,
+  })));
+  return row.payload;
 }
 
 // ---------------------------------------------------------------------------

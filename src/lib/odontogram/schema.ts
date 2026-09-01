@@ -407,6 +407,151 @@ export const amendPeriodontalExaminationInputSchema = z.object({
 }).strict();
 
 // ---------------------------------------------------------------------------
+// Periodontal v2: the versioned examination workflows
+//
+// Every bound below is mirrored by the SQL boundary. The browser copy exists to
+// give a clinician a useful error before a round trip, never to be the place
+// the rule is enforced. The action boundary accepts route-context ids and a
+// request key only: no organization, provider, author or encounter.
+// ---------------------------------------------------------------------------
+
+export const PERIO_BATCH_MAX_ROWS = 200;
+export const PERIO_BATCH_MAX_BYTES = 65536;
+
+export const createPeriodontalDraftInputSchema = z.object({
+  actingBranchId: databaseUuid,
+  patientId: databaseUuid,
+  examinationKind: perioExaminationKindSchema,
+  examinedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  idempotencyKey: databaseUuid,
+}).strict();
+
+const perioSiteBatchRowSchema = z.object({
+  tooth_fdi: toothCodeSchema,
+  site: z.enum(["MB", "B", "DB", "ML", "L", "DL"]),
+  probing_depth_mm: z.number().int().min(1).max(15),
+  // Optional means "not measured". It is never sent as 0 to mean unknown, and
+  // the SQL boundary stores the absence as NULL.
+  gingival_margin_mm: z.number().int().min(-10).max(20).optional(),
+  bleeding_on_probing: z.boolean().optional(),
+  suppuration: z.boolean().optional(),
+  implant_context: z.boolean().optional(),
+}).strict();
+
+const perioPlaqueBatchRowSchema = z.object({
+  tooth_fdi: toothCodeSchema,
+  surface: z.enum(["MESIAL", "DISTAL", "BUCCAL", "LINGUAL"]),
+  plaque_present: z.boolean().optional(),
+  plaque_index: z.number().int().min(0).max(3).optional(),
+  gingival_index: z.number().int().min(0).max(3).optional(),
+  modified_plaque_index: z.number().int().min(0).max(3).optional(),
+  modified_bleeding_index: z.number().int().min(0).max(3).optional(),
+}).strict();
+
+const perioToothBatchRowSchema = z.object({
+  tooth_fdi: toothCodeSchema,
+  tooth_present: z.boolean().optional(),
+  implant_context: z.boolean().optional(),
+  mobility_miller: z.enum(["M0", "M1", "M2", "M3"]).optional(),
+  notes: z.string().max(2000).optional(),
+  keratinized_gingiva_mm: z.number().min(0).max(15).optional(),
+  gingival_thickness_mm: z.number().min(0.1).max(9.9).optional(),
+  gingival_phenotype: perioGingivalPhenotypeSchema.optional(),
+  miller_recession_class: perioMillerRecessionClassSchema.optional(),
+  cej_visible: z.boolean().optional(),
+  root_concavity: z.boolean().optional(),
+}).strict();
+
+const perioFurcationBatchRowSchema = z.object({
+  tooth_fdi: toothCodeSchema,
+  entrance: z.enum(["mesial", "distal", "buccal", "lingual"]),
+  grade: z.number().int().min(1).max(4),
+}).strict();
+
+const perioRiskInputSchema = z.object({
+  age_years_snapshot: z.number().int().min(0).max(130).optional(),
+  smoking_status: perioSmokingStatusSchema.optional(),
+  cigarettes_per_day: z.number().int().min(0).max(100).optional(),
+  diabetes_status: perioDiabetesStatusSchema.optional(),
+  hba1c_percent: z.number().min(3).max(20).optional(),
+  teeth_lost_to_periodontitis: z.number().int().min(0).max(32).optional(),
+  radiographic_bone_loss_percent: z.number().int().min(0).max(100).optional(),
+}).strict();
+
+export const perioMeasurementBatchSchema = z.object({
+  sites: z.array(perioSiteBatchRowSchema).max(PERIO_BATCH_MAX_ROWS).optional(),
+  plaque: z.array(perioPlaqueBatchRowSchema).max(PERIO_BATCH_MAX_ROWS).optional(),
+  tooth: z.array(perioToothBatchRowSchema).max(PERIO_BATCH_MAX_ROWS).optional(),
+  furcation: z.array(perioFurcationBatchRowSchema).max(PERIO_BATCH_MAX_ROWS).optional(),
+  risk: perioRiskInputSchema.optional(),
+}).strict();
+
+export const savePeriodontalMeasurementsV2InputSchema = z
+  .object({
+    // Route context only. The SQL boundary re-derives the acting branch from
+    // the examination's own encounter and authorizes against that, so this
+    // value can widen nothing; it exists so the action can refuse an
+    // unauthorized caller before a round trip.
+    actingBranchId: databaseUuid,
+    examinationId: databaseUuid,
+    expectedVersion: z.number().int().positive(),
+    batch: perioMeasurementBatchSchema,
+    idempotencyKey: databaseUuid,
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const total =
+      (value.batch.sites?.length ?? 0) +
+      (value.batch.plaque?.length ?? 0) +
+      (value.batch.tooth?.length ?? 0) +
+      (value.batch.furcation?.length ?? 0);
+    if (total > PERIO_BATCH_MAX_ROWS) {
+      ctx.addIssue({ code: "custom", path: ["batch"], message: "batch too large" });
+    }
+    // The byte bound the SQL boundary enforces, checked here so an oversized
+    // autosave fails before it is sent rather than after.
+    if (JSON.stringify(value.batch).length > PERIO_BATCH_MAX_BYTES) {
+      ctx.addIssue({ code: "custom", path: ["batch"], message: "batch too large" });
+    }
+  });
+
+export const perioConfirmationSchema = z.object({
+  diagnosis: perioDiagnosisSchema,
+  stage: perioStageSchema.optional(),
+  grade: perioGradeSchema.optional(),
+  extent: perioExtentSchema.optional(),
+  override_reason: z.string().min(1).max(2000).optional(),
+}).strict();
+
+export const finalizePeriodontalExaminationV2InputSchema = z.object({
+  actingBranchId: databaseUuid,
+  examinationId: databaseUuid,
+  expectedVersion: z.number().int().positive(),
+  confirmation: perioConfirmationSchema,
+  idempotencyKey: databaseUuid,
+}).strict();
+
+export const amendPeriodontalExaminationV2InputSchema = z.object({
+  actingBranchId: databaseUuid,
+  predecessorExaminationId: databaseUuid,
+  reason: z.string().trim().min(1).max(2000),
+  idempotencyKey: databaseUuid,
+}).strict();
+
+export const periodontalWorkspaceInputSchema = z.object({
+  patientId: databaseUuid,
+  actingBranchId: databaseUuid,
+  examinationId: databaseUuid.nullable().optional(),
+}).strict();
+
+export const comparePeriodontalExaminationsInputSchema = z.object({
+  patientId: databaseUuid,
+  actingBranchId: databaseUuid,
+  leftExaminationId: databaseUuid,
+  rightExaminationId: databaseUuid,
+}).strict();
+
+// ---------------------------------------------------------------------------
 // Execution schemas
 // ---------------------------------------------------------------------------
 
@@ -494,6 +639,48 @@ export const periodontalSaveRowSchema = z.object({
   saved_plaque: z.number().int().min(0),
   saved_tooth: z.number().int().min(0),
   saved_furcation: z.number().int().min(0),
+}).strict();
+
+// The v2 boundaries return their own authoritative patient, so no follow-up
+// entity-resolution round trip is needed to know which patient page to
+// revalidate.
+export const periodontalDraftRowSchema = z.object({
+  examination_id: databaseUuid,
+  patient_id: databaseUuid,
+  encounter_id: databaseUuid,
+  version: z.number().int().positive(),
+  resumed: z.boolean(),
+}).strict();
+
+export const periodontalSaveV2RowSchema = z.object({
+  examination_id: databaseUuid,
+  patient_id: databaseUuid,
+  version: z.number().int().positive(),
+  saved_sites: z.number().int().min(0),
+  saved_plaque: z.number().int().min(0),
+  saved_tooth: z.number().int().min(0),
+  saved_furcation: z.number().int().min(0),
+}).strict();
+
+export const periodontalFinalizeRowSchema = z.object({
+  examination_id: databaseUuid,
+  patient_id: databaseUuid,
+  version: z.number().int().positive(),
+  derived_diagnosis: perioDiagnosisSchema.nullable(),
+  confirmed_diagnosis: perioDiagnosisSchema,
+  overridden: z.boolean(),
+}).strict();
+
+export const periodontalAmendmentRowSchema = z.object({
+  examination_id: databaseUuid,
+  patient_id: databaseUuid,
+  encounter_id: databaseUuid,
+  version: z.number().int().positive(),
+  adopted: z.boolean(),
+}).strict();
+
+export const periodontalProjectionRowSchema = z.object({
+  payload: z.unknown(),
 }).strict();
 
 export const treatmentExecutionTransitionRowSchema = z.object({

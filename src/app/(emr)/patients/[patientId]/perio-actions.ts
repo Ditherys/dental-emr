@@ -5,28 +5,37 @@ import { revalidatePath } from "next/cache";
 import { AuthorizationError, requirePermission } from "@/lib/authorization";
 import {
   amendPeriodontalExaminationInputSchema,
+  amendPeriodontalExaminationV2InputSchema,
+  createPeriodontalDraftInputSchema,
   createPeriodontalExaminationInputSchema,
   finalizePeriodontalExaminationInputSchema,
+  finalizePeriodontalExaminationV2InputSchema,
   savePeriodontalMeasurementsInputSchema,
+  savePeriodontalMeasurementsV2InputSchema,
 } from "@/lib/odontogram/schema";
 import { OdontogramServiceError, mapOdontogramRpcError } from "@/lib/odontogram/errors";
 import {
   amendPeriodontalExamination,
+  amendPeriodontalExaminationV2,
+  createPeriodontalDraft,
   createPeriodontalExamination,
   finalizePeriodontalExamination,
+  finalizePeriodontalExaminationV2,
   savePeriodontalMeasurements,
+  savePeriodontalMeasurementsV2,
 } from "@/lib/odontogram/service";
 
 type PerioCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "CONFLICT" | "FAILED";
-export type PerioActionResult = { ok: true; id?: string; version?: number } | { ok: false; code: PerioCode; fieldErrors?: Record<string, string[]> };
+type PerioFailure = { ok: false; code: PerioCode; fieldErrors?: Record<string, string[]> };
+export type PerioActionResult = { ok: true; id?: string; version?: number } | PerioFailure;
 
-function invalidResult(schema: { safeParse(i: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown): PerioActionResult | null {
+function invalidResult(schema: { safeParse(i: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown): PerioFailure | null {
   const parsed = schema.safeParse(input);
   if (parsed.success) return null;
   return { ok: false, code: "INVALID_INPUT", fieldErrors: parsed.error?.flatten().fieldErrors };
 }
 
-function mapError(error: unknown): PerioActionResult {
+function mapError(error: unknown): PerioFailure {
   if (error instanceof AuthorizationError) return { ok: false, code: "NOT_AUTHORIZED" };
   if (error instanceof OdontogramServiceError) return { ok: false, code: error.code };
   return { ok: false, code: mapOdontogramRpcError(error).code };
@@ -88,5 +97,88 @@ export async function amendPeriodontalExaminationAction(input: unknown): Promise
     const res = await amendPeriodontalExamination(v);
     revalidateAuthoritativePatient(res.patientId);
     return { ok: true, id: res.examinationId, version: res.version };
+  } catch (e) { return mapError(e); }
+}
+
+// ---------------------------------------------------------------------------
+// The versioned periodontal workflows
+//
+// Every result below carries identities, a version, and lifecycle flags only.
+// A probing depth, an attachment level, a diagnosis narrative and an override
+// reason are clinical content and are never placed in an action result, a
+// thrown message, or a log line; a conflict is reported as a typed code the
+// caller can retry on.
+// ---------------------------------------------------------------------------
+
+export type PerioWorkflowResult =
+  | {
+      ok: true;
+      id: string;
+      version: number;
+      encounterId?: string;
+      resumed?: boolean;
+      adopted?: boolean;
+      overridden?: boolean;
+    }
+  | PerioFailure;
+
+export async function createPeriodontalDraftAction(input: unknown): Promise<PerioWorkflowResult> {
+  const inv = invalidResult(createPeriodontalDraftInputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = createPeriodontalDraftInputSchema.parse(input);
+    await authorizePerioWrite(v.actingBranchId);
+    const res = await createPeriodontalDraft(v);
+    revalidateAuthoritativePatient(res.patientId);
+    return {
+      ok: true,
+      id: res.examinationId,
+      version: res.version,
+      encounterId: res.encounterId,
+      resumed: res.resumed,
+    };
+  } catch (e) { return mapError(e); }
+}
+
+export async function savePeriodontalMeasurementsV2Action(input: unknown): Promise<PerioWorkflowResult> {
+  const inv = invalidResult(savePeriodontalMeasurementsV2InputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = savePeriodontalMeasurementsV2InputSchema.parse(input);
+    await authorizePerioWrite(v.actingBranchId);
+    const res = await savePeriodontalMeasurementsV2(v);
+    revalidateAuthoritativePatient(res.patientId);
+    return { ok: true, id: res.examinationId, version: res.version };
+  } catch (e) { return mapError(e); }
+}
+
+export async function finalizePeriodontalExaminationV2Action(input: unknown): Promise<PerioWorkflowResult> {
+  const inv = invalidResult(finalizePeriodontalExaminationV2InputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = finalizePeriodontalExaminationV2InputSchema.parse(input);
+    await authorizePerioWrite(v.actingBranchId);
+    const res = await finalizePeriodontalExaminationV2(v);
+    revalidateAuthoritativePatient(res.patientId);
+    return { ok: true, id: res.examinationId, version: res.version, overridden: res.overridden };
+  } catch (e) { return mapError(e); }
+}
+
+export async function amendPeriodontalExaminationV2Action(input: unknown): Promise<PerioWorkflowResult> {
+  const inv = invalidResult(amendPeriodontalExaminationV2InputSchema, input);
+  if (inv) return inv;
+  try {
+    const v = amendPeriodontalExaminationV2InputSchema.parse(input);
+    await authorizePerioWrite(v.actingBranchId);
+    await requirePermission({ permission: "patient.clinical.correct", branchId: v.actingBranchId });
+    const res = await amendPeriodontalExaminationV2(v);
+    revalidateAuthoritativePatient(res.patientId);
+    return {
+      ok: true,
+      id: res.examinationId,
+      version: res.version,
+      encounterId: res.encounterId,
+      adopted: res.adopted,
+    };
   } catch (e) { return mapError(e); }
 }

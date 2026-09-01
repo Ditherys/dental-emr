@@ -7983,6 +7983,20 @@ export type Database = {
           version: number
         }[]
       }
+      amend_periodontal_examination_v2: {
+        Args: {
+          p_idempotency_key: string
+          p_predecessor_examination_id: string
+          p_reason: string
+        }
+        Returns: {
+          adopted: boolean
+          encounter_id: string
+          examination_id: string
+          patient_id: string
+          version: number
+        }[]
+      }
       amend_procedure_installment_schedule: {
         Args: {
           p_acting_branch_id: string
@@ -8212,6 +8226,17 @@ export type Database = {
         }
         Returns: {
           payment_id: string
+        }[]
+      }
+      compare_periodontal_examinations_v2: {
+        Args: {
+          p_branch_id: string
+          p_left_examination_id: string
+          p_patient_id: string
+          p_right_examination_id: string
+        }
+        Returns: {
+          payload: Json
         }[]
       }
       complete_clinical_photo_derivatives: {
@@ -8635,6 +8660,22 @@ export type Database = {
           version: number
         }[]
       }
+      create_periodontal_draft_v2: {
+        Args: {
+          p_acting_branch_id: string
+          p_examination_kind: string
+          p_examined_at: string
+          p_idempotency_key: string
+          p_patient_id: string
+        }
+        Returns: {
+          encounter_id: string
+          examination_id: string
+          patient_id: string
+          resumed: boolean
+          version: number
+        }[]
+      }
       create_periodontal_examination: {
         Args: {
           p_acting_branch_id: string
@@ -8941,6 +8982,22 @@ export type Database = {
           version: number
         }[]
       }
+      finalize_periodontal_examination_v2: {
+        Args: {
+          p_confirmation: Json
+          p_examination_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+        }
+        Returns: {
+          confirmed_diagnosis: string
+          derived_diagnosis: string
+          examination_id: string
+          overridden: boolean
+          patient_id: string
+          version: number
+        }[]
+      }
       finalize_prescription: {
         Args: {
           p_acting_branch_id: string
@@ -9138,6 +9195,16 @@ export type Database = {
         Returns: {
           data: Json
           entry_id: string
+        }[]
+      }
+      get_periodontal_workspace_v2: {
+        Args: {
+          p_branch_id: string
+          p_examination_id?: string
+          p_patient_id: string
+        }
+        Returns: {
+          payload: Json
         }[]
       }
       get_procedure_configuration: {
@@ -10437,6 +10504,23 @@ export type Database = {
         }
         Returns: {
           examination_id: string
+          saved_furcation: number
+          saved_plaque: number
+          saved_sites: number
+          saved_tooth: number
+          version: number
+        }[]
+      }
+      save_periodontal_measurements_v2: {
+        Args: {
+          p_examination_id: string
+          p_expected_version: number
+          p_idempotency_key: string
+          p_measurement_batch: Json
+        }
+        Returns: {
+          examination_id: string
+          patient_id: string
           saved_furcation: number
           saved_plaque: number
           saved_sites: number

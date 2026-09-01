@@ -62,6 +62,7 @@ insert into approved_grant_objects (signature) values
   ('public.amend_clinical_note(uuid,uuid,integer,text)'),
   ('public.amend_current_bridge(uuid,uuid,integer,jsonb)'),
   ('public.amend_current_implant_component(uuid,uuid,integer,jsonb)'),
+  ('public.amend_periodontal_examination_v2(uuid,text,uuid)'),
   ('public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)'),
   ('public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)'),
   ('public.approve_charge_direct_cost(uuid,uuid,text,bigint,text,text)'),
@@ -82,6 +83,7 @@ insert into approved_grant_objects (signature) values
   ('public.claim_due_calendar_syncs(uuid,integer)'),
   ('public.claim_due_communications(uuid,integer)'),
   ('public.clear_postdated_cheque(uuid,uuid,text)'),
+  ('public.compare_periodontal_examinations_v2(uuid,uuid,uuid,uuid)'),
   ('public.complete_clinical_photo_derivatives(uuid,uuid,uuid,text,bigint,jsonb)'),
   ('public.complete_recall(uuid,uuid,integer)'),
   ('public.complete_treatment_case(uuid,uuid,uuid,integer,uuid[],bigint,jsonb,text)'),
@@ -107,6 +109,7 @@ insert into approved_grant_objects (signature) values
   ('public.create_patient_medical_record(uuid,uuid,text,jsonb)'),
   ('public.create_patient_referral(uuid,uuid,jsonb)'),
   ('public.create_patient_relationship(uuid,uuid,uuid,text,text,text,text,boolean,boolean,boolean)'),
+  ('public.create_periodontal_draft_v2(uuid,uuid,text,timestamptz,uuid)'),
   ('public.create_periodontal_examination(uuid,uuid,uuid,text)'),
   ('public.create_plan_bridge_design(uuid,uuid,uuid,jsonb)'),
   ('public.create_plan_implant_design(uuid,uuid,uuid,jsonb)'),
@@ -134,6 +137,7 @@ insert into approved_grant_objects (signature) values
   ('public.finalize_clinical_encounter(uuid,uuid,integer)'),
   ('public.finalize_clinical_note(uuid,uuid,integer)'),
   ('public.finalize_periodontal_examination(uuid,uuid,integer)'),
+  ('public.finalize_periodontal_examination_v2(uuid,integer,jsonb,uuid)'),
   ('public.finalize_prescription(uuid,uuid,integer)'),
   ('public.finalize_workforce_invitation(uuid, uuid, uuid)'),
   ('public.find_available_slots(uuid,uuid,timestamptz,timestamptz,integer,integer)'),
@@ -154,6 +158,7 @@ insert into approved_grant_objects (signature) values
   ('public.get_patient_detail(uuid,uuid)'),
   ('public.get_patient_odontogram(uuid,uuid)'),
   ('public.get_patient_odontogram_v3(uuid,uuid)'),
+  ('public.get_periodontal_workspace_v2(uuid,uuid,uuid)'),
   ('public.get_procedure_configuration(uuid, uuid)'),
   ('public.get_provider_configuration(uuid, uuid)'),
   ('public.get_public_site(text)'),
@@ -245,6 +250,7 @@ insert into approved_grant_objects (signature) values
   ('public.review_booking_request(uuid,uuid,integer,text,text)'),
   ('public.revoke_workforce_invitation(uuid, uuid)'),
   ('public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)'),
+  ('public.save_periodontal_measurements_v2(uuid,integer,jsonb,uuid)'),
   ('public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'),
   ('public.search_patients(uuid, text, date, text, text, integer, integer)'),
   ('public.set_branch_membership(uuid, uuid, text)'),
@@ -294,7 +300,7 @@ insert into approved_grant_objects (signature) values
 
 select extensions.is(
   (select pg_catalog.count(*)::integer from approved_grant_objects),
-  251,
+  257,
   'the approved-grant registry projection carries every unmarked function grant'
 );
 

@@ -819,6 +819,20 @@ const TREATMENT_PLAN_ACTOR_PROVIDER_GRANTS_MIGRATION =
 const TREATMENT_PLAN_AMENDMENT_GRANTS_MIGRATION =
   "20260901010143_treatment_plan_amendment_grants.sql";
 
+// ---------------------------------------------------------------------------
+// Periodontal - the versioned examination workflows (task 11)
+// ---------------------------------------------------------------------------
+
+// Neither object migration revokes a registered grant. 20260901010240 repairs
+// three applied periodontal boundaries in place under their existing
+// signatures, so their privileges are untouched and no entry below needs a
+// supersede pivot. Had one been revoked, the pivot would have to name that
+// revoking object migration, never one of these grants files.
+const FULL_PERIODONTAL_RPCS_GRANTS_MIGRATION =
+  "20260901010241_full_periodontal_rpcs_grants.sql";
+const FULL_PERIODONTAL_PROJECTION_GRANTS_MIGRATION =
+  "20260901010243_full_periodontal_projection_grants.sql";
+
 const treatmentPlanAmendmentGrants = Object.freeze([
   {
     grantee: "authenticated",
@@ -828,6 +842,66 @@ const treatmentPlanAmendmentGrants = Object.freeze([
     columns: [],
     reason:
       "The treatment plan creation boundary that records an amendment rather than performing one. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch, and validates the patient against the derived tenant. A superseded plan and a bounded amendment reason are accepted only together, so a plan that replaces finalized clinical history can never be created without saying why; the predecessor is revalidated against the derived tenant and the same patient, a partial unique index refuses a second successor, and the predecessor row is never mutated. The reason stays on the RLS-protected plan row and is never copied into the audit event. No organization, provider, actor, or author identity may be supplied by a client.",
+  },
+]);
+
+const fullPeriodontalRpcGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.create_periodontal_draft_v2(uuid,uuid,text,timestamptz,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The visit-bound periodontal draft boundary. It derives organization, actor, treating provider and encounter inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there through private.require_active_actor_provider, and validates the patient against the derived tenant. Its encounter comes from public.start_or_resume_clinical_visit, so a periodontal examination can never exist without a managed visit; a browser-supplied examination time may not be in the future and must fall on the visit's own Philippine clinical date. A replayed request key returns the original draft and a second call on the same visit resumes the open one rather than forking it. No organization, provider, actor, encounter or provider display name may be supplied by a client.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.save_periodontal_measurements_v2(uuid,integer,jsonb,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The versioned periodontal autosave boundary. Organization, patient, acting branch and treating provider are derived from the examination and the signed-in actor, never accepted from a client, and live patient.clinical.write plus an active linked provider at that branch are required. The batch is bounded in bytes, row count, allowed key set, value type and structural depth, duplicate rows within a section are refused, and the canonical current odontogram state decides whether a tooth may be measured at all. Writes are serialized per examination on a distinct advisory-lock key space, only rows whose values actually changed are written so a redundant autosave cannot withdraw a clinician's confirmation, an omitted measurement stays unknown rather than becoming zero or false, and one accepted batch increments the examination version exactly once. A stale expected_version returns a typed conflict having written nothing.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.finalize_periodontal_examination_v2(uuid,integer,jsonb,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The trusted periodontal finalization boundary. It derives the finalizing provider from the signed-in actor at the acting branch with private.require_active_actor_provider and never from the draft's author, so an actor with no active provider link cannot finalize another clinician's draft or have the immutable record attributed to that clinician. It finalizes only a complete DRAFT at the expected version, recomputes the 2017/2018 classification from the canonical rows rather than trusting the submitted one, requires a bounded reason whenever the clinician's confirmation departs from it, stores both provenance fingerprints as the true measurement digest in one statement that touches no risk input, and audits the transition with no clinical content in the metadata.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.amend_periodontal_examination_v2(uuid,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The explained periodontal amendment boundary that replaces the revoked reason-less three-argument signature. It derives organization, patient, acting branch, actor, provider and encounter server-side, requires patient.clinical.write plus patient.clinical.correct at that branch and an active linked provider there, and refuses an empty or unbounded reason. Because periodontal_examinations_one_amendment_idx keys on the predecessor regardless of status and no delete path exists for a DRAFT examination, a pre-existing reason-less DRAFT successor is adopted and given the reason it lacked rather than duplicated or discarded; a FINAL successor is refused. Otherwise it clones the predecessor's full measurement set and risk snapshot, never its classification block, and never mutates the predecessor.",
+  },
+]);
+
+const fullPeriodontalProjectionGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_periodontal_workspace_v2(uuid,uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The read-only projection the periodontal workspace is rebuilt from on every load, and the reason the chart is renderable at all without granting a browser role any table privilege. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, validates the patient and any named examination against the derived tenant, and refuses a foreign examination as unauthorized rather than reporting it absent. It returns the canonical measurements, the classification recomputed server-side from them, the classification the clinician actually signed, and the patient's examination timeline, and it writes nothing at all - no row, no state change, and no audit event.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.compare_periodontal_examinations_v2(uuid,uuid,uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The read-only periodontal comparison projection. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, and refuses as unauthorized any examination that is not this tenant's and this patient's, so naming a foreign examination widens nothing. The two six-site charts are full outer joined, so examinations with different tooth sets compare honestly and a site charted on only one side reports the missing counterpart and its delta as unknown rather than as zero. It writes nothing at all.",
   },
 ]);
 
@@ -2015,6 +2089,14 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: TREATMENT_PLAN_AMENDMENT_GRANTS_MIGRATION,
     grants: treatmentPlanAmendmentGrants,
+  }),
+  Object.freeze({
+    file: FULL_PERIODONTAL_RPCS_GRANTS_MIGRATION,
+    grants: fullPeriodontalRpcGrants,
+  }),
+  Object.freeze({
+    file: FULL_PERIODONTAL_PROJECTION_GRANTS_MIGRATION,
+    grants: fullPeriodontalProjectionGrants,
   }),
 ]);
 

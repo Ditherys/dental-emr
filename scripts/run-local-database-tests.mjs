@@ -28,6 +28,7 @@ import { runOdontogramImplantIdempotencyConcurrencyTest } from "../supabase/test
 import { runProcedureInstallmentSchedulesConcurrencyTest } from "../supabase/tests/procedure_installment_schedules_concurrency.local.mjs";
 import { runClinicalVisitResumeConcurrencyTest } from "../supabase/tests/clinical_visit_resume_concurrency.local.mjs";
 import { runTreatmentCaseCompletionConcurrencyTest } from "../supabase/tests/treatment_case_completion_concurrency.local.mjs";
+import { runPeriodontalAutosaveConcurrencyTest } from "../supabase/tests/periodontal_autosave_concurrency.local.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -209,6 +210,12 @@ try {
     dockerEnvironment,
   });
   console.log("PASS supabase/tests/clinical_visit_resume_concurrency.local.mjs");
+  await runPeriodontalAutosaveConcurrencyTest({
+    command: resolveLocalDatabaseTestCommand("local concurrency test", containerName),
+    repositoryRoot,
+    dockerEnvironment,
+  });
+  console.log("PASS supabase/tests/periodontal_autosave_concurrency.local.mjs");
 
   console.log("Local Supabase pgTAP suites passed.");
 } catch (error) {

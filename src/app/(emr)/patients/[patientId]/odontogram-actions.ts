@@ -6,20 +6,16 @@ import { AuthorizationError, requirePermission } from "@/lib/authorization";
 import {
   amendCurrentBridgeInputSchema,
   amendCurrentImplantComponentInputSchema,
-  amendPeriodontalExaminationInputSchema,
   amendToothClinicalEntryInputSchema,
   completeTreatmentPlanItemWithChargeInputSchema,
   correctTreatmentPlanItemExecutionInputSchema,
-  createPeriodontalExaminationInputSchema,
   createPlanBridgeDesignInputSchema,
   createPlanImplantDesignInputSchema,
-  finalizePeriodontalExaminationInputSchema,
   findingInputSchema,
   getPatientOdontogramInputSchema,
   visitClinicalNoteInputSchema,
   recordToothClinicalEntryInputSchema,
   resolveLegacyOdontogramEntryInputSchema,
-  savePeriodontalMeasurementsInputSchema,
   transitionTreatmentPlanItemExecutionInputSchema,
   treatmentEventInputSchema,
   visitBridgeInputSchema,
@@ -34,14 +30,11 @@ import {
   OdontogramServiceError,
   amendCurrentBridge,
   amendCurrentImplantComponent,
-  amendPeriodontalExamination,
   amendToothClinicalEntry,
   completeTreatmentPlanItemWithCharge,
   correctTreatmentPlanItemExecution,
-  createPeriodontalExamination,
   createPlanBridgeDesign,
   createPlanImplantDesign,
-  finalizePeriodontalExamination,
   getPatientOdontogram,
   recordToothClinicalEntry,
   recordTreatmentEvent,
@@ -50,7 +43,6 @@ import {
   recordVisitBridge,
   recordVisitImplantComponent,
   resolveLegacyOdontogramEntry,
-  savePeriodontalMeasurements,
   transitionTreatmentPlanItemExecution,
   updateDraftPlanBridgeDesign,
   updateDraftPlanImplantDesign,
@@ -365,52 +357,14 @@ export async function voidCurrentImplantComponentAction(input: unknown): Promise
   } catch (error) { return result(error); }
 }
 
-// Perio
-
-export async function createPeriodontalExaminationAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(createPeriodontalExaminationInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = createPeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    const mutation = await createPeriodontalExamination(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
-export async function savePeriodontalMeasurementsAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(savePeriodontalMeasurementsInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = savePeriodontalMeasurementsInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    const mutation = await savePeriodontalMeasurements(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
-export async function finalizePeriodontalExaminationAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(finalizePeriodontalExaminationInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = finalizePeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    const mutation = await finalizePeriodontalExamination(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
-
-export async function amendPeriodontalExaminationAction(input: unknown): Promise<OdontogramMutationResult> {
-  const invalidResult = invalid(amendPeriodontalExaminationInputSchema, input); if (invalidResult) return invalidResult;
-  try {
-    const value = amendPeriodontalExaminationInputSchema.parse(input);
-    await requirePermission({ permission: "patient.clinical.write", branchId: value.actingBranchId });
-    await requirePermission({ permission: "patient.clinical.correct", branchId: value.actingBranchId });
-    const mutation = await amendPeriodontalExamination(value);
-    revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
-  } catch (error) { return result(error); }
-}
+// Periodontal
+//
+// Task 11 made src/app/(emr)/patients/[patientId]/perio-actions.ts the single
+// periodontal mutation boundary. The four duplicate periodontal actions that
+// used to live here were removed rather than re-exported: two action modules
+// wrapping the same RPCs meant two places where a permission check, a
+// revalidation target, or a conflict mapping could drift apart, and the shipped
+// clinical UI already imported the periodontal actions from perio-actions.ts.
 
 // Execution
 

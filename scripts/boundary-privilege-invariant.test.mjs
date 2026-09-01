@@ -263,6 +263,12 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)",
     "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
     "public.resolve_odontogram_entity_patient(uuid,text,uuid)",
+    "public.create_periodontal_draft_v2(uuid,uuid,text,timestamptz,uuid)",
+    "public.save_periodontal_measurements_v2(uuid,integer,jsonb,uuid)",
+    "public.finalize_periodontal_examination_v2(uuid,integer,jsonb,uuid)",
+    "public.amend_periodontal_examination_v2(uuid,text,uuid)",
+    "public.get_periodontal_workspace_v2(uuid,uuid,uuid)",
+    "public.compare_periodontal_examinations_v2(uuid,uuid,uuid,uuid)",
     "public.create_treatment_plan(uuid, uuid, text)",
     "public.create_treatment_plan_v2(uuid,uuid,text,uuid,text)",
     "public.update_treatment_plan(uuid, uuid, integer, text)",
@@ -1504,7 +1510,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(262);
+    expect(approved.size).toBe(268);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {
