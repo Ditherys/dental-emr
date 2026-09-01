@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(336);
+    expect(result.checked.files).toBe(337);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -352,7 +352,15 @@ describe("the active migration chain", () => {
     // progress-record projection boundary and its two private derivation
     // helpers. Only the boundary is SECURITY DEFINER, so the definer count
     // below moves by exactly one.
-    expect(count("function")).toBe(507);
+    //
+    // 508 with 20260901010310, which adds ONE top-level declaration: the
+    // private actor-provider helper. That migration also replaces the applied
+    // projection boundary, but through EXECUTE inside a DO block - the only
+    // form available, because a top-level CREATE OR REPLACE of a granted
+    // SECURITY DEFINER function would need an adjacent REVOKE that destroys the
+    // grant. A statement inside a string literal is not a declaration, so
+    // neither this count nor the SECURITY DEFINER count below moves for it.
+    expect(count("function")).toBe(508);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only

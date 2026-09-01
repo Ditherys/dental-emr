@@ -15,16 +15,37 @@ import {
  * server returned. Nothing here groups by day, by case or by kind - a grouping
  * that reorders the sequence stops it being the record.
  *
- * No sort, no merge and no arithmetic happens in this component. The three
- * money columns are the procedure case's ledger position as computed server
- * side at read time; the caption says so, because they are deliberately not an
- * account running total.
+ * No sort, no merge and no arithmetic happens in this component.
+ *
+ * Two different money facts sit side by side and are labelled so they cannot be
+ * confused. **Amount** is what that one entry moved. **Case charge / Case paid /
+ * Case balance** are the procedure case's ledger position computed server-side
+ * at read time - the same three numbers on every row of that case, and
+ * deliberately not an account running total.
  */
 
 function eventTitle(row: ClinicalProgressRow): string {
   const procedure = clinicalProgressProcedureLabel(row);
   const label = clinicalProgressEventLabel(row.eventType);
   return procedure === null ? label : `${label} · ${procedure}`;
+}
+
+/** An unfinished clinical record must never be mistakable for signed history. */
+function DraftMark() {
+  return (
+    <span className="ml-2 rounded-sm border px-1 py-px align-middle text-[0.6875rem] font-normal uppercase tracking-wide text-muted-foreground">
+      Draft
+    </span>
+  );
+}
+
+function EventCell({ row }: { row: ClinicalProgressRow }) {
+  return (
+    <>
+      {eventTitle(row)}
+      {row.finalized === false && <DraftMark />}
+    </>
+  );
 }
 
 function DateCell({ row }: { row: ClinicalProgressRow }) {
@@ -51,8 +72,8 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
         </h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {financialVisible
-            ? "Oldest first. Charge, paid and balance are the procedure case position derived from the billing ledger when the record was read, not an account running total."
-            : "Oldest first. Your current access does not include this patient account, so no charge, payment or balance is shown."}
+            ? "Oldest first. Amount is what this one entry moved. Case charge, case paid and case balance are the procedure case position derived from the billing ledger when the record was read, not an account running total."
+            : "Oldest first. Your current access does not include this patient account, so no amount, charge, payment or balance is shown."}
         </p>
         {hasMore && (
           <p className="mt-1 text-xs text-muted-foreground">
@@ -68,7 +89,7 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
       ) : (
         <>
           <div data-testid="progress-record-table" className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[940px] text-left text-sm">
               <caption className="sr-only">
                 Patient progress record, oldest first, one row per recorded clinical or ledger event.
               </caption>
@@ -80,9 +101,10 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
                   <th scope="col" className="px-3 py-2 font-medium">Provider</th>
                   {financialVisible && (
                     <>
-                      <th scope="col" className="px-3 py-2 text-right font-medium">Charge</th>
-                      <th scope="col" className="px-3 py-2 text-right font-medium">Paid</th>
-                      <th scope="col" className="px-3 py-2 text-right font-medium">Balance</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">Amount</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">Case charge</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">Case paid</th>
+                      <th scope="col" className="px-3 py-2 text-right font-medium">Case balance</th>
                     </>
                   )}
                   <th scope="col" className="px-3 py-2 font-medium">Notes</th>
@@ -92,16 +114,17 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
                 {rows.map((row) => (
                   <tr key={row.eventId} className="align-top">
                     <td className="px-3 py-2.5"><DateCell row={row} /></td>
-                    <td className="px-3 py-2.5 font-medium">{eventTitle(row)}</td>
+                    <td className="px-3 py-2.5 font-medium"><EventCell row={row} /></td>
                     <td className="px-3 py-2.5 tabular-nums text-muted-foreground">
                       {clinicalProgressToothLabel(row.toothCodes)}
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">{row.providerDisplay}</td>
                     {financialVisible && (
                       <>
-                        <td className="px-3 py-2.5 text-right tabular-nums">{clinicalProgressAmountLabel(row.chargeMinor)}</td>
-                        <td className="px-3 py-2.5 text-right tabular-nums">{clinicalProgressAmountLabel(row.paidMinor)}</td>
-                        <td className="px-3 py-2.5 text-right tabular-nums">{clinicalProgressAmountLabel(row.balanceMinor)}</td>
+                        <td className="px-3 py-2.5 text-right font-medium tabular-nums">{clinicalProgressAmountLabel(row.lineAmountMinor)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{clinicalProgressAmountLabel(row.chargeMinor)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{clinicalProgressAmountLabel(row.paidMinor)}</td>
+                        <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{clinicalProgressAmountLabel(row.balanceMinor)}</td>
                       </>
                     )}
                     <td className="max-w-md px-3 py-2.5 text-muted-foreground">{row.description}</td>
@@ -124,9 +147,12 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
                 <details className="group px-3 py-1.5">
                   <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-1.5 [&::-webkit-details-marker]:hidden">
                     <span className="min-w-0">
-                      <span className="block font-medium">{eventTitle(row)}</span>
+                      <span className="block font-medium"><EventCell row={row} /></span>
                       <span className="block text-xs text-muted-foreground">
                         {clinicalProgressDateLabel(row.occurredAt)} · {clinicalProgressTimeLabel(row.occurredAt)}
+                        {financialVisible && row.lineAmountMinor !== null
+                          ? ` · ${clinicalProgressAmountLabel(row.lineAmountMinor)}`
+                          : ""}
                       </span>
                     </span>
                     <span aria-hidden="true" className="shrink-0 text-xs text-muted-foreground group-open:hidden">Show</span>
@@ -145,13 +171,19 @@ export function ProgressRecordTable({ record }: { record: ClinicalProgressRecord
                         <dd>{row.providerDisplay}</dd>
                       </>
                     )}
+                    {financialVisible && row.lineAmountMinor !== null && (
+                      <>
+                        <dt className="text-xs text-muted-foreground">Amount</dt>
+                        <dd className="tabular-nums">{clinicalProgressAmountLabel(row.lineAmountMinor)}</dd>
+                      </>
+                    )}
                     {financialVisible && row.chargeMinor !== null && (
                       <>
-                        <dt className="text-xs text-muted-foreground">Charge</dt>
+                        <dt className="text-xs text-muted-foreground">Case charge</dt>
                         <dd className="tabular-nums">{clinicalProgressAmountLabel(row.chargeMinor)}</dd>
-                        <dt className="text-xs text-muted-foreground">Paid</dt>
+                        <dt className="text-xs text-muted-foreground">Case paid</dt>
                         <dd className="tabular-nums">{clinicalProgressAmountLabel(row.paidMinor)}</dd>
-                        <dt className="text-xs text-muted-foreground">Balance</dt>
+                        <dt className="text-xs text-muted-foreground">Case balance</dt>
                         <dd className="tabular-nums">{clinicalProgressAmountLabel(row.balanceMinor)}</dd>
                       </>
                     )}

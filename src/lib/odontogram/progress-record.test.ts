@@ -18,6 +18,8 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   toothCodes: [11],
   providerDisplay: "Alba Reyes",
   description: "Synthetic finding",
+  finalized: null,
+  lineAmountMinor: null,
   chargeMinor: null,
   paidMinor: null,
   balanceMinor: null,
@@ -86,6 +88,37 @@ describe("parseClinicalProgressRecord", () => {
     expect(record.rows[1].balanceMinor).toBeNull();
   });
 
+  it("keeps the line amount separate from the case position it sits beside", () => {
+    const record = parseClinicalProgressRecord(
+      payload([
+        row({
+          eventType: "ALLOCATION",
+          lineAmountMinor: 500000,
+          chargeMinor: 8000000,
+          paidMinor: 1000000,
+          balanceMinor: 7000000,
+        }),
+      ]),
+    );
+
+    // The defect this pins: a 5,000 installment must not be readable as the
+    // 10,000 the case has been paid in total.
+    expect(record.rows[0].lineAmountMinor).toBe(500000);
+    expect(record.rows[0].paidMinor).toBe(1000000);
+  });
+
+  it("carries the finalization state of a source that has one, and null where none exists", () => {
+    const record = parseClinicalProgressRecord(
+      payload([
+        row({ eventId: "draft", eventType: "NOTE", finalized: false }),
+        row({ eventId: "signed", eventType: "NOTE", finalized: true }),
+        row({ eventId: "entry", finalized: null }),
+      ]),
+    );
+
+    expect(record.rows.map((entry) => entry.finalized)).toEqual([false, true, null]);
+  });
+
   it("carries a withheld-money record through without inventing zeros", () => {
     const record = parseClinicalProgressRecord(payload([row()], { financialVisible: false }));
 
@@ -93,6 +126,7 @@ describe("parseClinicalProgressRecord", () => {
     expect(record.rows[0].chargeMinor).toBeNull();
     expect(record.rows[0].paidMinor).toBeNull();
     expect(record.rows[0].balanceMinor).toBeNull();
+    expect(record.rows[0].lineAmountMinor).toBeNull();
   });
 });
 

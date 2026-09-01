@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 13
+# AI Handoff - Unified Clinical Chart workspace, Task 13 (round 2)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -6,7 +6,7 @@ history; this file is deliberately not an append-only transcript.
 Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
-`2ec2a4d`. Task 13 is this commit.
+`2ec2a4d`. Task 13 is `1f9c97b` and this commit.
 
 ## Task 13 - the canonical chronological progress-record projection (2026-09-02)
 
@@ -82,7 +82,8 @@ and `charge_void` are both rows in the chronology. Because `public.void_charge`
 reverses every allocation in the same transaction, `charge_net_allocated`
 already returns 0 for a voided charge, so the position is 0/0/0.
 
-**The isolation proof** (assertions 34-36): the orthodontic case position
+**The isolation proof** (assertions 55-57 after the round-2 additions; 34-36
+as first written): the orthodontic case position
 `8000000/1000000/7000000` is captured from the projection, an unrelated filling
 is then paid in full, and the orthodontic position is re-asserted byte-identical
 while the filling moves to `150000/150000/0` and the unrelated root-canal case
@@ -314,8 +315,9 @@ Tailwind.
 
 ### Known residual risks and open questions
 
-1. **The receptionist ruling contradicts the task brief and needs the
-   controller.** The brief says "a receptionist may read the record but may not
+1. **The receptionist ruling contradicts the task brief.** CONFIRMED CORRECT in
+   review round 1; the reviewer traced that there is no second path in and both
+   refusals stand. Retained here as the standing decision. The brief says "a receptionist may read the record but may not
    create clinical events." `20260827012800` says, in terms, "Reception gets
    neither clinical permission": a RECEPTIONIST holds `billing.read` and
    `payment.record` and no clinical permission at all. Granting clinical read to
@@ -325,21 +327,20 @@ Tailwind.
    permission-contract change and belongs in its own reviewed migration, not
    here.
 2. **The three money columns are a per-case position, not a per-line movement.**
-   Every row of the same procedure case shows the same charge/paid/balance - the
-   case's ledger position as of the read. A PAYMENT row therefore shows no
-   amount of its own; the ALLOCATION row that applied it to a case does. The
-   caption says exactly this. It is the design the "no running total" constraint
-   forces, but it is a real departure from a paper chart's per-line "amount
-   paid" column and the controller may want a different presentation.
+   RESOLVED in round 2, which was a review Important. Every ledger row now also
+   carries `lineAmountMinor` - the signed amount that ONE event moved - and the
+   three case columns are renamed `Case charge` / `Case paid` / `Case balance`
+   so the two facts cannot be confused. See the round-2 section below.
 3. **`procedure_case_events` has five event types and the row contract has
    eighteen.** COMPLETION and CANCELLATION are mapped to `FOLLOW_UP`;
    `CORRECTION` is mapped to `VOID`, because within this projection VOID means
    "an earlier recorded fact was withdrawn or corrected" and it is the only
    member of the closed union carrying that meaning. The distinction survives in
    `sourceKind` and in the event's own reason text, but not in `eventType`.
-4. **PHOTO_RENAME can never be produced** from any append-only source. See
-   above. If renames must appear in the record, the photograph tables need a
-   rename-event row, which is a schema change.
+4. **PHOTO_RENAME can never be produced** from any append-only source.
+   ENDORSED in review round 1: a rename changes a display label, not a clinical
+   fact. If renames must ever appear, the photograph tables need a rename-event
+   row, which is a schema change.
 5. **A charge with no procedure case still carries money.** Direct charges exist
    (`charges.procedure_id` without a `procedure_cases` row). Those rows report
    the charge's own ledger position with `procedureCaseId: null`. That is still
@@ -350,8 +351,8 @@ Tailwind.
    with more than 200 recorded events cannot yet page through them from the
    screen. The RPC supports it; the UI does not.
 7. `row_number()` is computed over the whole union on every call, so the
-   projection is O(patient history) even for a small page. Bounded per patient
-   and acceptable now; it is not a good shape for a very long-lived record.
+   projection is O(patient history) even for a small page. LEDGERED by the
+   reviewer as deferred: bounded per patient and fine at current scale.
 8. `charge_adjustments` gained
    `charge_adjustments_org_charge_occurred_idx (organization_id, charge_id,
    occurred_at, id)`. That table carried **no** index on the charge path at all,
@@ -385,6 +386,206 @@ Tailwind.
   record region on a payload the server considers valid.
 - The grants file guard, and that the two private helpers are unreachable from
   every browser and service role.
+
+## Task 13 round 2 - review fixes: 0 Critical, 3 Important, 4 Minor (2026-09-02)
+
+The load-bearing constraint was accepted without qualification and the per-case
+money arithmetic is UNCHANGED. All three Important findings were about what the
+record **says**, not what it computes. One migration,
+`20260901010310_clinical_progress_record_repair.sql`, allocated from the
+verified ceiling `20260901010301`. It grants and revokes nothing.
+
+### How the applied boundary was replaced
+
+Through `execute` inside a DO block, exactly as `20260901010220` replaces
+`public.post_charge`. My first attempt used a top-level `CREATE OR REPLACE` and
+`npm run security:migrations` **correctly refused it**:
+
+```
+20260901010310_...:133 [security-definer-not-fail-closed]
+  SECURITY DEFINER function public.get_clinical_progress_record_v1(...) is created
+  without an adjacent REVOKE ALL from public, anon, authenticated.
+```
+
+ADR-017 requires that revoke, and the revoke would destroy the `authenticated`
+grant `20260901010301` owns, which this migration has no authority to re-issue.
+`CREATE OR REPLACE` through `EXECUTE` preserves the ACL, so no privilege moves.
+`20260901010220` rewrites one expression with `pg_catalog.replace`; this repair
+changes fifteen sites across nineteen branches and adds two CTE columns, so the
+replacement text is the whole restated body. The guards are correspondingly
+stricter and every one fails closed on `55000`: **before**, the target must exist
+with the exact signature, be SECURITY DEFINER, stable and empty-search-path, and
+already be executable by `authenticated`; **before**, three text targets are
+counted in the applied body (the repaired marker absent, two branch anchors
+exactly once each) so a different or already-repaired body is refused;
+**after**, the posture is re-asserted and the browser boundary is re-asserted in
+both directions - `authenticated` may execute, public/anon/service_role may not.
+
+The local database was rolled back to the pre-repair state before re-applying
+(the `20260901010300` body restored through `CREATE OR REPLACE`, the helper
+dropped, the `schema_migrations` row deleted). `npm run db:reset:local` was NOT
+used. The grant was verified intact across that restore.
+
+### I1 - money movements were invisible and a case position read as a payment
+
+`ALLOCATION` carried an empty description and no amount of its own, so a row
+reading "Payment applied" showed the case's `paidMinor` **as of read time** under
+a header saying `Paid`. A first installment of 5,000 rendered as 10,000 once a
+second had been applied. `PAYMENT`, `REFUND`, `ADJUSTMENT` and `REVERSAL` showed
+no amount at all.
+
+Every ledger row now carries `lineAmountMinor`: the signed amount THAT ONE event
+moved, read from its own `amount_centavos`, never derived from another row and
+never a total. `charge_void`, `payment_void` and `charge_adjustment_reversal`
+have no amount column of their own, so they carry the amount of the row they
+withdraw, negated. Signs: a charge, payment or allocation is positive; a refund,
+reversal or void is negative; an adjustment is signed by its direction.
+
+Desktop headers are now `Amount` / `Case charge` / `Case paid` / `Case balance`,
+with `Amount` emphasised and the three case columns muted. The phone summary
+line carries the line amount; the disclosure lists all four.
+
+Tests: pgTAP *"an allocation states the amount IT applied, distinct from the case
+total paid to date"* pins `500000 of 1000000` in one string, plus five more
+pinning payment, refund, adjustment, reversal and charge, plus one asserting a
+clinical event carries no line amount at all. Component: *"shows what this event
+moved separately from what the case now stands at"* asserts header 4 is `Amount`,
+header 6 is `Case paid`, cell 4 is `PHP 5,000.00` and cell 6 is `PHP 10,000.00`.
+
+### I2 - draft clinical content entered the record unmarked
+
+Five branches selected every row regardless of status and put the draft's text in
+`description`. It was also a silent broadening: the browser merge this projection
+replaced filtered periodontal examinations to `status === "FINAL"`.
+
+Every row from a source with a draft lifecycle now carries `finalized`
+(`clinical_encounters`, `clinical_notes`, `prescriptions`, `treatment_plans`,
+`periodontal_examinations`); every other source carries `null` rather than
+guessing. Drafts are **shown, not hidden** - an unfinished note is part of the
+record-in-progress - and the table marks them with a restrained bordered `Draft`
+label so they cannot read as signed history.
+
+Tests: a DRAFT note and a DRAFT periodontal examination were added to the
+fixture; six pgTAP assertions cover finalized note true / draft note false /
+FINAL exam true / DRAFT exam false / open visit false / draft plan false, plus
+one asserting sources with no draft lifecycle report `null`. Component: *"marks
+unfinished clinical content and leaves signed history unmarked"*.
+
+### I3 - undisclosed provider inference attributed clinical acts to the wrong clinician
+
+`public.procedure_case_events` has `recorded_by` and **no** provider column. The
+projection named the CHARGE's treating provider for every treatment, follow-up
+and correction on that case, whoever performed it. New helper
+`private.clinical_progress_actor_provider(organization_id, user_id)` resolves the
+real actor through `providers.linked_user_id` inside the derived tenant,
+deterministically, and returns NULL when that actor is not a provider here -
+never a borrowed identity. The `charges` join that existed only to supply that
+provider is gone. Clinical photographs get the same treatment from `created_by`,
+and the archive row from `archived_by`; both previously passed `null`.
+
+Tests: the fixture gained a second clinician (provider `Cara Santos`, user 6) who
+records the orthodontic follow-up on a case whose charge names `Alba Reyes`, and
+the correction is recorded by the dental assistant, who is not a provider at all.
+Five assertions: the follow-up names Cara; the follow-up and its case charge
+report **different** clinicians; the treatment names its own recorder; the
+non-provider actor yields NULL; the photograph names its creator.
+
+### Minors fixed
+
+- **Cross-`source_kind` tie.** The DRAFT note sits at the same instant as the two
+  findings, so the tie-breaker is now proved across kinds and within one:
+  `clinical_note:...003, tooth_clinical_entry:...001, tooth_clinical_entry:...002`.
+- **Voided charge with a prior allocation.** The consultation charge is now paid
+  100,000, allocated, then reversed with cause `VOID` and voided - mirroring what
+  `public.void_charge` does in one transaction. `0/0/0` is no longer a trivial
+  pass, and a new assertion proves the allocation and its reversal both survive
+  in the record.
+- **Positive branch access.** The branch-scoped dentist refused at PROG A Main is
+  asserted to read the same patient successfully AT PROG A Second.
+- **`clinical-chart-workspace.tsx` is in the brief's Modify list and is
+  UNCHANGED.** Disclosed here: it already accepted `record` and
+  `recordLoadFailed` and already rendered the bounded-retry region, so mounting
+  the new record needed nothing from it. Round 1 failed to say so.
+
+### Ledgered, not fixed
+
+`row_number()` runs over the whole union per call. Correctly self-reported in
+round 1 and deferred by the reviewer; fine at current scale.
+
+### Round 2 files
+
+Added: `supabase/migrations/20260901010310_clinical_progress_record_repair.sql`.
+
+Changed: `supabase/tests/clinical_progress_record.test.sql` (43 -> 65
+assertions), `src/lib/odontogram/progress-record.ts` (+ suite),
+`src/components/odontogram/progress-record-table.tsx` (+ suite),
+`scripts/migration-privilege-lint.test.mjs` (files 336 -> 337, function
+declarations 507 -> 508; the SECURITY DEFINER count does NOT move, because the
+boundary is replaced inside a string literal and a statement in a literal is not
+a declaration).
+
+No grant was added, so `scripts/approved-final-grants.mjs`,
+`scripts/boundary-privilege-invariant.test.mjs` and
+`supabase/tests/approved_grant_registry_integrity.test.sql` are unchanged and
+their counters stand at 405 / 269 / 258.
+
+### Round 2 tests run and observed results
+
+Red-green held in both halves. RED, database, before the migration:
+
+```
+not ok 27 - a follow-up names the clinician who recorded it, not the clinician on the case charge
+not ok 28 - the follow-up and its case charge report different clinicians
+not ok 30 - an event recorded by someone who is not a provider here reports no clinician
+not ok 31 - a photograph names the clinician who took it
+not ok 33..38 - the six finalization assertions
+not ok 48..53 - the six line-amount assertions
+```
+
+RED, TypeScript: `Test Files 2 failed (2) / Tests 7 failed | 16 passed (23)`.
+
+```
+npm run db:migrate:local    -> applied 20260901010310
+npm run db:types:local      -> Updated; NO diff (the boundary signature is unchanged)
+npm run security:migrations -> passed (337 files, 93 terminals, 405 approved)
+npm run test:unit -- progress-record.test.ts progress-record-table.test.tsx
+                            -> Test Files 2 passed (2) / Tests 23 passed (23)
+npm run test:db:local       -> halts at treatment_plans.test.sql (pre-existing);
+                               PASS clinical_progress_record.test.sql
+                               PASS approved_grant_registry_integrity.test.sql
+npm run typecheck           -> clean
+npm run lint                -> 0 errors, 3 warnings (pre-existing, untouched files)
+npx vitest run scripts/     -> 13 files, 288 tests passed
+```
+
+Run directly, because the gate halts before the end:
+
+```
+psql < supabase/tests/clinical_progress_record.test.sql          -> P1_TEST_PASS (65 assertions)
+psql < supabase/tests/approved_grant_registry_integrity.test.sql -> P1_TEST_PASS
+```
+
+Regression: `clinical-section`, `odontogram-section`, `patient-workspace`,
+`clinical-chart-workspace`, `service` -> 5 files, 111 tests passed.
+
+Playwright was not run; hosted E2E remains unauthorized.
+
+### Round 2 residual risks
+
+1. `lineAmountMinor` mixes two sign conventions in one column - "effect on what
+   is owed" on the charge side and "money received" on the payment side - unified
+   as "positive adds to what this event is about, negative withdraws". Each row
+   is labelled by its event type, but a reader scanning only the Amount column
+   sees a signed list that does not sum to anything meaningful. It is a per-line
+   fact, never a total, and the caption says so.
+2. Drafts are shown rather than hidden. That is a deliberate, disclosed
+   broadening over the old browser merge, made safe by the `Draft` marker, but a
+   clinical owner may prefer them excluded from the printed record.
+3. `private.clinical_progress_actor_provider` takes `order by provider.id limit 1`
+   because `providers.linked_user_id` carries no uniqueness constraint per
+   organization. One user linked to two provider rows in one tenant is already a
+   data defect; this makes the projection deterministic rather than correct in
+   that case.
 
 ### Next bounded task
 

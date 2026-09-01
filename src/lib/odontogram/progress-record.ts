@@ -45,6 +45,18 @@ export type ClinicalProgressRow = {
   toothCodes: readonly number[];
   providerDisplay: string | null;
   description: string;
+  /**
+   * Whether this row's source considers it finalized. `null` where the source
+   * has no draft lifecycle at all. An unfinished note is part of the
+   * record-in-progress and is shown, but it must never read as signed history.
+   */
+  finalized: boolean | null;
+  /**
+   * The signed amount THIS ONE ledger event moved, from its own amount column.
+   * Never a total, never derived from another row, and deliberately distinct
+   * from the three case-position fields below.
+   */
+  lineAmountMinor: number | null;
   chargeMinor: number | null;
   paidMinor: number | null;
   balanceMinor: number | null;
@@ -75,6 +87,8 @@ const clinicalProgressRowSchema = z.object({
   toothCodes: z.array(z.number().int()),
   providerDisplay: z.string().nullable(),
   description: z.string(),
+  finalized: z.boolean().nullable(),
+  lineAmountMinor: z.number().int().nullable(),
   chargeMinor: z.number().int().nullable(),
   paidMinor: z.number().int().nullable(),
   balanceMinor: z.number().int().nullable(),

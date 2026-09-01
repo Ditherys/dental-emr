@@ -22,7 +22,8 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
   ('d1100000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','assistant-a@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
   ('d1100000-0000-0000-0000-000000000003','00000000-0000-0000-0000-000000000000','authenticated','authenticated','reception-a@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
   ('d1100000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-b@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
-  ('d1100000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-second@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
+  ('d1100000-0000-0000-0000-000000000005','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-second@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
+  ('d1100000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-two@prog.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp());
 
 insert into public.organizations (id, legal_name, business_name, slug) values
   ('d1200000-0000-0000-0000-000000000001','PROG Synthetic A Inc.','PROG A','prog-a'),
@@ -38,14 +39,16 @@ insert into public.organization_members (id, organization_id, user_id, membershi
   ('d1400000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000002','active',statement_timestamp()),
   ('d1400000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000003','active',statement_timestamp()),
   ('d1400000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000002','d1100000-0000-0000-0000-000000000004','active',statement_timestamp()),
-  ('d1400000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000005','active',statement_timestamp());
+  ('d1400000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000005','active',statement_timestamp()),
+  ('d1400000-0000-0000-0000-000000000006','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000006','active',statement_timestamp());
 
 insert into public.branch_memberships (organization_id, branch_id, organization_member_id, access_status) values
   ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1400000-0000-0000-0000-000000000001','active'),
   ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1400000-0000-0000-0000-000000000002','active'),
   ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1400000-0000-0000-0000-000000000003','active'),
   ('d1200000-0000-0000-0000-000000000002','d1300000-0000-0000-0000-000000000003','d1400000-0000-0000-0000-000000000004','active'),
-  ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000002','d1400000-0000-0000-0000-000000000005','active');
+  ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000002','d1400000-0000-0000-0000-000000000005','active'),
+  ('d1200000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001','d1400000-0000-0000-0000-000000000006','active');
 
 insert into public.member_roles (organization_id, organization_member_id, role_id, branch_id, assigned_by)
 select assignment.organization_id, assignment.member_id, role.id, assignment.branch_id, assignment.user_id
@@ -54,7 +57,8 @@ from (values
   ('d1200000-0000-0000-0000-000000000001'::uuid,'d1400000-0000-0000-0000-000000000002'::uuid,'DENTAL_ASSISTANT'::text,null::uuid,'d1100000-0000-0000-0000-000000000001'::uuid),
   ('d1200000-0000-0000-0000-000000000001'::uuid,'d1400000-0000-0000-0000-000000000003'::uuid,'RECEPTIONIST'::text,null::uuid,'d1100000-0000-0000-0000-000000000001'::uuid),
   ('d1200000-0000-0000-0000-000000000002'::uuid,'d1400000-0000-0000-0000-000000000004'::uuid,'DENTIST'::text,null::uuid,'d1100000-0000-0000-0000-000000000004'::uuid),
-  ('d1200000-0000-0000-0000-000000000001'::uuid,'d1400000-0000-0000-0000-000000000005'::uuid,'DENTIST'::text,'d1300000-0000-0000-0000-000000000002'::uuid,'d1100000-0000-0000-0000-000000000001'::uuid)
+  ('d1200000-0000-0000-0000-000000000001'::uuid,'d1400000-0000-0000-0000-000000000005'::uuid,'DENTIST'::text,'d1300000-0000-0000-0000-000000000002'::uuid,'d1100000-0000-0000-0000-000000000001'::uuid),
+  ('d1200000-0000-0000-0000-000000000001'::uuid,'d1400000-0000-0000-0000-000000000006'::uuid,'DENTIST'::text,null::uuid,'d1100000-0000-0000-0000-000000000001'::uuid)
 ) as assignment(organization_id, member_id, role_code, branch_id, user_id)
 join public.roles as role on role.organization_id is null and role.code = assignment.role_code;
 
@@ -64,11 +68,13 @@ insert into public.patients (id, organization_id, patient_number, first_name, la
 
 insert into public.providers (id, organization_id, linked_user_id, first_name, last_name, provider_type, status) values
   ('d1600000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000001','Alba','Reyes','REGULAR','active'),
-  ('d1600000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000002','d1100000-0000-0000-0000-000000000004','Bea','Cruz','REGULAR','active');
+  ('d1600000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000002','d1100000-0000-0000-0000-000000000004','Bea','Cruz','REGULAR','active'),
+  ('d1600000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1100000-0000-0000-0000-000000000006','Cara','Santos','REGULAR','active');
 
 insert into public.provider_branches (organization_id, provider_id, branch_id, is_active) values
   ('d1200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','d1300000-0000-0000-0000-000000000001',true),
-  ('d1200000-0000-0000-0000-000000000002','d1600000-0000-0000-0000-000000000002','d1300000-0000-0000-0000-000000000003',true);
+  ('d1200000-0000-0000-0000-000000000002','d1600000-0000-0000-0000-000000000002','d1300000-0000-0000-0000-000000000003',true),
+  ('d1200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000003','d1300000-0000-0000-0000-000000000001',true);
 
 insert into public.procedures (id, organization_id, code, name, status) values
   ('d1700000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','PRG_FILL','Synthetic composite filling','active'),
@@ -88,6 +94,12 @@ insert into public.clinical_notes (id, organization_id, encounter_id, note_type,
   ('d1d00000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','PROGRESS','Synthetic progress note text','FINALIZED',timestamptz '2026-08-20 02:00:00+00','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-20 01:30:00+00',timestamptz '2026-08-20 02:00:00+00');
 insert into public.clinical_notes (id, organization_id, encounter_id, parent_note_id, note_type, content, status, finalized_at, created_by, created_at, updated_at) values
   ('d1d00000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','d1d00000-0000-0000-0000-000000000001','AMENDMENT','Synthetic amendment text','FINALIZED',timestamptz '2026-08-21 02:00:00+00','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-21 01:30:00+00',timestamptz '2026-08-21 02:00:00+00');
+
+-- A DRAFT note, deliberately placed at the SAME instant as the two findings
+-- below, so the tie-breaker is exercised across two different source kinds as
+-- well as within one.
+insert into public.clinical_notes (id, organization_id, encounter_id, note_type, content, status, created_by, created_at, updated_at) values
+  ('d1d00000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','PROGRESS','Synthetic unfinished note text','DRAFT','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-20 04:00:00+00',timestamptz '2026-08-20 04:00:00+00');
 
 insert into public.prescriptions (id, organization_id, encounter_id, patient_id, provider_id, items, status, finalized_at, created_by, created_at, updated_at) values
   ('d1e00000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','[]'::jsonb,'FINALIZED',timestamptz '2026-08-20 03:00:00+00','d1100000-0000-0000-0000-000000000001',timestamptz '2026-08-20 02:30:00+00',timestamptz '2026-08-20 03:00:00+00');
@@ -143,10 +155,10 @@ insert into public.procedure_cases (id, organization_id, patient_id, origin_bran
 -- collapse them onto one row.
 insert into public.procedure_case_events (id, organization_id, procedure_case_id, event_type, occurred_at, recorded_at, recorded_by, notes) values
   ('d2400000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000001','TREATMENT',timestamptz '2026-08-16 03:00:00+00',timestamptz '2026-08-23 06:31:00+00','d1100000-0000-0000-0000-000000000001','Synthetic orthodontic bonding'),
-  ('d2400000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000001','FOLLOW_UP',timestamptz '2026-08-28 03:00:00+00',timestamptz '2026-08-28 03:00:00+00','d1100000-0000-0000-0000-000000000001','Synthetic orthodontic adjustment'),
+  ('d2400000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000001','FOLLOW_UP',timestamptz '2026-08-28 03:00:00+00',timestamptz '2026-08-28 03:00:00+00','d1100000-0000-0000-0000-000000000006','Synthetic orthodontic adjustment'),
   ('d2400000-0000-0000-0000-000000000003','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000002','TREATMENT',timestamptz '2026-08-24 03:00:00+00',timestamptz '2026-08-24 03:00:00+00','d1100000-0000-0000-0000-000000000001','Synthetic filling placement');
 insert into public.procedure_case_events (id, organization_id, procedure_case_id, event_type, occurred_at, recorded_at, recorded_by, reason, correction_of_event_id) values
-  ('d2400000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000001','CORRECTION',timestamptz '2026-08-29 03:00:00+00',timestamptz '2026-08-29 03:00:00+00','d1100000-0000-0000-0000-000000000001','Synthetic correction reason','d2400000-0000-0000-0000-000000000002');
+  ('d2400000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d1a00000-0000-0000-0000-000000000001','CORRECTION',timestamptz '2026-08-29 03:00:00+00',timestamptz '2026-08-29 03:00:00+00','d1100000-0000-0000-0000-000000000002','Synthetic correction reason','d2400000-0000-0000-0000-000000000002');
 
 -- A completed treatment entry bound to the filling charge, so a case-linked row
 -- can name its tooth.
@@ -160,18 +172,24 @@ from (values
   ('d2000000-0000-0000-0000-000000000001'::uuid, 500000::bigint, timestamptz '2026-08-23 08:00:00+00', 'prog-pay-ortho-1'),
   ('d2000000-0000-0000-0000-000000000002'::uuid, 500000::bigint, timestamptz '2026-08-30 08:00:00+00', 'prog-pay-ortho-2'),
   ('d2000000-0000-0000-0000-000000000004'::uuid, 200000::bigint, timestamptz '2026-08-27 08:00:00+00', 'prog-pay-extract'),
-  ('d2000000-0000-0000-0000-000000000005'::uuid, 300000::bigint, timestamptz '2026-08-31 08:00:00+00', 'prog-pay-refunded')
+  ('d2000000-0000-0000-0000-000000000005'::uuid, 300000::bigint, timestamptz '2026-08-31 08:00:00+00', 'prog-pay-refunded'),
+  ('d2000000-0000-0000-0000-000000000006'::uuid, 100000::bigint, timestamptz '2026-08-26 08:00:00+00', 'prog-pay-consult')
 ) as payment(id, amount, received_at, key)
 cross join lateral (select id from public.payment_methods where organization_id='d1200000-0000-0000-0000-000000000001' and code='CASH') as method;
 
 insert into public.payment_allocations (id, organization_id, payment_id, charge_id, patient_id, amount_centavos, allocated_at, allocated_by, idempotency_key) values
   ('d2100000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000001','d1f00000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001',500000,timestamptz '2026-08-23 08:01:00+00','d1100000-0000-0000-0000-000000000001','prog-alloc-ortho-1'),
   ('d2100000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000002','d1f00000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001',500000,timestamptz '2026-08-30 08:01:00+00','d1100000-0000-0000-0000-000000000001','prog-alloc-ortho-2'),
-  ('d2100000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000004','d1f00000-0000-0000-0000-000000000005','d1500000-0000-0000-0000-000000000001',200000,timestamptz '2026-08-27 08:01:00+00','d1100000-0000-0000-0000-000000000001','prog-alloc-extract');
+  ('d2100000-0000-0000-0000-000000000004','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000004','d1f00000-0000-0000-0000-000000000005','d1500000-0000-0000-0000-000000000001',200000,timestamptz '2026-08-27 08:01:00+00','d1100000-0000-0000-0000-000000000001','prog-alloc-extract'),
+  ('d2100000-0000-0000-0000-000000000005','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000006','d1f00000-0000-0000-0000-000000000004','d1500000-0000-0000-0000-000000000001',100000,timestamptz '2026-08-26 08:01:00+00','d1100000-0000-0000-0000-000000000001','prog-alloc-consult');
 
 -- The extraction allocation is reversed: paid returns to zero from the ledger.
 insert into public.payment_allocation_reversals (id, organization_id, allocation_id, cause, amount_centavos, reason, reversed_at, reversed_by, idempotency_key) values
-  ('d2800000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d2100000-0000-0000-0000-000000000004','MANUAL',200000,'Synthetic reversal reason',timestamptz '2026-09-01 08:00:00+00','d1100000-0000-0000-0000-000000000001','prog-reversal-extract');
+  ('d2800000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d2100000-0000-0000-0000-000000000004','MANUAL',200000,'Synthetic reversal reason',timestamptz '2026-09-01 08:00:00+00','d1100000-0000-0000-0000-000000000001','prog-reversal-extract'),
+  -- public.void_charge reverses every allocation in the SAME transaction as
+  -- the void. The fixture mirrors that, so the voided consultation is a
+  -- voided charge that HAD been paid rather than one that trivially never was.
+  ('d2800000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d2100000-0000-0000-0000-000000000005','VOID',100000,'Synthetic void reversal reason',timestamptz '2026-08-26 10:00:00+00','d1100000-0000-0000-0000-000000000001','prog-reversal-consult');
 
 insert into public.payment_refunds (id, organization_id, payment_id, patient_id, amount_centavos, reason, refunded_at, refunded_by, idempotency_key) values
   ('d2700000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d2000000-0000-0000-0000-000000000005','d1500000-0000-0000-0000-000000000001',300000,'Synthetic refund reason',timestamptz '2026-09-01 09:00:00+00','d1100000-0000-0000-0000-000000000001','prog-refund');
@@ -188,6 +206,9 @@ insert into public.charge_voids (id, organization_id, charge_id, reason, voided_
 
 insert into public.periodontal_examinations (id, organization_id, patient_id, encounter_id, examination_kind, status, version, examined_at, examined_by, examined_provider_id, finalized_at, finalized_by, finalized_provider_id, notes, recorded_at) values
   ('d2200000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','INITIAL','FINAL',1,timestamptz '2026-08-20 07:00:00+00','d1100000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001',timestamptz '2026-08-20 07:30:00+00','d1100000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','Synthetic periodontal note',timestamptz '2026-08-20 07:00:00+00');
+
+insert into public.periodontal_examinations (id, organization_id, patient_id, encounter_id, examination_kind, status, version, examined_at, examined_by, examined_provider_id, notes, recorded_at) values
+  ('d2200000-0000-0000-0000-000000000002','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','d1c00000-0000-0000-0000-000000000001','MAINTENANCE','DRAFT',1,timestamptz '2026-08-28 07:00:00+00','d1100000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000001','Synthetic unfinished periodontal note',timestamptz '2026-08-28 07:00:00+00');
 
 insert into public.file_objects (id, organization_id, patient_id, object_key, mime_type, size_bytes, uploaded_by, status) values
   ('d2900000-0000-0000-0000-000000000001','d1200000-0000-0000-0000-000000000001','d1500000-0000-0000-0000-000000000001','org/d1200000-0000-0000-0000-000000000001/patients/d1500000-0000-0000-0000-000000000001/files/d2900000-0000-0000-0000-000000000001','image/jpeg',1024,'d1100000-0000-0000-0000-000000000001','available'),
@@ -391,15 +412,24 @@ select extensions.ok(
   'the record is chronological ascending - oldest first'
 );
 
--- The two findings share an instant. The tie-breaker is (sourceKind, sourceId)
--- ascending, which is total because sourceId is unique within a sourceKind.
+-- A draft note and two findings share an instant, so both legs of the
+-- tie-breaker are exercised: source kind first, then source id within a kind.
+select extensions.is(
+  (select string_agg(row_value->>'eventId', ',' order by ordinal)
+   from prog_payload, jsonb_array_elements(payload->'rows') with ordinality as element(row_value, ordinal)
+   where seq = 1
+     and (row_value->>'occurredAt')::timestamptz = timestamptz '2026-08-20 04:00:00+00'),
+  'clinical_note:d1d00000-0000-0000-0000-000000000003,tooth_clinical_entry:d1b00000-0000-0000-0000-000000000001,tooth_clinical_entry:d1b00000-0000-0000-0000-000000000002',
+  'events of DIFFERENT source kinds at one instant order by source kind, so the tie-breaker is total across the union'
+);
 select extensions.is(
   (select string_agg(row_value->>'sourceId', ',' order by ordinal)
    from prog_payload, jsonb_array_elements(payload->'rows') with ordinality as element(row_value, ordinal)
    where seq = 1
-     and (row_value->>'occurredAt')::timestamptz = timestamptz '2026-08-20 04:00:00+00'),
+     and (row_value->>'occurredAt')::timestamptz = timestamptz '2026-08-20 04:00:00+00'
+     and row_value->>'sourceKind' = 'tooth_clinical_entry'),
   'd1b00000-0000-0000-0000-000000000001,d1b00000-0000-0000-0000-000000000002',
-  'two events at the same instant come back in a deterministic (sourceKind, sourceId) order'
+  'two events of the SAME source kind at one instant order by source id'
 );
 
 set local role authenticated;
@@ -489,6 +519,47 @@ select extensions.is(
   'a finalized note carries its own canonical text and no invented label'
 );
 
+-- The orthodontic charge names clinician A. The follow-up on that case was
+-- performed and recorded by clinician C. The record must name C.
+select extensions.is(
+  (select row_value->>'providerDisplay'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2400000-0000-0000-0000-000000000002'),
+  'Cara Santos',
+  'a follow-up names the clinician who recorded it, not the clinician on the case charge'
+);
+select extensions.ok(
+  (select (select row_value->>'providerDisplay'
+           from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+           where seq = 1 and row_value->>'sourceId' = 'd2400000-0000-0000-0000-000000000002')
+       is distinct from
+          (select row_value->>'providerDisplay'
+           from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+           where seq = 1 and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000001')),
+  'the follow-up and its case charge report different clinicians, so no attribution is inherited from the charge'
+);
+select extensions.is(
+  (select row_value->>'providerDisplay'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2400000-0000-0000-0000-000000000001'),
+  'Alba Reyes',
+  'a treatment event names the clinician who recorded it'
+);
+select extensions.ok(
+  (select row_value->>'providerDisplay' is null
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2400000-0000-0000-0000-000000000004'),
+  'an event recorded by someone who is not a provider here reports no clinician rather than borrowing one'
+);
+select extensions.is(
+  (select row_value->>'providerDisplay'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'clinical_photograph'
+     and row_value->>'sourceId' = 'd2300000-0000-0000-0000-000000000001'),
+  'Alba Reyes',
+  'a photograph names the clinician who took it rather than discarding the attribution it holds'
+);
+
 select extensions.is(
   (select count(*)::integer
    from prog_payload, jsonb_array_elements(payload->'rows') as row_value
@@ -496,6 +567,53 @@ select extensions.is(
      and row_value->>'description' = 'Synthetic amendment text'),
   1,
   'an amendment is its own row rather than an overwrite of the note it amends'
+);
+
+-- ===========================================================================
+-- 5b. Draft clinical content is present but never mistakable for signed history
+-- ===========================================================================
+
+select extensions.ok(
+  (select (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd1d00000-0000-0000-0000-000000000001'),
+  'a finalized note reports itself as finalized'
+);
+select extensions.ok(
+  (select not (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd1d00000-0000-0000-0000-000000000003'),
+  'a DRAFT note appears in the record and reports itself as unfinished'
+);
+select extensions.ok(
+  (select (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2200000-0000-0000-0000-000000000001'),
+  'a FINAL periodontal examination reports itself as finalized'
+);
+select extensions.ok(
+  (select not (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2200000-0000-0000-0000-000000000002'),
+  'a DRAFT periodontal examination is no longer silently dropped, and reports itself as unfinished'
+);
+select extensions.ok(
+  (select not (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'clinical_encounter'),
+  'an open visit reports itself as unfinished'
+);
+select extensions.ok(
+  (select not (row_value->>'finalized')::boolean
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' = 'treatment_plan'),
+  'a DRAFT treatment plan reports itself as unfinished'
+);
+select extensions.ok(
+  (select bool_and(row_value->>'finalized' is null)
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' in ('tooth_clinical_entry','charge','payment','payment_allocation')),
+  'a source with no draft lifecycle says nothing about finalization rather than guessing'
 );
 
 -- ===========================================================================
@@ -526,6 +644,17 @@ select extensions.is(
   'a voided charge still appears as a row but owes nothing'
 );
 
+-- Not a trivial pass: that charge WAS allocated against before it was voided,
+-- and the allocation is still in the record. The zero paid comes from the
+-- reversal public.void_charge writes in the same transaction, not from the
+-- absence of any payment.
+select extensions.ok(
+  (select (payload->'rows') @> '[{"sourceKind":"payment_allocation","sourceId":"d2100000-0000-0000-0000-000000000005"}]'::jsonb
+      and (payload->'rows') @> '[{"sourceKind":"payment_allocation_reversal","sourceId":"d2800000-0000-0000-0000-000000000002"}]'::jsonb
+   from prog_payload where seq = 1),
+  'the voided charge had been allocated against, and both the allocation and its reversal survive in the record'
+);
+
 select extensions.is(
   (select row_value->>'chargeMinor' || '/' || (row_value->>'paidMinor') || '/' || (row_value->>'balanceMinor')
    from prog_payload, jsonb_array_elements(payload->'rows') as row_value
@@ -553,6 +682,61 @@ select extensions.ok(
    from prog_payload, jsonb_array_elements(payload->'rows') as row_value
    where seq = 1),
   'every row states its currency'
+);
+
+-- The defect this replaces: an ALLOCATION row showed the case position in a
+-- column headed "Paid", so a 5,000 installment read as 10,000 once a second
+-- installment had been applied. The line amount and the case position are now
+-- two different values on the same row, and the test pins both.
+select extensions.is(
+  (select (row_value->>'lineAmountMinor') || ' of ' || (row_value->>'paidMinor')
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2100000-0000-0000-0000-000000000001'),
+  '500000 of 1000000',
+  'an allocation states the amount IT applied, distinct from the case total paid to date'
+);
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2000000-0000-0000-0000-000000000001'),
+  '500000',
+  'a payment states the amount received'
+);
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2700000-0000-0000-0000-000000000001'),
+  '-300000',
+  'a refund states the amount returned, signed as a withdrawal'
+);
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2500000-0000-0000-0000-000000000001'),
+  '-50000',
+  'a credit adjustment states its own amount, signed by its effect on what is owed'
+);
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd2800000-0000-0000-0000-000000000001'),
+  '-200000',
+  'an allocation reversal states the amount it un-applied'
+);
+select extensions.is(
+  (select row_value->>'lineAmountMinor'
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceId' = 'd1f00000-0000-0000-0000-000000000001'),
+  '8000000',
+  'a charge states the amount billed'
+);
+select extensions.ok(
+  (select bool_and(row_value->>'lineAmountMinor' is null)
+   from prog_payload, jsonb_array_elements(payload->'rows') as row_value
+   where seq = 1 and row_value->>'sourceKind' in
+     ('clinical_encounter','clinical_note','prescription','treatment_plan',
+      'periodontal_examination','tooth_clinical_entry','clinical_photograph')),
+  'a clinical event moves no money and says so, rather than reporting a zero'
 );
 
 -- The isolation proof. The orthodontic position is captured, an UNRELATED
@@ -626,10 +810,11 @@ select extensions.ok(
 );
 
 select extensions.ok(
-  (select bool_and(row_value->>'chargeMinor' is null and row_value->>'paidMinor' is null and row_value->>'balanceMinor' is null)
+  (select bool_and(row_value->>'chargeMinor' is null and row_value->>'paidMinor' is null
+                   and row_value->>'balanceMinor' is null and row_value->>'lineAmountMinor' is null)
    from prog_payload, jsonb_array_elements(payload->'rows') as row_value
    where seq = 4),
-  'a caller without billing read is shown no money on any clinical row either'
+  'a caller without billing read is shown no money on any clinical row either, line amount included'
 );
 
 select extensions.ok(
@@ -638,6 +823,25 @@ select extensions.ok(
       and not (payload->>'financialVisible')::boolean
    from prog_payload where seq = 4),
   'the clinical chronology is still complete for that caller, and the payload says the money is withheld'
+);
+
+-- ===========================================================================
+-- 7b. Positive branch access
+-- ===========================================================================
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','d1100000-0000-0000-0000-000000000005',true);
+insert into prog_payload (seq, payload)
+select 7, payload from public.get_clinical_progress_record_v1(
+  'd1500000-0000-0000-0000-000000000001'::uuid,
+  'd1300000-0000-0000-0000-000000000002'::uuid, 200, 0);
+reset role;
+
+select extensions.ok(
+  (select jsonb_array_length(payload->'rows') > 0 and (payload->>'financialVisible')::boolean
+   from prog_payload where seq = 7),
+  'the branch-scoped dentist refused at PROG A Main reads the same patient successfully AT the branch his role covers'
 );
 
 -- ===========================================================================

@@ -16,6 +16,8 @@ const row = (overrides: Partial<ClinicalProgressRow> = {}): ClinicalProgressRow 
   toothCodes: [11],
   providerDisplay: "Alba Reyes",
   description: "Synthetic finding text",
+  finalized: null,
+  lineAmountMinor: null,
   chargeMinor: null,
   paidMinor: null,
   balanceMinor: null,
@@ -47,7 +49,60 @@ describe("ProgressRecordTable", () => {
       within(screen.getByTestId("progress-record-table"))
         .getAllByRole("columnheader")
         .map((header) => header.textContent),
-    ).toEqual(["Date / time", "Procedure / event", "Tooth", "Provider", "Charge", "Paid", "Balance", "Notes"]);
+    ).toEqual([
+      "Date / time",
+      "Procedure / event",
+      "Tooth",
+      "Provider",
+      "Amount",
+      "Case charge",
+      "Case paid",
+      "Case balance",
+      "Notes",
+    ]);
+  });
+
+  it("shows what this event moved separately from what the case now stands at", () => {
+    render(
+      <ProgressRecordTable
+        record={record([
+          row({
+            eventType: "ALLOCATION",
+            procedureLabel: "Synthetic orthodontic case",
+            lineAmountMinor: 500000,
+            chargeMinor: 8000000,
+            paidMinor: 1000000,
+            balanceMinor: 7000000,
+          }),
+        ])}
+      />,
+    );
+
+    const table = within(screen.getByTestId("progress-record-table"));
+    const headers = table.getAllByRole("columnheader").map((header) => header.textContent);
+    const cells = table.getAllByRole("row")[1].querySelectorAll("td");
+
+    // The line amount and the case position are distinguishable by label, and
+    // the ledger's 5,000 movement is never rendered as the case's 10,000 total.
+    expect(headers[4]).toBe("Amount");
+    expect(headers[6]).toBe("Case paid");
+    expect(cells[4].textContent).toBe("₱5,000.00");
+    expect(cells[6].textContent).toBe("₱10,000.00");
+  });
+
+  it("marks unfinished clinical content and leaves signed history unmarked", () => {
+    render(
+      <ProgressRecordTable
+        record={record([
+          row({ eventId: "draft", eventType: "NOTE", finalized: false, description: "Unfinished text" }),
+          row({ eventId: "signed", eventType: "NOTE", finalized: true, description: "Signed text" }),
+        ])}
+      />,
+    );
+
+    const rows = within(screen.getByTestId("progress-record-table")).getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent(/draft/i);
+    expect(rows[1]).not.toHaveTextContent(/draft/i);
   });
 
   it("renders the record in the order the server returned it and never re-sorts", () => {
@@ -115,6 +170,7 @@ describe("ProgressRecordTable", () => {
 
     expect(screen.getByTestId("progress-record")).toHaveTextContent(/procedure case position derived from the billing ledger/i);
     expect(screen.getByTestId("progress-record")).toHaveTextContent(/not an account running total/i);
+    expect(screen.getByTestId("progress-record")).toHaveTextContent(/amount.*this one entry moved/i);
   });
 
   it("gives the phone list the same chronology and an explicit expand control per entry", () => {
