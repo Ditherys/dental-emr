@@ -6,9 +6,17 @@ import type { ClinicalFeatureDetail } from "@/lib/odontogram/feature-contract";
 import type { RendererToothProjection } from "@/lib/odontogram/renderer-projection";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
 
-import { measuredAssetKeyForFdi, measuredOrientation, measuredTemplateLayerIds } from "./measured-assets";
-import { measuredForkLayers } from "./measured-fork-layers";
-import { MeasuredSvgAsset } from "./measured-svg-asset";
+/**
+ * The reviewed anatomy is a ~3.5 MB checked-in node tree. It stays behind this
+ * boundary so a clinic on a constrained connection downloads the chart shell,
+ * the clinical labels and every selectable tooth first, and the artwork after.
+ *
+ * It remains an inert node tree consumed through `React.createElement`: this is
+ * a code-splitting boundary, never a runtime fetch of markup.
+ */
+const MeasuredToothAsset = React.lazy(async () => ({
+  default: (await import("./measured-svg-asset")).MeasuredToothAsset,
+}));
 
 /** How the pointer/keyboard event asked the chart to change selection. */
 export type SelectionModifiers = {
@@ -62,12 +70,6 @@ export function MeasuredTooth({
   onFocusChange,
   forceToggle = false,
 }: MeasuredToothProps): React.ReactElement {
-  const assetKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
-  const activeLayers = React.useMemo(
-    () => (assetKey ? measuredForkLayers(tooth, measuredTemplateLayerIds(assetKey)) : null),
-    [assetKey, tooth],
-  );
-
   const displayLabel = toLabel(tooth.fdi, notation);
   const summary = clinicalSummary(tooth);
   const ariaLabel =
@@ -121,16 +123,9 @@ export function MeasuredTooth({
         {displayLabel}
       </span>
       <span className="relative flex h-[74px] w-full items-center justify-center overflow-hidden" aria-hidden="true">
-        {assetKey && activeLayers ? (
-          <MeasuredSvgAsset
-            assetKey={assetKey}
-            activeLayers={activeLayers}
-            orientation={measuredOrientation(tooth.fdi)}
-            label={ariaLabel}
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">{tooth.fdi}</span>
-        )}
+        <React.Suspense fallback={<span className="text-xs text-muted-foreground">{tooth.fdi}</span>}>
+          <MeasuredToothAsset tooth={tooth} label={ariaLabel} />
+        </React.Suspense>
       </span>
       <span className="sr-only">{ariaLabel}</span>
     </button>

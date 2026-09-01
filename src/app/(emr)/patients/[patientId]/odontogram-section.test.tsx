@@ -117,6 +117,7 @@ describe("OdontogramSection O7", () => {
     // legacy flag visible after selecting that tooth
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Tooth 16/i }));
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
     expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Legacy reconciliation needed/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Original legacy facts/i).length).toBeGreaterThan(0);
@@ -134,8 +135,9 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    expect(screen.getAllByTestId("tooth-inspector").length).toBeGreaterThan(0);
-    // desktop inspector should show selected tooth
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
+    expect((await screen.findAllByTestId("tooth-inspector")).length).toBeGreaterThan(0);
+    // the inspector overlay should show the selected tooth
     expect(screen.getAllByText(/Tooth 11\b/).length).toBeGreaterThan(0);
 
     rerender(
@@ -148,9 +150,12 @@ describe("OdontogramSection O7", () => {
     );
 
     await waitFor(() => {
-      // after patient change, inspector should show placeholder, not previous selection
+      // after patient change the inspector closes and the new patient's chart owns the row
       expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
-      expect(screen.getByText(/Select a tooth on the chart/i)).toBeInTheDocument();
+      expect(screen.getByTestId("fork-odontogram")).toHaveAttribute(
+        "data-patient-key",
+        "00000000-0000-4000-a000-000000000022",
+      );
     });
   });
 
@@ -266,9 +271,10 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
+    expect(screen.getAllByText(/Read-only access/i).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
     const inspectors = await screen.findAllByTestId("tooth-inspector");
     expect(inspectors.length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Read-only access/i).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Record finding/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Amend/i })).not.toBeInTheDocument();
   });
@@ -286,6 +292,53 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByTestId("fork-odontogram")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "primary" })).not.toBeInTheDocument();
     expect(screen.queryByText(/classic/i)).not.toBeInTheDocument();
+  });
+
+  it("gives the chart the whole workspace row instead of a permanent inspector column", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    const section = screen.getByTestId("odontogram-section");
+    expect(screen.queryByRole("complementary", { name: "Tooth inspector" })).not.toBeInTheDocument();
+    expect(section.querySelector("aside")).toBeNull();
+    expect(section.querySelector('[class*="340px"]')).toBeNull();
+    // A scroll or clip container around the chart would hide a squeezed
+    // composition rather than fix it. (The progress-record data table keeps its
+    // own horizontal scroll; that is a table, not the chart.)
+    const chartRegion = screen.getByTestId("fork-odontogram").parentElement!;
+    expect(chartRegion.querySelector(".overflow-x-auto, .overflow-x-scroll")).toBeNull();
+    expect(chartRegion.className).not.toContain("overflow-");
+    expect(section.className).not.toContain("overflow-");
+  });
+
+  it("keeps the clinical write path reachable from a selected tooth at every width", async () => {
+    const user = userEvent.setup();
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    // No viewport branching: the same explicit affordance opens the inspector
+    // at every width.
+    await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
+    const open = screen.getByRole("button", { name: "Open inspector" });
+    expect(open).toBeEnabled();
+    expect(open.className).not.toContain("lg:hidden");
+    await user.click(open);
+
+    const inspectors = await screen.findAllByTestId("tooth-inspector");
+    expect(inspectors.length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: /Record finding/i }).length).toBeGreaterThan(0);
   });
 
   it("opens the bounded periodontal workspace for a relational draft examination", async () => {
@@ -353,6 +406,7 @@ describe("OdontogramSection O7", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Tooth 24/i }));
+    await user.click(screen.getByRole("button", { name: "Open inspector" }));
 
     expect((await screen.findAllByText("Bridge workflow")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Implant workflow").length).toBeGreaterThan(0);

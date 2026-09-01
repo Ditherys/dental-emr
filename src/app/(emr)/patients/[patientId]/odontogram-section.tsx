@@ -91,9 +91,12 @@ export function OdontogramSection({
   const handleSelect = React.useCallback(
     (fdi: number) => {
       const active = document.activeElement as HTMLElement | null;
-      if (active?.matches?.('.tooth-tile.side-view[data-tooth]')) lastFocusedRef.current = active;
+      if (active?.matches?.("[data-fdi]")) lastFocusedRef.current = active;
       setSelectedFdi(fdi);
-      setSheetOpen(window.matchMedia?.("(max-width: 1023px)")?.matches ?? false);
+      // Selection stays on the chart. The inspector is a temporary overlay
+      // opened explicitly, at every width, so selecting a tooth never covers
+      // the chart-level actions. Task 5 replaces this overlay with the record
+      // drawer.
     },
     [],
   );
@@ -203,12 +206,12 @@ export function OdontogramSection({
     setSheetOpen(false);
     setDirectTreatmentRequested(false);
     // Return focus to the previously selected tooth for keyboard continuity.
-    const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`.tooth-tile.side-view[data-tooth="${selectedFdi}"]`);
+    const el = lastFocusedRef.current ?? document.querySelector<HTMLElement>(`[data-fdi="${selectedFdi}"]`);
     // Defer to next frame so sheet/dialog unmount does not steal focus.
     requestAnimationFrame(() => {
       if (el && document.contains(el)) el.focus();
       else {
-        const first = document.querySelector<HTMLElement>('.tooth-tile.side-view[data-tooth]');
+        const first = document.querySelector<HTMLElement>("[data-fdi]");
         first?.focus();
       }
     });
@@ -223,87 +226,61 @@ export function OdontogramSection({
   }
 
   return (
-    <div key={patientId} data-testid="odontogram-section" className="@container flex max-w-full flex-col gap-3 overflow-hidden">
+    <div key={patientId} data-testid="odontogram-section" className="@container flex max-w-full min-w-0 flex-col gap-3">
       {error && (
         <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      <div className="flex justify-end print:hidden">
-        <Button type="button" variant="outline" size="sm" onClick={() => setPerioOpen(true)}>
-          Open periodontal entry
-        </Button>
-      </div>
-
       {!isCurrentPatientSnapshot || loading || !dto ? (
         <div className="rounded-md border p-6 text-sm text-muted-foreground">Loading odontogram…</div>
       ) : (
-        <div className="flex gap-4">
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <ForkOdontogram
-              patientKey={patientId}
-              dto={dto}
-              canWriteClinical={canWriteClinical}
-              onSelect={handleSelect}
-              onDraftChange={setForkDrafts}
-              onError={setError}
-            />
-            <ForkSaveController
-              key={`${patientId}:${actingBranchId}`}
-              patientId={patientId}
-              actingBranchId={actingBranchId}
-              canWriteClinical={canWriteClinical}
-              drafts={forkDrafts}
-              onSaved={async () => {
-                setForkDrafts([]);
-                await refetch();
-              }}
-              onError={setError}
-            />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>{canWriteClinical ? "Record, amend or void from the tooth inspector once a tooth is selected." : "Read-only access. Selection shows the current clinical record."}</span>
-              <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
-                Open inspector
-              </Button>
-            </div>
-            <div className="mt-4">
-              <ForkPrintChart
-                dto={dto}
-                patientName={printPatientName}
-                branchName={printBranchName}
-                providerName={printProviderName}
-                progressEvents={progressEvents}
-                renderChart={false}
-              />
-            </div>
-          </div>
-
-          <aside
-            aria-label="Tooth inspector"
-            className="hidden w-[340px] shrink-0 overflow-hidden rounded-md border bg-card lg:flex lg:flex-col"
-          >
-            {selectedFdiForCurrentPatient === null ? (
-              <div className="p-6 text-sm text-muted-foreground">Select a tooth on the chart to view details and actions.</div>
-            ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-                <ToothInspector
-                  key={`desktop-${selectedFdiForCurrentPatient}-${directTreatmentRequested ? "direct" : "inspect"}`}
-                  patientId={patientId}
-                  actingBranchId={actingBranchId}
-                  fdi={selectedFdiForCurrentPatient}
-                  dto={dto}
-                  notation="FDI"
-                  canWriteClinical={canWriteClinical}
-                  onClose={closeInspector}
-                  onMutated={refetch}
-                  initialRecordOpen={directTreatmentRequested}
-                />
-              </div>
-            )}
-          </aside>
+        // The chart owns the whole workspace row. Nothing clips or scrolls it,
+        // so a squeezed composition would be visible rather than masked.
+        <div className="flex w-full min-w-0 flex-col gap-3">
+          <ForkOdontogram
+            patientKey={patientId}
+            dto={dto}
+            canWriteClinical={canWriteClinical}
+            onSelect={handleSelect}
+            onDraftChange={setForkDrafts}
+            onError={setError}
+          />
+          <ForkSaveController
+            key={`${patientId}:${actingBranchId}`}
+            patientId={patientId}
+            actingBranchId={actingBranchId}
+            canWriteClinical={canWriteClinical}
+            drafts={forkDrafts}
+            onSaved={async () => {
+              setForkDrafts([]);
+              await refetch();
+            }}
+            onError={setError}
+          />
+          <ForkPrintChart
+            dto={dto}
+            patientName={printPatientName}
+            branchName={printBranchName}
+            providerName={printProviderName}
+            progressEvents={progressEvents}
+            renderChart={false}
+          />
         </div>
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground print:hidden">
+        <span>{canWriteClinical ? "Record, amend or void from the tooth inspector once a tooth is selected." : "Read-only access. Selection shows the current clinical record."}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
+            Open inspector
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setPerioOpen(true)}>
+            Open periodontal entry
+          </Button>
+        </div>
+      </div>
 
       <CurrentStatusPanel
         selectedTooth={selectedFdiForCurrentPatient}
@@ -312,7 +289,7 @@ export function OdontogramSection({
         followupAvailable={followupAvailable}
         onRecordDirectTreatment={() => {
           setDirectTreatmentRequested(true);
-          setSheetOpen(window.matchMedia?.("(max-width: 1023px)")?.matches ?? false);
+          setSheetOpen(true);
         }}
         onOpenFollowup={() => setFollowupOpen(true)}
       />

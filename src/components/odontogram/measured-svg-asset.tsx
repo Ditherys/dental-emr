@@ -2,7 +2,16 @@
 
 import * as React from "react";
 
-import { measuredSvgTree, type MeasuredSvgNode } from "./measured-assets";
+import type { RendererToothProjection } from "@/lib/odontogram/renderer-projection";
+
+import {
+  measuredAssetKeyForFdi,
+  measuredOrientation,
+  measuredSvgTree,
+  measuredTemplateLayerIds,
+  type MeasuredSvgNode,
+} from "./measured-assets";
+import { measuredForkLayers } from "./measured-fork-layers";
 // The generator strips each asset's inline `[data-active="0"] { display: none }`
 // rule, so this repository owns it. It must travel with the component that owns
 // the `data-active` contract, or a tooth rendered outside `MeasuredChart` paints
@@ -64,4 +73,33 @@ export function MeasuredSvgAsset({
     role: "img",
     "aria-label": label,
   });
+}
+
+/**
+ * The whole anatomy entry point for one tooth.
+ *
+ * This module — and only this module — pulls in the ~3.5 MB checked-in node
+ * tree, so `MeasuredTooth` can reach it through a single dynamic import and
+ * keep the anatomy out of the initial patient-chart download. Resolving the
+ * template, its orientation and its active layers therefore happens here rather
+ * than in the eagerly loaded tooth tile.
+ */
+export function MeasuredToothAsset({
+  tooth,
+  label,
+}: {
+  tooth: RendererToothProjection;
+  label: string;
+}): React.ReactElement | null {
+  const assetKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
+  if (!assetKey) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
+
+  return (
+    <MeasuredSvgAsset
+      assetKey={assetKey}
+      activeLayers={measuredForkLayers(tooth, measuredTemplateLayerIds(assetKey))}
+      orientation={measuredOrientation(tooth.fdi)}
+      label={label}
+    />
+  );
 }

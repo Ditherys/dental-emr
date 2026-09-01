@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
@@ -170,6 +170,27 @@ describe("toPatientChartDTO", () => {
     expect(chart.entries).toEqual([]);
   });
 });
+
+/**
+ * The reviewed anatomy loads through a code-splitting boundary; resolving it
+ * once here keeps the layer assertions below reading real rendered anatomy.
+ */
+beforeAll(async () => {
+  const { unmount } = render(
+    <ForkOdontogram
+      patientKey={PATIENT_ID}
+      dto={dto}
+      canWriteClinical
+      onSelect={vi.fn()}
+      onDraftChange={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
+  await waitFor(() => expect(document.querySelector("[data-measured-asset]")).not.toBeNull(), {
+    timeout: 60_000,
+  });
+  unmount();
+}, 90_000);
 
 describe("ForkOdontogram compatibility wrapper", () => {
   it("mounts the EMR-owned chart and no controlled-fork runtime surface", () => {

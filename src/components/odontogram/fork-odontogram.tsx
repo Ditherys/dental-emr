@@ -17,6 +17,7 @@ import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogr
 import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
 import type { NumberingSystem } from "@/lib/odontogram/dentition";
 
+import { useClinicalChartView } from "./clinical-chart-toolbar";
 import { MeasuredChart } from "./measured-chart";
 import { ForkPrintProjectionBridge } from "./fork-print-chart";
 import "./styles.css";
@@ -215,8 +216,18 @@ export function ForkOdontogram({
   onSelect,
   onError,
 }: ForkOdontogramProps): React.ReactElement {
-  const [notation, setNotation] = React.useState<NumberingSystem>("FDI");
-  const [selectedFdi, setSelectedFdi] = React.useState<readonly number[]>([]);
+  // The Clinical chart workspace owns notation, dentition, region and selection
+  // through its single toolbar. Mounted outside that workspace this falls back
+  // to a bounded local view and keeps its own notation control.
+  const view = useClinicalChartView();
+  const { setView } = view;
+
+  // Selection is transient and patient-scoped. The view outlives one chart, so
+  // a patient change must not leave another patient's tooth summarised in the
+  // toolbar.
+  React.useEffect(() => {
+    setView({ selectedFdi: [] });
+  }, [patientKey, setView]);
 
   const projection = React.useMemo(() => {
     try {
@@ -229,38 +240,41 @@ export function ForkOdontogram({
 
   const handleSelectionChange = React.useCallback(
     (next: readonly number[]) => {
-      setSelectedFdi(next);
+      setView({ selectedFdi: next });
       const last = next.at(-1);
       if (last !== undefined) onSelect(last);
     },
-    [onSelect],
+    [onSelect, setView],
   );
 
   return (
     <div className="dental-emr-fork" data-testid="fork-odontogram" data-patient-key={patientKey}>
       <ForkPrintProjectionBridge dto={dto} targetId={`fork-print-projection-${dto.patientId}`} />
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-        <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">
-          Tooth notation
-        </label>
-        <select
-          id={`fork-numbering-${patientKey}`}
-          data-testid="fork-numbering"
-          value={notation}
-          onChange={(event) => setNotation(event.target.value as NumberingSystem)}
-          className="min-h-11 rounded-md border bg-background px-2 text-sm"
-        >
-          <option value="FDI">FDI</option>
-          <option value="UNIVERSAL">Universal</option>
-          <option value="PALMER">Palmer</option>
-        </select>
-      </div>
+      {!view.managed && (
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+          <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">
+            Tooth notation
+          </label>
+          <select
+            id={`fork-numbering-${patientKey}`}
+            data-testid="fork-numbering"
+            value={view.notation}
+            onChange={(event) => setView({ notation: event.target.value as NumberingSystem })}
+            className="min-h-11 rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="FDI">FDI</option>
+            <option value="UNIVERSAL">Universal</option>
+            <option value="PALMER">Palmer</option>
+          </select>
+        </div>
+      )}
       <MeasuredChart
         key={patientKey}
         projection={projection}
-        notation={notation}
-        viewport="FULL"
-        selectedFdi={selectedFdi}
+        notation={view.notation}
+        viewport={view.viewport}
+        dentition={view.dentition}
+        selectedFdi={view.selectedFdi}
         onSelectionChange={handleSelectionChange}
         readOnly={!canWriteClinical}
       />

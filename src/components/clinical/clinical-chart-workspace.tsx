@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 
+import {
+  ClinicalChartToolbar,
+  ClinicalChartViewProvider,
+  DEFAULT_CLINICAL_CHART_VIEW,
+  type ClinicalChartView,
+} from "@/components/odontogram/clinical-chart-toolbar";
 import { Button } from "@/components/ui/button";
 import type { ClinicalChartMode } from "@/lib/clinical/types";
-import { cn } from "@/lib/utils";
-
-const CHART_MODES: ReadonlyArray<{ value: ClinicalChartMode; label: string }> = [
-  { value: "CURRENT_STATUS", label: "Current status" },
-  { value: "TREATMENT_PLAN", label: "Treatment plan" },
-  { value: "PERIODONTAL", label: "Periodontal" },
-];
 
 function RegionFailure({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
@@ -58,6 +57,17 @@ export function ClinicalChartWorkspace({
   defaultMode?: ClinicalChartMode;
 }) {
   const [mode, setMode] = useState<ClinicalChartMode>(defaultMode);
+  // The chart view belongs to the workspace, not to any one chart mode, so it
+  // survives a mode change and a responsive reflow.
+  const [view, setView] = useState<ClinicalChartView>(DEFAULT_CLINICAL_CHART_VIEW);
+  const galleryRef = useRef<HTMLDivElement | null>(null);
+
+  const updateView = useCallback(
+    (next: Partial<ClinicalChartView>) => setView((current) => ({ ...current, ...next })),
+    [],
+  );
+  const chartView = useMemo(() => ({ ...view, setView: updateView }), [updateView, view]);
+  const hasGallery = gallery !== undefined || galleryLoadFailed;
 
   return (
     <section aria-labelledby="clinical-chart-heading" className="flex w-full min-w-0 flex-col gap-4">
@@ -70,24 +80,18 @@ export function ClinicalChartWorkspace({
 
       {medicalSafety}
 
-      <div role="group" aria-label="Chart mode" className="flex flex-wrap gap-1 border-b text-sm font-medium">
-        {CHART_MODES.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={mode === value}
-            onClick={() => setMode(value)}
-            className={cn(
-              "min-h-11 shrink-0 rounded-t border-b-2 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-              mode === value
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ClinicalChartToolbar
+        mode={mode}
+        onModeChange={setMode}
+        view={view}
+        onViewChange={updateView}
+        onPrint={() => window.print()}
+        onOpenGallery={
+          hasGallery
+            ? () => galleryRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" })
+            : undefined
+        }
+      />
 
       <div data-testid="clinical-chart-surface" className="w-full min-w-0">
         {chartLoadFailed ? (
@@ -96,7 +100,7 @@ export function ClinicalChartWorkspace({
             onRetry={onRetry}
           />
         ) : (
-          chart[mode]
+          <ClinicalChartViewProvider value={chartView}>{chart[mode]}</ClinicalChartViewProvider>
         )}
       </div>
 
@@ -111,8 +115,8 @@ export function ClinicalChartWorkspace({
         )}
       </div>
 
-      {(gallery !== undefined || galleryLoadFailed) && (
-        <div data-testid="clinical-photo-region" className="w-full min-w-0">
+      {hasGallery && (
+        <div ref={galleryRef} data-testid="clinical-photo-region" className="w-full min-w-0">
           {galleryLoadFailed ? (
             <RegionFailure
               message="The clinical photographs could not be loaded. Retry to load them."

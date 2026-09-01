@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PerioChart } from "./perio-chart";
@@ -153,6 +153,28 @@ function tooth(container: HTMLElement, fdi: string): HTMLElement {
 function layerState(container: HTMLElement, fdi: string, layer: string): string | null | undefined {
   return tooth(container, fdi).querySelector(`[data-layer="${layer}"]`)?.getAttribute("data-active");
 }
+
+/**
+ * The reviewed anatomy loads through a code-splitting boundary, so it is
+ * resolved once here and every assertion below still reads the real rendered
+ * layers rather than the boundary's placeholder.
+ */
+beforeAll(async () => {
+  const { unmount } = render(
+    <ForkOdontogram
+      patientKey={PATIENT_ID}
+      dto={dto}
+      canWriteClinical
+      onSelect={vi.fn()}
+      onDraftChange={vi.fn()}
+      onError={vi.fn()}
+    />,
+  );
+  await waitFor(() => expect(document.querySelector("[data-measured-asset]")).not.toBeNull(), {
+    timeout: 60_000,
+  });
+  unmount();
+}, 90_000);
 
 describe("clinical feature parity through the patient workspace entry point", () => {
   it("renders the mapped clinical states in the reviewed anatomical SVG layers", () => {

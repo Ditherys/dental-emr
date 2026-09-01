@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { projectPatientChart, type PatientChartDTO } from "@/lib/odontogram/chart-projection";
@@ -164,7 +164,10 @@ function expectInactive(fdi: number, layers: readonly string[]): void {
 }
 
 describe("EMR-owned renderer feature parity", () => {
-  beforeAll(() => {
+  // The reviewed anatomy now loads through a code-splitting boundary, so the
+  // chart is rendered and the artwork awaited once before the parity
+  // assertions read the real layers.
+  beforeAll(async () => {
     render(
       <MeasuredChart
         projection={projectPatientChart(dto)}
@@ -174,7 +177,10 @@ describe("EMR-owned renderer feature parity", () => {
         onSelectionChange={vi.fn()}
       />,
     );
-  }, 60_000);
+    await waitFor(() => expect(document.querySelector("[data-measured-asset]")).not.toBeNull(), {
+      timeout: 60_000,
+    });
+  }, 90_000);
 
   afterAll(cleanup);
 

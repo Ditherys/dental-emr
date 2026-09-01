@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { dentitionFor } from "@/lib/odontogram/dentition";
 import type { RendererToothProjection, RendererToothView } from "@/lib/odontogram/renderer-projection";
@@ -39,6 +39,20 @@ function renderTooth(projection: RendererToothProjection, props: Partial<React.C
     />,
   );
 }
+
+/**
+ * The reviewed anatomy now loads through a code-splitting boundary so the
+ * ~3.5 MB node tree stays out of the initial patient-chart download. Resolving
+ * it once here keeps every assertion below reading the real rendered anatomy
+ * rather than the boundary's placeholder.
+ */
+beforeAll(async () => {
+  const { unmount } = renderTooth(tooth(11));
+  await waitFor(() => expect(document.querySelector("[data-measured-asset]")).not.toBeNull(), {
+    timeout: 60_000,
+  });
+  unmount();
+}, 90_000);
 
 function layer(container: HTMLElement, id: string): Element | null {
   return container.querySelector(`[data-layer="${id}"]`);

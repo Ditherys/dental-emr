@@ -22,10 +22,23 @@ import { MeasuredTooth, type SelectionModifiers } from "./measured-tooth";
  * selection. It owns no clinical state, performs no save, and holds no fork
  * context, browser storage or demo data.
  */
+/**
+ * Which dentition the clinician has asked the chart to draw.
+ *
+ * This is a view choice, not a clinical fact. `AUTO` keeps the safe default —
+ * the chart follows the canonical record, so a recorded primary finding is
+ * never hidden. Choosing `MIXED` or `PRIMARY` makes the primary sites reachable
+ * so a first paediatric finding can be recorded on a child who has none yet; it
+ * never adds a tooth to the canonical projection.
+ */
+export type ChartDentition = "AUTO" | "PERMANENT" | "MIXED" | "PRIMARY";
+
 export type AnatomicalChartProps = {
   projection: PatientChartProjection;
   notation: NumberingSystem;
   viewport: ClinicalChartViewport;
+  /** Defaults to `AUTO`: the chart infers the dentition from the canonical record. */
+  dentition?: ChartDentition;
   selectedFdi: readonly number[];
   onSelectionChange: (next: readonly number[]) => void;
   readOnly?: boolean;
@@ -69,6 +82,21 @@ export function resolveSelection(
   return [fdi];
 }
 
+/**
+ * Teeth per row at each container step: four on a phone, one quadrant on a
+ * tablet, the whole arch on a desktop. Every break lands on a quadrant
+ * boundary, so a narrower screen reflows the arch into quadrant blocks instead
+ * of squeezing 32 teeth into one row or hiding them behind a scroll container.
+ * The step is chosen from the row's own tooth count, never from a measured
+ * window width.
+ */
+function columnClass(count: number): string {
+  if (count <= 5) return "grid-cols-5";
+  if (count <= 8) return "grid-cols-4 @md:grid-cols-8";
+  if (count <= 10) return "grid-cols-5 @md:grid-cols-10";
+  return "grid-cols-4 @md:grid-cols-8 @4xl:grid-cols-[repeat(16,minmax(0,1fr))]";
+}
+
 function ToothRow({
   teeth,
   chart,
@@ -90,7 +118,12 @@ function ToothRow({
 }): React.ReactElement | null {
   if (teeth.length === 0) return null;
   return (
-    <div className="flex flex-wrap justify-center gap-1" role="group" aria-label={label} data-row={label}>
+    <div
+      className={`grid gap-1 ${columnClass(teeth.length)}`}
+      role="group"
+      aria-label={label}
+      data-row={label}
+    >
       {teeth.map((fdi) => {
         const tooth = chart.get(fdi);
         if (!tooth) return null;
@@ -114,6 +147,7 @@ export function MeasuredChart({
   projection,
   notation,
   viewport,
+  dentition = "AUTO",
   selectedFdi,
   onSelectionChange,
   readOnly = false,
@@ -121,11 +155,20 @@ export function MeasuredChart({
   const [multiSelect, setMultiSelect] = React.useState(false);
   const anchorRef = React.useRef<number | null>(null);
 
-  const includePrimary = projectionHasPrimaryDentition(projection);
-  const ordered = React.useMemo(
-    () => viewportFdiTeeth(viewport, { includePrimary }),
-    [includePrimary, viewport],
-  );
+  // Without an explicit choice the chart still infers the dentition from the
+  // record, so a recorded primary finding is never hidden. With one, the
+  // clinician decides — a mixed-dentition child with no primary finding yet
+  // must still have a primary tooth to click.
+  const includePrimary =
+    dentition === "MIXED" || dentition === "PRIMARY"
+      ? true
+      : dentition === "PERMANENT"
+        ? false
+        : projectionHasPrimaryDentition(projection);
+  const ordered = React.useMemo(() => {
+    const teeth = viewportFdiTeeth(viewport, { includePrimary });
+    return dentition === "PRIMARY" ? teeth.filter(isPrimary) : teeth;
+  }, [dentition, includePrimary, viewport]);
   const chart = React.useMemo(() => projectRendererChart(projection, ordered, "front"), [ordered, projection]);
   const selected = React.useMemo(() => new Set(selectedFdi), [selectedFdi]);
 
@@ -150,8 +193,11 @@ export function MeasuredChart({
       data-testid="measured-chart"
       data-viewport={viewport}
       data-notation={notation}
+      data-dentition={dentition}
       data-read-only={readOnly ? "1" : "0"}
-      className="flex flex-col gap-2"
+      // The chart sizes itself against its own width, so it composes the same
+      // way in the full-width workspace, in a print preview and on a phone.
+      className="@container flex flex-col gap-2"
     >
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button

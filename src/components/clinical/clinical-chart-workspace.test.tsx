@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { MedicalRecord } from "@/lib/clinical/types";
+
+import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 
 import { ClinicalChartWorkspace } from "./clinical-chart-workspace";
 import { MedicalSafetySummary } from "./medical-safety-summary";
@@ -80,6 +83,63 @@ describe("ClinicalChartWorkspace information architecture", () => {
     const surface = screen.getByTestId("clinical-chart-surface");
     expect(surface.className).not.toContain("max-w-7xl");
     expect(container.querySelector(".max-w-7xl")).toBeNull();
+  });
+});
+
+describe("ClinicalChartWorkspace chart controls", () => {
+  function ViewProbe() {
+    const view = useClinicalChartView();
+    return (
+      <p data-testid="view-probe">
+        {view.notation}/{view.dentition}/{view.viewport}
+      </p>
+    );
+  }
+
+  it("carries the chart controls in exactly one toolbar rather than a separate control strip", () => {
+    renderWorkspace();
+
+    const toolbar = screen.getByRole("toolbar", { name: "Clinical chart controls" });
+    expect(within(toolbar).getByRole("group", { name: "Chart mode" })).toBeVisible();
+    expect(screen.getAllByRole("group", { name: "Chart mode" })).toHaveLength(1);
+    expect(within(toolbar).getByRole("group", { name: "Chart region" })).toBeVisible();
+    expect(within(toolbar).getByLabelText("Tooth notation")).toBeVisible();
+    expect(within(toolbar).getByLabelText("Dentition")).toBeVisible();
+  });
+
+  it("publishes the toolbar view state to the mounted chart and keeps it across a mode change", () => {
+    renderWorkspace({
+      chart: {
+        CURRENT_STATUS: <ViewProbe />,
+        TREATMENT_PLAN: <ViewProbe />,
+        PERIODONTAL: <p data-testid="perio-panel">Periodontal chart</p>,
+      },
+    });
+
+    expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/AUTO/FULL");
+
+    fireEvent.change(screen.getByLabelText("Dentition"), { target: { value: "MIXED" } });
+    fireEvent.click(screen.getByRole("button", { name: "Lower arch" }));
+    expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/MIXED/LOWER");
+
+    // The view is a workspace concern, so it survives a chart-mode change.
+    fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
+    expect(screen.getByTestId("view-probe")).toHaveTextContent("FDI/MIXED/LOWER");
+  });
+
+  it("offers the photograph action only when the workspace actually holds a gallery", async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderWorkspace();
+
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Clinical photographs" })).toBeInTheDocument();
+    unmount();
+
+    const nextUser = userEvent.setup();
+    renderWorkspace({ gallery: undefined });
+    await nextUser.click(screen.getByRole("button", { name: "More chart actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Chart help" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Clinical photographs" })).not.toBeInTheDocument();
   });
 });
 

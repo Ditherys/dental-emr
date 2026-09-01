@@ -2,14 +2,14 @@
 
 import * as React from "react";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { projectPatientChart, type PatientChartDTO } from "@/lib/odontogram/chart-projection";
 import type { ClinicalChartViewport } from "@/lib/clinical/types";
 import type { ClinicalEntry } from "@/lib/odontogram/state";
 
-import { MeasuredChart, resolveSelection } from "./measured-chart";
+import { MeasuredChart, resolveSelection, type ChartDentition } from "./measured-chart";
 
 afterEach(cleanup);
 
@@ -47,12 +47,14 @@ function Harness({
   onChange,
   readOnly = false,
   viewport = "QUADRANT_1" as ClinicalChartViewport,
+  dentition,
 }: {
   projection?: ReturnType<typeof projectPatientChart>;
   initial?: readonly number[];
   onChange?: (next: readonly number[]) => void;
   readOnly?: boolean;
   viewport?: ClinicalChartViewport;
+  dentition?: ChartDentition;
 }) {
   const [selected, setSelected] = React.useState<readonly number[]>(initial);
   return (
@@ -60,6 +62,7 @@ function Harness({
       projection={projection}
       notation="FDI"
       viewport={viewport}
+      dentition={dentition}
       selectedFdi={selected}
       readOnly={readOnly}
       onSelectionChange={(next) => {
@@ -79,6 +82,19 @@ function selectedFdi(): number[] {
     .map((node) => Number(node.dataset.fdi))
     .sort((a, b) => a - b);
 }
+
+/**
+ * The reviewed anatomy loads through a code-splitting boundary so it stays out
+ * of the initial patient-chart download. Resolving it once here keeps the
+ * layer assertion below reading real rendered anatomy.
+ */
+beforeAll(async () => {
+  const { unmount } = render(<Harness />);
+  await waitFor(() => expect(document.querySelector("[data-measured-asset]")).not.toBeNull(), {
+    timeout: 60_000,
+  });
+  unmount();
+}, 90_000);
 
 describe("resolveSelection", () => {
   const ordered = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 48, 47, 46];
@@ -243,6 +259,88 @@ describe("MeasuredChart", () => {
     expect(screen.getByTestId("measured-chart")).toHaveAttribute("data-read-only", "1");
     fireEvent.click(tooth(16));
     expect(onChange).toHaveBeenLastCalledWith([16]);
+  }, 30_000);
+
+  it("renders every permanent tooth of the desktop composition without a masking scroll container", () => {
+    const { container } = render(<Harness viewport="FULL" dentition="PERMANENT" />);
+
+    expect(document.querySelectorAll("[data-fdi]")).toHaveLength(32);
+    expect(container.querySelector(".overflow-x-auto, .overflow-x-scroll, .overflow-auto")).toBeNull();
+    expect(screen.getByTestId("measured-chart").className).toContain("@container");
+  }, 30_000);
+
+  it("reflows an arch into quadrant blocks instead of one squeezed 32-tooth row", () => {
+    render(<Harness viewport="FULL" dentition="PERMANENT" />);
+
+    // 4 teeth per row on a phone, one quadrant per row on a tablet, the whole
+    // arch on a desktop. Order and every tooth are preserved at each step.
+    const upper = screen.getByRole("group", { name: "Upper permanent teeth" });
+    expect(upper.className).toContain("grid-cols-4");
+    expect(upper.className).toContain("@md:grid-cols-8");
+    expect(upper.className).toContain("@4xl:grid-cols-[repeat(16,minmax(0,1fr))]");
+    expect([...upper.querySelectorAll<HTMLElement>("[data-fdi]")].map((node) => node.dataset.fdi)).toEqual([
+      "18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28",
+    ]);
+  }, 30_000);
+
+  it("sizes a narrowed region to its own tooth count rather than the full arch", () => {
+    render(<Harness viewport="QUADRANT_1" dentition="PERMANENT" />);
+
+    const upper = screen.getByRole("group", { name: "Upper permanent teeth" });
+    expect(upper.className).toContain("grid-cols-4");
+    expect(upper.className).toContain("@md:grid-cols-8");
+    expect(upper.className).not.toContain("repeat(16");
+  }, 30_000);
+
+  it("lets the clinician chart mixed dentition for a child with no primary record", () => {
+    // The paediatric first-visit dead end: inferring the dentition from the
+    // record alone leaves no primary tooth to click to record the first finding.
+    const projection = chartWith({ entries: [entry(11)], implants: [] });
+    render(<Harness projection={projection} viewport="QUADRANT_1" dentition="MIXED" />);
+
+    expect(screen.getByTestId("tooth-11")).toBeInTheDocument();
+    expect(screen.getByTestId("tooth-51")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Upper primary teeth" })).toBeInTheDocument();
+
+    // The view widened; the canonical projection did not gain a tooth.
+    expect([...projection.teeth.keys()]).toEqual([11]);
+
+    fireEvent.click(tooth(51));
+    expect(selectedFdi()).toEqual([51]);
+  }, 30_000);
+
+  it("renders the primary dentition alone when the clinician chooses it", () => {
+    render(<Harness viewport="QUADRANT_1" dentition="PRIMARY" />);
+
+    expect(screen.queryByTestId("tooth-11")).not.toBeInTheDocument();
+    expect([...document.querySelectorAll<HTMLElement>("[data-fdi]")].map((node) => node.dataset.fdi)).toEqual([
+      "55", "54", "53", "52", "51",
+    ]);
+  }, 30_000);
+
+  it("keeps a permanent composition free of primary teeth even when the record holds them", () => {
+    render(
+      <Harness
+        projection={chartWith({ entries: [entry(54)], implants: [] })}
+        viewport="QUADRANT_1"
+        dentition="PERMANENT"
+      />,
+    );
+
+    expect(screen.queryByTestId("tooth-54")).not.toBeInTheDocument();
+    expect(screen.getByTestId("tooth-11")).toBeInTheDocument();
+  }, 30_000);
+
+  it("keeps every edentulous site rendered and selectable", () => {
+    const missing = [18, 17, 16, 15, 14, 13, 12, 11].map((fdi) =>
+      entry(fdi, { entryId: `missing-${fdi}`, kind: "TREATMENT", clinicalCode: "MISSING", surfaces: [] }),
+    );
+    render(<Harness projection={chartWith({ entries: missing, implants: [] })} viewport="QUADRANT_1" dentition="PERMANENT" />);
+
+    expect(document.querySelectorAll("[data-fdi]")).toHaveLength(8);
+    expect(tooth(16)).toHaveAttribute("data-anatomy", "MISSING");
+    fireEvent.click(tooth(16));
+    expect(selectedFdi()).toEqual([16]);
   }, 30_000);
 
   it("exposes no fork runtime, reset, import or storage affordance", () => {
