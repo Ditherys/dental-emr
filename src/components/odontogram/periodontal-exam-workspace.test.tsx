@@ -439,7 +439,11 @@ describe("PeriodontalExamWorkspace", () => {
     const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
       batch: { tooth?: Array<Record<string, unknown>>; plaque?: Array<Record<string, unknown>> };
     };
-    expect(call.batch.tooth).toEqual([{ tooth_fdi: "15" }]);
+    // The implant context must be STATED, not left to the INSERT default of
+    // false: private.enforce_periodontal_tooth_context refuses a tooth row whose
+    // implant flag contradicts its own site rows. The diff alone never emits it,
+    // because the draft and the baseline both read true from the site row.
+    expect(call.batch.tooth).toEqual([{ tooth_fdi: "15", implant_context: true }]);
     expect(call.batch.plaque).toEqual([
       { tooth_fdi: "15", surface: "BUCCAL", modified_plaque_index: 2 },
     ]);
@@ -603,6 +607,25 @@ describe("PeriodontalExamWorkspace", () => {
     expect(screen.getByRole("button", { name: /confirm and finalize/i })).toBeDisabled();
     expect(screen.getByTestId("perio-finalize-blocked")).toHaveTextContent(/not on the record yet/i);
     expect(api.finalize).not.toHaveBeenCalled();
+  }, 20000);
+
+  it("tells the workspace navigation guard that a held reading is unsaved, and clears it on unmount", async () => {
+    const user = userEvent.setup();
+    const onUnsavedChange = vi.fn();
+    const { unmount } = renderWorkspace(draftPayload(), handlers(), {
+      onUnsavedChange,
+      autosaveDelayMs: 5000,
+    });
+
+    expect(onUnsavedChange).toHaveBeenLastCalledWith(false);
+
+    // A deferred reading is exactly the case where the on-screen notice
+    // explaining it vanishes with the page.
+    await user.click(screen.getByRole("button", { name: /tooth 16 disto-lingual bleeding on probing, not recorded/i }));
+    await waitFor(() => expect(onUnsavedChange).toHaveBeenLastCalledWith(true));
+
+    unmount();
+    expect(onUnsavedChange).toHaveBeenLastCalledWith(false);
   }, 20000);
 
   it("hides the amendment control from a clinician without the correction permission", () => {

@@ -178,6 +178,11 @@ export function PatientWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Demographics and the clinical chart hold unsaved work independently, so
+  // they are tracked separately and OR-ed for the navigation guard. One shared
+  // boolean would let whichever wrote last clear the other one's warning.
+  const [hasUnsavedClinical, setHasUnsavedClinical] = useState(false);
+  const hasUnsavedWork = hasUnsavedChanges || hasUnsavedClinical;
   const [lifecycle, setLifecycle] = useState<"archive" | "reactivate" | null>(null);
   const [review, setReview] = useState<DuplicateReview | null>(null);
   const [reviewRequest, setReviewRequest] = useState<DuplicateRequest | null>(null);
@@ -271,17 +276,17 @@ export function PatientWorkspace({
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (saving || hasUnsavedChanges) {
+      if (saving || hasUnsavedWork) {
         event.preventDefault();
         event.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [hasUnsavedChanges, saving]);
+  }, [hasUnsavedWork, saving]);
 
   useEffect(() => {
-    if (!hasUnsavedChanges) return;
+    if (!hasUnsavedWork) return;
     const interceptNavigation = (event: MouseEvent) => {
       const target = event.target as Element | null;
       const anchor = target?.closest?.("a[href]");
@@ -294,7 +299,7 @@ export function PatientWorkspace({
     };
     document.addEventListener("click", interceptNavigation, true);
     return () => document.removeEventListener("click", interceptNavigation, true);
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedWork]);
 
   async function requestDuplicateReview(request: DuplicateRequest) {
     setSaving(true);
@@ -505,6 +510,7 @@ export function PatientWorkspace({
               actingBranchId={actingBranchId}
               canWriteClinical={canWriteClinical}
               canCorrectClinical={canCorrectClinical}
+              onUnsavedClinicalChange={setHasUnsavedClinical}
               printPatientName={patientDisplayName(patient)}
               printBranchName={actingBranchName}
               printProviderName="Signed-in dentist"

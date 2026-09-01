@@ -54,6 +54,9 @@ type Props = {
   actingBranchId: string;
   canWriteClinical: boolean;
   canCorrectClinical?: boolean;
+  /** Raised while the clinical chart holds work that is not on the record, so
+   *  the workspace navigation guard can warn before it is lost. */
+  onUnsavedClinicalChange?: (unsaved: boolean) => void;
   printPatientName?: string;
   printBranchName?: string;
   printProviderName?: string;
@@ -104,7 +107,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedClinicalChange, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, initialAccountRows = [] }: Props) {
   void _initialToothConditions;
   // Plan printing moves with the plan page Task 17 removes; the prop stays on the
   // route contract until then.
@@ -276,7 +279,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       loadFailed={loadFailed}
       chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} renderProgressRecord={false} loadFailed={loadFailed} />}
     />,
-    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} />,
+    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={onUnsavedClinicalChange} />,
   };
 
   return <section id="clinical" className="border-t py-6">
@@ -413,7 +416,7 @@ function requestKey(): string {
  * provider server-side. No organization, provider or author identifier is sent
  * from here.
  */
-function PeriodontalModePanel({ patientId, actingBranchId, canWriteClinical, canCorrectClinical }: { patientId: string; actingBranchId: string; canWriteClinical: boolean; canCorrectClinical: boolean }) {
+function PeriodontalModePanel({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedChange }: { patientId: string; actingBranchId: string; canWriteClinical: boolean; canCorrectClinical: boolean; onUnsavedChange?: (unsaved: boolean) => void }) {
   const handlers = useMemo<PeriodontalWorkspaceHandlers>(() => ({
     load: async ({ examinationId }) => {
       const result = await getPeriodontalWorkspaceAction({ patientId, actingBranchId, examinationId: examinationId ?? null });
@@ -442,6 +445,7 @@ function PeriodontalModePanel({ patientId, actingBranchId, canWriteClinical, can
     actingBranchId={actingBranchId}
     canWriteClinical={canWriteClinical}
     canCorrect={canCorrectClinical}
+    onUnsavedChange={onUnsavedChange}
     handlers={handlers}
   />;
 }

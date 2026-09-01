@@ -173,6 +173,10 @@ export interface PeriodontalRiskClassificationProps {
   /** The browser's derivation of unsaved edits. Preview only. */
   preview: PeriodontalClassification | null;
   hasUnsavedEdits: boolean;
+  /** True when at least one unsaved reading cannot be written yet, rather than
+   *  merely not having been written yet. The two need different instructions:
+   *  Save draft cannot help the first. */
+  hasDeferredReadings?: boolean;
   confirmed: PerioClassificationPayload | null;
   risk: PerioRiskPayload;
   onRiskChange: (field: RiskField, value: string | number | null) => void;
@@ -185,6 +189,7 @@ export function PeriodontalRiskClassification({
   derived,
   preview,
   hasUnsavedEdits,
+  hasDeferredReadings = false,
   confirmed,
   risk,
   onRiskChange,
@@ -517,7 +522,7 @@ export function PeriodontalRiskClassification({
 
               {differs && (
                 <div className="mt-2">
-                  <p data-testid="perio-override-required" className="mb-1 text-[11px] text-warning-foreground">
+                  <p data-testid="perio-override-required" className="mb-1 text-[11px] text-warning">
                     Your confirmation differs from the server derivation. Record why before finalizing; the reason is
                     stored with the record.
                   </p>
@@ -547,9 +552,10 @@ export function PeriodontalRiskClassification({
               </label>
 
               {hasUnsavedEdits && (
-                <p data-testid="perio-finalize-blocked" className="mt-2 text-[11px] text-warning-foreground">
-                  This examination has edits that are not on the record yet. Finalizing now would lock a record
-                  without them, and a finalized examination is corrected only by amendment. Save the draft first.
+                <p data-testid="perio-finalize-blocked" className="mt-2 text-[11px] text-warning">
+                  {hasDeferredReadings
+                    ? "A finding on this chart cannot be written yet: a periodontal site is stored by its probing depth, and one is missing. Chart the missing probing depth listed above and the finding saves with it. Saving the draft will not help, because there is nothing the save boundary can carry. Finalizing now would lock a record without that finding, and a finalized examination is corrected only by amendment."
+                    : "This examination has edits that are not on the record yet. Finalizing now would lock a record without them, and a finalized examination is corrected only by amendment. Save the draft first."}
                 </p>
               )}
 

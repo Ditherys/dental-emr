@@ -330,6 +330,7 @@ export function buildPeriodontalBatch(
       if (changed) sites.push(row);
     }
 
+    const insertingToothRow = !baselineToothRows.has(code);
     const toothRow: PerioBatchToothRow = { tooth_fdi: code };
     let toothChanged = false;
     if (current.present !== null && current.present !== base.present) {
@@ -339,6 +340,21 @@ export function buildPeriodontalBatch(
     if (current.implantContext !== null && current.implantContext !== base.implantContext) {
       toothRow.implant_context = current.implantContext;
       toothChanged = true;
+    }
+    // A tooth row that does not exist yet is an INSERT, and the INSERT branch
+    // coalesces an absent flag to its default: `tooth_present` to true and
+    // `implant_context` to FALSE. `private.enforce_periodontal_tooth_context`
+    // then refuses a tooth row whose implant flag contradicts its own site
+    // rows, so a peri-implant chart whose implant context is already on the
+    // sites — and is therefore identical on both sides of the diff, and never
+    // emitted by it — would be written as a natural tooth and raise
+    // `site/tooth implant context mismatch`.
+    //
+    // On an INSERT the diff is the wrong question: there is no prior row to
+    // differ from. Whatever the draft knows is stated outright.
+    if (insertingToothRow) {
+      if (current.present !== null) toothRow.tooth_present = current.present;
+      if (current.implantContext !== null) toothRow.implant_context = current.implantContext;
     }
     for (const [field, key] of Object.entries(TOOTH_FIELD_KEYS) as [
       keyof typeof TOOTH_FIELD_KEYS,
@@ -389,7 +405,7 @@ export function buildPeriodontalBatch(
     // `implantContext` from a SITE row when no tooth row exists.
     const needsToothRow =
       !toothChanged &&
-      !baselineToothRows.has(code) &&
+      insertingToothRow &&
       (plaque.some((row) => row.tooth_fdi === code) || furcation.some((row) => row.tooth_fdi === code));
     if (toothChanged || needsToothRow) tooth.push(toothRow);
   }
@@ -581,6 +597,11 @@ export interface PeriodontalExamWorkspaceProps {
   initialPayload?: PeriodontalWorkspacePayload;
   dentition?: readonly string[];
   autosaveDelayMs?: number;
+  /** Raised while the chart holds work the record does not, so the workspace
+   *  navigation guard can warn before it is lost. A deferred reading counts:
+   *  it is exactly the case where the notice explaining it disappears with the
+   *  screen. */
+  onUnsavedChange?: (unsaved: boolean) => void;
 }
 
 export function PeriodontalExamWorkspace({
@@ -592,6 +613,7 @@ export function PeriodontalExamWorkspace({
   initialPayload,
   dentition = DEFAULT_DENTITION,
   autosaveDelayMs = 900,
+  onUnsavedChange,
 }: PeriodontalExamWorkspaceProps): React.ReactElement {
   const [payload, setPayload] = React.useState<PeriodontalWorkspacePayload | null>(initialPayload ?? null);
   const [loading, setLoading] = React.useState(initialPayload === undefined);
@@ -780,6 +802,14 @@ export function PeriodontalExamWorkspace({
     }, autosaveDelayMs);
     return () => clearTimeout(timer);
   }, [attemptedRevision, autosaveDelayMs, flush, readOnly, revision]);
+
+  // Reporting upward happens after the render that produced the value, and the
+  // cleanup clears it, so leaving this chart mode disarms the guard rather than
+  // leaving it stuck on.
+  React.useEffect(() => {
+    onUnsavedChange?.(hasUnsavedEdits);
+    return () => onUnsavedChange?.(false);
+  }, [hasUnsavedEdits, onUnsavedChange]);
 
   const touch = React.useCallback(() => {
     setRevision((current) => current + 1);
@@ -1217,6 +1247,7 @@ export function PeriodontalExamWorkspace({
             derived={payload?.derived ?? null}
             preview={preview}
             hasUnsavedEdits={hasUnsavedEdits}
+            hasDeferredReadings={deferredSites.length > 0}
             confirmed={examination.confirmed}
             risk={draftRisk}
             onRiskChange={onRiskChange}

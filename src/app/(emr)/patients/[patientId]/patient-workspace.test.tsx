@@ -45,8 +45,11 @@ vi.mock("./photos/clinical-photo-gallery", () => ({
   ),
 }));
 vi.mock("./clinical-section", () => ({
-  ClinicalSection: ({ gallery }: { gallery?: ReactNode }) => (
-    <div data-testid="clinical-section">{gallery}</div>
+  ClinicalSection: ({ gallery, onUnsavedClinicalChange }: { gallery?: ReactNode; onUnsavedClinicalChange?: (unsaved: boolean) => void }) => (
+    <div data-testid="clinical-section">
+      {gallery}
+      <button type="button" onClick={() => onUnsavedClinicalChange?.(true)}>clinical unsaved</button>
+    </div>
   ),
 }));
 vi.mock("./intake-section", () => ({ IntakeSection: () => <div data-testid="intake-section" /> }));
@@ -202,5 +205,22 @@ describe("PatientWorkspace", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Archive patient" }));
 
     await waitFor(() => expect(actions.lifecyclePatientAction).toHaveBeenCalledWith({ patientId: patient.patientId, actingBranchId: branchId, expectedVersion: 1 }, "archive"));
+  });
+
+  it("warns before the page is left while the clinical chart holds work the record does not", async () => {
+    const user = userEvent.setup();
+    renderWorkspace({ section: "clinical", canReadClinical: true, canWriteClinical: true });
+
+    const quiet = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(quiet);
+    expect(quiet.defaultPrevented).toBe(false);
+
+    // A periodontal reading that cannot be written yet is exactly the case where
+    // the notice explaining it disappears with the screen.
+    await user.click(screen.getByRole("button", { name: "clinical unsaved" }));
+
+    const armed = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(armed);
+    expect(armed.defaultPrevented).toBe(true);
   });
 });

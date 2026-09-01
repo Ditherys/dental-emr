@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 12 (round 3)
+# AI Handoff - Unified Clinical Chart workspace, Task 12 (round 4, final)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -7,7 +7,7 @@ Task 9 (canonical periodontal data model) is complete across `5dce284`,
 `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 (pure
 periodontal calculations, graphics and classification) is complete across
 `4053739` and `4836ae9`. Task 11 (versioned RPCs and the action boundary) is
-complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502` and this commit.
+complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and this commit.
 
 ## Task 12 - The complete periodontal and peri-implant workspace (2026-09-02)
 
@@ -703,6 +703,153 @@ client-side; `periodontal-exam-workspace.tsx` at ~1200 lines with
 unit-tested. Extracting those two pure functions into their own module with a
 dedicated suite would have made C2 and M2 much cheaper to pin, and is worth a
 later slice.
+
+## Round 4 - review fixes 2 of 2: closes Task 12 (2026-09-02)
+
+No migration. Four items, all closed.
+
+### 1 - MEDIUM. The minimal tooth row omitted the implant context it already knew
+
+`buildPeriodontalBatch` added `implant_context` only when it DIFFERED from the
+baseline. For a tooth whose implant flag reached the record through its SITE
+rows, `rowsFromPayload` sets the flag on both the draft and the baseline, so the
+diff never emitted it - and the RPC's INSERT branch coalesces an absent flag to
+`false`. `private.enforce_periodontal_tooth_context` then raises
+`site/tooth implant context mismatch`, so the whole batch fails.
+
+On an INSERT the diff is the wrong question: there is no prior row to differ
+from. `insertingToothRow` now states whatever the draft knows for both NOT NULL
+flags outright.
+
+The round-3 test asserted only the batch shape, so it certified a path that
+could not succeed. It now expects `{ tooth_fdi: "15", implant_context: true }`
+and says why, and the claim is proved where it actually matters - four new
+pgTAP assertions in `periodontal_full_chart_rpcs.test.sql`:
+
+```
+ok 93 - a peri-implant site is charted before any tooth row exists for that tooth
+ok 94 - the peri-implant tooth has site rows and no tooth row of its own
+ok 95 - a minimal tooth row that omits the implant context is refused under peri-implant sites
+ok 96 - a minimal tooth row that states the implant context is accepted with its surface index
+ok 97 - the tooth row lands as an implant, so the peri-implant surface index it enables is consistent with its sites
+ok 98 - the peri-implant surface index the tooth row enabled is on the record
+```
+
+Assertion 95 pins the OLD batch shape as a refusal, so the fix cannot be
+reverted without a red test.
+
+### 2 - The deferred-reading guidance sent the clinician in a loop
+
+The finalize block said "Save the draft first". For a deferred reading that is
+wrong: `Save draft` calls `flush`, which returns `EMPTY` and changes nothing, so
+Finalize stays disabled and the clinician gets a silent no-op. The real remedy -
+chart the missing probing depth - was only stated in a different panel.
+
+`PeriodontalRiskClassification` now takes `hasDeferredReadings` and names the
+real remedy for that cause, says plainly that saving the draft will not help,
+and keeps the ordinary "Save the draft first" wording for an ordinary diff.
+Both branches are tested, including that the deferred message does NOT contain
+the misleading instruction.
+
+### 3 - The chart could be abandoned with a held reading, unwarned
+
+`patient-workspace.tsx` already had a `beforeunload` and anchor-interception
+guard, wired to a `hasUnsavedChanges` that only `PatientDemographics` sets.
+
+Demographics and the clinical chart hold unsaved work independently, so a second
+piece of state was added rather than sharing one boolean - one shared flag would
+let whichever wrote last clear the other's warning. `hasUnsavedWork` ORs them and
+feeds both effects. `PeriodontalExamWorkspace` gained `onUnsavedChange`, reported
+from an effect and cleared on unmount so leaving the chart mode disarms the
+guard.
+
+Tested at both ends: the workspace reports `true` for a deferred reading and
+`false` on unmount, and `patient-workspace.test.tsx` asserts a `beforeunload`
+event is `defaultPrevented` only after the clinical chart reports unsaved work.
+RED with the old demographics-only guard: `expected false to be true`.
+
+### 4 - LOW. `text-warning-foreground` is not a token here
+
+`globals.css` defines `--color-warning` and `--color-warning-soft` only, so the
+utility resolved to nothing and the block rendered in inherited body colour.
+Both occurrences are now `text-warning`, with a test asserting the class the
+design system actually defines.
+
+### Round 4 files
+
+Changed only: `periodontal-exam-workspace.tsx` (+ suite),
+`periodontal-risk-classification.tsx` (+ suite), `clinical-section.tsx`,
+`patient-workspace.tsx` (+ suite), `periodontal_full_chart_rpcs.test.sql`.
+No migration, no SQL function change, no schema change.
+
+### Round 4 tests run and observed results
+
+```
+npm run typecheck        -> clean, no output
+npm run lint             -> 0 errors, 3 warnings (pre-existing, untouched files)
+npm run test:unit -- <the six periodontal suites>   -> 6 files, 94 tests passed
+npm run test:unit -- service, perio-actions, clinical-section, odontogram-section,
+                     patient-workspace                -> 5 files, 103 tests passed
+psql < supabase/tests/periodontal_full_chart_rpcs.test.sql
+                         -> P1_TEST_PASS, 98 assertions
+npm run test:db:local    -> halts at supabase/tests/treatment_plans.test.sql (pre-existing);
+                            all four periodontal suites PASS before it
+```
+
+### A concurrent task's work is in the tree - do not attribute it here
+
+`npx vitest run scripts/` reports **4 failures that are not this task's**. Three
+untracked files belonging to the clinical progress record (task 13) are present
+in the shared working tree:
+
+```
+?? supabase/migrations/20260901010300_clinical_progress_record_projection.sql
+?? supabase/migrations/20260901010301_clinical_progress_record_projection_grants.sql
+?? supabase/tests/clinical_progress_record.test.sql
+```
+
+Every failure names them, and the arithmetic is exact:
+
+- migration files `336` on disk minus the 2 foreign files = **334**, this task's
+  round-2 baseline;
+- function declarations `507` minus the 3 the two foreign migrations declare =
+  **504**, this task's round-2 baseline;
+- registered suites: `112` files on disk minus the 1 foreign suite = **111**,
+  the registry's length;
+- the grant-last violation names
+  `20260901010301_clinical_progress_record_projection_grants.sql` granting
+  execute on `public.get_clinical_progress_record_v1` outside a registered
+  grant-terminal.
+
+Registering that terminal in `scripts/approved-final-grants.mjs` and moving the
+pinned counts belongs to task 13's checkpoint, not this one. **This commit
+deliberately stages only its own eight paths and leaves those three files
+untracked.** Round 3 left `scripts/` green at 288/288 with the same code this
+task owns.
+
+### Round 4 residual risks
+
+Unchanged from round 3, minus the two that closed:
+
+1. A recorded site row still cannot be deleted, and a probing depth cannot be
+   withdrawn. Both are NOT NULL and no periodontal boundary deletes.
+2. A deferred reading can still sit unsent indefinitely if the depth is never
+   charted - but it is now visible, counted as unsaved, blocks finalization,
+   names its own remedy, and warns before the page is left.
+3. Switching a tooth from natural to implant after natural surface indices were
+   recorded is still refused by `perio_plaque_index_family_check` without the UI
+   pre-empting it.
+4. Comparison attribution is per examination, not per measurement.
+5. Both E2E specs remain written and unexecuted.
+
+### Ledgered by the controller, deliberately not fixed
+
+`Save draft` and `Retry` swallowing `BUSY` silently during an in-flight save; the
+dead `REFUSED` member of `AutosaveStatus`; and extracting
+`buildPeriodontalBatch` / `applyPeriodontalBatch` into their own tested module.
+The implementer and both reviewers independently recommended that extraction, and
+both Criticals, M2 and this round's MEDIUM all lived in exactly those two
+functions. It is the highest-value follow-up in this task.
 
 ### Next bounded task
 

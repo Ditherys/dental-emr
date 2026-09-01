@@ -190,6 +190,35 @@ describe("PeriodontalRiskClassification", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   }, 20000);
 
+  it("names charting the probing depth, not saving the draft, when a reading cannot be written yet", async () => {
+    const user = userEvent.setup();
+    renderPanel({ hasUnsavedEdits: true, hasDeferredReadings: true, preview: null });
+
+    await user.click(screen.getByRole("checkbox", { name: /i confirm this classification/i }));
+
+    const blocked = screen.getByTestId("perio-finalize-blocked");
+    expect(blocked).toHaveTextContent(/chart the missing probing depth/i);
+    // "Save draft" is a no-op for this cause; sending the clinician there is a loop.
+    expect(blocked).toHaveTextContent(/saving the draft will not help/i);
+    expect(blocked.textContent ?? "").not.toMatch(/Save the draft first/);
+    expect(screen.getByRole("button", { name: /confirm and finalize/i })).toBeDisabled();
+  }, 20000);
+
+  it("tells an ordinary unsaved diff to save the draft", () => {
+    renderPanel({ hasUnsavedEdits: true, hasDeferredReadings: false, preview: null });
+    const blocked = screen.getByTestId("perio-finalize-blocked");
+    expect(blocked).toHaveTextContent(/save the draft first/i);
+    expect(blocked.textContent ?? "").not.toMatch(/probing depth/i);
+  });
+
+  it("emphasises the finalize block with a token this design system actually defines", () => {
+    renderPanel({ hasUnsavedEdits: true, preview: null });
+    // --color-warning exists in globals.css; --color-warning-foreground does not,
+    // so text-warning-foreground would resolve to nothing at all.
+    expect(screen.getByTestId("perio-finalize-blocked").className).toMatch(/(^|\s)text-warning(\s|$)/);
+    expect(screen.getByTestId("perio-finalize-blocked").className).not.toMatch(/text-warning-foreground/);
+  });
+
   it("is read-only for a finalized examination", () => {
     renderPanel({ readOnly: true });
     expect(screen.queryByRole("button", { name: /confirm and finalize/i })).toBeNull();

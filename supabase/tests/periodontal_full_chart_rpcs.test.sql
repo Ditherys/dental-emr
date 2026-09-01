@@ -1593,6 +1593,110 @@ select extensions.is(
 
 reset role;
 
+-- Task 12 review round 2. The minimal tooth row a batch writes for a tooth that
+-- has none must STATE the implant context, not leave it to the INSERT default.
+--
+-- private.enforce_periodontal_tooth_context refuses a tooth row whose implant
+-- flag contradicts its own site rows, and the INSERT branch of
+-- save_periodontal_measurements_v2 coalesces an absent implant_context to
+-- false. A peri-implant chart whose implant context reached the record through
+-- its SITE rows therefore has the flag identical on both sides of the browser
+-- diff, so the diff never emits it - and the batch that adds the first surface
+-- index for that tooth would insert a NATURAL tooth row underneath peri-implant
+-- sites. The two assertions below pin both halves: the omission fails, and
+-- stating the flag succeeds and lands the right row.
+
+insert into public.periodontal_examinations (
+  id, organization_id, patient_id, encounter_id, examination_kind, status,
+  examined_at, examined_by, examined_provider_id
+) values (
+  'ea800000-0000-0000-0000-000000000015','ea200000-0000-0000-0000-000000000001',
+  'ea500000-0000-0000-0000-000000000001',
+  (select encounter_id from perio_rpc_scratch where label = 'draft'),
+  'MAINTENANCE','DRAFT', statement_timestamp(),
+  'ea100000-0000-0000-0000-000000000001','ea600000-0000-0000-0000-000000000001'
+);
+
+-- A peri-implant SITE row and deliberately no tooth row. This is the state a
+-- reload produces for a chart whose implant context was recorded on the sites.
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select save.saved_sites from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-000000000015'::uuid, 1,
+     $implant_a${"sites":[{"tooth_fdi":"25","site":"MB","probing_depth_mm":3,"implant_context":true}]}$implant_a$::jsonb,
+     'ea900000-0000-0000-0000-000000000070'::uuid) as save),
+  1,
+  'a peri-implant site is charted before any tooth row exists for that tooth'
+);
+
+reset role;
+
+-- The trigger auto-created a context row from the SITE row, so it already
+-- carries the implant flag. Removing it reproduces the state the browser sees
+-- after a reload of a chart whose tooth row was never written explicitly.
+delete from public.periodontal_tooth_measurements
+where organization_id = 'ea200000-0000-0000-0000-000000000001'
+  and examination_id = 'ea800000-0000-0000-0000-000000000015'
+  and tooth_fdi = '25';
+
+select extensions.ok(
+  not exists (
+    select 1 from public.periodontal_tooth_measurements as tooth
+    where tooth.examination_id = 'ea800000-0000-0000-0000-000000000015'::uuid
+      and tooth.tooth_fdi = '25'),
+  'the peri-implant tooth has site rows and no tooth row of its own'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','ea100000-0000-0000-0000-000000000001',true);
+
+-- Half one: omitting the flag is refused. This is exactly what a batch built
+-- from a plain diff would send, and it is why the browser must state the flag
+-- outright on an INSERT rather than ask whether it changed.
+select extensions.throws_ok(
+  $implant_b$select * from public.save_periodontal_measurements_v2(
+      'ea800000-0000-0000-0000-000000000015'::uuid, 2,
+      '{"tooth":[{"tooth_fdi":"25"}],
+        "plaque":[{"tooth_fdi":"25","surface":"BUCCAL","modified_plaque_index":1}]}'::jsonb,
+      'ea900000-0000-0000-0000-000000000071'::uuid)$implant_b$,
+  '23514','site/tooth implant context mismatch',
+  'a minimal tooth row that omits the implant context is refused under peri-implant sites'
+);
+
+-- Half two: stating it succeeds, and the row lands as an implant.
+select extensions.is(
+  (select save.saved_tooth + save.saved_plaque
+   from public.save_periodontal_measurements_v2(
+     'ea800000-0000-0000-0000-000000000015'::uuid, 2,
+     $implant_c${"tooth":[{"tooth_fdi":"25","implant_context":true}],
+        "plaque":[{"tooth_fdi":"25","surface":"BUCCAL","modified_plaque_index":1}]}$implant_c$::jsonb,
+     'ea900000-0000-0000-0000-000000000072'::uuid) as save),
+  2,
+  'a minimal tooth row that states the implant context is accepted with its surface index'
+);
+
+reset role;
+
+select extensions.ok(
+  (select tooth.implant_context and tooth.tooth_present
+   from public.periodontal_tooth_measurements as tooth
+   where tooth.examination_id = 'ea800000-0000-0000-0000-000000000015'::uuid
+     and tooth.tooth_fdi = '25'),
+  'the tooth row lands as an implant, so the peri-implant surface index it enables is consistent with its sites'
+);
+
+select extensions.ok(
+  (select surface.modified_plaque_index = 1
+   from public.periodontal_plaque_measurements as surface
+   where surface.examination_id = 'ea800000-0000-0000-0000-000000000015'::uuid
+     and surface.tooth_fdi = '25' and surface.surface = 'BUCCAL'),
+  'the peri-implant surface index the tooth row enabled is on the record'
+);
+
 with test_failures as (
   select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$'
 )
