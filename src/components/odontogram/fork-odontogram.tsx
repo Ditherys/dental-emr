@@ -72,7 +72,9 @@ function canonicalCode(entry: ToothClinicalEntryDTO): ClinicalFeatureCode | null
   if (entry.clinical_code !== "TOOTH_STATE") return entry.clinical_code as ClinicalFeatureCode;
   const detail = entry.detail as ClinicalFeatureDetail | null | undefined;
   if (detail?.code !== "TOOTH_STATE") return null;
-  return TOOTH_STATE_TO_CODE[detail.state] ?? null;
+  // `Object.hasOwn` rather than `??`: these maps are plain object literals, so a
+  // state of `constructor` or `toString` would resolve to an inherited function.
+  return Object.hasOwn(TOOTH_STATE_TO_CODE, detail.state) ? TOOTH_STATE_TO_CODE[detail.state] : null;
 }
 
 /**
@@ -85,8 +87,10 @@ function compatibleDetail(
   detail: ClinicalFeatureDetail | null | undefined,
 ): ClinicalFeatureDetail | undefined {
   if (!detail) return undefined;
-  if (code in TOOTH_STATE_TO_CODE) {
-    return detail.code === "TOOTH_STATE" && TOOTH_STATE_TO_CODE[detail.state] === code ? detail : undefined;
+  if (Object.hasOwn(TOOTH_STATE_TO_CODE, code)) {
+    if (detail.code !== "TOOTH_STATE") return undefined;
+    const mapped = Object.hasOwn(TOOTH_STATE_TO_CODE, detail.state) ? TOOTH_STATE_TO_CODE[detail.state] : null;
+    return mapped === code ? detail : undefined;
   }
   if (code === "CARIES") return detail.code === "CARIES" ? detail : undefined;
   if (code === "RESTORATION") return detail.code === "RESTORATION" ? detail : undefined;
@@ -184,7 +188,8 @@ function toPeriodontal(dto: PatientOdontogramDTO): PeriodontalChartInput[] {
 
   for (const tooth of latest.tooth) {
     const entry = forTooth(Number(tooth.tooth_fdi));
-    entry.mobility = MILLER_TO_MOBILITY[tooth.mobility_miller ?? "M0"] ?? "none";
+    const miller = tooth.mobility_miller ?? "M0";
+    entry.mobility = Object.hasOwn(MILLER_TO_MOBILITY, miller) ? MILLER_TO_MOBILITY[miller] : "none";
   }
   for (const site of latest.sites) {
     if (!site.tooth_present) continue;

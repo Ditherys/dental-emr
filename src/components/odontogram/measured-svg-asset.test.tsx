@@ -45,6 +45,9 @@ const RUNTIME_RENDERER_FILES = [
   "src/components/odontogram/measured-fork-layers.ts",
   "src/components/odontogram/generated/measured-svg-nodes.ts",
   "src/lib/odontogram/renderer-projection.ts",
+  // The component the patient workspace actually mounts, and the file that
+  // previously held the fork DOM bridge.
+  "src/components/odontogram/fork-odontogram.tsx",
 ];
 
 const FORBIDDEN_RUNTIME_APIS = [
@@ -164,6 +167,48 @@ describe("MeasuredSvgAsset", () => {
         expect(attribute.name.startsWith("on"), `unexpected handler ${attribute.name}`).toBe(false);
         expect(attribute.value).not.toContain("javascript:");
       }
+    }
+  });
+
+  it("actually hides an inactive layer under the stylesheet it imports", () => {
+    // The generator strips the fork's inline hiding rule, so the artwork is no
+    // longer self-contained. Prove the replacement rule this repository owns is
+    // reachable from the asset component alone, without MeasuredChart.
+    const assetSource = readFileSync(
+      resolve(process.cwd(), "src/components/odontogram/measured-svg-asset.tsx"),
+      "utf8",
+    );
+    expect(assetSource).toContain('import "./styles.css"');
+
+    const css = readFileSync(resolve(process.cwd(), "src/components/odontogram/styles.css"), "utf8");
+    expect(css).toMatch(/\.odontogram-measured-asset\s+\[data-active="0"\]\s*\{\s*display:\s*none;?\s*\}/);
+
+    const { container } = render(
+      <MeasuredSvgAsset
+        assetKey="12"
+        activeLayers={immutableStringSet(["tooth-base"])}
+        orientation="normal"
+        label="Tooth 12"
+      />,
+    );
+
+    const active = container.querySelector('[data-layer="tooth-base"]')!;
+    const inactive = container.querySelector('[data-layer="zircon-crown"]')!;
+    expect(active.getAttribute("data-active")).toBe("1");
+    expect(inactive.getAttribute("data-active")).toBe("0");
+
+    // Without the rule the artwork is not self-hiding: this is the regression
+    // the assertions below guard against, so prove it is real first.
+    expect(window.getComputedStyle(inactive).display).not.toBe("none");
+
+    const stylesheet = document.createElement("style");
+    stylesheet.textContent = css;
+    document.head.append(stylesheet);
+    try {
+      expect(window.getComputedStyle(inactive).display).toBe("none");
+      expect(window.getComputedStyle(active).display).not.toBe("none");
+    } finally {
+      stylesheet.remove();
     }
   });
 

@@ -3,6 +3,11 @@
 import * as React from "react";
 
 import { measuredSvgTree, type MeasuredSvgNode } from "./measured-assets";
+// The generator strips each asset's inline `[data-active="0"] { display: none }`
+// rule, so this repository owns it. It must travel with the component that owns
+// the `data-active` contract, or a tooth rendered outside `MeasuredChart` paints
+// every clinical layer at once.
+import "./styles.css";
 
 /**
  * Renders one reviewed anatomical template.

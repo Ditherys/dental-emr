@@ -74,17 +74,26 @@ export function measuredOrientation(fdi: number): MeasuredOrientation {
 
 const LAYER_ID_CACHE = new Map<string, ReadonlySet<string>>();
 
-/** Renderer-controlled layer ids the given template actually carries. */
+/**
+ * Renderer-controlled layer ids the given template actually carries.
+ *
+ * The generated records are plain object literals, so they inherit from
+ * `Object.prototype`. Both lookups use `Object.hasOwn` rather than `??` so an
+ * asset key of `constructor` or `toString` resolves to nothing instead of an
+ * inherited function.
+ */
 export function measuredTemplateLayerIds(assetKey: string): ReadonlySet<string> {
   const cached = LAYER_ID_CACHE.get(assetKey);
   if (cached) return cached;
-  const ids = immutableStringSet(MEASURED_TEMPLATE_LAYER_IDS[assetKey] ?? []);
+  const ids = immutableStringSet(
+    Object.hasOwn(MEASURED_TEMPLATE_LAYER_IDS, assetKey) ? MEASURED_TEMPLATE_LAYER_IDS[assetKey] : [],
+  );
   LAYER_ID_CACHE.set(assetKey, ids);
   return ids;
 }
 
 export function measuredSvgTree(assetKey: string): MeasuredSvgNode | null {
-  return MEASURED_SVG_TREES[assetKey] ?? null;
+  return Object.hasOwn(MEASURED_SVG_TREES, assetKey) ? MEASURED_SVG_TREES[assetKey] : null;
 }
 
 export const MEASURED_ASSET_KEYS: readonly string[] = Object.freeze(Object.keys(MEASURED_SVG_TREES).sort());

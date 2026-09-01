@@ -156,8 +156,10 @@ function expectActive(fdi: number, layers: readonly string[]): void {
 
 function expectInactive(fdi: number, layers: readonly string[]): void {
   for (const layer of layers) {
+    // Assert existence too, so a mistyped layer id cannot pass silently.
     const node = toothLayer(fdi, layer);
-    if (node) expect(node.getAttribute("data-active"), `tooth ${fdi} layer ${layer}`).toBe("0");
+    expect(node, `tooth ${fdi} has no ${layer} layer`).toBeTruthy();
+    expect(node?.getAttribute("data-active"), `tooth ${fdi} layer ${layer}`).toBe("0");
   }
 }
 

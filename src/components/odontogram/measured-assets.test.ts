@@ -108,6 +108,15 @@ describe("measured asset selection", () => {
     expect(templateForFdi(0, "front")).toBeNull();
   });
 
+  it("resolves nothing for an inherited Object.prototype key", () => {
+    // The generated records are plain object literals. A key such as
+    // `constructor` must not resolve to an inherited function and reach React.
+    for (const hostile of ["constructor", "toString", "__proto__", "hasOwnProperty", "valueOf"]) {
+      expect(measuredSvgTree(hostile), `tree for ${hostile}`).toBeNull();
+      expect(measuredTemplateLayerIds(hostile).size, `layers for ${hostile}`).toBe(0);
+    }
+  });
+
   it("names assets deterministically", () => {
     expect(measuredAssetKey(16, "front")).toBe("16");
     expect(measuredAssetKey(16, "occlusal")).toBe("16_occl");

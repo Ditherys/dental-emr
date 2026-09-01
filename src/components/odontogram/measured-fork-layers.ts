@@ -211,7 +211,11 @@ function activateFeature(
   }
 
   if (detail.code === "OTHER") {
-    for (const id of OTHER_CODE_LAYERS[detail.controlledCode] ?? []) add(id);
+    // `Object.hasOwn` rather than `??`: a controlled code of `constructor` or
+    // `toString` would otherwise resolve to an inherited function.
+    if (Object.hasOwn(OTHER_CODE_LAYERS, detail.controlledCode)) {
+      for (const id of OTHER_CODE_LAYERS[detail.controlledCode]) add(id);
+    }
     return;
   }
 

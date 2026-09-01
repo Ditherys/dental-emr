@@ -327,6 +327,13 @@ describe("measured fork layer activation — permanent anatomy", () => {
     expect(result.has("fissure-sealing-occlusal")).toBe(true);
   });
 
+  it("renders no artwork for a controlled code that collides with Object.prototype", () => {
+    for (const hostile of ["constructor", "toString", "__proto__", "valueOf"]) {
+      const result = active(tooth(11, { features: [feature({ code: "OTHER", controlledCode: hostile })] }));
+      expect([...result].sort()).toEqual(["tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"]);
+    }
+  });
+
   it("renders a fracture", () => {
     expect(active(tooth(11, { features: [feature({ code: "OTHER", controlledCode: "FRACTURE" })] })).has("fracture-vertical")).toBe(true);
   });

@@ -255,8 +255,10 @@ describe("MeasuredTooth — canonical projections activate real SVG layers", () 
         expect(activeState(container, id), `${testCase.name}: layer ${id}`).toBe("1");
       }
       for (const id of testCase.off ?? []) {
+        // Assert existence too, so a mistyped `off` id cannot pass silently.
         const node = layer(container, id);
-        if (node) expect(node.getAttribute("data-active"), `${testCase.name}: layer ${id}`).toBe("0");
+        expect(node, `${testCase.name}: missing layer ${id}`).toBeTruthy();
+        expect(node?.getAttribute("data-active"), `${testCase.name}: layer ${id}`).toBe("0");
       }
     });
   }
@@ -318,8 +320,10 @@ describe("MeasuredTooth — canonical projections activate real SVG layers", () 
         expect(activeState(container, id), `${testCase.name}: layer ${id}`).toBe("1");
       }
       for (const id of testCase.off ?? []) {
+        // Assert existence too, so a mistyped `off` id cannot pass silently.
         const node = layer(container, id);
-        if (node) expect(node.getAttribute("data-active"), `${testCase.name}: layer ${id}`).toBe("0");
+        expect(node, `${testCase.name}: missing layer ${id}`).toBeTruthy();
+        expect(node?.getAttribute("data-active"), `${testCase.name}: layer ${id}`).toBe("0");
       }
     });
   }

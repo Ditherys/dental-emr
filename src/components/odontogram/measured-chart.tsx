@@ -14,7 +14,6 @@ import {
 } from "@/lib/odontogram/renderer-projection";
 
 import { MeasuredTooth, type SelectionModifiers } from "./measured-tooth";
-import "./styles.css";
 
 /**
  * The EMR-owned anatomical chart.

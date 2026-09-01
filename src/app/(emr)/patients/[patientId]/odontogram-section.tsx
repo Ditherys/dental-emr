@@ -262,7 +262,7 @@ export function OdontogramSection({
               onError={setError}
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>{canWriteClinical ? "Use the chart controls to prepare a finding or treatment. Use inspector for amend/void." : "Read-only access. Selection shows the current clinical record."}</span>
+              <span>{canWriteClinical ? "Record, amend or void from the tooth inspector once a tooth is selected." : "Read-only access. Selection shows the current clinical record."}</span>
               <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs lg:hidden" disabled={!selectedFdiForCurrentPatient} onClick={() => setSheetOpen(true)}>
                 Open inspector
               </Button>
