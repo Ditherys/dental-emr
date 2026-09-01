@@ -146,6 +146,56 @@ describe("PeriodontalArchVisualization", () => {
     expect(document.querySelectorAll('[data-index="PD"]').length).toBe(1);
   });
 
+  it("filters the threshold on the reading, not on the coordinate the mark is drawn at", async () => {
+    const user = userEvent.setup();
+    render(
+      <PeriodontalArchVisualization
+        teeth={[
+          tooth("16", {
+            sites: {
+              // 4 mm pocket with 3 mm recession: drawn 7 mm below the CEJ, but
+              // the probing depth is 4 and must be hidden at the 5 mm threshold.
+              MB: charted(4, 3),
+              // 6 mm pocket with a 2 mm coronal margin: drawn 4 mm below the
+              // CEJ, but the probing depth is 6 and must be shown.
+              B: charted(6, -2),
+            },
+          }),
+        ]}
+      />,
+    );
+
+    expect(document.querySelectorAll('[data-index="PD"]').length).toBe(2);
+    await user.selectOptions(screen.getByRole("combobox", { name: /threshold/i }), "5");
+
+    expect(document.querySelector('[data-index="PD"][data-fdi="16"][data-site="MB"]')).toBeNull();
+    expect(document.querySelector('[data-index="PD"][data-fdi="16"][data-site="B"]')).not.toBeNull();
+  }, 20000);
+
+  it("filters the attachment overlay on the attachment level, and hides a site whose level is unknown", async () => {
+    const user = userEvent.setup();
+    render(
+      <PeriodontalArchVisualization
+        teeth={[
+          tooth("16", {
+            sites: {
+              MB: charted(3, 3),
+              B: charted(9, null),
+            },
+          }),
+        ]}
+      />,
+    );
+
+    await user.selectOptions(screen.getByRole("combobox", { name: /overlay/i }), "CAL");
+    await user.selectOptions(screen.getByRole("combobox", { name: /threshold/i }), "5");
+
+    // CAL 6 at MB passes; B has no margin, so its attachment level is unknown
+    // and an unknown reading never satisfies a threshold.
+    expect(document.querySelector('[data-index="CAL"][data-fdi="16"][data-site="MB"]')).not.toBeNull();
+    expect(document.querySelector('[data-index="CAL"][data-fdi="16"][data-site="B"]')).toBeNull();
+  }, 20000);
+
   it("focuses one arch without dropping the other from the record", async () => {
     const user = userEvent.setup();
     render(

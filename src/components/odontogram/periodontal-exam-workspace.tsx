@@ -105,6 +105,14 @@ export type PerioMeasurementBatch = {
   risk?: Partial<Record<keyof PerioRiskPayload, number | string | null>>;
 };
 
+/** A reading the draft holds that no batch can carry yet. */
+export type PerioDeferredSite = { toothFdi: string; site: PerioSite };
+
+export type PerioBatchPlan = {
+  batch: PerioMeasurementBatch;
+  deferredSites: PerioDeferredSite[];
+};
+
 export type PerioWorkspaceOutcome =
   | { ok: true; id?: string; version?: number }
   | { ok: false; code: string };
@@ -145,6 +153,10 @@ const EXAMINATION_KINDS: readonly PerioExaminationKind[] = ["INITIAL", "RE-EVALU
 type ChartingArch = "UPPER" | "LOWER" | "BOTH";
 
 type AutosaveStatus = "IDLE" | "PENDING" | "SAVING" | "SAVED" | "CONFLICT" | "OFFLINE" | "REFUSED";
+
+/** `ISSUED` the batch reached the server, `EMPTY` there was nothing to send,
+ *  `BUSY` a write is already in flight and this diff has not been offered. */
+type FlushOutcome = "ISSUED" | "EMPTY" | "BUSY";
 
 const controlClass =
   "h-11 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50";
@@ -256,11 +268,17 @@ export function buildPeriodontalBatch(
   draft: ReadonlyMap<string, PerioGridToothRow>,
   baselineRisk: PerioRiskPayload,
   draftRisk: PerioRiskPayload,
-): PerioMeasurementBatch {
+  /** Tooth codes that actually have a stored `periodontal_tooth_measurements`
+   *  row. Taken from the projection, never inferred: a site row can set
+   *  `implantContext` on the draft row, so reading the flags back would be a
+   *  proxy that a peri-implant chart with no tooth row silently defeats. */
+  baselineToothRows: ReadonlySet<string>,
+): PerioBatchPlan {
   const sites: PerioBatchSiteRow[] = [];
   const tooth: PerioBatchToothRow[] = [];
   const plaque: PerioBatchPlaqueRow[] = [];
   const furcation: PerioBatchFurcationRow[] = [];
+  const deferredSites: PerioDeferredSite[] = [];
 
   for (const [code, current] of draft) {
     const base = baseline.get(code) ?? emptyPerioGridToothRow(code);
@@ -268,7 +286,22 @@ export function buildPeriodontalBatch(
     for (const site of PERIO_SITES) {
       const now = current.sites[site];
       const was = base.sites[site];
-      if (!now || now.probingDepthMm === null) continue;
+      if (!now) continue;
+      if (now.probingDepthMm === null) {
+        // A site row is stored BY its probing depth, which is NOT NULL, so a
+        // bleeding or suppuration finding recorded before the depth cannot be
+        // written yet. It is reported as deferred rather than dropped: the
+        // clinician sees that the record does not hold it, and the reading is
+        // still in the draft, so it is sent the moment a depth arrives.
+        if (
+          now.gingivalMarginMm !== (was?.gingivalMarginMm ?? null) ||
+          now.bleedingOnProbing !== (was?.bleedingOnProbing ?? null) ||
+          now.suppuration !== (was?.suppuration ?? null)
+        ) {
+          deferredSites.push({ toothFdi: code, site });
+        }
+        continue;
+      }
       const row: PerioBatchSiteRow = { tooth_fdi: code, site, probing_depth_mm: now.probingDepthMm };
       let changed = now.probingDepthMm !== (was?.probingDepthMm ?? null);
       // A field is sent when it DIFFERS from the baseline, whether the new
@@ -349,16 +382,14 @@ export function buildPeriodontalBatch(
     // minimal one. A site does not need it: the site row carries its own
     // presence flag.
     //
-    // "Has a stored row" is read off the two NOT NULL columns, not off
-    // `baseline.has(code)`: the baseline map is seeded with a blank row for
-    // every tooth in the dentition, so `has` is always true and would make this
-    // guard permanently inert. `tooth_present` and `implant_context` are NOT
-    // NULL in the schema, so they are non-null in the projection exactly when a
-    // row exists.
-    const baselineHasToothRow = base.present !== null || base.implantContext !== null;
+    // Existence comes from the projection, through `baselineToothRows`. Two
+    // earlier proxies were wrong: `baseline.has(code)` is always true because
+    // the map is seeded for every tooth in the dentition, and reading the two
+    // NOT NULL flags back is defeated by `rowsFromPayload`, which sets
+    // `implantContext` from a SITE row when no tooth row exists.
     const needsToothRow =
       !toothChanged &&
-      !baselineHasToothRow &&
+      !baselineToothRows.has(code) &&
       (plaque.some((row) => row.tooth_fdi === code) || furcation.some((row) => row.tooth_fdi === code));
     if (toothChanged || needsToothRow) tooth.push(toothRow);
   }
@@ -379,11 +410,102 @@ export function buildPeriodontalBatch(
   if (tooth.length > 0) batch.tooth = tooth;
   if (furcation.length > 0) batch.furcation = furcation;
   if (riskChanged) batch.risk = risk;
-  return batch;
+  return { batch, deferredSites };
 }
 
 function batchIsEmpty(batch: PerioMeasurementBatch): boolean {
   return Object.keys(batch).length === 0;
+}
+
+/**
+ * The new baseline after a batch is accepted: the previous baseline with
+ * exactly the rows the batch CARRIED applied on top.
+ *
+ * Adopting the whole draft instead would mark as persisted everything the diff
+ * skipped — a bleeding finding at a site with no probing depth, for instance —
+ * so the next diff would see no change and never send it, and the screen would
+ * assert a reading the record does not hold until the next reload.
+ *
+ * The rules mirror the SQL boundary exactly: an omitted key preserves the
+ * stored value, an explicit null clears it, and an INSERTed row takes the
+ * column defaults for the two NOT NULL flags.
+ */
+export function applyPeriodontalBatch(
+  baseline: ReadonlyMap<string, PerioGridToothRow>,
+  batch: PerioMeasurementBatch,
+): Map<string, PerioGridToothRow> {
+  const next = cloneRows(baseline);
+  const rowFor = (code: string): PerioGridToothRow => {
+    const existing = next.get(code);
+    if (existing) return existing;
+    const created = emptyPerioGridToothRow(code);
+    next.set(code, created);
+    return created;
+  };
+
+  for (const written of batch.sites ?? []) {
+    const row = rowFor(written.tooth_fdi);
+    const before = row.sites[written.site];
+    row.sites[written.site] = {
+      probingDepthMm: written.probing_depth_mm,
+      gingivalMarginMm:
+        "gingival_margin_mm" in written
+          ? (written.gingival_margin_mm ?? null)
+          : (before?.gingivalMarginMm ?? null),
+      bleedingOnProbing:
+        "bleeding_on_probing" in written
+          ? (written.bleeding_on_probing ?? null)
+          : (before?.bleedingOnProbing ?? null),
+      suppuration:
+        "suppuration" in written ? (written.suppuration ?? null) : (before?.suppuration ?? null),
+    };
+  }
+
+  for (const written of batch.tooth ?? []) {
+    const row = rowFor(written.tooth_fdi);
+    // Only what the batch CARRIED is adopted. The INSERT branch does coalesce
+    // the two NOT NULL flags to their defaults, but inferring that here would
+    // be the browser asserting a server value it was not told, and the one
+    // signal that would make the inference safe - whether a tooth row already
+    // existed - is tracked separately in `baselineToothRows`. A reload is the
+    // authority for what the defaults became.
+    if ("tooth_present" in written) row.present = written.tooth_present ?? null;
+    if ("implant_context" in written) row.implantContext = written.implant_context ?? null;
+
+    if ("mobility_miller" in written) row.mobilityMiller = (written.mobility_miller ?? null) as typeof row.mobilityMiller;
+    if ("keratinized_gingiva_mm" in written) row.keratinizedGingivaMm = written.keratinized_gingiva_mm ?? null;
+    if ("gingival_thickness_mm" in written) row.gingivalThicknessMm = written.gingival_thickness_mm ?? null;
+    if ("gingival_phenotype" in written) row.gingivalPhenotype = (written.gingival_phenotype ?? null) as typeof row.gingivalPhenotype;
+    if ("miller_recession_class" in written) row.millerRecessionClass = (written.miller_recession_class ?? null) as typeof row.millerRecessionClass;
+    if ("cej_visible" in written) row.cejVisible = written.cej_visible ?? null;
+    if ("root_concavity" in written) row.rootConcavity = written.root_concavity ?? null;
+  }
+
+  for (const written of batch.plaque ?? []) {
+    const row = rowFor(written.tooth_fdi);
+    const before = row.surfaces[written.surface] ?? {
+      plaquePresent: null,
+      plaqueIndex: null,
+      gingivalIndex: null,
+      modifiedPlaqueIndex: null,
+      modifiedBleedingIndex: null,
+    };
+    row.surfaces[written.surface] = {
+      plaquePresent: "plaque_present" in written ? (written.plaque_present ?? null) : before.plaquePresent,
+      plaqueIndex: "plaque_index" in written ? (written.plaque_index ?? null) : before.plaqueIndex,
+      gingivalIndex: "gingival_index" in written ? (written.gingival_index ?? null) : before.gingivalIndex,
+      modifiedPlaqueIndex:
+        "modified_plaque_index" in written ? (written.modified_plaque_index ?? null) : before.modifiedPlaqueIndex,
+      modifiedBleedingIndex:
+        "modified_bleeding_index" in written ? (written.modified_bleeding_index ?? null) : before.modifiedBleedingIndex,
+    };
+  }
+
+  for (const written of batch.furcation ?? []) {
+    rowFor(written.tooth_fdi).furcation[written.entrance] = written.grade;
+  }
+
+  return next;
 }
 
 /** A request key, not a secret. WebCrypto where it exists; a v4-shaped
@@ -478,6 +600,9 @@ export function PeriodontalExamWorkspace({
   const [baseline, setBaseline] = React.useState<Map<string, PerioGridToothRow>>(() =>
     initialPayload ? rowsFromPayload(initialPayload, dentition) : new Map(),
   );
+  const [baselineToothRows, setBaselineToothRows] = React.useState<ReadonlySet<string>>(
+    () => new Set((initialPayload?.tooth ?? []).map((row) => row.tooth_fdi)),
+  );
   const [draft, setDraft] = React.useState<Map<string, PerioGridToothRow>>(() =>
     initialPayload ? rowsFromPayload(initialPayload, dentition) : new Map(),
   );
@@ -519,6 +644,7 @@ export function PeriodontalExamWorkspace({
       setPayload(next);
       const rows = rowsFromPayload(next, dentition);
       setBaseline(rows);
+      setBaselineToothRows(new Set(next.tooth.map((row) => row.tooth_fdi)));
       setDraft(cloneRows(rows));
       setBaselineRisk(next.examination?.risk ?? EMPTY_RISK);
       setDraftRisk(next.examination?.risk ?? EMPTY_RISK);
@@ -577,16 +703,30 @@ export function PeriodontalExamWorkspace({
   }, [adopt, handlers, initialPayload]);
 
 
-  const batch = React.useMemo(
-    () => buildPeriodontalBatch(baseline, draft, baselineRisk, draftRisk),
-    [baseline, draft, baselineRisk, draftRisk],
+  const plan = React.useMemo(
+    () => buildPeriodontalBatch(baseline, draft, baselineRisk, draftRisk, baselineToothRows),
+    [baseline, baselineRisk, baselineToothRows, draft, draftRisk],
   );
-  const hasUnsavedEdits = !batchIsEmpty(batch);
+  const batch = plan.batch;
+  const deferredSites = plan.deferredSites;
+  // A deferred reading is unsaved too. Counting only the batch would let the
+  // status line read "Up to date" while the grid shows a finding the record
+  // does not hold.
+  const hasUnsavedEdits = !batchIsEmpty(batch) || deferredSites.length > 0;
 
-  const flush = React.useCallback(async () => {
-    if (readOnly || examination === null || status === "SAVING") return;
+  const flush = React.useCallback(async (): Promise<FlushOutcome> => {
+    // BUSY is not "nothing to send": a write is already in flight and this diff
+    // has not been offered to the server yet, so the caller must NOT record the
+    // revision as attempted. Consuming it here is how an edit made during an
+    // in-flight save became permanently unscheduled while the status still read
+    // "Saved".
+    if (status === "SAVING") return "BUSY";
+    if (readOnly || examination === null) return "EMPTY";
     // The single place a no-op is stopped: an empty diff is not a write.
-    if (batchIsEmpty(batch)) return;
+    if (batchIsEmpty(batch)) {
+      setStatus((current) => (current === "PENDING" ? "IDLE" : current));
+      return "EMPTY";
+    }
     setStatus("SAVING");
     setFailureCode(null);
     try {
@@ -597,33 +737,46 @@ export function PeriodontalExamWorkspace({
         attemptKey,
       });
       if (result.ok) {
-        setBaseline(cloneRows(draft));
-        setBaselineRisk(draftRisk);
+        // Only what was SENT becomes the baseline. Adopting the whole draft
+        // would mark a skipped reading as persisted and lose it silently.
+        setBaseline((current) => applyPeriodontalBatch(current, batch));
+        setBaselineToothRows((current) => {
+          if (!batch.tooth?.length) return current;
+          const grown = new Set(current);
+          for (const row of batch.tooth) grown.add(row.tooth_fdi);
+          return grown;
+        });
+        setBaselineRisk((current) => ({ ...current, ...(batch.risk ?? {}) }) as PerioRiskPayload);
         if (typeof result.version === "number") setVersion(result.version);
         setAttemptKey(newRequestKey());
         setStatus("SAVED");
-        return;
+        return "ISSUED";
       }
       if (result.code === "STALE_VERSION" || result.code === "CONFLICT") {
         setStatus("CONFLICT");
-        return;
+        return "ISSUED";
       }
       setFailureCode(result.code);
       setStatus("OFFLINE");
+      return "ISSUED";
     } catch {
       setStatus("OFFLINE");
+      return "ISSUED";
     }
-  }, [attemptKey, batch, draft, draftRisk, examination, handlers, readOnly, status, version]);
+  }, [attemptKey, batch, examination, handlers, readOnly, status, version]);
 
-  // Autosave fires once per BATCH OF EDITS, after a bounded debounce. It is
-  // gated on the revision it has already attempted, so a failed write is never
-  // retried automatically: an offline or conflicting save waits for the
-  // clinician, which is why neither state can spin.
+  // Autosave fires once per BATCH OF EDITS, after a bounded debounce. The
+  // revision is recorded as attempted only when the flush actually offered it
+  // to the server, or when there was genuinely nothing to send. A flush that
+  // declined because a write was in flight leaves the revision outstanding, so
+  // the effect re-arms once that write settles.
   React.useEffect(() => {
     if (readOnly || revision === 0 || revision === attemptedRevision) return;
     const timer = setTimeout(() => {
-      setAttemptedRevision(revision);
-      void flush();
+      void (async () => {
+        const outcome = await flush();
+        if (outcome !== "BUSY") setAttemptedRevision(revision);
+      })();
     }, autosaveDelayMs);
     return () => clearTimeout(timer);
   }, [attemptedRevision, autosaveDelayMs, flush, readOnly, revision]);
@@ -835,20 +988,22 @@ export function PeriodontalExamWorkspace({
     [draft, draftRisk, hasUnsavedEdits, maxFurcation],
   );
 
+  // `hasUnsavedEdits` outranks a stale SAVED. The status line describes the
+  // relationship between the screen and the record, not the outcome of the last
+  // request: saying "Saved" while a diff exists is exactly the claim that costs
+  // a clinician their measurements when they navigate away.
   const statusText =
     status === "SAVING"
       ? "Saving…"
-      : status === "SAVED"
-        ? "Saved"
-        : status === "PENDING"
-          ? "Unsaved edits"
-          : status === "CONFLICT"
-            ? "Conflict — nothing was written"
-            : status === "OFFLINE"
-              ? `Offline — nothing was written${failureCode ? ` (${failureCode})` : ""}`
-              : hasUnsavedEdits
-                ? "Unsaved edits"
-                : "Up to date";
+      : status === "CONFLICT"
+        ? "Conflict — nothing was written"
+        : status === "OFFLINE"
+          ? `Offline — nothing was written${failureCode ? ` (${failureCode})` : ""}`
+          : hasUnsavedEdits
+            ? "Unsaved edits"
+            : status === "SAVED"
+              ? "Saved"
+              : "Up to date";
 
   return (
     <div
@@ -954,6 +1109,22 @@ export function PeriodontalExamWorkspace({
         <p data-testid="perio-withdraw-refused" role="alert" className="border-y py-2 text-sm text-destructive">
           {refusal}
         </p>
+      )}
+
+      {deferredSites.length > 0 && (
+        <div data-testid="perio-deferred-readings" role="status" className="border-y py-2 text-sm">
+          <p>
+            A periodontal site is stored by its probing depth, so these findings are held on this screen and are
+            not yet on the record. Chart the depth and they save with it.
+          </p>
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+            {deferredSites.map((entry) => (
+              <li key={`${entry.toothFdi}-${entry.site}`} className="tabular-nums">
+                Tooth {entry.toothFdi} {entry.site} — no probing depth
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {examination === null ? (

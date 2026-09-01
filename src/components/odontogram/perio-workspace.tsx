@@ -125,7 +125,7 @@ export function PerioWorkspace({
   const readOnly = currentExam.status === "FINAL";
   const getToothState = React.useCallback((tooth: string, source: ReadonlyMap<string, PerioMeasurement> = sites) => defaultToothState(tooth, source, toothStates?.[tooth]), [sites, toothStates]);
 
-  const updateSite = React.useCallback((tooth: string, site: PerioSite, field: PerioSiteField, value: string | boolean) => {
+  const updateSite = React.useCallback((tooth: string, site: PerioSite, field: PerioSiteField, value: string | boolean | null) => {
     const state = getToothState(tooth);
     if (readOnly || !state.toothPresent || state.implantContext) return;
     setSites((previous) => {
@@ -152,9 +152,10 @@ export function PerioWorkspace({
         if (number !== null && (!Number.isInteger(number) || number < -10 || number > 20)) return previous;
         gingivalMargin = number;
       } else if (field === "bop") {
-        bleedingOnProbing = Boolean(value);
+        // null is a real answer here: "nobody assessed this site".
+        bleedingOnProbing = value === null ? null : Boolean(value);
       } else {
-        suppuration = Boolean(value);
+        suppuration = value === null ? null : Boolean(value);
       }
 
       if (probingDepth === 0) {

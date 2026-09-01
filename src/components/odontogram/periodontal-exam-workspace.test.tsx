@@ -238,6 +238,92 @@ describe("PeriodontalExamWorkspace", () => {
     await waitFor(() => expect(screen.getByTestId("perio-autosave-status")).toHaveTextContent(/saved/i));
   }, 20000);
 
+  it("re-sends an edit made while an earlier autosave was in flight, and never reads Saved while a diff exists", async () => {
+    const user = userEvent.setup();
+    const releases: Array<(value: { ok: true; id: string; version: number }) => void> = [];
+    const save = vi.fn(
+      () =>
+        new Promise<{ ok: true; id: string; version: number }>((resolve) => {
+          releases.push(resolve);
+        }),
+    );
+    const api = handlers({ save: save as unknown as PeriodontalWorkspaceHandlers["save"] });
+    renderWorkspace(draftPayload(), api);
+
+    const statusOf = () => screen.getByTestId("perio-autosave-status").textContent ?? "";
+
+    // Batch A goes out and is held open.
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 disto-buccal probing depth/i }), "5");
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    // Batch B is charted while A is still in flight, and its debounce elapses.
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 mesio-lingual probing depth/i }), "6");
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(statusOf()).not.toMatch(/^Saved/);
+
+    releases[0]!({ ok: true, id: EXAM_ID, version: 5 });
+
+    // A resolving must NOT leave B unscheduled, and must not report success.
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(statusOf()).not.toMatch(/^Saved/);
+
+    const second = (save.mock.calls[1] as unknown[])[0] as { batch: { sites?: Array<Record<string, unknown>> } };
+    expect(second.batch.sites).toEqual([{ tooth_fdi: "16", site: "ML", probing_depth_mm: 6 }]);
+
+    releases[1]!({ ok: true, id: EXAM_ID, version: 6 });
+    await waitFor(() => expect(screen.getByTestId("perio-autosave-status")).toHaveTextContent(/^Saved/));
+  }, 20000);
+
+  it("holds a bleeding finding charted before its probing depth, says so, and sends it once the depth arrives", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    renderWorkspace(draftPayload(), api);
+
+    // Tooth 16 DL has no site row, so this reading cannot be written yet.
+    await user.click(screen.getByRole("button", { name: /tooth 16 disto-lingual bleeding on probing, not recorded/i }));
+
+    const deferred = await screen.findByTestId("perio-deferred-readings");
+    expect(deferred).toHaveTextContent(/tooth 16 dl/i);
+    expect(deferred).toHaveTextContent(/not yet on the record/i);
+    // The status line must not claim the screen and the record agree.
+    expect(screen.getByTestId("perio-autosave-status")).toHaveTextContent(/unsaved/i);
+
+    // A save of an unrelated field must not absorb the held reading.
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 disto-buccal probing depth/i }), "5");
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+
+    // The depth arrives; the held bleeding finding goes with it.
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 disto-lingual probing depth/i }), "4");
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(2));
+
+    const second = (api.save as ReturnType<typeof vi.fn>).mock.calls[1][0] as {
+      batch: { sites?: Array<Record<string, unknown>> };
+    };
+    expect(second.batch.sites).toEqual([
+      { tooth_fdi: "16", site: "DL", probing_depth_mm: 4, bleeding_on_probing: true },
+    ]);
+    expect(screen.queryByTestId("perio-deferred-readings")).toBeNull();
+  }, 30000);
+
+  it("returns to Up to date when an edit is typed back to the value already on the record", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    // A long debounce keeps autosave out of the way: this is about the status
+    // the clinician reads BEFORE anything is written.
+    renderWorkspace(draftPayload(), api, { autosaveDelayMs: 5000 });
+
+    // Tooth 16 DB has no reading on the record, so charting one and taking it
+    // back leaves the draft exactly as the record already holds it.
+    const pd = screen.getByRole("spinbutton", { name: /tooth 16 disto-buccal probing depth/i }) as HTMLInputElement;
+    await user.type(pd, "5");
+    await waitFor(() => expect(screen.getByTestId("perio-autosave-status")).toHaveTextContent(/unsaved/i));
+
+    await user.clear(pd);
+    await waitFor(() => expect(screen.getByTestId("perio-autosave-status")).toHaveTextContent(/up to date/i));
+    expect(api.save).not.toHaveBeenCalled();
+  }, 30000);
+
   it("surfaces a stale version as an actionable conflict, not a generic failure", async () => {
     const user = userEvent.setup();
     const api = handlers({ save: vi.fn(async () => ({ ok: false as const, code: "STALE_VERSION" })) });
@@ -320,6 +406,43 @@ describe("PeriodontalExamWorkspace", () => {
     };
     expect(call.batch.tooth).toEqual([{ tooth_fdi: "15" }]);
     expect(call.batch.plaque).toEqual([{ tooth_fdi: "15", surface: "BUCCAL", plaque_index: 2 }]);
+  }, 20000);
+
+  it("still writes the tooth row first when only a SITE row flagged the tooth as an implant", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    const payload = draftPayload();
+    // Tooth 15 has an implant-flagged site row and no tooth row at all. Reading
+    // the implant flag back off the draft row would say "a tooth row exists"
+    // and skip the write the peri-implant trigger depends on.
+    payload.sites = [
+      ...payload.sites,
+      {
+        tooth_fdi: "15",
+        site: "MB",
+        probing_depth_mm: 3,
+        gingival_margin_mm: null,
+        cal_mm: null,
+        bleeding_on_probing: null,
+        suppuration: null,
+        implant_context: true,
+      },
+    ];
+    renderWorkspace(payload, api);
+
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /tooth 15 buccal modified plaque index/i }),
+      "2",
+    );
+
+    await waitFor(() => expect(api.save).toHaveBeenCalledTimes(1));
+    const call = (api.save as ReturnType<typeof vi.fn>).mock.calls[0][0] as {
+      batch: { tooth?: Array<Record<string, unknown>>; plaque?: Array<Record<string, unknown>> };
+    };
+    expect(call.batch.tooth).toEqual([{ tooth_fdi: "15" }]);
+    expect(call.batch.plaque).toEqual([
+      { tooth_fdi: "15", surface: "BUCCAL", modified_plaque_index: 2 },
+    ]);
   }, 20000);
 
   it("adds no tooth row for a surface index on a tooth that already has one", async () => {
@@ -466,6 +589,28 @@ describe("PeriodontalExamWorkspace", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: /open examination/i }), legacyId);
     await waitFor(() => expect(api.load).toHaveBeenCalledWith({ examinationId: legacyId }));
   }, 20000);
+
+  it("refuses to finalize while an edit is not yet on the record", async () => {
+    const user = userEvent.setup();
+    const api = handlers();
+    const payload = draftPayload();
+    payload.derived = { ...payload.derived!, diagnosis: "GINGIVITIS", complete: true };
+    renderWorkspace(payload, api, { autosaveDelayMs: 5000 });
+
+    await user.type(screen.getByRole("spinbutton", { name: /tooth 16 disto-buccal probing depth/i }), "5");
+    await user.click(screen.getByRole("checkbox", { name: /i confirm this classification/i }));
+
+    expect(screen.getByRole("button", { name: /confirm and finalize/i })).toBeDisabled();
+    expect(screen.getByTestId("perio-finalize-blocked")).toHaveTextContent(/not on the record yet/i);
+    expect(api.finalize).not.toHaveBeenCalled();
+  }, 20000);
+
+  it("hides the amendment control from a clinician without the correction permission", () => {
+    const payload = draftPayload();
+    payload.examination = { ...payload.examination!, status: "FINAL", finalized_at: "2026-09-01T05:00:00Z" };
+    renderWorkspace(payload, handlers(), { canCorrect: false });
+    expect(screen.queryByRole("button", { name: /amend this examination/i })).toBeNull();
+  });
 
   it("rebuilds the chart from the authorized projection on reload", async () => {
     const user = userEvent.setup();

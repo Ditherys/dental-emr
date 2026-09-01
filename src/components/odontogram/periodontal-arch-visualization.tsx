@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import type { PerioSite, PlaqueSurface } from "@/lib/odontogram/clinical-codes";
+import { deriveCal, perioRecessionMm } from "@/lib/odontogram/perio";
 import {
   PERIO_MM_PX,
   PERIO_ROW_BASELINE_Y,
@@ -72,6 +73,27 @@ const TOOTH_INDEX_IDS: readonly PerioToothIndexId[] = ["KG", "CAIRO"];
 const THRESHOLDABLE: readonly PerioIndexId[] = ["PD", "CAL", "RECESSION"];
 
 export type PerioArchFocus = "FULL" | "UPPER" | "LOWER";
+
+type PerioThresholdInput = {
+  probingDepthMm: number | null;
+  gingivalMarginMm: number | null;
+};
+
+/**
+ * The millimetre reading a depth threshold compares against, taken from the
+ * canonical measurements rather than from the geometry the mark is drawn at.
+ * `null` means the reading is unknown, and an unknown reading never passes a
+ * threshold: hiding it is right, because a threshold is a claim about a value.
+ */
+export function perioThresholdReading(
+  index: PerioIndexId,
+  site: PerioThresholdInput,
+): number | null {
+  if (index === "PD") return site.probingDepthMm;
+  if (index === "CAL") return deriveCal(site.probingDepthMm, site.gingivalMarginMm);
+  if (index === "RECESSION") return perioRecessionMm(site.gingivalMarginMm);
+  return null;
+}
 
 const BUCKET_RADIUS: Record<PerioSeverityBucket, number> = { SHALLOW: 2, MODERATE: 2.8, DEEP: 3.6 };
 
@@ -153,8 +175,23 @@ function ArchRow({ focus, teeth, overlay, threshold }: ArchRowProps): React.Reac
           const marginRuns = perioCurveSegments(curve.marginPts);
           const pocketRuns = perioCurveSegments(curve.pocketPts);
 
+          // The threshold filters the READING the overlay is about, never the
+          // y it is drawn at. perioSiteOverlayMarks places a pocket-base mark at
+          // cejY + ((gm ?? 0) + pd) * mmPx, so recovering millimetres from the
+          // coordinate compares the attachment level where the margin is known
+          // and the plain probing depth where it is not - two different
+          // quantities under one label. It would also make an SVG attribute the
+          // source of a clinical value, which the renderer boundary forbids.
+          const thresholdedInputs =
+            threshold === null || !THRESHOLDABLE.includes(overlay)
+              ? siteInputs
+              : siteInputs.filter((site) => {
+                  const reading = perioThresholdReading(overlay, site);
+                  return reading !== null && reading >= threshold;
+                });
+
           const siteMarks = SITE_INDEX_IDS.includes(overlay as PerioSiteIndexId)
-            ? perioSiteOverlayMarks(overlay as PerioSiteIndexId, siteInputs, {
+            ? perioSiteOverlayMarks(overlay as PerioSiteIndexId, thresholdedInputs, {
                 cejY: PERIO_ROW_BASELINE_Y,
                 mmPx: PERIO_MM_PX,
               })
@@ -207,12 +244,6 @@ function ArchRow({ focus, teeth, overlay, threshold }: ArchRowProps): React.Reac
                   { cejY: PERIO_ROW_BASELINE_Y },
                 )
               : [];
-
-          const thresholded = siteMarks.filter((mark) => {
-            if (threshold === null || !THRESHOLDABLE.includes(overlay)) return true;
-            const mm = (mark.y - PERIO_ROW_BASELINE_Y) / PERIO_MM_PX;
-            return mm >= threshold;
-          });
 
           return (
             <g key={aspect} transform={`translate(0 ${offsetY})`} data-aspect={aspect}>
@@ -293,7 +324,7 @@ function ArchRow({ focus, teeth, overlay, threshold }: ArchRowProps): React.Reac
                 );
               })}
 
-              {thresholded.map((mark) => (
+              {siteMarks.map((mark) => (
                 <OverlayMark
                   key={`site-${mark.fdi}-${mark.site}`}
                   index={mark.index}

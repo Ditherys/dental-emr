@@ -246,6 +246,36 @@ describe("PerioWorkspace unknown measurements", () => {
     expect(screen.getAllByTestId("perio-unknown-cal-16-MB")[0]).toHaveTextContent(/not recorded/i);
   });
 
+  it("shows an unassessed bleeding or suppuration answer as not recorded, not as a negative one", async () => {
+    const user = userEvent.setup();
+    render(
+      <PerioWorkspace
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-000000000010"
+        examination={exam}
+        initialSites={[
+          { toothFdi: "16", site: "MB", probingDepthMm: 4, gingivalMarginMm: 1, calMm: 5 },
+        ]}
+      />,
+    );
+
+    // An unchecked checkbox reads as "assessed, no bleeding". A three-state
+    // control says which of the three it is.
+    expect(screen.queryByRole("checkbox", { name: /tooth 16 mesio-buccal bleeding/i })).toBeNull();
+    const bleeding = screen.getAllByRole("button", {
+      name: /tooth 16 mesio-buccal bleeding, not recorded/i,
+    })[0]!;
+    expect(bleeding).toHaveAttribute("data-state", "UNKNOWN");
+    expect(
+      screen.getAllByRole("button", { name: /tooth 16 mesio-buccal suppuration, not recorded/i })[0],
+    ).toHaveAttribute("data-state", "UNKNOWN");
+
+    await user.click(bleeding);
+    expect(
+      screen.getAllByRole("button", { name: /tooth 16 mesio-buccal bleeding, present/i })[0],
+    ).toHaveAttribute("data-state", "PRESENT");
+  }, 20000);
+
   it("omits an unassessed margin, bleeding and suppuration from the save payload", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => ({ ok: true }));

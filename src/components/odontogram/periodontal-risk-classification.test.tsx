@@ -174,6 +174,22 @@ describe("PeriodontalRiskClassification", () => {
     expect(drift.textContent ?? "").not.toMatch(/clinician overrode/i);
   });
 
+  it("refuses to finalize while the draft holds an edit the record does not", async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn(async () => {});
+    renderPanel({ hasUnsavedEdits: true, preview: null, onConfirm });
+
+    await user.click(screen.getByRole("checkbox", { name: /i confirm this classification/i }));
+
+    const confirm = screen.getByRole("button", { name: /confirm and finalize/i });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByTestId("perio-finalize-blocked")).toHaveTextContent(/not on the record yet/i);
+    expect(screen.getByTestId("perio-finalize-blocked")).toHaveTextContent(/amendment/i);
+
+    await user.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  }, 20000);
+
   it("is read-only for a finalized examination", () => {
     renderPanel({ readOnly: true });
     expect(screen.queryByRole("button", { name: /confirm and finalize/i })).toBeNull();

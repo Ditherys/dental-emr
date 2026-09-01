@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 12 (round 2)
+# AI Handoff - Unified Clinical Chart workspace, Task 12 (round 3)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -7,7 +7,7 @@ Task 9 (canonical periodontal data model) is complete across `5dce284`,
 `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 (pure
 periodontal calculations, graphics and classification) is complete across
 `4053739` and `4836ae9`. Task 11 (versioned RPCs and the action boundary) is
-complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is `49c5385` and this commit.
+complete across `d589dbf`, `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502` and this commit.
 
 ## Task 12 - The complete periodontal and peri-implant workspace (2026-09-02)
 
@@ -174,7 +174,9 @@ below with the fix.
 - `src/components/odontogram/perio-chart.tsx` - an unrecorded gingival margin was
   rendered as the string `"0"`, and a `null` margin as `String(null)`. Both are
   now blank, and an unknown attachment level says "Not recorded" instead of an
-  `aria-hidden` dash.
+  `aria-hidden` dash. **Correction (round 3): this did NOT cover the bleeding and
+  suppuration checkboxes, which kept rendering an unassessed answer as unchecked,
+  i.e. "assessed, absent". Round 3 replaced them with three-state controls.**
 - `src/components/odontogram/perio-workspace.tsx` - `updateSite` coalesced an
   omitted margin to `0` and an unassessed bleeding or suppuration answer to
   `false`, then computed `pd + 0` as the attachment level. It now carries `null`
@@ -546,6 +548,161 @@ container the runner resolves.
    returns a typed code; the UI does not yet pre-empt it.
 3. The comparison attribution is per examination, not per measurement: a chart
    two clinicians both touched reports only the examining provider on the record.
+
+## Round 3 - review fixes: 2 Critical, 2 Important, 4 Minor (2026-09-02)
+
+No migration. Both Criticals were the same shape - **the screen asserting
+something the record does not hold** - and both came from the autosave state
+machine, not from the rendering layer the earlier rounds hardened.
+
+### C1 - `Saved` while an edit was unsaved and unscheduled
+
+Batch A in flight; the clinician keeps charting; B's debounce elapses while A is
+still open. The timer body set `attemptedRevision = revision` **before** calling
+`flush`, and `flush` returned immediately on its own `status === "SAVING"` guard.
+B was marked attempted but never sent. A resolved to `SAVED`, the effect saw
+`revision === attemptedRevision`, and scheduled nothing. The status line read
+`Saved` with a live diff and no write pending.
+
+Two independent fixes, because either alone leaves a hole:
+
+1. `flush` now returns a `FlushOutcome` - `ISSUED`, `EMPTY` or `BUSY` - and the
+   timer records the revision only when the outcome is not `BUSY`. A declined
+   flush leaves the revision outstanding, so the effect re-arms once the
+   in-flight write settles. `EMPTY` still consumes it, which is what keeps the
+   effect from re-arming forever on a diff that nets to nothing.
+2. `statusText` now treats `hasUnsavedEdits` as outranking a stale `SAVED`. The
+   status line describes the relationship between the screen and the record, not
+   the outcome of the last request.
+
+Test: *"re-sends an edit made while an earlier autosave was in flight, and never
+reads Saved while a diff exists"* - two deferred saves, the second batch asserted
+to be exactly the second edit, and `/^Saved/` asserted absent at both points
+where the old code showed it.
+
+### C2 - a bleeding finding recorded before its probing depth was silently lost
+
+A site row is stored BY its probing depth, which is NOT NULL, so a BOP or SUP
+answer charted before the depth cannot be written. The diff correctly skipped it
+- and then `setBaseline(cloneRows(draft))` on the next successful save absorbed
+it **as though it had persisted**, so the following diff saw no change and never
+sent it. The screen kept showing `+` for the rest of the session.
+
+Fixed at the general defect, as directed: `applyPeriodontalBatch(baseline, batch)`
+builds the new baseline from the previous baseline plus exactly the rows the
+batch **carried**, mirroring the SQL rules - an omitted key preserves, an
+explicit null clears. A skipped reading therefore stays pending and diffs
+correctly the moment its depth arrives.
+
+The reading is also no longer invisible: `buildPeriodontalBatch` returns a
+`deferredSites` list, `hasUnsavedEdits` counts it, and the workspace renders
+`perio-deferred-readings` naming each held site and why.
+
+Test: *"holds a bleeding finding charted before its probing depth, says so, and
+sends it once the depth arrives"* - toggles BOP at a depthless site, asserts the
+notice and that the status does not claim agreement, saves an unrelated field,
+then charts the depth and asserts `bleeding_on_probing: true` rides with it.
+
+Deliberately NOT done: disabling the toggles until a depth exists. It was offered
+as an acceptable addition, but with the baseline fix the reading is no longer
+lost, and refusing the input would stop a clinician recording a finding in the
+order they observe it.
+
+### I1 - the overlay threshold filtered geometry, not the reading
+
+`(mark.y - PERIO_ROW_BASELINE_Y) / PERIO_MM_PX` recovered millimetres from the
+drawing coordinate, but `perioSiteOverlayMarks` places a pocket-base mark at
+`cejY + ((gm ?? 0) + pd) * mmPx`. So one threshold compared the **attachment
+level** where the margin was known and the **plain probing depth** where it was
+not. A 4 mm pocket with 3 mm recession passed a 5 mm filter; a 6 mm pocket with a
+coronal margin was hidden. It also made an SVG attribute the source of a clinical
+value, which the renderer boundary forbids.
+
+Replaced with `perioThresholdReading(index, site)`, which reads the canonical
+measurement - `probingDepthMm` for PD, `deriveCal` for CAL, `perioRecessionMm`
+for RECESSION - and filters the site inputs before any mark is generated. An
+unknown reading never passes a threshold.
+
+Both fixtures in the old tests used `gingivalMarginMm: 0`, where geometry and
+reading coincide, which is why they missed it. Two new tests use margins of `3`
+and `-2`, plus one asserting a site with no margin is hidden from a CAL
+threshold.
+
+### I2 - finalize was enabled with unsaved edits
+
+The version guard cannot catch this: the pending edits were never written, so
+`expectedVersion` still matched and the server finalized happily, and the reload
+that follows replaced the draft. Measurements gone, from a record correctable
+only by amendment.
+
+`canConfirm` now requires `!hasUnsavedEdits`, with `perio-finalize-blocked`
+explaining why. The panel already received `hasUnsavedEdits` for the preview.
+Tested in both the panel suite and the workspace suite.
+
+### M1 - `perio-chart.tsx` unknown BOP/SUP, and the claim about it
+
+The round-1 report said this component's unknown-rendering defects were repaired.
+**That was only partly true and is corrected here.** The gingival margin and the
+attachment level were fixed; the bleeding and suppuration checkboxes were not,
+and an unchecked checkbox reads as "assessed, absent". They are now the same
+three-state control the new grid uses, and `updateSite` carries `null` for them.
+
+### M2 - the tooth-row existence proxy was spoofable
+
+Round 2 replaced `!baseline.has(code)` with a read of the two NOT NULL flags.
+`rowsFromPayload` sets `implantContext` from a **site** row, so a peri-implant
+chart with no tooth row re-inerted the guard. Existence now comes from the
+projection through `baselineToothRows`, a `Set` built from `payload.tooth` and
+grown by the tooth rows a batch writes. RED with the flag proxy:
+`expected undefined to deeply equal [ { tooth_fdi: '15' } ]`.
+
+`applyPeriodontalBatch` no longer infers the INSERT defaults for the two NOT NULL
+flags either - that was the browser asserting a server value it was not told.
+
+### M3 - a diff that nets to nothing
+
+Folded into C1's `statusText` change, plus `flush` normalising `PENDING` to
+`IDLE` on an empty diff. Test: chart a depth, see "Unsaved edits", clear it, see
+"Up to date", with `save` asserted never called.
+
+### M8 - the permission actually hides the control
+
+Test: `canCorrect={false}` on a FINAL examination hides `Amend this examination`.
+
+### Round 3 files
+
+Changed only: `periodontal-exam-workspace.tsx` (+ suite),
+`periodontal-risk-classification.tsx` (+ suite),
+`periodontal-arch-visualization.tsx` (+ suite), `perio-chart.tsx`,
+`perio-workspace.tsx` (+ suite). No migration, no SQL, no schema change, no
+new dependency.
+
+### Round 3 tests run and observed results
+
+```
+npm run typecheck        -> clean, no output
+npm run lint             -> 0 errors, 3 warnings (pre-existing, untouched files)
+npm run test:unit -- <the six periodontal suites>  -> 6 files, 90 tests passed
+npm run test:unit -- service, perio-actions, clinical-section, odontogram-section,
+                     patient-workspace, fork-print-chart -> 6 files, 107 tests passed
+npx vitest run scripts/  -> 13 files, 288 tests passed
+npm run test:db:local    -> halts at supabase/tests/treatment_plans.test.sql (pre-existing);
+                            all four periodontal suites PASS before it
+```
+
+No migration was added, so `security:migrations` and `db:types:local` are
+unchanged from round 2 and were not re-run. Playwright was not run; both E2E
+specs remain PENDING.
+
+### Ledgered, not fixed (per the review)
+
+`markTitle` emitting a trailing-space tooltip without its reading;
+`expectedSiteCount` counting tooth rows; `NumberCell` accepting `4.5`
+client-side; `periodontal-exam-workspace.tsx` at ~1200 lines with
+`buildPeriodontalBatch` and `applyPeriodontalBatch` exported but not directly
+unit-tested. Extracting those two pure functions into their own module with a
+dedicated suite would have made C2 and M2 much cheaper to pin, and is worth a
+later slice.
 
 ### Next bounded task
 

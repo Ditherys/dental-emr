@@ -230,8 +230,18 @@ export function PeriodontalRiskClassification({
       confirmed.grade !== (derived?.grade ?? null) ||
       confirmed.extent !== (derived?.extent ?? null));
 
+  // Finalization is append-only and immutable. An unsaved edit is not covered
+  // by the optimistic-concurrency guard - it was never written, so the expected
+  // version still matches and the server finalizes happily - and the reload that
+  // follows replaces the draft, taking those measurements with it. The panel
+  // already knows the diff exists; it must refuse rather than discard.
   const canConfirm =
-    !readOnly && !busy && acknowledged && diagnosis !== null && (!differs || reason.trim().length > 0);
+    !readOnly &&
+    !busy &&
+    !hasUnsavedEdits &&
+    acknowledged &&
+    diagnosis !== null &&
+    (!differs || reason.trim().length > 0);
 
   return (
     <section aria-label="Risk factors and classification" className="min-w-0">
@@ -535,6 +545,13 @@ export function PeriodontalRiskClassification({
                 />
                 I confirm this classification
               </label>
+
+              {hasUnsavedEdits && (
+                <p data-testid="perio-finalize-blocked" className="mt-2 text-[11px] text-warning-foreground">
+                  This examination has edits that are not on the record yet. Finalizing now would lock a record
+                  without them, and a finalized examination is corrected only by amendment. Save the draft first.
+                </p>
+              )}
 
               <Button
                 type="button"

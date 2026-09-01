@@ -27,6 +27,46 @@ export type PerioToothState = {
 
 export type PerioSiteField = "pd" | "gm" | "bop" | "sup";
 
+/**
+ * A bleeding or suppuration answer nobody gave is not a negative one. An
+ * unchecked checkbox reads as "assessed, absent", so the three states are a
+ * button: ? not recorded, + present, - absent.
+ */
+function TriState({
+  label,
+  short,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  short: string;
+  value: boolean | null;
+  disabled: boolean;
+  onChange: (next: boolean | null) => void;
+}): React.ReactElement {
+  const state = value === null ? "not recorded" : value ? "present" : "absent";
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={`${label}, ${state}`}
+      data-state={value === null ? "UNKNOWN" : value ? "PRESENT" : "ABSENT"}
+      onClick={() => onChange(value === null ? true : value ? false : null)}
+      className={`inline-flex min-h-7 items-center gap-0.5 rounded border px-1 text-[10px] font-medium tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+        value === null
+          ? "border-dashed border-slate-300 text-slate-400"
+          : value
+            ? "border-red-300 bg-red-50 text-red-700"
+            : "border-slate-300 text-slate-600"
+      }`}
+    >
+      {short}
+      <span aria-hidden="true">{value === null ? "?" : value ? "+" : "-"}</span>
+    </button>
+  );
+}
+
 export interface PerioChartProps {
   /** One arch of the permanent dentition in the clinical display order. */
   teeth: readonly string[];
@@ -35,7 +75,7 @@ export interface PerioChartProps {
   historicalSites?: ReadonlyMap<string, PerioChartMeasurement>;
   toothStates?: Readonly<Record<string, PerioToothState>>;
   readOnly?: boolean;
-  onSiteChange: (tooth: string, site: PerioSite, field: PerioSiteField, value: string | boolean) => void;
+  onSiteChange: (tooth: string, site: PerioSite, field: PerioSiteField, value: string | boolean | null) => void;
   onToothFocus?: (tooth: string) => void;
 }
 
@@ -202,7 +242,7 @@ export function PerioChart({
                     ? String(measurement.gingivalMarginMm)
                     : "";
                 const accessibleSite = SITE_LABELS[site];
-                const update = (field: PerioSiteField, value: string | boolean) => {
+                const update = (field: PerioSiteField, value: string | boolean | null) => {
                   if (!disabled) onSiteChange(tooth, site, field, value);
                 };
                 return (
@@ -269,12 +309,10 @@ export function PerioChart({
                         Not recorded
                       </span>
                     )}
-                    <label className="flex min-h-[28px] items-center gap-1 rounded px-1 py-0.5 text-[10px] text-slate-600 touch-manipulation focus-within:ring-1 focus-within:ring-blue-400">
-                      <input type="checkbox" aria-label={`Tooth ${tooth} ${accessibleSite} bleeding`} checked={Boolean(measurement?.bleedingOnProbing)} onChange={(event) => update("bop", event.target.checked)} disabled={disabled} className="size-4 rounded border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500" />
-                      BOP
-                      <input type="checkbox" aria-label={`Tooth ${tooth} ${accessibleSite} suppuration`} checked={Boolean(measurement?.suppuration)} onChange={(event) => update("sup", event.target.checked)} disabled={disabled} className="ml-1 size-4 rounded border-slate-300 focus-visible:ring-2 focus-visible:ring-blue-500" />
-                      SUP
-                    </label>
+                    <div className="flex min-h-[28px] items-center gap-1 rounded px-1 py-0.5 text-[10px] text-slate-600 touch-manipulation">
+                      <TriState label={`Tooth ${tooth} ${accessibleSite} bleeding`} short="BOP" value={measurement?.bleedingOnProbing ?? null} disabled={disabled} onChange={(next) => update("bop", next)} />
+                      <TriState label={`Tooth ${tooth} ${accessibleSite} suppuration`} short="SUP" value={measurement?.suppuration ?? null} disabled={disabled} onChange={(next) => update("sup", next)} />
+                    </div>
                   </div>
                 );
               })}
