@@ -242,19 +242,34 @@ describe("periodontal site overlays", () => {
     ]);
   });
 
+  // The whole PD family anchors on the pocket base, whose position relative to
+  // the CEJ depends on the margin. The depth itself is known either way, so the
+  // mark is still drawn when the margin is not — but it must say so.
   it.each([
-    ["PD_GTE_5", 4, 0],
-    ["PD_GTE_5", 5, 1],
-    ["PD_GTE_6", 5, 0],
-    ["PD_GTE_6", 6, 1],
-  ] as const)("marks %s at probing depth %i as %i mark(s)", (index, pd, expected) => {
-    const marks = perioSiteOverlayMarks(index, [site({ probingDepthMm: pd })], CURVE_OPTS);
-    expect(marks).toHaveLength(expected);
-    if (expected === 1) {
-      expect(marks[0].anchor).toBe("POCKET_BASE");
-      expect(marks[0].y).toBe(40 + pd * 3);
-    }
-  });
+    ["PD_GTE_5", 4, 0, 0, null],
+    ["PD_GTE_5", 5, 0, 1, "POCKET_BASE"],
+    ["PD_GTE_5", 5, null, 1, "CEJ_FALLBACK"],
+    ["PD_GTE_5", 4, null, 0, null],
+    ["PD_GTE_6", 5, 0, 0, null],
+    ["PD_GTE_6", 6, 0, 1, "POCKET_BASE"],
+    ["PD_GTE_6", 7, null, 1, "CEJ_FALLBACK"],
+    ["PD", 3, 2, 1, "POCKET_BASE"],
+    ["PD", 3, null, 1, "CEJ_FALLBACK"],
+  ] as const)(
+    "marks %s at probing depth %i with margin %s as %i mark(s) anchored %s",
+    (index, pd, gm, expected, anchor) => {
+      const marks = perioSiteOverlayMarks(
+        index,
+        [site({ probingDepthMm: pd, gingivalMarginMm: gm })],
+        CURVE_OPTS,
+      );
+      expect(marks).toHaveLength(expected);
+      if (expected === 1) {
+        expect(marks[0].anchor).toBe(anchor);
+        expect(marks[0].y).toBe(40 + ((gm ?? 0) + pd) * 3);
+      }
+    },
+  );
 
   it("never marks a probing threshold for an uncharted depth", () => {
     expect(perioSiteOverlayMarks("PD_GTE_6", [site({ probingDepthMm: null })], CURVE_OPTS)).toEqual([]);
@@ -302,6 +317,20 @@ describe("periodontal site overlays", () => {
     expect(marks).toHaveLength(1);
     expect(marks[0].y).toBe(49);
     expect(marks[0].bucket).toBe("MODERATE");
+    expect(marks[0].anchor).toBe("MARGIN");
+  });
+
+  it("marks recession from the margin alone, without requiring a probing depth", () => {
+    // Recession is a measurement of the margin against the CEJ. The fork gated
+    // every site overlay behind a charted probing depth; a recorded margin with
+    // no probing depth is still a recorded recession.
+    const marks = perioSiteOverlayMarks(
+      "RECESSION",
+      [site({ probingDepthMm: null, gingivalMarginMm: 3 })],
+      CURVE_OPTS,
+    );
+    expect(marks).toHaveLength(1);
+    expect(marks[0].y).toBe(49);
     expect(marks[0].anchor).toBe("MARGIN");
   });
 

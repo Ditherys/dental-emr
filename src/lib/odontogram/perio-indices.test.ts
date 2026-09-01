@@ -87,6 +87,9 @@ describe("periodontal index registry", () => {
     }
     expect(PERIO_INDEX_DEFINITIONS.CAIRO.unit).toBe("RECESSION_CLASS");
     expect(PERIO_INDEX_DEFINITIONS.CAIRO.classes).toEqual(["RT1", "RT2", "RT3"]);
+    // Nothing derives the Cairo type and no column stores it, so a consumer
+    // must treat it as clinician-supplied input, not as a computed value.
+    expect(PERIO_INDEX_DEFINITIONS.CAIRO.derived).toBe(false);
   });
 
   it("keeps the natural-tooth and peri-implant index families apart", () => {
@@ -111,11 +114,27 @@ describe("periodontal index registry", () => {
   });
 
   it("marks the derived indices as derived and the recorded ones as recorded", () => {
-    for (const id of ["CAL", "RECESSION", "CAIRO", "PD_GTE_5", "PD_GTE_6"] as const) {
+    for (const id of ["CAL", "RECESSION", "PD_GTE_5", "PD_GTE_6"] as const) {
       expect(PERIO_INDEX_DEFINITIONS[id].derived, id).toBe(true);
     }
     for (const id of ["PD", "KG", "BOP", "PLAQUE", "PI", "GI", "MPI", "MBI"] as const) {
       expect(PERIO_INDEX_DEFINITIONS[id].derived, id).toBe(false);
+    }
+  });
+
+  it("never reports an index as derived unless this repository actually derives it", () => {
+    // A Task 12 consumer branching on `derived` reads true as "computed, do not
+    // fetch". Every index marked derived must therefore have a function here
+    // that computes it.
+    const derivedBy: Record<string, string> = {
+      CAL: "deriveCal",
+      RECESSION: "perioRecessionMm",
+      PD_GTE_5: "perioSiteOverlayMarks",
+      PD_GTE_6: "perioSiteOverlayMarks",
+    };
+    for (const id of PERIO_INDEX_IDS) {
+      if (!PERIO_INDEX_DEFINITIONS[id].derived) continue;
+      expect(derivedBy[id], `${id} is marked derived but nothing derives it`).toBeDefined();
     }
   });
 });

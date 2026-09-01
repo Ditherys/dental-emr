@@ -352,6 +352,14 @@ function deriveGrade(risk: PeriodontalRiskInputs): {
     return { grade: null, buckets };
   }
 
+  // Fork rule, ported as-is: when the bone-loss-over-age ratio cannot be
+  // computed but at least one modifier IS known, the grade falls back to a B
+  // baseline rather than an A. A patient known only to be a never-smoker
+  // therefore grades B on no evidence about the disease itself. This is the
+  // single most clinically consequential line in this module and it is on the
+  // dentist acceptance gate recorded in docs/AI_HANDOFF.md. Do not "fix" it to
+  // "A" without a clinical owner's decision — that would silently downgrade
+  // every under-documented case.
   const baseline: PerioGrade = direct ?? "B";
   return { grade: worseGrade(worseGrade(baseline, smoking), diabetes), buckets };
 }

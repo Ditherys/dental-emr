@@ -128,7 +128,15 @@ export const PERIO_INDEX_DEFINITIONS: Record<PerioIndexId, PerioIndexDefinition>
     // implant does not have.
     appliesToNaturalTooth: true,
     appliesToPeriImplant: false,
-    derived: true,
+    // NOT derived. Nothing in this repository computes the Cairo type: the
+    // fork's derivation lives in its un-ported engine module, and the canonical
+    // schema records the Miller class instead, so
+    // `PERIO_OVERLAY_CONTRACT.CAIRO.canonicalTable` is null too. Marking it
+    // derived would tell a consumer "computed, do not fetch" about a value that
+    // is neither computed nor stored. Until the clinical owner decides which
+    // recession classification this EMR records, Cairo is clinician-supplied
+    // input to the overlay.
+    derived: false,
   },
   KG: {
     id: "KG",

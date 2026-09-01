@@ -4,8 +4,11 @@ Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
 Task 9 (canonical periodontal data model) is complete across `5dce284`,
-`372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. This checkpoint is
-Task 10.
+`372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d` and `83de815`. Task 10 is `4053739`
+plus this commit, a single bounded polish round applying four Minor review
+findings that Task 12 consumes as contracts. The review of `4053739` was
+**Approved: 0 Critical, 0 Important, 8 Minor**; the other four Minor findings
+are ledgered for the final review and deliberately not addressed here.
 
 ## Task 10 - Port and validate periodontal calculations, graphics and classification (2026-09-02)
 
@@ -354,6 +357,54 @@ periodontal overlays are a separate constant rather than new rows in it.
    task built into the geometry is lost at the last step.
 6. The booking test failures noted above are unowned by this task and will keep
    failing the full suite until someone fixes their pinned timestamps.
+
+## Polish round applied in this commit (four Minor review findings)
+
+1. **`CAIRO.derived` was `true` while nothing derives it.** With
+   `canonicalTable: null` beside it, that pair told a Task 12 consumer
+   "computed, do not fetch" about a value that is neither computed nor stored -
+   the exact "looks derivable, silently returns nothing" shape this task avoided
+   elsewhere. Now `false`, with a comment explaining why and pointing at the
+   open clinical-owner question. Two invariant tests were added rather than a
+   bare assertion: one in `perio-indices.test.ts` requiring every
+   `derived: true` index to name the function that computes it, and one in
+   `feature-contract.test.ts` failing any index that is both unstored and
+   marked derived. Both were red before the fix.
+2. **`CEJ_FALLBACK` was pinned only on `BOP`.** The PD family emits it too, and
+   every PD test used a margin of `0`, so half the emitters of a contract Task
+   12 must honour were unpinned. The `it.each` now carries the margin and the
+   expected anchor and covers `PD`, `PD_GTE_5` and `PD_GTE_6` with a known and
+   an unknown margin. **These cases passed on first run**: the implementation
+   was already correct and the gap was purely in coverage.
+3. **The Grade-B baseline had no inline comment.** `direct ?? "B"` is the line
+   this task was least sure of clinically, and the only one of the three grade
+   rules without an explanation. It now names itself as the fork's rule, states
+   the consequence (a known never-smoker grades B on no evidence about the
+   disease), points at the dentist gate, and warns against "fixing" it to `A`
+   without a clinical owner.
+4. **The `RECESSION` gating divergence was undeclared.** The fork's
+   `perioMmHeatMarks` gates every site overlay, `gr` included, behind a charted
+   probing depth before its `gm <= 0` test; this port runs the `RECESSION`
+   branch before that guard, so a recorded margin with no probing depth still
+   marks. Recession measures the margin against the CEJ and does not depend on a
+   pocket having been probed. Now recorded in the manifest's "Local adaptations"
+   column and pinned by a test.
+
+Deliberately **not** fixed, ledgered for the final review: the three
+hand-maintained scope sub-unions duplicating the registry's `scope` field with
+no test tying them together; `perioSiteOverlayMarks` not consulting
+`perioIndexAppliesTo` (behaviourally inert today, since all six site indices
+apply to both contexts); and the `notes` array aliasing on the returned
+`readonly` type.
+
+The Task 10 report's §1 claim that all three overlay functions enforce
+applicability was **wrong** and has been corrected to two
+(`perioSurfaceOverlayMarks`, `perioToothOverlayMarks`). This handoff was already
+correct and named only those two.
+
+Gate after the polish round: `Test Files 5 passed (5) / Tests 167 passed (167)`
+(was 159); `npm run typecheck` clean; `npm run lint` 0 errors, the same 3
+pre-existing warnings in untouched files. No SQL, no JSX, no migration.
 
 ### Next bounded task
 

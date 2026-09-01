@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { CLINICAL_FEATURE_CODES } from "./clinical-codes";
 import { FEATURE_CONTRACT, PERIO_OVERLAY_CONTRACT, type ToothRenderState } from "./feature-contract";
-import { PERIO_INDEX_IDS } from "./perio-indices";
+import { PERIO_INDEX_DEFINITIONS, PERIO_INDEX_IDS } from "./perio-indices";
 
 describe("odontogram feature contract", () => {
   it.each([
@@ -80,6 +80,17 @@ describe("periodontal overlay contract", () => {
 
   it("does not claim a canonical column for the Cairo recession type, which nothing stores yet", () => {
     expect(PERIO_OVERLAY_CONTRACT.CAIRO.canonicalTable).toBeNull();
+  });
+
+  it("never leaves an index both unstored and marked derived", () => {
+    // An index with no canonical table and `derived: true` reads to a consumer
+    // as "computed, do not fetch", and then yields nothing at all. Cairo is
+    // unstored, so it must be declared clinician-supplied input.
+    for (const id of PERIO_INDEX_IDS) {
+      const unstored = PERIO_OVERLAY_CONTRACT[id].canonicalTable === null;
+      const derived = PERIO_INDEX_DEFINITIONS[id].derived;
+      expect(unstored && derived, `${id} is neither stored nor derived`).toBe(false);
+    }
   });
 
   it("keeps every overlay layer name distinct", () => {
