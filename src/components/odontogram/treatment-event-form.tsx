@@ -145,6 +145,23 @@ export async function deriveTreatmentRequestKey(facts: unknown): Promise<string>
 }
 
 /**
+ * Today's Philippine clinical date, the same calendar day the server derives.
+ *
+ * A payment is received when it is received. `record_payment` stamps its own
+ * receipt time and accepts no date, so the boundary requires the submitted
+ * payment date to be today; sending the performed date instead would either be
+ * refused or, worse, record a date the ledger does not actually carry.
+ */
+export function manilaToday(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/**
  * Pesos as a clinician types them, converted to the ledger unit.
  *
  * Returns null for anything that is not a positive amount with at most two
@@ -166,7 +183,7 @@ function failureMessage(result: Extract<WriteResult, { ok: false }>): string {
     return "Your clinical or billing access changed. Nothing was recorded and no charge was confirmed; refresh before retrying.";
   }
   if (result.code === "INVALID_INPUT") {
-    return "This treatment could not be recorded as entered. Review the treated teeth, the linked findings and the amount, then try again.";
+    return "This treatment could not be recorded as entered. Review the performed date, the treated teeth and surfaces, the linked findings and the amount, then try again.";
   }
   if (result.code === "STALE_VERSION" || result.code === "CONFLICT") {
     return "This procedure case changed while you were working. Nothing was recorded; reopen the case and retry.";
@@ -228,6 +245,7 @@ export function TreatmentEventForm({
   const [error, setError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [pendingFacts, setPendingFacts] = React.useState<SubmittedFacts | null>(null);
+  const [replayNotice, setReplayNotice] = React.useState(false);
   const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   const lifecycleId = React.useId();
@@ -250,6 +268,13 @@ export function TreatmentEventForm({
   const noteId = React.useId();
 
   const confirmsCharge = lifecycle !== "FOLLOW_UP";
+  const today = manilaToday();
+  const paymentIsBackdatedTreatment = paymentMode === "PAY_NOW" && serviceDate !== "" && serviceDate !== today;
+  // The status the recorded entry will carry. It is derived, not chosen: the
+  // same transaction decides it from the lifecycle intent, and a second browser
+  // authority for a clinical fact the server already determines would be a lie
+  // waiting to happen. It is shown so the clinician can see it before writing.
+  const resultStatus = lifecycle === "FOLLOW_UP" ? "In progress" : lifecycle === "COMPLETED" ? "Completed" : "Completed (case stays open)";
   const availableSurfaces = React.useMemo(
     () => allowedSurfacesForToothCodes(toothCodes),
     [toothCodes],
@@ -299,6 +324,7 @@ export function TreatmentEventForm({
     setError(null);
     setPendingFacts(null);
     setConfirmOpen(false);
+    setReplayNotice(false);
     setSurfaces((current) =>
       current.includes(surface) ? current.filter((item) => item !== surface) : [...current, surface],
     );
@@ -308,6 +334,7 @@ export function TreatmentEventForm({
     setError(null);
     setPendingFacts(null);
     setConfirmOpen(false);
+    setReplayNotice(false);
     setFindingIds((current) =>
       current.includes(entryId) ? current.filter((item) => item !== entryId) : [...current, entryId],
     );
@@ -377,7 +404,9 @@ export function TreatmentEventForm({
       immediatePayment = {
         paymentMethodId,
         amountCentavos: paymentCentavos,
-        paymentDate: serviceDate,
+        // Received today, which is not necessarily the day the treatment was
+        // performed. The UI states this whenever the two differ.
+        paymentDate: today,
         ...(paymentReference.trim() ? { reference: paymentReference.trim() } : {}),
       };
     }
@@ -441,6 +470,7 @@ export function TreatmentEventForm({
       }
       setConfirmOpen(false);
       setPendingFacts(null);
+      setReplayNotice(result.replayed === true);
       await onRecorded();
       router.refresh();
     } catch {
@@ -472,6 +502,13 @@ export function TreatmentEventForm({
   return (
     <>
       <form className="grid gap-3" onSubmit={handleSubmit} aria-label="Record treatment performed">
+        {replayNotice && (
+          <p role="status" className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+            This matches a record already saved, so nothing was recorded again and no second charge was
+            confirmed. Open the tooth record to review it.
+          </p>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -502,6 +539,7 @@ export function TreatmentEventForm({
               setLifecycle(event.target.value as LifecycleIntent);
               setPendingFacts(null);
               setConfirmOpen(false);
+              setReplayNotice(false);
               setError(null);
             }}
             className="min-h-11"
@@ -525,6 +563,7 @@ export function TreatmentEventForm({
               setCaseId("");
               setPendingFacts(null);
               setConfirmOpen(false);
+              setReplayNotice(false);
               setError(null);
             }}
             className="min-h-11"
@@ -598,6 +637,7 @@ export function TreatmentEventForm({
               setFindingIds([]);
               setPendingFacts(null);
               setConfirmOpen(false);
+              setReplayNotice(false);
               setError(null);
             }}
             className="min-h-11"
@@ -617,7 +657,7 @@ export function TreatmentEventForm({
               <Select
                 id={restorationTypeId}
                 value={restorationType}
-                onChange={(event) => { setRestorationType(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setRestorationType(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               >
                 {TREATMENT_RESTORATION_TYPES.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -628,7 +668,7 @@ export function TreatmentEventForm({
               <Select
                 id={materialId}
                 value={material}
-                onChange={(event) => { setMaterial(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setMaterial(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               >
                 {TREATMENT_RESTORATION_MATERIALS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -639,7 +679,7 @@ export function TreatmentEventForm({
                 type="checkbox"
                 className="size-4 accent-primary"
                 checked={marginalLeakage}
-                onChange={() => { setMarginalLeakage((current) => !current); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={() => { setMarginalLeakage((current) => !current); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
               />
               Marginal leakage observed
             </label>
@@ -652,7 +692,7 @@ export function TreatmentEventForm({
             <Select
               id={rootCanalId}
               value={rootCanalState}
-              onChange={(event) => { setRootCanalState(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+              onChange={(event) => { setRootCanalState(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
               className="min-h-11"
             >
               {TREATMENT_ROOT_CANAL_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -667,7 +707,7 @@ export function TreatmentEventForm({
               <Select
                 id={applianceId}
                 value={appliance}
-                onChange={(event) => { setAppliance(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setAppliance(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               >
                 {TREATMENT_ORTHODONTIC_APPLIANCES.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -678,7 +718,7 @@ export function TreatmentEventForm({
               <Select
                 id={movementId}
                 value={movement}
-                onChange={(event) => { setMovement(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setMovement(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               >
                 {TREATMENT_ORTHODONTIC_MOVEMENTS.map((value) => <option key={value} value={value}>{value}</option>)}
@@ -695,7 +735,7 @@ export function TreatmentEventForm({
               type="text"
               maxLength={100}
               value={controlledCode}
-              onChange={(event) => { setControlledCode(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+              onChange={(event) => { setControlledCode(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
               className="min-h-11"
             />
           </label>
@@ -759,6 +799,7 @@ export function TreatmentEventForm({
             onChange={(event) => {
               setPendingFacts(null);
               setConfirmOpen(false);
+              setReplayNotice(false);
               setError(null);
               onServiceDateChange(event.target.value);
             }}
@@ -774,11 +815,15 @@ export function TreatmentEventForm({
               type="text"
               inputMode="decimal"
               value={amountText}
-              onChange={(event) => { setAmountText(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+              onChange={(event) => { setAmountText(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
               className="min-h-11"
             />
           </label>
         )}
+
+        <p className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Result / current status:</span> {resultStatus}
+        </p>
 
         <label htmlFor={paymentOptionId} className="grid gap-1 text-xs font-medium">
           Payment option
@@ -789,6 +834,7 @@ export function TreatmentEventForm({
               setPaymentMode(event.target.value as "NONE" | "PAY_NOW");
               setPendingFacts(null);
               setConfirmOpen(false);
+              setReplayNotice(false);
               setError(null);
             }}
             className="min-h-11"
@@ -805,7 +851,7 @@ export function TreatmentEventForm({
               <Select
                 id={paymentMethodFieldId}
                 value={paymentMethodId}
-                onChange={(event) => { setPaymentMethodId(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setPaymentMethodId(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               >
                 {paymentMethods.map((method) => (
@@ -820,7 +866,7 @@ export function TreatmentEventForm({
                 type="text"
                 inputMode="decimal"
                 value={paymentAmountText}
-                onChange={(event) => { setPaymentAmountText(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setPaymentAmountText(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               />
             </label>
@@ -831,14 +877,20 @@ export function TreatmentEventForm({
                 type="text"
                 maxLength={80}
                 value={paymentReference}
-                onChange={(event) => { setPaymentReference(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={(event) => { setPaymentReference(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
                 className="min-h-11"
               />
             </label>
             <p className="text-xs text-muted-foreground">
-              This payment is allocated to this procedure case only. It is received today and never changes
-              another case&apos;s balance.
+              Payment date: {today}. It is allocated to this procedure case only and never changes another
+              case&apos;s balance.
             </p>
+            {paymentIsBackdatedTreatment && (
+              <p role="status" className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                The treatment was performed on {serviceDate}, but this payment is received today, {today}.
+                The clinical record keeps the performed date and the ledger keeps the receipt date.
+              </p>
+            )}
           </>
         )}
 
@@ -849,7 +901,7 @@ export function TreatmentEventForm({
                 type="checkbox"
                 className="size-4 accent-primary"
                 checked={installmentsEnabled}
-                onChange={() => { setInstallmentsEnabled((current) => !current); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+                onChange={() => { setInstallmentsEnabled((current) => !current); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
               />
               Schedule installments for this case
             </label>
@@ -909,7 +961,7 @@ export function TreatmentEventForm({
             id={noteId}
             maxLength={2000}
             value={note}
-            onChange={(event) => { setNote(event.target.value); setPendingFacts(null); setConfirmOpen(false); setError(null); }}
+            onChange={(event) => { setNote(event.target.value); setPendingFacts(null); setConfirmOpen(false); setReplayNotice(false); setError(null); }}
             className="min-h-20"
           />
         </label>

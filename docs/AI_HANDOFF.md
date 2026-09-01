@@ -1,7 +1,11 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 6
+# AI Handoff - Unified Clinical Chart workspace, Task 6 (review fixes)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
+
+This checkpoint is the second commit of Task 6. It applies the round-1 review
+findings on top of `716cb82`; the sections below describe the task as it now
+stands, with a dedicated review-fix section at the end.
 
 ## Task 6 - Treatment events, exact finding resolution, immutable charge confirmation (2026-09-01)
 
@@ -70,6 +74,10 @@ the same transaction.
 - `supabase/migrations/20260901010121_clinical_treatment_events_v2_grants.sql`
   (the plan's `010104`/`010105` would have sorted before the already-applied
   `010110`-`010113`; the controller authorized `010120`/`010121`)
+- `supabase/migrations/20260901010126_clinical_treatment_events_v2_repair.sql`
+  (review round 1; a `pg_get_functiondef` forward repair, matching how the O8
+  completion family is already repaired, so `CREATE OR REPLACE` preserves the
+  reviewed grant and no grants migration or registry change is needed)
 - `supabase/tests/clinical_treatment_events_v2.test.sql` (74 assertions)
 - `src/components/odontogram/treatment-event-form.tsx` (+ test)
 - `src/components/odontogram/procedure-charge-confirmation.tsx` (+ test)
@@ -261,6 +269,9 @@ All local only.
 
 ### Known residual risks and open questions
 
+- **Backdating is bounded to 365 days** (review round 1; it was a hundred years).
+  A year covers a late-entered treatment and a year-end catch-up while stopping a
+  typo'd year from posting revenue into a closed period.
 - **Service date and posting date are different dates by design, and that is
   accepted rather than finished.** The clinical record carries `p_service_date`
   (when the treatment happened); the ledger row carries the server-derived
@@ -302,6 +313,74 @@ All local only.
   reasonable follow-up.
 - Geometry remains unverified until the hosted gate: jsdom applies no Tailwind,
   so the 44px targets are proved only as an authored class contract.
+
+### Review fixes applied in this commit
+
+Round 1 returned one Important and seven Minor findings; one Minor was deferred
+by the controller. All the rest are fixed.
+
+1. **A backdated treatment with an immediate payment was always rejected, with a
+   message that blamed the wrong fields (Important).** `buildFacts` sent
+   `paymentDate: serviceDate`, but the boundary requires the payment date to be
+   today. "Treatment performed last week, cash taken today" therefore raised
+   `22023` after the dentist had already passed the immutable-charge dialog, and
+   the error copy named the teeth, findings and amount but never the date. The
+   form now sends `manilaToday()` as the payment date and, whenever it differs
+   from the performed date, renders a line naming both. The `INVALID_INPUT` copy
+   now names the performed date first. Covered by a form test asserting the
+   submitted payment date is today and not the service date, and by two pgTAP
+   cases: a payment dated on the past service date is refused, and a week-old
+   treatment paid at the counter today succeeds with its clinical record on the
+   performed date, its ledger row on the posting date, and a zero balance.
+2. **An action test asserted a property the code did not have (Minor).** The
+   result projection now carries `patient_id`, `treatmentEventRowSchema` requires
+   it, and `recordTreatmentEvent` returns `row.patient_id` like every sibling.
+   The service test fixture deliberately returns a different id from the one
+   submitted, so the assertion proves the server-resolved patient is the one
+   revalidated. **Chosen: add `patient_id`, not drop the assertion.**
+3. **The delegated path's `event_id` was a lookup (Minor).** It captured the
+   case's COMPLETION events before delegating, now takes only an event that is
+   not among them, and raises `P0001 'invalid state'` rather than returning a
+   stale id.
+4. **The backdating window is 365 days (Minor)**, with a pgTAP case at exactly
+   365 days passing and 366 refused.
+5. **`replayed` is surfaced (Minor).** `recordTreatmentEventAction` returns
+   `{ ok: true, replayed }` through a dedicated `TreatmentEventActionResult`, and
+   the form shows "this matches a record already saved ... no second charge was
+   confirmed" instead of a plain success.
+6. **The touch-target sweep asserted a non-zero control count (Minor)** so it
+   cannot go vacuously green.
+7. **Result / current status is surfaced (Minor)** as an explicit labelled line
+   showing the status the transaction will record. It stays **derived**: the same
+   transaction decides the entry status from the lifecycle intent, and a browser
+   control would create a second authority for a clinical fact the server already
+   determines. Covered by a test asserting it reads "Completed" for a completion
+   and "In progress" for a follow-up.
+8. **Deferred by the controller, not fixed:** splitting
+   `treatment-event-form.tsx`'s seven per-treatment fieldsets.
+
+### Review-fix commands and observed results
+
+- `npm run db:migrate:local` - applied `20260901010126`; re-run reports
+  **`Local database is up to date.`** The `authenticated` grant survived the
+  `CREATE OR REPLACE`, verified directly against `has_function_privilege`.
+- `npm run db:types:local` - regenerated.
+- `npm run security:migrations` - **passed**, 307 files, 2973 statements.
+- `npm run test:unit -- <the five brief files + the composer>` - **6 files,
+  84/84 passed.**
+- `npm run test:db:local` - **`PASS supabase/tests/clinical_treatment_events_v2.test.sql`**
+  through the runner, then halts at `treatment_plans.test.sql` as before.
+- Run directly: `clinical_treatment_events_v2` **81 assertions, P1_TEST_PASS**;
+  `billing_authorization`, `billing_charge_ledger`,
+  `odontogram_atomic_completion_revamp`, `clinical_record_composer`,
+  `billing_payment_allocations`, `billing_corrections`,
+  `procedure_cases_and_plan_details`, `treatment_item_execution`,
+  `financial_analytics` - all **P1_TEST_PASS**.
+  `procedure_installment_schedules` still fails on its pre-existing missing
+  sentinel.
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `git diff --check` - clean.
 
 ### Next bounded task
 

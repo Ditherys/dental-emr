@@ -254,10 +254,10 @@ export async function recordTreatmentEvent(input: unknown) {
     p_idempotency_key: value.idempotencyKey,
   }));
   return {
-    // The patient revalidated by the action is the one the caller routed to;
-    // the server independently proved it belongs to the derived tenant before
-    // writing anything.
-    patientId: value.patientId,
+    // The server re-derives the tenant, proves the patient belongs to it, and
+    // reports back the identifier it wrote against. The action revalidates that
+    // one, never the identifier the browser claimed.
+    patientId: row.patient_id,
     procedureCaseId: row.procedure_case_id,
     caseStatus: row.case_status,
     caseVersion: row.case_version,

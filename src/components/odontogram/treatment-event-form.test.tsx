@@ -13,7 +13,7 @@ const { recordTreatmentEventAction, refresh } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({ recordTreatmentEventAction }));
 
-import { TreatmentEventForm, deriveTreatmentRequestKey } from "./treatment-event-form";
+import { TreatmentEventForm, deriveTreatmentRequestKey, manilaToday } from "./treatment-event-form";
 
 const patientId = "c2000000-0000-0000-0000-000000000002";
 const branchId = "c1000000-0000-0000-0000-000000000001";
@@ -58,7 +58,7 @@ afterEach(cleanup);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  recordTreatmentEventAction.mockResolvedValue({ ok: true });
+  recordTreatmentEventAction.mockResolvedValue({ ok: true, replayed: false });
 });
 
 describe("deriveTreatmentRequestKey", () => {
@@ -202,8 +202,62 @@ describe("TreatmentEventForm", () => {
     expect(recordTreatmentEventAction.mock.calls[0][0].immediatePayment).toMatchObject({
       paymentMethodId: cashMethodId,
       amountCentavos: 100000,
-      paymentDate: "2026-09-01",
+      paymentDate: manilaToday(),
     });
+  });
+
+  it("records a backdated treatment paid today without a dead end, naming both dates", async () => {
+    const user = userEvent.setup();
+    // A treatment performed earlier and paid at the counter today is an ordinary
+    // clinic workflow. The clinical record keeps the performed date; the ledger
+    // keeps the receipt date, and the form says so rather than sending a payment
+    // date the boundary will refuse.
+    renderForm({ serviceDate: "2026-08-25" });
+
+    await user.click(screen.getByLabelText(/occlusal/i));
+    fireEvent.change(screen.getByLabelText(/actual cost/i), { target: { value: "2500.00" } });
+    await user.selectOptions(screen.getByLabelText(/payment option/i), "PAY_NOW");
+    fireEvent.change(screen.getByLabelText(/payment amount/i), { target: { value: "2500.00" } });
+
+    const notice = screen.getByText(/performed on 2026-08-25/i);
+    expect(notice).toHaveTextContent(manilaToday());
+
+    await user.click(screen.getByRole("button", { name: /review charge/i }));
+    await user.click(await screen.findByRole("button", { name: /cannot be edited after/i }));
+
+    await waitFor(() => expect(recordTreatmentEventAction).toHaveBeenCalledTimes(1));
+    const submitted = recordTreatmentEventAction.mock.calls[0][0];
+    expect(submitted.serviceDate).toBe("2026-08-25");
+    expect(submitted.immediatePayment.paymentDate).toBe(manilaToday());
+    expect(submitted.immediatePayment.paymentDate).not.toBe("2026-08-25");
+  });
+
+  it("says a replayed submission recorded nothing again", async () => {
+    const user = userEvent.setup();
+    recordTreatmentEventAction.mockResolvedValue({ ok: true, replayed: true });
+    renderForm();
+
+    await user.click(screen.getByLabelText(/occlusal/i));
+    fireEvent.change(screen.getByLabelText(/actual cost/i), { target: { value: "2500.00" } });
+    await user.click(screen.getByRole("button", { name: /review charge/i }));
+    await user.click(await screen.findByRole("button", { name: /cannot be edited after/i }));
+
+    expect(await screen.findByText(/matches a record already saved/i)).toBeInTheDocument();
+    expect(screen.getByText(/no second charge was confirmed/i)).toBeInTheDocument();
+  });
+
+  it("shows the resulting tooth status the transaction will record", async () => {
+    const user = userEvent.setup();
+    renderForm({
+      openCases: [
+        { procedureCaseId: caseId, caseVersion: 3, procedureId: fillingId, label: "Composite filling" },
+      ],
+    });
+
+    expect(screen.getByText(/result \/ current status/i).parentElement).toHaveTextContent("Completed");
+
+    await user.selectOptions(screen.getByLabelText(/lifecycle/i), "FOLLOW_UP");
+    expect(screen.getByText(/result \/ current status/i).parentElement).toHaveTextContent("In progress");
   });
 
   it("reuses the request key for an unmodified retry and rotates it after an edit", async () => {
@@ -232,7 +286,11 @@ describe("TreatmentEventForm", () => {
   it("keeps every control at a safe touch size and uses no inline style", () => {
     const { container } = renderForm();
 
-    for (const control of container.querySelectorAll("button, select, input[type='date'], input[type='text']")) {
+    const controls = container.querySelectorAll("button, select, input[type='date'], input[type='text']");
+    // Without this the sweep below would pass vacuously if the selector ever
+    // stopped matching the form's controls.
+    expect(controls.length).toBeGreaterThanOrEqual(6);
+    for (const control of controls) {
       expect(control.className).toMatch(/min-h-11/);
     }
     expect(container.querySelector("[style]")).toBeNull();

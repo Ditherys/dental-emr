@@ -787,7 +787,12 @@ describe("treatment event service boundary", () => {
     idempotencyKey: key,
   };
 
+  // Deliberately not the submitted patientId: the assertion below proves the
+  // service reports the patient the server wrote against.
+  const serverPatientId = "cb000000-0000-0000-0000-00000000000b";
+
   const serverResult = {
+    patient_id: serverPatientId,
     procedure_case_id: caseId,
     case_status: "OPEN",
     case_version: 2,
@@ -817,7 +822,7 @@ describe("treatment event service boundary", () => {
     rpc.mockResolvedValueOnce({ data: serverResult, error: null });
 
     await expect(recordTreatmentEvent(performed)).resolves.toEqual({
-      patientId,
+      patientId: serverPatientId,
       procedureCaseId: caseId,
       caseStatus: "OPEN",
       caseVersion: 2,

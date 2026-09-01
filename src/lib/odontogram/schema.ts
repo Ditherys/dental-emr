@@ -951,6 +951,9 @@ export const treatmentEventInputSchema = z
 
 export const treatmentEventRowSchema = z
   .object({
+    // The patient the server actually wrote against, not the one the caller
+    // claimed. Revalidation and any later read follow this identifier.
+    patient_id: databaseUuid,
     procedure_case_id: databaseUuid,
     case_status: z.enum(["OPEN", "COMPLETED", "CANCELLED"]),
     case_version: z.number().int().positive(),

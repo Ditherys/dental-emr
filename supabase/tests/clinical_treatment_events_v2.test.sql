@@ -142,6 +142,23 @@ select extensions.throws_ok(
   $$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'AMENDMENT',(timezone('Asia/Manila', statement_timestamp()))::date,array[]::uuid[],'{"toothCodes":["16"],"surfaces":["O"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,250000,null,null,'f6e00000-0000-0000-0000-000000000003')$$,
   '22023','invalid input','an unknown lifecycle event kind is refused'
 );
+
+-- The backdating window is one year, not a century: wide enough for a
+-- late-entered treatment and a year-end catch-up, narrow enough that a typo'd
+-- year cannot post revenue into a period nobody is still reconciling.
+select extensions.throws_ok(
+  $$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'PERFORMED',(timezone('Asia/Manila', statement_timestamp()))::date - 366,array[]::uuid[],'{"toothCodes":["14"],"surfaces":["O"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,250000,null,null,'f6e00000-0000-0000-0000-000000000031')$$,
+  '22023','invalid input','a service date beyond the one-year backdating window is refused'
+);
+-- A payment is received when it is received. public.record_payment stamps its
+-- own receipt time and accepts no date, so a payment claiming the past service
+-- date is refused rather than recorded under a date the ledger does not carry.
+select extensions.throws_ok(
+  format($$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'PERFORMED',(timezone('Asia/Manila', statement_timestamp()))::date - 7,array[]::uuid[],'{"toothCodes":["13"],"surfaces":["M"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,120000,'{"paymentMethodId":"%s","amountCentavos":"120000","paymentDate":"%s"}'::jsonb,null,'f6e00000-0000-0000-0000-000000000032')$$,
+    (select value from tev_scalar where seq = 0),
+    ((timezone('Asia/Manila', statement_timestamp()))::date - 7)::text),
+  '22023','invalid input','a payment dated on the past service date rather than today is refused'
+);
 select extensions.throws_ok(
   $$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'FOLLOW_UP',(timezone('Asia/Manila', statement_timestamp()))::date,array[]::uuid[],'{"toothCodes":["16"],"surfaces":["O"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,250000,null,null,'f6e00000-0000-0000-0000-000000000004')$$,
   '22023','invalid input','a follow-up cannot open a new procedure case'
@@ -230,6 +247,7 @@ select extensions.ok(
       and payload->>'balance_centavos' = '250000'
       and payload->>'paid_centavos' = '0'
       and payload->>'service_date' = (timezone('Asia/Manila', statement_timestamp()))::date::text
+      and payload->>'patient_id' = 'f6500000-0000-0000-0000-000000000001'
       and not (payload->>'replayed')::boolean
    from tev_result where seq = 1),
   'a performed treatment confirms one charge, leaves the case open, and reports charge/paid/balance'
@@ -702,6 +720,54 @@ select extensions.is(
   (select count(*)::integer from public.tooth_clinical_entries where organization_id='f6200000-0000-0000-0000-000000000002'),
   0,
   'the foreign tenant recorded nothing'
+);
+
+-- ---------------------------------------------------------------------------
+-- Backdated recording. Placed last because these write real charges, and every
+-- count assertion above must see only the events it is counting.
+-- ---------------------------------------------------------------------------
+
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','f6100000-0000-0000-0000-000000000001',true);
+select extensions.lives_ok(
+  $$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'PERFORMED',(timezone('Asia/Manila', statement_timestamp()))::date - 365,array[]::uuid[],'{"toothCodes":["15"],"surfaces":["O"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,250000,null,null,'f6e00000-0000-0000-0000-000000000041')$$,
+  'a service date exactly one year old is still recordable'
+);
+-- "Treatment performed last week, cash taken at the counter today" is an
+-- ordinary clinic workflow and must not be a dead end.
+select extensions.lives_ok(
+  format($$select public.record_treatment_event_v2('f6300000-0000-0000-0000-000000000001','f6500000-0000-0000-0000-000000000001','f6700000-0000-0000-0000-000000000001',null,null,null,'PERFORMED',(timezone('Asia/Manila', statement_timestamp()))::date - 7,array[]::uuid[],'{"toothCodes":["12"],"surfaces":["M"],"detail":{"code":"RESTORATION","restorationType":"none","material":"composite","marginalLeakage":false}}'::jsonb,120000,'{"paymentMethodId":"%s","amountCentavos":"120000","paymentDate":"%s"}'::jsonb,null,'f6e00000-0000-0000-0000-000000000042')$$,
+    (select value from tev_scalar where seq = 0),
+    (timezone('Asia/Manila', statement_timestamp()))::date::text),
+  'a treatment performed a week ago and paid at the counter today is recordable'
+);
+reset role;
+
+select extensions.is(
+  (select entry.effective_at::date
+   from public.tooth_clinical_entries as entry
+   where entry.organization_id='f6200000-0000-0000-0000-000000000001' and entry.tooth_code='12'),
+  ((timezone('Asia/Manila', statement_timestamp()))::date - 7),
+  'the clinical record keeps the performed date, not the day it was entered'
+);
+select extensions.is(
+  (select charge.service_date
+   from public.charges as charge
+   join public.tooth_clinical_entries as entry
+     on entry.organization_id = charge.organization_id and entry.charge_id = charge.id
+   where entry.tooth_code='12'),
+  (timezone('Asia/Manila', statement_timestamp()))::date,
+  'the ledger keeps the posting date, which is deliberately not the service date'
+);
+select extensions.is(
+  (select private.charge_due(charge.id, charge.organization_id)::text
+   from public.charges as charge
+   join public.tooth_clinical_entries as entry
+     on entry.organization_id = charge.organization_id and entry.charge_id = charge.id
+   where entry.tooth_code='12'),
+  '0',
+  'the counter payment settled the backdated treatment in the same transaction'
 );
 
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')

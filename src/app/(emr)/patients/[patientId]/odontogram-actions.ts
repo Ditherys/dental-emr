@@ -63,6 +63,16 @@ import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
 type OdontogramMutationCode = "NOT_AUTHORIZED" | "INVALID_INPUT" | "STALE_VERSION" | "INVALID_STATE" | "CONFLICT" | "FAILED";
 export type OdontogramMutationResult = { ok: true } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 export type OdontogramDTOListResult = { ok: true; odontogram: PatientOdontogramDTO } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
+/**
+ * A treatment event reports whether the server replayed a stored result.
+ *
+ * The request key is a hash of the submitted facts, so two byte-identical
+ * treatments derive the same key and the second one replays. Without this flag
+ * the form would report a plain success for a write that did not happen.
+ */
+export type TreatmentEventActionResult =
+  | { ok: true; replayed: boolean }
+  | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 export type OdontogramIdResult = { ok: true; id: string; version: number } | { ok: false; code: OdontogramMutationCode; fieldErrors?: Record<string, string[]> };
 
 function invalid(schema: { safeParse(input: unknown): { success: boolean; error?: { flatten(): { fieldErrors: Record<string, string[]> } } } }, input: unknown) {
@@ -139,7 +149,7 @@ export async function recordVisitClinicalNoteAction(input: unknown): Promise<Odo
  * the first. Every clinical and financial invariant, including the immutability
  * of a confirmed charge, is enforced inside the single RPC transaction.
  */
-export async function recordTreatmentEventAction(input: unknown): Promise<OdontogramMutationResult> {
+export async function recordTreatmentEventAction(input: unknown): Promise<TreatmentEventActionResult> {
   const invalidResult = invalid(treatmentEventInputSchema, input); if (invalidResult) return invalidResult;
   try {
     const value = treatmentEventInputSchema.parse(input);
@@ -155,7 +165,7 @@ export async function recordTreatmentEventAction(input: unknown): Promise<Odonto
     }
     const mutation = await recordTreatmentEvent(value);
     revalidateAuthoritativePatient(mutation.patientId);
-    return { ok: true };
+    return { ok: true, replayed: mutation.replayed };
   } catch (error) { return result(error); }
 }
 

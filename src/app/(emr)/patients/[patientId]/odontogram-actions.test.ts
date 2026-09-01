@@ -198,20 +198,28 @@ describe("treatment event action boundary", () => {
   };
 
   it("requires clinical write and billing charge, then revalidates the server-resolved patient", async () => {
-    await expect(recordTreatmentEventAction(performed)).resolves.toEqual({ ok: true });
+    await expect(recordTreatmentEventAction(performed)).resolves.toEqual({ ok: true, replayed: false });
 
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "billing.charge", branchId });
     expect(recordTreatmentEvent).toHaveBeenCalledWith(performed);
+    // The service now returns the RPC's own patient_id, so revalidating the
+    // server-resolved patient rather than the claimed one is a real property.
     expect(revalidatePath).toHaveBeenCalledWith(`/patients/${authoritativePatientId}`, "page");
     expect(revalidatePath).not.toHaveBeenCalledWith(`/patients/${patientId}`, "page");
+  });
+
+  it("reports a replayed submission so the form cannot claim a write that did not happen", async () => {
+    recordTreatmentEvent.mockResolvedValueOnce({ patientId: authoritativePatientId, replayed: true });
+
+    await expect(recordTreatmentEventAction(performed)).resolves.toEqual({ ok: true, replayed: true });
   });
 
   it("requires payment.record only when money is submitted", async () => {
     await expect(recordTreatmentEventAction({
       ...performed,
       immediatePayment: { paymentMethodId: noteId, amountCentavos: 100000, paymentDate: "2026-09-01" },
-    })).resolves.toEqual({ ok: true });
+    })).resolves.toEqual({ ok: true, replayed: false });
 
     expect(requirePermission).toHaveBeenCalledWith({ permission: "payment.record", branchId });
   });
@@ -223,7 +231,7 @@ describe("treatment event action boundary", () => {
       existingCaseId: itemId,
       expectedCaseVersion: 3,
       chargeAmountCentavos: null,
-    })).resolves.toEqual({ ok: true });
+    })).resolves.toEqual({ ok: true, replayed: false });
 
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
     expect(requirePermission).not.toHaveBeenCalledWith({ permission: "billing.charge", branchId });
