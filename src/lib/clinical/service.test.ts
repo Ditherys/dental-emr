@@ -19,6 +19,7 @@ import {
   getClinicalEncounterDetail,
   listClinicalEncounters,
   listPatientMedicalRecords,
+  getCurrentManagedVisit,
   startOrResumeClinicalVisit,
   updateClinicalNote,
   voidPatientMedicalRecord,
@@ -152,6 +153,51 @@ describe("clinical service input validation boundary", () => {
     await expect(getClinicalEncounterDetail({ actingBranchId: branchId, encounterId: "nope" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listPatientMedicalRecords({ actingBranchId: branchId, patientId, recordType: "PRESCRIPTION" })).rejects.toBeInstanceOf(z.ZodError);
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("current managed visit projection boundary", () => {
+  beforeEach(() => rpc.mockReset());
+
+  const readInput = { branchId, patientId };
+
+  it("never accepts a provider, organization, actor, or date from the caller", async () => {
+    await expect(getCurrentManagedVisit({ ...readInput, treatingProviderId: providerId })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ ...readInput, organizationId: "foreign-org" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ ...readInput, createdBy: "u-1" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ ...readInput, providerDisplay: "Dr. Synthetic Dentist" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ ...readInput, clinicalDate: "2026-09-01" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ ...readInput, actingBranchId: branchId })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(getCurrentManagedVisit({ branchId: "not-a-uuid", patientId })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("binds the projection RPC to its exact contract", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, status: "OPEN", clinical_date: "2026-09-01", provider_display: "Dentist A1", version: 1 }], error: null });
+    await expect(getCurrentManagedVisit(readInput)).resolves.toEqual({
+      encounterId, status: "OPEN", clinicalDate: "2026-09-01", providerDisplay: "Dentist A1", version: 1,
+    });
+    expect(rpc).toHaveBeenLastCalledWith("get_current_managed_visit", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+    });
+  });
+
+  it("reports no current managed visit rather than inventing one", async () => {
+    rpc.mockResolvedValueOnce({ data: [], error: null });
+    await expect(getCurrentManagedVisit(readInput)).resolves.toBeNull();
+  });
+
+  it("reports a finalized visit as finalized", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, status: "FINALIZED", clinical_date: "2026-09-01", provider_display: null, version: 2 }], error: null });
+    await expect(getCurrentManagedVisit(readInput)).resolves.toEqual({
+      encounterId, status: "FINALIZED", clinicalDate: "2026-09-01", providerDisplay: null, version: 2,
+    });
+  });
+
+  it("maps a refused read to a safe service error", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(getCurrentManagedVisit(readInput)).rejects.toBeInstanceOf(ClinicalServiceError);
   });
 });
 

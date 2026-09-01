@@ -51,6 +51,21 @@ export const startOrResumeClinicalVisitInputSchema = z.object({
   idempotencyKey: databaseUuid.nullable().optional(),
 }).strict();
 
+// The read-only current-visit projection accepts route context only. Like the
+// write lifecycle it never accepts an organization, provider, actor, or date.
+export const getCurrentManagedVisitInputSchema = z.object({
+  branchId: databaseUuid,
+  patientId: databaseUuid,
+}).strict();
+
+export const currentManagedVisitRowSchema = z.object({
+  encounter_id: databaseUuid,
+  status: clinicalEncounterStatusSchema,
+  clinical_date: z.iso.date(),
+  provider_display: z.string().nullable(),
+  version: z.number().int().positive(),
+}).strict();
+
 export const clinicalVisitRowSchema = z.object({
   encounter_id: databaseUuid,
   clinical_date: z.iso.date(),

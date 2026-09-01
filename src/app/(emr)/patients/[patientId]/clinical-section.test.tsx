@@ -220,6 +220,17 @@ describe("ClinicalSection visit lifecycle", () => {
     await waitFor(() => expect(actions.finalizeClinicalEncounterAction).toHaveBeenCalledWith({ actingBranchId: branchId, encounterId, expectedVersion: 1 }));
   });
 
+  it("starts a further same-day visit after the current one is finalized", async () => {
+    renderSection({ canWriteClinical: true, visit: { ...openVisit, status: "FINALIZED", version: 2 } });
+
+    expect(screen.getByTestId("clinical-visit-state")).toHaveTextContent("Visit finalized");
+    expect(screen.queryByRole("button", { name: "Resume visit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Finalize visit" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start visit" }));
+    await waitFor(() => expect(actions.startClinicalVisitAction).toHaveBeenCalledWith({ branchId, patientId, idempotencyKey: expect.any(String) }));
+  });
+
   it("reports an unavailable visit state instead of offering a start action", () => {
     renderSection({ canWriteClinical: true, visit: null });
 

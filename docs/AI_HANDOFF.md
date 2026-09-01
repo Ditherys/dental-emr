@@ -37,8 +37,17 @@ consumer and left `Start visit` without the idempotency key the RPC accepts.
 - Task 1's managed visit contract in
   `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`.
 
+This handoff covers commit `48d792d` plus the two review corrections committed
+on top of it: the read-only current-managed-visit projection, and `Start visit`
+being available after a same-day visit is finalized.
+
 ### Files added
 
+- `supabase/migrations/20260901010112_current_managed_visit_projection.sql` —
+  `public.get_current_managed_visit(uuid, uuid)`.
+- `supabase/migrations/20260901010113_current_managed_visit_projection_grants.sql`
+  — one additive `authenticated` EXECUTE.
+- `supabase/tests/current_managed_visit.test.sql` (21 pgTAP assertions).
 - `src/components/clinical/clinical-chart-workspace.tsx` (+ test) — the workspace
   shell: the single `Clinical chart` landmark, the mode group, the full-width
   chart surface, the progress-record region, the photograph region, and one
@@ -63,8 +72,16 @@ consumer and left `Start visit` without the idempotency key the RPC accepts.
   profile keeps `max-w-7xl`; only the Clinical breakout spans the viewport. The
   photo gallery is now passed into the workspace instead of rendered as a
   sibling section.
-- `src/app/(emr)/patients/[patientId]/page.tsx` — derives the read-only
-  `ClinicalVisitState` on the server.
+- `src/lib/clinical/{schema,service,service.test}.ts` — `getCurrentManagedVisit`
+  with its strict input schema and row contract.
+- `src/app/(emr)/patients/[patientId]/page.tsx` — reads the visit through the new
+  projection. The former `created_at` approximation is deleted.
+- `scripts/approved-final-grants.mjs` — new grant terminal for the projection.
+- `scripts/remote-database-test-guard.mjs` (+ its test) — registers the suite.
+- `scripts/migration-privilege-lint.test.mjs`,
+  `scripts/boundary-privilege-invariant.test.mjs` — counters and the final
+  effective-boundary fixture follow the two new migrations and the new grant.
+- `src/types/database.generated.ts` — regenerated, never hand-edited.
 - `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` — optional
   `renderProgressRecord` so the workspace owns the single chronology region.
 - `e2e/support/odontogram.ts`, `e2e/odontogram-integration.spec.ts` — drop the
@@ -73,9 +90,22 @@ consumer and left `Start visit` without the idempotency key the RPC accepts.
 
 ### Security and tenancy decisions
 
-- Opening Clinical creates nothing. The visit summary is a read-only server
-  derivation from data the page already loads; only an explicit `Start visit` or
-  `Resume visit` press reaches `start_or_resume_clinical_visit`.
+- Opening Clinical creates nothing. The visit summary comes from
+  `public.get_current_managed_visit`, a strictly read-only `security definer`
+  projection with an empty search path: no insert, no update, no delete, no audit
+  event. Only an explicit `Start visit` or `Resume visit` press reaches
+  `start_or_resume_clinical_visit`.
+- The projection derives organization, treating provider and the Philippine
+  clinical date server-side exactly as the write lifecycle does, requires live
+  `patient.clinical.read` at an active acting branch plus an active linked
+  provider there, and validates the patient against the derived tenant. It
+  accepts no organization, provider, actor, provider display name or date.
+- It returns only `managed_visit` rows, scoped to the acting provider and today's
+  clinical date, so the visit displayed is always the visit a write would land
+  in. A pre-workspace unmanaged encounter is never reported as the current visit
+  and stays readable and unchanged through `list_clinical_encounters`.
+- Additive only: no existing function signature, grant or RLS policy changed.
+  `list_clinical_encounters` is untouched.
 - The action boundary accepts only `branchId`, `patientId`, optional
   `appointmentId` and optional `idempotencyKey` through the strict Task 1 schema.
   `organizationId`, `treatingProviderId`, `createdBy`, `providerDisplay` and
@@ -92,6 +122,18 @@ consumer and left `Start visit` without the idempotency key the RPC accepts.
   `Visit status unavailable` with no start action, rather than rendering a false
   `NOT_STARTED`.
 - No migration, RPC, grant or RLS change in this checkpoint.
+
+### Negative authorization cases covered (database)
+
+`current_managed_visit.test.sql` asserts with `throws_ok`: receptionist denied;
+owner with no active provider link denied exactly as the write lifecycle denies
+them; dentist whose provider is not active at the requested branch denied;
+cross-tenant patient denied; foreign-tenant dentist denied; null patient
+rejected as `22023 invalid input`. It further proves a legacy unmanaged OPEN
+encounter created today is not returned, yesterday's managed visit is not
+returned, another provider's managed visit for the same patient and day is not
+returned as this actor's, a finalized visit reports FINALIZED without being
+reopened, and that every read left the encounter set and the audit log unchanged.
 
 ### Negative and degradation cases covered (component level)
 
@@ -139,30 +181,61 @@ All local only.
   another suite was active it failed 10/45. The failures are machine
   contention, not regressions.
 
+Review corrections, all local:
+
+- `supabase/tests/current_managed_visit.test.sql` run directly against
+  `supabase_db_local` — RED before the migration
+  (`ERROR: function "public.get_current_managed_visit(uuid,uuid)" does not exist`),
+  then **21/21 ok, `P1_TEST_PASS`**.
+- `unified_clinical_visit.test.sql` and `clinical_rpcs.test.sql` re-run directly
+  — both `P1_TEST_PASS`.
+- `npm run db:migrate:local` — applied `20260901010112` and `20260901010113`
+  forward; no reset.
+- `npm run db:types:local` — `Updated src/types/database.generated.ts.`
+- `npm run security:migrations` — passed; 302 files, 84 grant-terminal
+  migrations, 390 approved privileges.
+- `npm run test:db:local` — reaches and passes
+  `PASS supabase/tests/current_managed_visit.test.sql`, then halts at the
+  **pre-existing** `treatment_plans.test.sql` failure (assertion 7,
+  `treatment_plan_items` approved-field set), reproduced directly and unrelated
+  to this work. The runner therefore never reaches the suites registered after
+  it, including the `.local.mjs` concurrency tests.
+- `npm run test:unit -- src/lib/clinical/service.test.ts` — 27/27 passed
+  (5 failed before the implementation, as required by TDD).
+- `npm run test:unit -- scripts src/lib/clinical "…/clinical-actions.test.ts"` —
+  19 files, 349/349 passed.
+
 ### Not run, and why
 
 - `npm run build`, Playwright E2E, responsive/accessibility device verification,
-  Cloud TEST, `npm run test:db`, database advisors: no database or grant change
-  in this checkpoint and hosted access is not authorized for this work. This work
-  may be described only as locally implemented and locally verified.
+  Cloud TEST, `npm run test:db` (hosted), database advisors: hosted access is not
+  authorized for this work. This work may be described only as locally
+  implemented and locally verified.
+- R6-D boundary-privilege file-mode replay: hosted-only, still UNRUN, unchanged
+  from Task 1. The new grant terminal is additive and carries no supersede pivot.
 
 ### Known residual risks and open questions
 
-- `list_clinical_encounters` does not expose `clinical_date` or `managed_visit`,
-  so the server derivation matches today's encounters on the Manila calendar day
-  of `created_at`. A pre-workspace unmanaged OPEN encounter created today would
-  therefore be shown as the current visit. A later task should add a managed
-  visit read that returns `clinical_date` and `managed_visit` directly.
+- The projection denies any actor without an active linked provider at the acting
+  branch, which is correct — a managed visit belongs to a provider — but it means
+  a clinical *reader* such as a dental assistant sees `Visit status unavailable`
+  rather than a visit summary. The chart, record, safety strip and history
+  dialogs are all still readable for them.
+- The `NOT_STARTED` label's date is formatted in the server component from
+  `Asia/Manila`. It is a label only; every encounter decision uses the
+  server-derived date. Across local midnight the label could be one day off for a
+  request in flight, which is cosmetic.
 - `PERIODONTAL` mode is a bounded seam that points at the chart's existing
   periodontal entry; Task 12 mounts the real periodontal work surface.
 - The progress-record region uses the same server-derived events the chart was
   already given, so it inherits the existing behaviour where an in-chart fork
   save refreshes the chart but not the record until the next route refresh.
   Task 13 owns the chronology.
-- `Resume visit` calls the same idempotent lifecycle action as `Start visit`.
-  Whether an explicit `Resume visit` control is wanted at all, and whether a
-  finalized same-day visit should offer starting a second visit, are open
-  questions for the controller.
+- `Resume visit` calls the same idempotent lifecycle action as `Start visit`;
+  the controller ruled this the faithful reading of brief Step 4. A finalized
+  same-day visit now offers `Start visit` (and no `Resume visit`), because the
+  partial unique index covers only managed OPEN rows, so the lifecycle opens a
+  further visit rather than handing back the finalized one.
 - `createClinicalEncounter` in `src/lib/clinical/service.ts` and
   `createClinicalEncounterInputSchema` are now unreferenced by any UI path and
   remain for Task 17's superseded-path sweep.

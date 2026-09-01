@@ -54,13 +54,23 @@ describe("ClinicalVisitHeader", () => {
     expect(onFinalizeVisit).toHaveBeenCalledTimes(1);
   });
 
-  it("never reopens a finalized visit", () => {
-    renderHeader(finalized);
+  it("starts a further visit after finalizing instead of reopening the finalized one", () => {
+    const { onStartVisit } = renderHeader(finalized);
 
     expect(screen.getByTestId("clinical-visit-state")).toHaveTextContent("Visit finalized");
-    expect(screen.queryByRole("button", { name: "Start visit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Resume visit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Finalize visit" })).not.toBeInTheDocument();
+
+    const start = screen.getByRole("button", { name: "Start visit" });
+    expect(start).toBeVisible();
+    fireEvent.click(start);
+    expect(onStartVisit).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers a finalized visit no start action to a clinical reader", () => {
+    renderHeader(finalized, false);
+
+    expect(screen.queryByRole("button", { name: "Start visit" })).not.toBeInTheDocument();
   });
 
   it("reports an unknown visit state instead of showing a stale not-started visit", () => {

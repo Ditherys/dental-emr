@@ -47,7 +47,9 @@ export function ClinicalVisitHeader({
   actions?: ReactNode;
 }) {
   const writable = canWriteClinical && visit !== null;
-  const canStart = writable && visit.status === "NOT_STARTED";
+  // A finalized visit is never reopened, but the day is not over: the managed
+  // lifecycle opens a further visit for a patient who returns the same day.
+  const canStart = writable && visit.status !== "OPEN";
   const canResume = writable && visit.status === "OPEN";
 
   return (

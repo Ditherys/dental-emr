@@ -484,6 +484,8 @@ const UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_MIGRATION =
   "20260901010110_unified_clinical_visit_lifecycle_lock_seed.sql";
 const UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION =
   "20260901010111_unified_clinical_visit_lifecycle_lock_seed_grants.sql";
+const CURRENT_MANAGED_VISIT_PROJECTION_GRANTS_MIGRATION =
+  "20260901010113_current_managed_visit_projection_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -859,6 +861,18 @@ const unifiedClinicalVisitLifecycleLockSeedGrants = Object.freeze([
     privilege: "execute",
     columns: [],
     reason: `${CLINICAL_VISIT_LIFECYCLE_GRANT_REASON} Re-granted unchanged after the request-key advisory lock was moved to its own key space (seed 1) so that lock ordering, and therefore deadlock freedom, is structural rather than incidental.`,
+  },
+]);
+
+const currentManagedVisitProjectionGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_current_managed_visit(uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The read-only projection of the one current managed clinical visit. It derives organization, treating provider, and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch plus an active linked provider there, and validates the patient against the derived tenant. It accepts no organization, provider, actor, provider display name, or date from the browser, returns at most one row scoped to the acting provider, never reports a pre-workspace unmanaged encounter, and writes nothing — no row, no state change, and no audit event — so opening the clinical workspace never opens an encounter.",
   },
 ]);
 
@@ -1768,6 +1782,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: UNIFIED_CLINICAL_VISIT_LIFECYCLE_LOCK_SEED_GRANTS_MIGRATION,
     grants: unifiedClinicalVisitLifecycleLockSeedGrants,
+  }),
+  Object.freeze({
+    file: CURRENT_MANAGED_VISIT_PROJECTION_GRANTS_MIGRATION,
+    grants: currentManagedVisitProjectionGrants,
   }),
 ]);
 

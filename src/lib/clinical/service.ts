@@ -15,6 +15,8 @@ import {
   clinicalRecordMutationRowSchema,
   clinicalVisitRowSchema,
   createClinicalEncounterInputSchema,
+  currentManagedVisitRowSchema,
+  getCurrentManagedVisitInputSchema,
   createClinicalNoteInputSchema,
   createPatientMedicalRecordInputSchema,
   createPrescriptionInputSchema,
@@ -36,6 +38,7 @@ import type {
   ClinicalNoteMutationResult,
   ClinicalRecordMutationResult,
   ClinicalVisitStartResult,
+  ClinicalVisitState,
   MedicalRecord,
   PrescriptionMutationResult,
 } from "./types";
@@ -52,6 +55,28 @@ async function callRpc(name: string, args: Record<string, unknown>) {
 
 function firstRow(data: unknown) {
   return Array.isArray(data) ? data[0] : undefined;
+}
+
+/**
+ * Read-only projection of the acting provider's current managed visit. Returns
+ * null when no managed visit exists today. It never opens an encounter, and a
+ * pre-workspace unmanaged encounter is never reported as the current visit.
+ */
+export async function getCurrentManagedVisit(input: unknown): Promise<ClinicalVisitState | null> {
+  const value = getCurrentManagedVisitInputSchema.parse(input);
+  const data = firstRow(await callRpc("get_current_managed_visit", {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+  }));
+  if (data === undefined || data === null) return null;
+  const row = currentManagedVisitRowSchema.parse(data);
+  return {
+    encounterId: row.encounter_id,
+    status: row.status,
+    clinicalDate: row.clinical_date,
+    providerDisplay: row.provider_display,
+    version: row.version,
+  };
 }
 
 export async function startOrResumeClinicalVisit(input: unknown): Promise<ClinicalVisitStartResult> {

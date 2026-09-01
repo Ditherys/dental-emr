@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { PermissionDenied } from "@/components/feedback/permission-denied";
 import { AuthorizationError, requireBranchAccess, requireOrganizationAuthorizationState, requireSharedPatientPermission } from "@/lib/authorization";
 import { hasPermission, hasSharedPatientPermission } from "@/lib/authorization/policy";
-import { ClinicalServiceError, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
-import type { ClinicalEncounter, ClinicalVisitState } from "@/lib/clinical/types";
+import { ClinicalServiceError, getCurrentManagedVisit, listClinicalEncounters, listPatientMedicalRecords } from "@/lib/clinical/service";
+import type { ClinicalVisitState } from "@/lib/clinical/types";
 import { ClinicalPhotoServiceError, listClinicalPhotos } from "@/lib/clinical-media/service";
 import { FileServiceError, listPatientFiles } from "@/lib/files/service";
 import { AcquisitionServiceError, listPatientReferrals } from "@/lib/acquisition/service";
@@ -53,7 +53,11 @@ function requestedBranch(state: AuthorizationState, candidate: string | undefine
   return readableBranch(state);
 }
 
-const manilaDate = new Intl.DateTimeFormat("en-CA", {
+// Label only. The authoritative clinical date always comes from the server —
+// from the projection when a managed visit exists, and from
+// `start_or_resume_clinical_visit` when one is opened. This never decides which
+// encounter the workspace is looking at.
+const manilaDateLabel = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Manila",
   year: "numeric",
   month: "2-digit",
@@ -61,31 +65,31 @@ const manilaDate = new Intl.DateTimeFormat("en-CA", {
 });
 
 /**
- * Read-only summary of today's visit for the Clinical chart workspace. It never
- * opens an encounter: the authoritative clinical date and provider are derived
- * again server-side by `start_or_resume_clinical_visit` when a visit is actually
- * started. Returns null when the encounter read failed, so the workspace reports
- * an unknown visit rather than a false "not started".
+ * Reads the acting provider's current managed visit for the Clinical chart
+ * workspace. This opens nothing: the projection is read-only and a legacy
+ * unmanaged encounter is never reported as the current visit, so the visit shown
+ * is always the visit `Start visit` and `Resume visit` would write into.
+ *
+ * Returns null when the read is refused or fails, so the workspace reports an
+ * unknown visit rather than a false "not started".
  */
-function deriveClinicalVisitState(
-  encounters: readonly ClinicalEncounter[],
-  providerNames: ReadonlyMap<string, string>,
-  loadFailed: boolean,
-): ClinicalVisitState | null {
-  if (loadFailed) return null;
-  const clinicalDate = manilaDate.format(new Date());
-  const today = encounters.filter((encounter) => manilaDate.format(new Date(encounter.createdAt)) === clinicalDate);
-  const current = today.find((encounter) => encounter.status === "OPEN") ?? today[0];
-  if (!current) {
-    return { encounterId: null, status: "NOT_STARTED", clinicalDate, providerDisplay: null, version: null };
+async function readClinicalVisitState(
+  actingBranchId: string,
+  patientId: string,
+): Promise<ClinicalVisitState | null> {
+  try {
+    const visit = await getCurrentManagedVisit({ branchId: actingBranchId, patientId });
+    return visit ?? {
+      encounterId: null,
+      status: "NOT_STARTED",
+      clinicalDate: manilaDateLabel.format(new Date()),
+      providerDisplay: null,
+      version: null,
+    };
+  } catch (error) {
+    if (!(error instanceof ClinicalServiceError || error instanceof AuthorizationError)) throw error;
+    return null;
   }
-  return {
-    encounterId: current.encounterId,
-    status: current.status,
-    clinicalDate,
-    providerDisplay: providerNames.get(current.treatingProviderId) ?? null,
-    version: current.version,
-  };
 }
 
 export default async function PatientPage({
@@ -294,11 +298,7 @@ export default async function PatientPage({
   }
 
   const clinicalVisit = section === "clinical" && canReadClinical
-    ? deriveClinicalVisitState(
-        clinicalEncounters,
-        new Map(clinicalProviders.map((provider) => [provider.providerId, provider.displayName])),
-        clinicalLoadFailed,
-      )
+    ? await readClinicalVisitState(actingBranchId, patientId)
     : null;
 
   return (

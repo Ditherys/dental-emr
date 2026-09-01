@@ -273,6 +273,7 @@ describe("registered database suites", () => {
       "communication_permission_contract.test.sql",
       "communication_rpcs.test.sql",
       "communications_foundation.test.sql",
+      "current_managed_visit.test.sql",
       "document_permission_contract.test.sql",
       "document_rpcs.test.sql",
       "document_treatment_plan.test.sql",

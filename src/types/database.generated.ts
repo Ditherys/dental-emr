@@ -8869,6 +8869,16 @@ export type Database = {
           version: number
         }[]
       }
+      get_current_managed_visit: {
+        Args: { p_branch_id: string; p_patient_id: string }
+        Returns: {
+          clinical_date: string
+          encounter_id: string
+          provider_display: string
+          status: string
+          version: number
+        }[]
+      }
       get_document_snapshot: {
         Args: { p_acting_branch_id: string; p_document_id: string }
         Returns: {
