@@ -365,16 +365,10 @@ export function isValidImplantAttachmentValue(value: unknown): value is ImplantA
  * authorized workflow. Every code here resolves to a canonical renderer detail
  * without the composer inventing a clinical measurement it did not observe.
  */
-export type ClinicalFindingCode =
-  | "CARIES"
-  | "RESTORATION"
-  | "CROWN"
-  | "MISSING"
-  | "SEALANT"
-  | "FRACTURE"
-  | "OTHER";
-
-export const CLINICAL_FINDING_CODES: readonly ClinicalFindingCode[] = [
+// Declared as a const tuple so the literal union survives into `z.enum`, the
+// contract schema, the service and the actions. Widening it to `string[]` would
+// silently cost every downstream consumer its exhaustiveness checking.
+export const CLINICAL_FINDING_CODES = [
   "CARIES",
   "RESTORATION",
   "CROWN",
@@ -382,10 +376,12 @@ export const CLINICAL_FINDING_CODES: readonly ClinicalFindingCode[] = [
   "SEALANT",
   "FRACTURE",
   "OTHER",
-];
+] as const;
+
+export type ClinicalFindingCode = (typeof CLINICAL_FINDING_CODES)[number];
 
 /** Findings that describe the whole tooth and therefore claim no surface. */
-export const WHOLE_TOOTH_FINDING_CODES: readonly ClinicalFindingCode[] = ["CROWN", "MISSING"];
+export const WHOLE_TOOTH_FINDING_CODES = ["CROWN", "MISSING"] as const satisfies readonly ClinicalFindingCode[];
 
 const WHOLE_TOOTH_FINDING_SET = new Set<string>(WHOLE_TOOTH_FINDING_CODES);
 

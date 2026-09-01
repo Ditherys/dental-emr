@@ -1,7 +1,12 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 5
+# AI Handoff - Unified Clinical Chart workspace, Task 5 (review fixes)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
+
+This checkpoint is the second commit of Task 5. It applies the round-1 review
+findings on top of `9fa51cd`; the sections below describe the task as it now
+stands, with a dedicated review-fix section at the end. **No database, migration,
+grant-registry or script file changed in this round.**
 
 ## Task 5 - Tooth record drawer and canonical finding composer (2026-09-01)
 
@@ -162,10 +167,13 @@ whole `ClinicalChartView` to `DEFAULT_CLINICAL_CHART_VIEW` during render (the
 documented React "adjust state when a prop changes" pattern, using state rather
 than a ref so `react-hooks/refs` stays satisfied). The reset lives with the view
 owner, not with a chart mode, so it fires in `TREATMENT_PLAN` and `PERIODONTAL`
-too. `ToothRecordDrawer` separately resets its body and draft when
-`patientId:selection` changes. Tests: the workspace reset is asserted in all
-three chart modes; `odontogram-section.test.tsx` keeps its `data-patient-key`
-guard and now also asserts the drawer is gone after a patient change.
+too, and it is the **only** owner - `odontogram-section.tsx` keeps no second
+copy. `ToothRecordDrawer` separately resets its body and draft when
+`patientId:selection` changes, which is drawer-local state, not the shared view.
+Tests: the workspace reset is asserted in all three chart modes;
+`odontogram-section.test.tsx` keeps its `data-patient-key` guard, asserts the
+drawer is gone after a patient change, and proves the current-status clear
+against the real composition by mounting the section inside the workspace.
 
 ### Composition decisions
 
@@ -192,8 +200,9 @@ guard and now also asserts the drawer is gone after a patient change.
   idempotency and lineage mechanics. Execute is re-granted for the duration of
   that rolled-back test transaction and revoked again immediately after, so the
   rest of the suite still observes the revoked boundary. No assertion removed.
-- `odontogram-section.test.tsx`: ten tests retargeted or extended from the
-  removed inspector overlay to the drawer. Four cross-patient safety tests keep
+- `odontogram-section.test.tsx`: eleven tests retargeted or extended from the
+  removed inspector overlay to the drawer, and the mocked chart now publishes
+  selection into the workspace view the way the real one does. Four cross-patient safety tests keep
   their `tooth-inspector` absence assertion and gain the same assertion for the
   drawer. "Open inspector" became "Open tooth record";
   legacy reconciliation is now reached through the drawer's `Corrections`;
@@ -308,6 +317,76 @@ All local only.
   database needs `--include-all` once.
 - The full unit suite remains flaky under parallel load on this machine, before
   and after this change.
+
+### Review fixes applied in this commit
+
+Round 1 returned two Important and five Minor findings. All seven are fixed; no
+SQL, migration, grant-registry or script file changed.
+
+1. **A multi-tooth selection showed one tooth's record under a plural heading
+   (Important).** `focusedFdi = selectedFdi.at(-1)` drives both record sections,
+   but the heading read `Teeth 16, 17` and neither section named its tooth, so a
+   clinician could read tooth 17's restoration as belonging to the pair - while
+   the composer beneath writes to both. Both section headings now carry the tooth
+   (`Current state — tooth 17`), and a multi-selection additionally renders a
+   one-line scope notice: "Showing the record for tooth 17. A new clinical record
+   applies to all 2 selected teeth." Per-tooth blocks were rejected: up to 32
+   teeth may be selected and the rail is 400px.
+2. **An edited retry after an ambiguous failure reported success falsely
+   (Important).** `requestKeyRef` was retained across a failure (correct for an
+   unmodified retry) but was never rotated when the clinical payload changed, so
+   editing the finding and retrying replayed the stored server result and the
+   form reported the *edited* finding as recorded. Both forms now rotate the key
+   from every handler that changes a submitted fact - finding code, surfaces,
+   clinical date, note; note type and note content. The unmodified-retry
+   key-reuse tests are kept, because the two properties pull in opposite
+   directions and both matter.
+3. **The responsive-width test under-proved its claim (Minor).** It asserted the
+   override classes were present but not that the base `data-[side=right]:w-3/4`
+   and `data-[side=right]:sm:max-w-sm` were displaced, which is the entire point
+   of matching the base variant prefix. Both negative assertions added.
+4. **The legacy-reconciliation cue was lost (Minor).** Reachability was fine, but
+   the amber "Legacy reconciliation needed" alert only appeared after the
+   clinician had already opened `Corrections`. The drawer summary now renders a
+   one-line notice whenever the focused tooth carries legacy rows.
+   `isLegacyToothEntry` is exported from `tooth-inspector.tsx` so there is one
+   predicate, not two.
+5. **The patient-change reset had two owners (Minor).** `odontogram-section.tsx`
+   kept a `lastPatientRef` effect that duplicated the workspace's authoritative
+   render-phase reset. Removed. The section test that depended on it now renders
+   the section **inside the real `ClinicalChartWorkspace`**, and the mocked chart
+   now publishes selection into the view exactly as the real one does, so the
+   case is proven against the real composition rather than a second copy.
+6. **The finding-code enum discarded its literal union (Minor).**
+   `z.enum(CLINICAL_FINDING_CODES as unknown as [string, ...string[]])` made
+   `findingCode` infer as `string` through the contract, service and action.
+   `CLINICAL_FINDING_CODES` is now a `const` tuple with the type derived from it,
+   `WHOLE_TOOTH_FINDING_CODES` uses `as const satisfies`, and the double cast is
+   gone. Verified with a throwaway `tsc` assignment proving the seven-member
+   union survives `findingInputSchema.parse`.
+7. **Deferred (ledgered, not fixed).** Each action parses its input twice, so the
+   `superRefine` anatomy rules run twice per submission. It matches the
+   surrounding file's existing pattern.
+
+### Review-fix commands and observed results
+
+- `npm run db:migrate:local` - `Local database is up to date.`
+- `npm run db:types:local` - regenerated; `git diff --stat` on
+  `src/types/database.generated.ts` is **empty**, confirming no schema change.
+- `npm run security:migrations` - passed, 304 files (unchanged).
+- `npm run test:unit -- <the seven brief files> src/components/odontogram/tooth-inspector.test.tsx`
+  - **8 files, 95/95 passed** (86 before, 9 added).
+- `npm run test:db:local` - **78 suites PASS**, then halts at
+  `treatment_plans.test.sql`, the same verified pre-existing failure.
+  `clinical_record_composer.test.sql` run directly - **42/42, P1_TEST_PASS**.
+- `npm run typecheck` - passed, no output. A throwaway
+  `.tmp-infer-check.ts` asserting the narrow union compiled cleanly, then removed.
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npm run test:unit` (whole suite) - **1854/1858 passed, 4 failed**, the same
+  four `Test timed out` flakes in `fork-package`, `fork-print-chart` and
+  `perio-workspace`; all pass when those files are run alone.
+- `git diff --check` - clean. The diff touches 11 files, none of them SQL, a
+  migration, the grant registry, or a script.
 
 ### Next bounded task
 

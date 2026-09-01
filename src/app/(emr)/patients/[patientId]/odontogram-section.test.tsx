@@ -18,25 +18,43 @@ vi.mock("./odontogram-actions", async (importOriginal) => ({
   getPatientOdontogramAction: actionMocks.getPatientOdontogramAction,
 }));
 
-vi.mock("@/components/odontogram/fork-odontogram", () => ({
-  ForkOdontogram: ({
-    patientKey,
-    canWriteClinical,
-    onSelect,
-  }: {
-    patientKey: string;
-    canWriteClinical: boolean;
-    onSelect: (fdi: number) => void;
-  }) => (
-    <div data-testid="fork-odontogram" data-patient-key={patientKey} data-read-only={String(!canWriteClinical)}>
-      {[11, 16, 24].map((fdi) => (
-        <button key={fdi} type="button" aria-label={`Tooth ${fdi}`} data-tooth={fdi} onClick={() => onSelect(fdi)}>
-          Tooth {fdi}
-        </button>
-      ))}
-    </div>
-  ),
-}));
+// Stands in for the real chart, including the part that matters here: a managed
+// chart publishes its selection into the workspace chart view before reporting
+// the tooth, and only an unmanaged mount leaves that to the section.
+vi.mock("@/components/odontogram/fork-odontogram", async () => {
+  const { useClinicalChartView } = await import("@/components/odontogram/clinical-chart-toolbar");
+  return {
+    ForkOdontogram: ({
+      patientKey,
+      canWriteClinical,
+      onSelect,
+    }: {
+      patientKey: string;
+      canWriteClinical: boolean;
+      onSelect: (fdi: number) => void;
+    }) => {
+      const { managed, setView } = useClinicalChartView();
+      return (
+        <div data-testid="fork-odontogram" data-patient-key={patientKey} data-read-only={String(!canWriteClinical)}>
+          {[11, 16, 24].map((fdi) => (
+            <button
+              key={fdi}
+              type="button"
+              aria-label={`Tooth ${fdi}`}
+              data-tooth={fdi}
+              onClick={() => {
+                if (managed) setView({ selectedFdi: [fdi] });
+                onSelect(fdi);
+              }}
+            >
+              Tooth {fdi}
+            </button>
+          ))}
+        </div>
+      );
+    },
+  };
+});
 
 const mockDto: PatientOdontogramDTO = {
   patientId: "00000000-0000-4000-a000-000000000020",
@@ -86,6 +104,8 @@ const mockDto: PatientOdontogramDTO = {
   legacyReconciliationFlags: [],
   treatmentExecutions: [],
 };
+
+import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-workspace";
 
 import { OdontogramSection } from "./odontogram-section";
 
@@ -163,19 +183,43 @@ describe("OdontogramSection O7", () => {
   });
 
   it("clears the selected tooth's current-status state when the patient changes", async () => {
+    // The chart view has exactly one owner: ClinicalChartWorkspace. This case is
+    // therefore proven against the real composition - the owner, with the real
+    // section mounted inside it - rather than against a second copy of the reset
+    // living in the section.
     const user = userEvent.setup();
-    const { rerender } = render(
-      <OdontogramSection patientId={mockDto.patientId} actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={mockDto} />,
+    const inWorkspace = (patientId: string) => (
+      <ClinicalChartWorkspace
+        patientId={patientId}
+        visitHeader={<p>Visit state</p>}
+        medicalSafety={<p>Safety</p>}
+        chart={{
+          CURRENT_STATUS: (
+            <OdontogramSection
+              patientId={patientId}
+              actingBranchId="00000000-0000-4000-a000-0000000000aa"
+              canWriteClinical
+              initialOdontogram={{ ...mockDto, patientId }}
+              renderProgressRecord={false}
+            />
+          ),
+          TREATMENT_PLAN: <p data-testid="plan-panel">Treatment plan</p>,
+          PERIODONTAL: <p data-testid="perio-panel">Periodontal</p>,
+        }}
+        record={<p>Progress record</p>}
+      />
     );
+
+    const { rerender } = render(inWorkspace(mockDto.patientId));
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    expect(screen.getByText("Tooth 11 selected")).toBeInTheDocument();
+    // Both the toolbar readout and the current-status panel report it.
+    expect(screen.getAllByText("Tooth 11 selected").length).toBeGreaterThan(0);
 
-    rerender(
-      <OdontogramSection patientId="00000000-0000-4000-a000-000000000022" actingBranchId="00000000-0000-4000-a000-0000000000aa" canWriteClinical initialOdontogram={{ ...mockDto, patientId: "00000000-0000-4000-a000-000000000022" }} />,
-    );
+    rerender(inWorkspace("00000000-0000-4000-a000-000000000022"));
 
     expect(screen.queryByText("Tooth 11 selected")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chart-selection-summary")).toHaveTextContent("No tooth selected");
   });
 
   it("does not render retained patient A events after patient B's deferred fetch effects flush", async () => {

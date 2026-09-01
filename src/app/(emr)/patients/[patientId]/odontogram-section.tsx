@@ -100,16 +100,10 @@ export function OdontogramSection({
     setFollowupOpen(false);
   }, [patientId]);
 
-  // The chart view outlives this section, so selection must be cleared on a
-  // real patient change only. A chart-mode round trip remounts this component
-  // with the same patient and must preserve the selection the shared view
-  // exists to hold.
-  const lastPatientRef = React.useRef(patientId);
-  React.useEffect(() => {
-    if (lastPatientRef.current === patientId) return;
-    lastPatientRef.current = patientId;
-    setView({ selectedFdi: [] });
-  }, [patientId, setView]);
+  // The cross-patient selection reset belongs to `ClinicalChartWorkspace`, the
+  // one owner of the chart view. It resets during render, before any mode is
+  // mounted, so it fires in every chart mode rather than only the one this
+  // section happens to occupy. This section deliberately keeps no second copy.
 
   const handleSelect = React.useCallback(
     (fdi: number) => {

@@ -8,7 +8,7 @@ import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
 import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
 
 import { ClinicalRecordComposer } from "./clinical-record-composer";
-import { ToothInspector } from "./tooth-inspector";
+import { ToothInspector, isLegacyToothEntry } from "./tooth-inspector";
 
 /** One body at a time, so the drawer never becomes a stack of panels. */
 type DrawerBody = "summary" | "composer" | "corrections";
@@ -96,12 +96,23 @@ export function ToothRecordDrawer({
     [toothEntries],
   );
 
+  const legacyEntries = React.useMemo(() => toothEntries.filter(isLegacyToothEntry), [toothEntries]);
+
   const heading =
     selectedFdi.length === 0
       ? "No tooth selected"
       : selectedFdi.length === 1
         ? `Tooth ${toLabel(selectedFdi[0]!, notation)}`
         : `Teeth ${selectedFdi.map((fdi) => toLabel(fdi, notation)).join(", ")}`;
+
+  // The record below belongs to exactly one tooth. With several selected, the
+  // heading names them all and the composer writes to them all, so every
+  // record section states which tooth it is showing and the drawer says so
+  // once in plain words. A clinician must never read one tooth's restoration
+  // as if it belonged to the pair.
+  const focusedLabel = focusedFdi === null ? null : toLabel(focusedFdi, notation);
+  const recordScope = focusedLabel === null ? "" : ` — tooth ${focusedLabel}`;
+  const isMultiSelection = selectedFdi.length > 1;
 
   return (
     // Non-modal on purpose: the drawer sits beside the chart, so selecting
@@ -155,9 +166,31 @@ export function ToothRecordDrawer({
             />
           ) : (
             <>
+              {isMultiSelection && focusedLabel !== null && (
+                <p
+                  data-testid="drawer-record-scope"
+                  role="status"
+                  className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground"
+                >
+                  Showing the record for tooth {focusedLabel}. A new clinical record applies to all{" "}
+                  {selectedFdi.length} selected teeth.
+                </p>
+              )}
+
+              {legacyEntries.length > 0 && (
+                <p
+                  data-testid="drawer-legacy-notice"
+                  role="alert"
+                  className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                >
+                  Legacy reconciliation needed: {legacyEntries.length} row(s) on tooth {focusedLabel} still
+                  need resolving. Open Corrections to resolve them.
+                </p>
+              )}
+
               <section aria-labelledby="tooth-current-state-heading" className="grid gap-1.5">
                 <h4 id="tooth-current-state-heading" className="text-xs font-semibold text-muted-foreground">
-                  Current state
+                  Current state{recordScope}
                 </h4>
                 <div data-testid="tooth-current-state">
                   {currentEntries.length === 0 ? (
@@ -180,7 +213,7 @@ export function ToothRecordDrawer({
 
               <section aria-labelledby="tooth-history-heading" className="grid gap-1.5">
                 <h4 id="tooth-history-heading" className="text-xs font-semibold text-muted-foreground">
-                  History
+                  History{recordScope}
                 </h4>
                 <div data-testid="tooth-history">
                   {history.length === 0 ? (

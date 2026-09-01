@@ -64,7 +64,21 @@ export function ClinicalNoteForm({
   const [saving, setSaving] = React.useState(false);
   const typeId = React.useId();
   const contentId = React.useId();
+  // Held across a failed submission so an unmodified retry replays the same
+  // request key, and cleared on success so the next note is a genuinely new one.
   const requestKeyRef = React.useRef<string | null>(null);
+
+  /**
+   * Editing the note type or the authored text makes this a different clinical
+   * record, so it must not inherit the previous submission's request key: an
+   * ambiguous failure followed by an edit would otherwise replay the stored
+   * server result and report the edited note as recorded when only the original
+   * one exists.
+   */
+  function changeAuthoredNote() {
+    requestKeyRef.current = null;
+    setError(null);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -121,7 +135,10 @@ export function ClinicalNoteForm({
         <Select
           id={typeId}
           value={noteType}
-          onChange={(event) => setNoteType(event.target.value as NoteType)}
+          onChange={(event) => {
+            changeAuthoredNote();
+            setNoteType(event.target.value as NoteType);
+          }}
           className="min-h-11"
         >
           {NOTE_TYPES.map((type) => (
@@ -140,8 +157,8 @@ export function ClinicalNoteForm({
           maxLength={4000}
           value={content}
           onChange={(event) => {
+            changeAuthoredNote();
             setContent(event.target.value);
-            setError(null);
           }}
           className="min-h-28"
         />

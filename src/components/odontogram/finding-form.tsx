@@ -97,9 +97,25 @@ export function FindingForm({
   const findingId = React.useId();
   const dateId = React.useId();
   const noteId = React.useId();
-  // Held across a failed submission so a retry replays the same request key and
-  // cleared on success so the next finding is a genuinely new record.
+  // Held across a failed submission so an unmodified retry replays the same
+  // request key, and cleared on success so the next finding is a genuinely new
+  // record.
   const requestKeyRef = React.useRef<string | null>(null);
+
+  /**
+   * Any change to the submitted clinical facts makes this a different clinical
+   * record, so it must not inherit the previous submission's request key.
+   *
+   * Without this, an ambiguous failure (the request committed but its response
+   * was lost) followed by an edit would replay the stored server result, and the
+   * form would report the edited finding as recorded when only the original one
+   * exists. The canonical chart would show the truth; the success signal would
+   * not.
+   */
+  function changeClinicalFacts() {
+    requestKeyRef.current = null;
+    setError(null);
+  }
 
   const wholeTooth = isWholeToothFindingCode(findingCode);
   const availableSurfaces = React.useMemo(
@@ -112,7 +128,7 @@ export function FindingForm({
   );
 
   function toggleSurface(surface: ToothSurfaceCode) {
-    setError(null);
+    changeClinicalFacts();
     setSurfaces((current) =>
       current.includes(surface) ? current.filter((item) => item !== surface) : [...current, surface],
     );
@@ -180,7 +196,7 @@ export function FindingForm({
           value={findingCode}
           onChange={(event) => {
             setFindingCode(event.target.value as ClinicalFindingCode);
-            setError(null);
+            changeClinicalFacts();
           }}
           className="min-h-11"
         >
@@ -221,7 +237,10 @@ export function FindingForm({
           type="date"
           required
           value={clinicalDate}
-          onChange={(event) => onClinicalDateChange(event.target.value)}
+          onChange={(event) => {
+            changeClinicalFacts();
+            onClinicalDateChange(event.target.value);
+          }}
           className="min-h-11"
         />
       </label>
@@ -232,7 +251,10 @@ export function FindingForm({
           id={noteId}
           maxLength={2000}
           value={note}
-          onChange={(event) => setNote(event.target.value)}
+          onChange={(event) => {
+            changeClinicalFacts();
+            setNote(event.target.value);
+          }}
           className="min-h-20"
         />
       </label>

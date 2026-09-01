@@ -13,7 +13,12 @@ import {
   voidToothClinicalEntryAction,
 } from "@/app/(emr)/patients/[patientId]/odontogram-actions";
 
-function isLegacyEntry(entry: ToothClinicalEntryDTO): boolean {
+/**
+ * A Phase 15 row that still needs reconciliation. Exported so the tooth record
+ * drawer can surface the cue in its summary without the clinician having to
+ * open Corrections first to discover there is something to reconcile.
+ */
+export function isLegacyToothEntry(entry: ToothClinicalEntryDTO): boolean {
   const status = String(entry.status ?? "");
   const prov = String(entry.provenance ?? "");
   const code = String(entry.clinical_code ?? "");
@@ -73,8 +78,8 @@ export function ToothInspector({
     return (dto.entries ?? []).filter((e) => Number(e.tooth_code) === fdi);
   }, [dto, fdi]);
 
-  const legacyEntries = React.useMemo(() => entries.filter(isLegacyEntry), [entries]);
-  const currentEntries = React.useMemo(() => entries.filter((e) => !isLegacyEntry(e)), [entries]);
+  const legacyEntries = React.useMemo(() => entries.filter(isLegacyToothEntry), [entries]);
+  const currentEntries = React.useMemo(() => entries.filter((e) => !isLegacyToothEntry(e)), [entries]);
 
   const label = toLabel(fdi, notation);
 

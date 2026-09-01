@@ -169,6 +169,51 @@ describe("FindingForm canonical write", () => {
     expect(retry.idempotencyKey).toBe(first.idempotencyKey);
   });
 
+  it("rotates the request key when the clinical facts change after a failure", async () => {
+    const user = userEvent.setup();
+    // The ambiguous case: the request may have committed before the response was
+    // lost. Replaying its key for an *edited* finding would return the original
+    // server result and report the edit as recorded when it never was.
+    mocks.recordVisitToothFindingsAction.mockRejectedValueOnce(new Error("network"));
+    renderForm();
+
+    await user.click(screen.getByRole("checkbox", { name: /occlusal/i }));
+    await user.click(screen.getByRole("button", { name: "Record finding" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be recorded/i);
+
+    mocks.recordVisitToothFindingsAction.mockResolvedValue({ ok: true });
+    await user.selectOptions(screen.getByLabelText("Finding"), "SEALANT");
+    await user.click(screen.getByRole("button", { name: "Record finding" }));
+
+    await waitFor(() => expect(mocks.recordVisitToothFindingsAction).toHaveBeenCalledTimes(2));
+    const first = mocks.recordVisitToothFindingsAction.mock.calls[0]?.[0] as { idempotencyKey: string };
+    const edited = mocks.recordVisitToothFindingsAction.mock.calls[1]?.[0] as { idempotencyKey: string; findingCode: string };
+    expect(edited.findingCode).toBe("SEALANT");
+    expect(edited.idempotencyKey).not.toBe(first.idempotencyKey);
+  });
+
+  it.each([
+    ["surface", async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("checkbox", { name: /buccal/i }))],
+    ["clinical date", async () => { fireEvent.change(screen.getByLabelText("Clinical date"), { target: { value: "2026-08-11" } }); }],
+    ["note", async (user: ReturnType<typeof userEvent.setup>) => user.type(screen.getByLabelText(/^Note/), "Edited")],
+  ])("rotates the request key when the %s changes after a failure", async (_label, edit) => {
+    const user = userEvent.setup();
+    mocks.recordVisitToothFindingsAction.mockResolvedValueOnce({ ok: false, code: "FAILED" });
+    renderForm();
+
+    await user.click(screen.getByRole("checkbox", { name: /occlusal/i }));
+    await user.click(screen.getByRole("button", { name: "Record finding" }));
+    await waitFor(() => expect(mocks.recordVisitToothFindingsAction).toHaveBeenCalledTimes(1));
+
+    await edit(user);
+    await user.click(screen.getByRole("button", { name: "Record finding" }));
+
+    await waitFor(() => expect(mocks.recordVisitToothFindingsAction).toHaveBeenCalledTimes(2));
+    const first = mocks.recordVisitToothFindingsAction.mock.calls[0]?.[0] as { idempotencyKey: string };
+    const second = mocks.recordVisitToothFindingsAction.mock.calls[1]?.[0] as { idempotencyKey: string };
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+  });
+
   it("uses a fresh request key for a genuinely new finding", async () => {
     const user = userEvent.setup();
     renderForm();

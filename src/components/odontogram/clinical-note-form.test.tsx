@@ -102,4 +102,45 @@ describe("ClinicalNoteForm bounded visit note", () => {
     const retry = mocks.recordVisitClinicalNoteAction.mock.calls[1]?.[0] as { idempotencyKey: string };
     expect(retry.idempotencyKey).toBe(first.idempotencyKey);
   });
+
+  it("rotates the request key when the authored note changes after a failure", async () => {
+    const user = userEvent.setup();
+    // Replaying the key for an edited note would return the original stored note
+    // and report the edit as recorded when only the first one exists.
+    mocks.recordVisitClinicalNoteAction.mockRejectedValueOnce(new Error("network"));
+    renderForm();
+
+    await user.type(screen.getByLabelText("Note"), "Synthetic visit note");
+    await user.click(screen.getByRole("button", { name: "Record note" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be recorded/i);
+
+    mocks.recordVisitClinicalNoteAction.mockResolvedValue({ ok: true });
+    await user.type(screen.getByLabelText("Note"), " amended");
+    await user.click(screen.getByRole("button", { name: "Record note" }));
+
+    await waitFor(() => expect(mocks.recordVisitClinicalNoteAction).toHaveBeenCalledTimes(2));
+    const first = mocks.recordVisitClinicalNoteAction.mock.calls[0]?.[0] as { idempotencyKey: string };
+    const edited = mocks.recordVisitClinicalNoteAction.mock.calls[1]?.[0] as { idempotencyKey: string; content: string };
+    expect(edited.content).toBe("Synthetic visit note amended");
+    expect(edited.idempotencyKey).not.toBe(first.idempotencyKey);
+  });
+
+  it("rotates the request key when only the note type changes after a failure", async () => {
+    const user = userEvent.setup();
+    mocks.recordVisitClinicalNoteAction.mockResolvedValueOnce({ ok: false, code: "FAILED" });
+    renderForm();
+
+    await user.type(screen.getByLabelText("Note"), "Synthetic visit note");
+    await user.click(screen.getByRole("button", { name: "Record note" }));
+    await waitFor(() => expect(mocks.recordVisitClinicalNoteAction).toHaveBeenCalledTimes(1));
+
+    await user.selectOptions(screen.getByLabelText("Note type"), "POST_OP");
+    await user.click(screen.getByRole("button", { name: "Record note" }));
+
+    await waitFor(() => expect(mocks.recordVisitClinicalNoteAction).toHaveBeenCalledTimes(2));
+    const first = mocks.recordVisitClinicalNoteAction.mock.calls[0]?.[0] as { idempotencyKey: string };
+    const second = mocks.recordVisitClinicalNoteAction.mock.calls[1]?.[0] as { idempotencyKey: string; noteType: string };
+    expect(second.noteType).toBe("POST_OP");
+    expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+  });
 });

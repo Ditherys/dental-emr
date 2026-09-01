@@ -692,9 +692,7 @@ export const fdiToothCodeSchema = toothCodeSchema;
 export const isoDateSchema = z.iso.date();
 export const boundedClinicalNoteSchema = z.string().trim().min(1).max(2000);
 export const boundedVisitNoteContentSchema = z.string().trim().min(1).max(4000);
-export const clinicalFindingCodeSchema = z.enum(
-  CLINICAL_FINDING_CODES as unknown as [string, ...string[]],
-);
+export const clinicalFindingCodeSchema = z.enum(CLINICAL_FINDING_CODES);
 
 export const findingInputSchema = z
   .object({

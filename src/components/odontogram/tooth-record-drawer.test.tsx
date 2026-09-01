@@ -65,6 +65,14 @@ const dto: PatientOdontogramDTO = {
       voided_at: "2026-02-01T04:00:00+00:00",
     }),
     entry({ id: "e0000000-0000-4000-a000-000000000009", tooth_code: "24", clinical_code: "FRACTURE" }),
+    entry({ id: "e0000000-0000-4000-a000-000000000017", tooth_code: "17", clinical_code: "RESTORATION" }),
+    entry({
+      id: "e0000000-0000-4000-a000-000000000037",
+      tooth_code: "37",
+      clinical_code: "CROWN",
+      status: "COMPLETED",
+      provenance: "LEGACY_PHASE15",
+    }),
   ],
   bridges: [],
   implantChains: [],
@@ -129,6 +137,42 @@ describe("ToothRecordDrawer summary", () => {
     renderDrawer({ selectedFdi: [16, 17] });
 
     expect(screen.getByTestId("tooth-record-drawer")).toHaveTextContent("Teeth 16, 17");
+  });
+
+  it("names the one tooth whose record it is showing when several teeth are selected", () => {
+    // Tooth 16 carries a CARIES and a voided SEALANT; tooth 17 carries a
+    // RESTORATION. Reading 17's restoration as if it belonged to the pair is a
+    // clinical-decision input, so both record sections state their tooth.
+    renderDrawer({ selectedFdi: [16, 17] });
+
+    expect(screen.getByRole("heading", { name: "Current state — tooth 17" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "History — tooth 17" })).toBeVisible();
+
+    const current = screen.getByTestId("tooth-current-state");
+    expect(current).toHaveTextContent("RESTORATION");
+    expect(current).not.toHaveTextContent("CARIES");
+
+    // And the drawer says in words that the composer writes wider than it reads.
+    const scope = screen.getByTestId("drawer-record-scope");
+    expect(scope).toHaveTextContent("Showing the record for tooth 17");
+    expect(scope).toHaveTextContent("applies to all 2 selected teeth");
+  });
+
+  it("does not clutter a single-tooth selection with the multi-tooth scope notice", () => {
+    renderDrawer();
+
+    expect(screen.queryByTestId("drawer-record-scope")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Current state — tooth 16" })).toBeVisible();
+  });
+
+  it("cues legacy reconciliation in the summary instead of hiding it behind Corrections", () => {
+    renderDrawer({ selectedFdi: [37] });
+
+    const notice = screen.getByTestId("drawer-legacy-notice");
+    expect(notice).toHaveTextContent(/legacy reconciliation needed/i);
+    expect(notice).toHaveTextContent("tooth 37");
+    // The cue appears without the clinician first having to open Corrections.
+    expect(screen.getByTestId("tooth-history")).toBeVisible();
   });
 
   it("reports an empty tooth without inventing a record", () => {
@@ -299,6 +343,10 @@ describe("ToothRecordDrawer composition rules", () => {
     // CSS-only responsive contract; the rendered geometry is a hosted E2E gate.
     expect(panel!.className).toContain("data-[side=right]:w-full");
     expect(panel!.className).toContain("data-[side=right]:sm:max-w-[400px]");
+    // The whole point of matching the base component's variant prefix is that
+    // tailwind-merge removes the base width rather than leaving a cascade race.
+    expect(panel!.className).not.toContain("data-[side=right]:w-3/4");
+    expect(panel!.className).not.toContain("data-[side=right]:sm:max-w-sm");
     expect(panel!.className).not.toContain("overflow-x");
   });
 
