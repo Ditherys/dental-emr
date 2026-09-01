@@ -1,284 +1,242 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 2
+# AI Handoff - Unified Clinical Chart workspace, Task 3
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-## Task 2 — Build the unified full-width Clinical workspace shell (2026-09-01)
+## Task 3 - Port the approved anatomical renderer behind an EMR-owned boundary (2026-09-01)
 
 ### Bounded slice implemented
 
-Task 2 of the accepted plan
-`docs/superpowers/plans/2026-09-01-unified-clinical-chart-workspace.md`.
-It replaces the inner `Records` / `Odontogram` / `Treatment plan` tabs and the
-standalone photo-gallery section with one Clinical chart workspace: heading and
-visit state, an always-visible medical-safety strip, three `aria-pressed` chart
-modes, a full-width chart breakout, and a chronological progress record. It is
-the first consumer of Task 1's `ClinicalVisitState` and `resumed` flag.
+Task 3 of the accepted plan. It replaces the controlled fork as the chart's
+runtime renderer with an EMR-owned anatomical renderer:
 
-The only database work here is the additive read-only projection described below.
-No renderer, tooth drawer, record composer, periodontal mount or chronology
-rebuild is in this checkpoint. Those are Tasks 4, 5, 12 and 13.
+- a PowerShell author-time generator turns the pinned, repository-owned measured
+  SVG assets into a reviewed, checked-in, immutable React node tree;
+- a pure layer-activation module maps canonical clinical state onto a closed
+  registry of reviewed SVG layer ids;
+- `MeasuredChart` renders the canonical chart projection and reports selection
+  only. It owns no clinical state, performs no save, and holds no fork context,
+  browser storage or demo data;
+- `fork-odontogram.tsx` stays as a thin compatibility wrapper so the patient
+  workspace cuts over in one place. Task 17 deletes it.
+
+No database work is in this checkpoint. No migration, RLS policy, grant, RPC or
+server action changed.
 
 ### Why
 
-The clinical record was split across three inner tabs plus a sibling gallery, so
-allergies, the chart, the plan and the progress record were never visible in one
-place, and the chart was squeezed into the patient profile's `max-w-7xl` reading
-width. Task 1 also left `ClinicalVisitState` and the `resumed` flag with no
-consumer and left `Start visit` without the idempotency key the RPC accepts.
+The chart still rendered through the fork runtime: a module-singleton engine
+that owned chart state, persisted to local storage, emitted save drafts, and
+mounted anatomy by fetching SVG text and injecting it with
+`dangerouslySetInnerHTML`. That makes a third-party renderer's browser state a
+de facto source of clinical truth and puts an injection API on the clinical
+render path. The plan's architecture depends on the opposite: the fork is a
+reviewed source reference, canonical data lives in PostgreSQL, and the renderer
+is a projection.
 
 ### Specifications relied on
 
-- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-2-brief.md`
+- `.superpowers/sdd/2026-09-01-unified-clinical-chart-workspace/task-3-brief.md`
   and `global-constraints.md`.
-- `docs/FRONTEND_ARCHITECTURE.md` composition rules as restated in `CLAUDE.md`
-  (no card grid, no KPI row, no decorative pills, restrained radii, compact and
-  information-forward, desktop/tablet/phone all supported).
-- Task 1's managed visit contract in
-  `supabase/migrations/20260901010100_unified_clinical_visit_lifecycle.sql`.
-
-This handoff covers three commits: `48d792d` (the workspace shell), `bae046f`
-(the two controller corrections — the read-only current-managed-visit projection
-replacing the `created_at` approximation, and `Start visit` after a same-day
-visit is finalized), and the review fix round on top of them (errors surfaced
-inside the two history dialogs, and the per-group medical-safety rule).
+- `CLAUDE.md`: approved odontogram fork, renderer-independent canonical data,
+  adapter boundary, no hover-only or drag-only critical interactions,
+  desktop/tablet/phone support.
+- ADR-028 (odontogram renderer domain boundary), ADR-029, ADR-030.
+- Controlled fork `Ditherys/React-Odontogram-Modul` at commit `5e28d93`, read
+  only through `git show`; and this repository's commit `5616325` for the
+  previously reviewed measured asset map and layer activation.
 
 ### Files added
 
-- `supabase/migrations/20260901010112_current_managed_visit_projection.sql` —
-  `public.get_current_managed_visit(uuid, uuid)`.
-- `supabase/migrations/20260901010113_current_managed_visit_projection_grants.sql`
-  — one additive `authenticated` EXECUTE.
-- `supabase/tests/current_managed_visit.test.sql` (21 pgTAP assertions).
-- `src/components/clinical/clinical-chart-workspace.tsx` (+ test) — the workspace
-  shell: the single `Clinical chart` landmark, the mode group, the full-width
-  chart surface, the progress-record region, the photograph region, and one
-  bounded `Retry` failure state per region.
-- `src/components/clinical/clinical-visit-header.tsx` (+ test) — visit state and
-  the `Start visit` / `Resume visit` / `Finalize visit` actions.
-- `src/components/clinical/medical-safety-summary.tsx` (+ test) — the
-  conditions / allergies / medications strip.
+- `docs/ODONTOGRAM_FORK_SOURCE_MANIFEST.md` - every ported file, function and
+  asset with source commit, paths, adaptations, SHA-256 and MIT attribution.
+- `scripts/generate-odontogram-svg-nodes.ps1` - the author-time generator.
+- `src/components/odontogram/generated/measured-svg-nodes.ts` - generated,
+  committed node tree, per-template layer index and per-asset SHA-256.
+- `src/components/odontogram/measured-assets.ts` (+ test) - FDI to template,
+  orientation, template layer index, asset provenance.
+- `src/components/odontogram/measured-fork-layers.ts` (+ test) - the pure,
+  closed layer-activation registry.
+- `src/components/odontogram/measured-svg-asset.tsx` (+ test) - renders the node
+  tree through `React.createElement`.
+- `src/components/odontogram/measured-tooth.tsx` (+ test) - one tooth button.
+- `src/components/odontogram/measured-chart.tsx` (+ test) - the chart contract
+  and selection policy.
+- `src/components/odontogram/measured-feature-parity.test.tsx` - canonical to
+  layer golden parity for permanent and primary anatomy.
+- `src/lib/odontogram/renderer-projection.ts` (+ test) - the renderer-facing
+  narrowing of the canonical chart projection, and viewport tooth ordering.
 
 ### Files changed
 
-- `src/lib/clinical/types.ts` — adds the plan's `ClinicalChartMode` stable
-  contract next to `ClinicalVisitState`.
-- `src/app/(emr)/patients/[patientId]/clinical-actions.ts` (+ test) —
-  `createClinicalEncounterAction` becomes `startClinicalVisitAction`, validated
-  by `startOrResumeClinicalVisitInputSchema`, forwarding an optional
-  `idempotencyKey` and returning `{ ok: true, resumed }`.
-- `src/app/(emr)/patients/[patientId]/clinical-section.tsx` (+ test) — renders
-  the workspace; legacy encounter table and medical-history management move into
-  a small `More clinical actions` menu (`Medical history`, `Treatment history`).
-- `src/app/(emr)/patients/[patientId]/patient-workspace.tsx` (+ test) — the
-  profile keeps `max-w-7xl`; only the Clinical breakout spans the viewport. The
-  photo gallery is now passed into the workspace instead of rendered as a
-  sibling section.
-- `src/lib/clinical/{schema,service,service.test}.ts` — `getCurrentManagedVisit`
-  with its strict input schema and row contract.
-- `src/app/(emr)/patients/[patientId]/page.tsx` — reads the visit through the new
-  projection. The former `created_at` approximation is deleted.
-- `scripts/approved-final-grants.mjs` — new grant terminal for the projection.
-- `scripts/remote-database-test-guard.mjs` (+ its test) — registers the suite.
-- `scripts/migration-privilege-lint.test.mjs`,
-  `scripts/boundary-privilege-invariant.test.mjs` — counters and the final
-  effective-boundary fixture follow the two new migrations and the new grant.
-- `src/types/database.generated.ts` — regenerated, never hand-edited.
-- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx` — optional
-  `renderProgressRecord` so the workspace owns the single chronology region.
-- `e2e/support/odontogram.ts`, `e2e/odontogram-integration.spec.ts` — drop the
-  click on the removed `Odontogram` inner tab; the chart is the default
-  `Current status` mode and the `fork-odontogram` assertions are unchanged.
+- `src/lib/odontogram/feature-contract.ts` - `ToothRenderState` gains
+  `features` (detail + surfaces + planned), `bridgeRole`, `mobility` and
+  `perioAlert`. Additive; `current`/`planned` are unchanged.
+- `src/lib/odontogram/chart-projection.ts` - `PatientChartDTO` accepts optional
+  `bridges` and `periodontal`; the projection fills the new fields and reuses
+  `currentBridgeProjection` so a voided or superseded bridge never renders.
+- `src/lib/odontogram/feature-contract.test.ts` - adds a renderer-layer naming
+  invariant and covers the new per-tooth shape.
+- `src/lib/clinical/types.ts` - adds the plan's `ClinicalChartViewport` stable
+  contract next to `ClinicalChartMode`.
+- `src/components/odontogram/fork-odontogram.tsx` - rewritten as the
+  compatibility wrapper around `MeasuredChart`, with the DTO to canonical
+  projection mapping.
+- `src/components/odontogram/fork-odontogram.test.tsx`,
+  `src/components/odontogram/fork-feature-parity.test.tsx` - rewritten against
+  the EMR-owned renderer.
+- `src/components/odontogram/styles.css` - owns the
+  `[data-active="0"] { display: none }` rule and the orientation transforms that
+  the fork previously shipped inside each asset.
 
-### Security and tenancy decisions
+No file was deleted. `src/lib/odontogram/fork-adapter.ts`,
+`fork-save-controller.tsx` and `fork-print-chart.tsx` are untouched; Task 17
+owns their removal.
 
-- Opening Clinical creates nothing. The visit summary comes from
-  `public.get_current_managed_visit`, a strictly read-only `security definer`
-  projection with an empty search path: no insert, no update, no delete, no audit
-  event. Only an explicit `Start visit` or `Resume visit` press reaches
-  `start_or_resume_clinical_visit`.
-- The projection derives organization, treating provider and the Philippine
-  clinical date server-side exactly as the write lifecycle does, requires live
-  `patient.clinical.read` at an active acting branch plus an active linked
-  provider there, and validates the patient against the derived tenant. It
-  accepts no organization, provider, actor, provider display name or date.
-- It returns only `managed_visit` rows, scoped to the acting provider and today's
-  clinical date, so the visit displayed is always the visit a write would land
-  in. A pre-workspace unmanaged encounter is never reported as the current visit
-  and stays readable and unchanged through `list_clinical_encounters`.
-- Additive only: no existing function signature, grant or RLS policy changed.
-  `list_clinical_encounters` is untouched.
-- The action boundary accepts only `branchId`, `patientId`, optional
-  `appointmentId` and optional `idempotencyKey` through the strict Task 1 schema.
-  `organizationId`, `treatingProviderId`, `createdBy`, `providerDisplay` and
-  `clinicalDate` are rejected as `INVALID_INPUT` before authorization, and the
-  RPC re-derives organization, provider and clinical date regardless.
-- No UI path reaches the revoked `create_clinical_encounter_v2`; the superseded
-  `Open encounter` dialog is gone and `Start visit` is the only create path.
-- One idempotency key per mounted workspace, generated in the browser with
-  `crypto.randomUUID()`, so a double-pressed `Start visit` serializes on one
-  token server-side. The key is not visit identity.
-- `Finalize visit` continues through the existing confirmation alert dialog and
-  the existing optimistic-version `finalizeClinicalEncounterAction`.
-- When the clinical read failed, the derived visit is `null` and the header says
-  `Visit status unavailable` with no start action, rather than rendering a false
-  `NOT_STARTED`.
-- The medical-safety strip applies a per-group, direction-of-harm rule rather
-  than one blanket filter: medications and conditions show `active` only, so a
-  stopped medication or resolved condition can never read as current; allergies
-  show every non-voided record with a `resolved` one explicitly qualified and
-  de-emphasised, so an allergy is never silently dropped. This is a conservative
-  safe-direction default pending clinical-owner confirmation, not a clinical
-  sign-off; it is on the clinical-owner validation gate.
-- Failed detail loads, finalizes and voids raised inside the `Treatment history`
-  and `Medical history` dialogs render their error inside that dialog, so an
-  optimistic-concurrency `STALE_VERSION` is never swallowed.
-- The two new migrations are additive and forward-only. No existing function
-  signature, grant, policy, column or RLS rule changed.
+### Security decisions
 
-### Negative authorization cases covered (database)
+- Runtime code never fetches or parses SVG text. There is no
+  `dangerouslySetInnerHTML`, `innerHTML`, `DOMParser`, `XMLSerializer`,
+  `insertAdjacentHTML`, `XMLHttpRequest`, `fetch`, `eval` or `new Function` in
+  any runtime renderer file or in the generated module, and a guard test asserts
+  this over the actual file contents so a future edit cannot reintroduce one.
+- The generator prohibits DTD processing, resolves no external entities, caps
+  entity expansion at zero, and rejects any script element, `on*` attribute,
+  `href`/`xlink:href`/`src`, image/use/foreignObject element, entity or doctype
+  declaration, `javascript:` value, CSS `expression()`/`@import`, or non-local
+  `url()`.
+- Elements, attributes and CSS declarations pass closed allowlists. The
+  allowlists are duplicated in the test suite on purpose, so a generator change
+  that widened them would fail.
+- The previously reviewed `measured-inline-asset` implementation was **not**
+  restored: it fetches markup and injects it.
+- Per-asset SHA-256 over LF-normalised bytes is recorded and asserted, so an
+  asset cannot change without a reviewed regeneration.
+- The renderer is projection-only. `onDraftChange` is never called, there is no
+  save callback, no implicit treatment action, no provider or demo data, and no
+  local storage. `Clear selection` clears UI selection only; a test proves the
+  canonical record survives it.
+- Selection identifiers stay canonical FDI in every notation; the display
+  notation never becomes an identifier.
+- No authorization, tenancy, RLS or server boundary changed in this checkpoint.
 
-`current_managed_visit.test.sql` asserts with `throws_ok`: receptionist denied;
-owner with no active provider link denied exactly as the write lifecycle denies
-them; dentist whose provider is not active at the requested branch denied;
-cross-tenant patient denied; foreign-tenant dentist denied; null patient
-rejected as `22023 invalid input`. It further proves a legacy unmanaged OPEN
-encounter created today is not returned, yesterday's managed visit is not
-returned, another provider's managed visit for the same patient and day is not
-returned as this actor's, a finalized visit reports FINALIZED without being
-reopened, and that every read left the encounter set and the audit log unchanged.
+### Interaction and accessibility decisions
 
-### Negative and degradation cases covered (component level)
+- Click selects one tooth. Ctrl or Cmd click toggles multi-selection. Shift
+  click selects a bounded visual range along the rendered chart order, and only
+  within one arch row and one dentition; where the range is not supported it
+  degrades to a single selection rather than guessing.
+- Touch has an explicit `Select multiple` toggle that needs no desktop modifier.
+  No critical interaction is hover-only or drag-only.
+- Keyboard activation uses Enter and Space, with the default prevented so a
+  browser-synthesised click cannot double-activate. Teeth are `aria-pressed`
+  buttons labelled in the active notation, with FDI, Universal and Palmer plus
+  the clinical summary in the accessible name.
 
-Clinical reader (no `patient.clinical.write`) sees no `Start visit`, no `Add`,
-no `Void`, no `Add note`, no `Finalize`, no `Amend`, and no provider selector
-anywhere — including on a finalized visit. A finalized visit offers a writer
-`Start visit` but never `Resume visit` or `Finalize visit`. A `null` visit
-reports `Visit status unavailable` and offers no start action. Chart,
-progress-record and photograph load failures each render a bounded `Retry`
-region that keeps the medical-safety strip visible and removes the failed
-region's content instead of showing stale data as current. A failed detail load,
-finalize or void inside either history dialog renders its message inside that
-dialog. A resolved condition and a stopped medication are absent from the safety
-strip; a resolved allergy stays present, qualified and de-emphasised.
+### Clinical mapping decisions worth review
+
+- `unerupted` and `impacted` both render through the reviewed `tooth-under-gum`
+  layer, and `retained root` through `tooth-radix`. The reviewed artwork has one
+  sub-gingival glyph; no new canonical code was invented.
+- Mobility renders as the reviewed `mobility` glyph. The grade (m1/m2/m3) is
+  canonical data; the artwork does not encode it.
+- A periodontal alert renders the `parodontal` glyph, derived from a finalized
+  examination's CAL severity.
+- A bridge pontic suppresses the closed-gap marker: the gap is filled by the
+  prosthesis, not closed. A bridge with no restoration material renders the
+  material-neutral `prosthesis` saddle rather than inventing a material.
+- `fracture-vertical` and `fracture-horizontal` were added to the
+  renderer-controlled set. The fork never activates them; this EMR has a
+  canonical `FRACTURE` code and the artwork exists. Recorded in the manifest.
+
+### Naming ruling followed
+
+The brief's contract names the renderer input `CanonicalChartProjection`. No
+such type exists in this repository. The canonical renderer-independent
+projection is `PatientChartProjection`, which already has callers and tests, so
+it was reused and no second name was introduced. Recorded in the manifest.
 
 ### Existing test assertions changed, and why
 
-- `clinical-section.test.tsx`: the legacy `Clinical` heading assertion becomes
-  `Clinical chart`; assertions that reached the encounter table and the medical
-  history lists directly now open them from `More clinical actions` first,
-  because Task 2 moves both out of the primary layout. The
-  `Open encounter` dialog test becomes a `Start visit` test — same capability,
-  same "no provider selector" assertion, new control. Nothing was removed; the
-  file gained visit-lifecycle, IA and bounded-failure coverage.
-- `clinical-actions.test.ts`: `createClinicalEncounterAction` renamed to
-  `startClinicalVisitAction` with the new input shape, and the over-posting case
-  was widened from `organizationId` alone to also cover `treatingProviderId`,
-  `createdBy`, `providerDisplay` and `clinicalDate`.
-- `patient-workspace.test.tsx`: the `ClinicalSection` mock now renders its
-  `gallery` child, because the gallery moved inside the workspace. The
-  `0 photos · write` assertion is unchanged.
-- `clinical-visit-header.test.tsx` (correction round): the finalized-visit test
-  asserted no start action; it now asserts `Start visit` present with
-  `Resume visit` and `Finalize visit` absent, per the controller ruling. A new
-  test keeps the read-only case (a clinical reader still gets no `Start visit`
-  on a finalized visit), so no coverage was lost.
-- `medical-safety-summary.test.tsx` (fix round): the long-value assertion now
-  targets `{ selector: "span" }`, because each value is its own element so a
-  resolved allergy can be de-emphasised independently. The assertion itself —
-  wraps, is not truncated, is not `whitespace-nowrap` — is unchanged.
+- `fork-odontogram.test.tsx` and `fork-feature-parity.test.tsx`: assertions that
+  reached fork-runtime DOM (`#toothGrid`, `.tooth-tile.side-view`, `#statusCard`,
+  `#cariesSection`, `#rootPeriodontiumSection`, `#chartModeStatus` /
+  `#chartModePlan`, the `read-only` class, `[role=option]` tabindex) and fork
+  module state (`getStatusChart`, `getPlanChart`, `setCariesSurfaceForSelection`,
+  `setChartMode`) were removed, because the fork runtime is no longer in the
+  render path. Every clinical parity assertion was kept and re-expressed against
+  the reviewed anatomy's `data-layer` / `data-active` contract, and the
+  chart-mode assertions are superseded by the Task 2 workspace mode group.
+- The "emits only bounded canonical drafts for a user edit" test became "reports
+  tooth selection and never emits a renderer draft", because Step 4 requires the
+  renderer to have no save callback. Clinical writes still run through the tooth
+  inspector.
+- The `FORK_ROOT_CARIES_ACTIVE_CAVITATED` fixture row became a `CARIES` entry
+  with no recorded surface, which is the canonical representation of root
+  caries; an `OTHER` row was added to prove an unmapped controlled code renders
+  no invented artwork.
+- `feature-contract.test.ts` gained assertions; none were removed.
+- Several new tests carry an explicit 30s or 60s timeout, matching the existing
+  convention in this folder, because rendering a full dentition of real anatomy
+  exceeds the 5s default under parallel load.
 
 ### Commands run and observed results
 
 All local only.
 
-- `npm run test:unit -- src/components/clinical/clinical-chart-workspace.test.tsx src/components/clinical/medical-safety-summary.test.tsx "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx"`
-  — RED gate before implementation: 3 files failed, 17 failed / 1 passed, the two
-  new component files unresolvable and the legacy `Clinical tabs` nav still
-  present.
-- `npm run test:unit -- src/components/clinical "src/app/(emr)/patients/[patientId]/clinical-section.test.tsx" "src/app/(emr)/patients/[patientId]/patient-workspace.test.tsx"`
-  (the brief's Step 5 command, re-run after the review fix round) — 5 files,
-  **52/52 passed**, no warnings.
-- `npm run typecheck` — passed, no output.
-- `npm run lint` — 0 errors, 3 pre-existing warnings in
+- RED gate, before any implementation:
+  `npm run test:unit -- src/components/odontogram/measured-fork-layers.test.ts src/components/odontogram/measured-tooth.test.tsx src/lib/odontogram/renderer-projection.test.ts`
+  - 3 test files failed, no tests ran: `Failed to resolve import "./measured-tooth"`,
+    `Cannot find module './renderer-projection'`, and the same for
+    `./measured-assets` / `./measured-fork-layers`.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-odontogram-svg-nodes.ps1`
+  - `Generated ... from 40 reviewed assets.`
+- Step 6 gate:
+  `npm run test:unit -- src/components/odontogram/measured-assets.test.ts src/components/odontogram/measured-fork-layers.test.ts src/components/odontogram/measured-svg-asset.test.tsx src/components/odontogram/measured-tooth.test.tsx src/components/odontogram/measured-chart.test.tsx src/components/odontogram/measured-feature-parity.test.tsx src/components/odontogram/fork-feature-parity.test.tsx src/lib/odontogram/renderer-projection.test.ts src/lib/odontogram/feature-contract.test.ts`
+  - **9 files, 135/135 passed.**
+- `npm run typecheck` - passed, no output.
+- `npm run lint` - 0 errors, the same 3 pre-existing warnings in
   `treatment-plan-section.tsx` and `lib/treatment-plan/schema.ts`.
-- `npm run test:unit` (whole suite), four runs before the fix round —
-  1602/1607/1609/1610 of 1612 passed, rising to 1617/1619 after the corrections.
-  Every failure in every run was `Error: Test timed out` in heavy odontogram fork
-  suites this task does not touch. The same folder run alone,
-  `npm run test:unit -- src/components/odontogram`, passes 45/45; run while
-  another suite was active it failed 10/45. The failures are machine
-  contention, not regressions.
-
-Review corrections, all local:
-
-- `supabase/tests/current_managed_visit.test.sql` run directly against
-  `supabase_db_local` — RED before the migration
-  (`ERROR: function "public.get_current_managed_visit(uuid,uuid)" does not exist`),
-  then **21/21 ok, `P1_TEST_PASS`**.
-- `unified_clinical_visit.test.sql` and `clinical_rpcs.test.sql` re-run directly
-  — both `P1_TEST_PASS`.
-- `npm run db:migrate:local` — applied `20260901010112` and `20260901010113`
-  forward; no reset.
-- `npm run db:types:local` — `Updated src/types/database.generated.ts.`
-- `npm run security:migrations` — passed; 302 files, 84 grant-terminal
-  migrations, 390 approved privileges.
-- `npm run test:db:local` — reaches and passes
-  `PASS supabase/tests/current_managed_visit.test.sql`, then halts at the
-  **pre-existing** `treatment_plans.test.sql` failure (assertion 7,
-  `treatment_plan_items` approved-field set), reproduced directly and unrelated
-  to this work. The runner therefore never reaches the suites registered after
-  it, including the `.local.mjs` concurrency tests.
-- `npm run test:unit -- src/lib/clinical/service.test.ts` — 27/27 passed
-  (5 failed before the implementation, as required by TDD).
-- `npm run test:unit -- scripts src/lib/clinical "…/clinical-actions.test.ts"` —
-  19 files, 349/349 passed.
-
-Review fix round, all local, no database change:
-
-- `npm run test:unit -- src/components/clinical/medical-safety-summary.test.tsx "…/clinical-section.test.tsx"`
-  — RED first: 8 failed / 21 passed, including three `Unable to find role="alert"`
-  reproducing the swallowed-error regression exactly. After the fix, **29/29
-  passed**.
-- Step 5 command, `npm run typecheck` and `npm run lint` re-run as recorded
-  above.
+- `npm run test:unit -- src/components/odontogram src/lib/odontogram "src/app/(emr)/patients/[patientId]/odontogram-section.test.tsx"`
+  - 341/346 passed. The 5 failures are `Test timed out in 5000ms` in four files
+    this task does not modify (`fork-package.test.ts`, `fork-print-chart.test.tsx`,
+    `perio-workspace.test.tsx`, `tooth-inspector.test.tsx`). Re-run in isolation
+    they pass: `fork-package` 2/2, and the other three 14/14 together. This is
+    the same machine-contention pattern recorded for Task 2.
+- `npm run build` - succeeded.
 
 ### Not run, and why
 
-- `npm run build`, Playwright E2E, responsive/accessibility device verification,
-  Cloud TEST, `npm run test:db` (hosted), database advisors: hosted access is not
-  authorized for this work. This work may be described only as locally
-  implemented and locally verified.
-- R6-D boundary-privilege file-mode replay: hosted-only, still UNRUN, unchanged
-  from Task 1. The new grant terminal is additive and carries no supersede pivot.
+- Playwright E2E, responsive and accessibility device verification, Cloud TEST,
+  hosted database tests and advisors: hosted access is not authorized for this
+  work. This may be described only as locally implemented and locally verified.
+- No database command was run: this checkpoint contains no migration, policy,
+  grant or RPC change.
 
 ### Known residual risks and open questions
 
-- The projection denies any actor without an active linked provider at the acting
-  branch, which is correct — a managed visit belongs to a provider — but it means
-  a clinical *reader* such as a dental assistant sees `Visit status unavailable`
-  rather than a visit summary. The chart, record, safety strip and history
-  dialogs are all still readable for them.
-- The `NOT_STARTED` label's date is formatted in the server component from
-  `Asia/Manila`. It is a label only; every encounter decision uses the
-  server-derived date. Across local midnight the label could be one day off for a
-  request in flight, which is cosmetic.
-- `PERIODONTAL` mode is a bounded seam that points at the chart's existing
-  periodontal entry; Task 12 mounts the real periodontal work surface.
-- The progress-record region uses the same server-derived events the chart was
-  already given, so it inherits the existing behaviour where an in-chart fork
-  save refreshes the chart but not the record until the next route refresh.
-  Task 13 owns the chronology.
-- `Resume visit` calls the same idempotent lifecycle action as `Start visit`;
-  the controller ruled this the faithful reading of brief Step 4. A finalized
-  same-day visit now offers `Start visit` (and no `Resume visit`), because the
-  partial unique index covers only managed OPEN rows, so the lifecycle opens a
-  further visit rather than handing back the finalized one.
-- `createClinicalEncounter` in `src/lib/clinical/service.ts` and
-  `createClinicalEncounterInputSchema` are now unreferenced by any UI path and
-  remain for Task 17's superseded-path sweep.
+- **Client bundle size.** The patient chart client chunk is now 8.87 MB. It
+  carries both the fork runtime (still imported by `fork-print-chart.tsx`,
+  roughly 5.4 MB) and the new node tree (roughly 3.5 MB). Task 17 removes the
+  former. Even after that, about 3.5 MB of anatomy on first load is heavy for a
+  Philippine clinic. The controller may want to rule on lazy-loading the
+  generated module or on a more compact representation.
+- `fork-print-chart.tsx` still mounts the fork runtime for the print projection.
+  Out of scope here; Task 17 owns it.
+- `ForkSaveController` now receives an always-empty draft list, because the
+  renderer is projection-only. Clinical writes run through the tooth inspector
+  until Task 4's record composer lands.
+- `MeasuredChart` renders the lateral view. The occlusal templates are generated,
+  tested and reachable through `projectRendererTooth(..., "occlusal")`, for the
+  tooth drawer in a later task.
+- The wrapper's periodontal mapping reads the latest **finalized** examination
+  only; a draft examination does not tint the chart. Task 12 owns the
+  periodontal work surface.
+- Repeated instances of one template duplicate that template's gradient `id`s in
+  the document. The definitions are identical, so rendering is correct, but a
+  strict HTML validator would flag it.
 
 ### Next bounded task
 
-Task 3 of the plan. Do not start it until Task 2 is independently reviewed and
+Task 4 of the plan. Do not start it until Task 3 is independently reviewed and
 accepted.

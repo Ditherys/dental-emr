@@ -1,11 +1,32 @@
+import type { Mobility } from "./clinical-codes";
+import type { BridgeRecord, BridgeUnit } from "./bridge";
+import { currentBridgeProjection } from "./bridge";
 import type { ImplantComponentRecord } from "./implant";
 import { currentImplantProjection } from "./implant";
 import {
   FEATURE_CONTRACT,
   type ClinicalFeatureDetail,
+  type ToothRenderFeature,
   type ToothRenderState,
 } from "./feature-contract";
 import { isEntryCurrentlyActive, type ClinicalEntry } from "./state";
+
+/** A canonical bridge with the units that place it on specific teeth. */
+export type BridgeChartInput = {
+  record: BridgeRecord;
+  units: readonly BridgeUnit[];
+};
+
+/**
+ * The renderer-relevant slice of a canonical periodontal examination. The
+ * examination itself stays in `periodontal_examinations`; only these two
+ * derived per-tooth signals reach the chart.
+ */
+export type PeriodontalChartInput = {
+  toothFdi: number;
+  mobility: Mobility;
+  perioAlert: boolean;
+};
 
 /**
  * Domain-only aggregate used by the renderer adapter. O5 maps its protected
@@ -15,6 +36,8 @@ import { isEntryCurrentlyActive, type ClinicalEntry } from "./state";
 export type PatientChartDTO = {
   entries: readonly ClinicalEntry[];
   implants: readonly ImplantComponentRecord[];
+  bridges?: readonly BridgeChartInput[];
+  periodontal?: readonly PeriodontalChartInput[];
 };
 
 export type PatientChartProjection = { teeth: ReadonlyMap<number, ToothRenderState> };
@@ -106,6 +129,10 @@ function initialState(fdi: number): ToothRenderState {
     rootTreatment: "NONE",
     current: [],
     planned: [],
+    features: [],
+    bridgeRole: null,
+    mobility: "none",
+    perioAlert: false,
     layers: [],
   };
 }
@@ -115,12 +142,13 @@ export function projectPatientChart(dto: PatientChartDTO): PatientChartProjectio
     state: ToothRenderState;
     current: ClinicalFeatureDetail[];
     planned: ClinicalFeatureDetail[];
+    features: ToothRenderFeature[];
     layers: string[];
   }>();
   const tooth = (fdi: number) => {
     const existing = mutable.get(fdi);
     if (existing) return existing;
-    const created = { state: initialState(fdi), current: [], planned: [], layers: [] };
+    const created = { state: initialState(fdi), current: [], planned: [], features: [], layers: [] };
     mutable.set(fdi, created);
     return created;
   };
@@ -129,6 +157,7 @@ export function projectPatientChart(dto: PatientChartDTO): PatientChartProjectio
     if (!isEntryCurrentlyActive(entry)) continue;
     const target = tooth(entry.toothFdi);
     const detail = normalizeClinicalEntry(entry);
+    target.features.push({ detail, surfaces: entry.surfaces, planned: entry.status === "PLANNED" });
     if (entry.status === "PLANNED") {
       target.planned.push(detail);
       continue;
@@ -169,12 +198,31 @@ export function projectPatientChart(dto: PatientChartDTO): PatientChartProjectio
     }
   }
 
+  const currentBridgeIds = new Set(
+    currentBridgeProjection((dto.bridges ?? []).map((bridge) => bridge.record)).map((record) => record.id),
+  );
+  for (const bridge of dto.bridges ?? []) {
+    if (!currentBridgeIds.has(bridge.record.id)) continue;
+    for (const unit of bridge.units) {
+      const target = tooth(unit.toothFdi);
+      target.state.bridgeRole = unit.role;
+      target.layers.push(...FEATURE_CONTRACT.BRIDGE.rendererLayers);
+    }
+  }
+
+  for (const measurement of dto.periodontal ?? []) {
+    const target = tooth(measurement.toothFdi);
+    target.state.mobility = measurement.mobility;
+    target.state.perioAlert = measurement.perioAlert;
+  }
+
   const teeth = new Map<number, ToothRenderState>();
   for (const [fdi, value] of mutable) {
     teeth.set(fdi, {
       ...value.state,
       current: value.current,
       planned: value.planned,
+      features: value.features,
       layers: [...new Set(value.layers)],
     });
   }

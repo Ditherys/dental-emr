@@ -49,6 +49,19 @@ export type StartOrResumeClinicalVisitInput = z.infer<typeof startOrResumeClinic
 export type ClinicalChartMode = "CURRENT_STATUS" | "TREATMENT_PLAN" | "PERIODONTAL";
 
 /**
+ * The bounded region of the dentition a chart renders. Like the mode, this is a
+ * presentation concern: it narrows what is drawn, never what is authorized.
+ */
+export type ClinicalChartViewport =
+  | "FULL"
+  | "UPPER"
+  | "LOWER"
+  | "QUADRANT_1"
+  | "QUADRANT_2"
+  | "QUADRANT_3"
+  | "QUADRANT_4";
+
+/**
  * The Clinical Chart workspace's view of the active visit. `NOT_STARTED` means
  * no managed visit exists yet for the acting branch, patient, provider, and
  * clinical date; the workspace renders read-only until one is opened.

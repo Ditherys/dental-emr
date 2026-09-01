@@ -1,4 +1,34 @@
 /* ------------------------------------------------------------------ */
+/* EMR-owned anatomical renderer.                                       */
+/* The reviewed templates author every clinical layer as data-active; the
+ * fork shipped this single rule inside each asset's <style> element. The
+ * generator drops that element and this repository owns the rule instead,
+ * so no asset carries embedded CSS into the runtime node tree.          */
+/* ------------------------------------------------------------------ */
+
+.odontogram-measured-asset {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+
+.odontogram-measured-asset [data-active="0"] {
+  display: none;
+}
+
+.odontogram-measured-asset-mirror {
+  transform: scaleX(-1);
+}
+
+.odontogram-measured-asset-rotate {
+  transform: scaleY(-1);
+}
+
+.odontogram-measured-asset-rotate-mirror {
+  transform: scale(-1, -1);
+}
+
+/* ------------------------------------------------------------------ */
 /* Controlled fork print boundary: anatomical chart, legend, provider/date,
  * current/planned projections. */
 /* No print button / no FHIR / no import-export is intentional.        */

@@ -1,16 +1,10 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import {
-  getPlanChart,
-  getStatusChart,
-  setCariesSurfaceForSelection,
-} from "react-advanced-odontogram";
-
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
-import { ForkOdontogram } from "./fork-odontogram";
+import { ForkOdontogram, toPatientChartDTO } from "./fork-odontogram";
 
 const PATIENT_ID = "00000000-0000-4000-8000-000000000031";
 
@@ -69,6 +63,32 @@ const dto: PatientOdontogramDTO = {
       surfaces: ["O"],
       detail: { code: "ROOT_CANAL", state: "endo-filling-incomplete" },
     },
+    {
+      id: "00000000-0000-4000-8000-000000000034",
+      patient_id: PATIENT_ID,
+      tooth_code: "17",
+      kind: "FINDING",
+      clinical_code: "CARIES",
+      status: "ACTIVE",
+      lifecycle: "VOIDED",
+      event_state: "VOIDED",
+      provenance: "INTERNAL",
+      notes: null,
+      version: 1,
+      recorded_at: "2026-08-30T00:00:00.000Z",
+      recorded_by: null,
+      treating_provider_id: null,
+      encounter_id: null,
+      treatment_plan_item_id: null,
+      charge_id: null,
+      effective_at: null,
+      completed_at: null,
+      voided_at: "2026-08-31T00:00:00.000Z",
+      supersedes_entry_id: null,
+      superseded_by_entry_id: null,
+      surfaces: ["O"],
+      detail: { code: "CARIES", depth: "DENTIN", icdas: 4, cars: null, radiographicDepth: null },
+    },
   ],
   bridges: [],
   implantChains: [],
@@ -97,8 +117,62 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("ForkOdontogram", () => {
-  it("mounts only the controlled clinical surfaces with measured inline anatomy", async () => {
+function tooth(container: HTMLElement, fdi: number): HTMLElement {
+  const node = container.querySelector<HTMLElement>(`[data-testid="tooth-${fdi}"]`);
+  if (!node) throw new Error(`Missing tooth ${fdi}`);
+  return node;
+}
+
+describe("toPatientChartDTO", () => {
+  it("drops voided and superseded rows before projection", () => {
+    const chart = toPatientChartDTO(dto);
+    expect(chart.entries.map((entry) => entry.toothFdi)).toEqual([11, 16]);
+  });
+
+  it("resolves a TOOTH_STATE row onto its canonical clinical code", () => {
+    const chart = toPatientChartDTO({
+      ...dto,
+      entries: [
+        {
+          ...dto.entries[0],
+          tooth_code: "21",
+          clinical_code: "TOOTH_STATE",
+          surfaces: [],
+          detail: { code: "TOOTH_STATE", state: "SUBGINGIVAL" },
+        },
+      ],
+    });
+    expect(chart.entries[0]?.clinicalCode).toBe("SUBGINGIVAL");
+  });
+
+  it("degrades a mismatched detail to the clinical code instead of failing the chart", () => {
+    const chart = toPatientChartDTO({
+      ...dto,
+      entries: [
+        {
+          ...dto.entries[0],
+          clinical_code: "CARIES",
+          detail: { code: "ROOT_CANAL", state: "endo-filling" },
+        } as PatientOdontogramDTO["entries"][number],
+      ],
+    });
+    expect(chart.entries[0]?.clinicalCode).toBe("CARIES");
+    expect(chart.entries[0]?.detail).toBeUndefined();
+  });
+
+  it("skips relationship-owned codes that belong to the bridge and implant tables", () => {
+    const chart = toPatientChartDTO({
+      ...dto,
+      entries: [
+        { ...dto.entries[0], clinical_code: "BRIDGE" } as PatientOdontogramDTO["entries"][number],
+      ],
+    });
+    expect(chart.entries).toEqual([]);
+  });
+});
+
+describe("ForkOdontogram compatibility wrapper", () => {
+  it("mounts the EMR-owned chart and no controlled-fork runtime surface", () => {
     const { container } = render(
       <ForkOdontogram
         patientKey={PATIENT_ID}
@@ -110,51 +184,38 @@ describe("ForkOdontogram", () => {
       />,
     );
 
-    expect(container.querySelector("#toothGrid")).toBeInTheDocument();
-    expect(container.querySelector("#statusCard")).toBeInTheDocument();
-    expect(container.querySelector("#cariesSection")).toBeInTheDocument();
-    expect(container.querySelector("#rootPeriodontiumSection")).toBeInTheDocument();
-    expect(container.querySelector("#toothGrid")).toHaveAttribute("data-anatomy", "measured");
-
-    await waitFor(() => {
-      expect(container.querySelector("#toothGrid svg")).toBeInTheDocument();
-    });
-    expect(container.querySelector(".odontogram-measured-root")).not.toBeInTheDocument();
-    expect(container.querySelector("#btnResetAll")).not.toBeInTheDocument();
-    expect(container.querySelector("#btnResetTooth")).not.toBeInTheDocument();
-    expect(container.querySelector("#btnImport, #settingsModal, [data-testid='odontogram-toolbar']")).not.toBeInTheDocument();
+    expect(container.querySelector('[data-testid="measured-chart"]')).toBeInTheDocument();
+    expect(container.querySelector("#toothGrid")).not.toBeInTheDocument();
+    expect(container.querySelector("#statusCard")).not.toBeInTheDocument();
+    expect(container.querySelector("#btnResetAll, #btnResetTooth, #btnImport, #settingsModal")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-testid='odontogram-toolbar']")).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/classic/i);
+    expect(container.innerHTML.toLowerCase()).not.toContain("localstorage");
+    expect(container.innerHTML.toLowerCase()).not.toContain("dangerouslysetinnerhtml");
   }, 30_000);
 
-  it("hydrates current and planned charts without reporting hydration as a user edit", async () => {
-    const onDraftChange = vi.fn();
-    render(
+  it("renders current and planned clinical records from the canonical projection", () => {
+    const { container } = render(
       <ForkOdontogram
         patientKey={PATIENT_ID}
         dto={dto}
         canWriteClinical
         onSelect={vi.fn()}
-        onDraftChange={onDraftChange}
+        onDraftChange={vi.fn()}
         onError={vi.fn()}
       />,
     );
 
-    await waitFor(() => {
-      expect(getStatusChart()).toMatchObject({
-        version: "2.20",
-        teeth: { "11": { caries: ["caries-occlusal"] } },
-      });
-      expect(getPlanChart()).toMatchObject({
-        version: "2.20",
-        teeth: { "16": { endo: "endo-filling-incomplete", note: "Synthetic plan note" } },
-      });
-    });
-    expect(onDraftChange).not.toHaveBeenCalled();
+    expect(tooth(container, 11).querySelector('[data-layer="caries-occlusal"]')).toHaveAttribute("data-active", "1");
+    expect(tooth(container, 16).querySelector('[data-layer="endo-filling-incomplete"]')).toHaveAttribute("data-active", "1");
+    expect(tooth(container, 16)).toHaveAttribute("data-planned", "1");
+    // The voided row on 17 must not render.
+    expect(tooth(container, 17).querySelector('[data-layer="caries-occlusal"]')).toHaveAttribute("data-active", "0");
   }, 30_000);
 
-  it("emits only bounded canonical drafts for a user edit and reports tooth selection", async () => {
-    const onDraftChange = vi.fn();
+  it("reports tooth selection and never emits a renderer draft", () => {
     const onSelect = vi.fn();
+    const onDraftChange = vi.fn();
     const { container } = render(
       <ForkOdontogram
         patientKey={PATIENT_ID}
@@ -166,46 +227,54 @@ describe("ForkOdontogram", () => {
       />,
     );
 
-    const tooth = await waitFor(() => {
-      const value = container.querySelector<HTMLElement>('.tooth-tile.side-view[data-tooth="12"]');
-      expect(value).toBeInTheDocument();
-      return value!;
-    });
-    fireEvent.click(tooth);
+    fireEvent.click(tooth(container, 12));
     expect(onSelect).toHaveBeenLastCalledWith(12);
-
-    act(() => setCariesSurfaceForSelection("caries-occlusal", true));
-
-    await waitFor(() => expect(onDraftChange).toHaveBeenCalled());
-    const emitted = onDraftChange.mock.lastCall?.[0];
-    expect(emitted).toHaveLength(1);
-    expect(emitted).toContainEqual({
-      toothCode: "12",
-      surfaces: ["O"],
-      kind: "FINDING",
-      status: "ACTIVE",
-      detail: { code: "CARIES", depth: "ENAMEL", icdas: 2, cars: null, radiographicDepth: null },
-      note: null,
-    });
-    expect(JSON.stringify(emitted)).not.toMatch(/patient|organization|provider|globals|teeth/i);
+    expect(tooth(container, 12)).toHaveAttribute("data-selected", "1");
+    expect(onDraftChange).not.toHaveBeenCalled();
   }, 30_000);
 
-  it("keeps read-only inspection non-editable", async () => {
+  it("switches the display notation while selection stays canonical FDI", () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <ForkOdontogram
+        patientKey={PATIENT_ID}
+        dto={dto}
+        canWriteClinical
+        onSelect={onSelect}
+        onDraftChange={vi.fn()}
+        onError={vi.fn()}
+      />,
+    );
+
+    const notation = container.querySelector<HTMLSelectElement>('[data-testid="fork-numbering"]')!;
+    expect([...notation.options].map((option) => option.value)).toEqual(["FDI", "UNIVERSAL", "PALMER"]);
+
+    fireEvent.change(notation, { target: { value: "UNIVERSAL" } });
+    expect(tooth(container, 11).textContent).toContain("8");
+    fireEvent.change(notation, { target: { value: "PALMER" } });
+    expect(tooth(container, 11).textContent).toContain("UR-1");
+
+    fireEvent.click(tooth(container, 11));
+    expect(onSelect).toHaveBeenLastCalledWith(11);
+  }, 30_000);
+
+  it("marks read-only inspection without disabling selection", () => {
+    const onSelect = vi.fn();
     const onDraftChange = vi.fn();
     const { container } = render(
       <ForkOdontogram
         patientKey={PATIENT_ID}
         dto={dto}
         canWriteClinical={false}
-        onSelect={vi.fn()}
+        onSelect={onSelect}
         onDraftChange={onDraftChange}
         onError={vi.fn()}
       />,
     );
 
-    await waitFor(() => expect(container.querySelector("#toothGrid svg")).toBeInTheDocument());
-    expect(container.querySelector("#toothGrid")).toHaveClass("read-only");
-    expect(container.querySelector("#toothGrid [role='option']")).toHaveAttribute("tabindex", "-1");
+    expect(container.querySelector('[data-testid="measured-chart"]')).toHaveAttribute("data-read-only", "1");
+    fireEvent.click(tooth(container, 11));
+    expect(onSelect).toHaveBeenLastCalledWith(11);
     expect(onDraftChange).not.toHaveBeenCalled();
   }, 30_000);
 });

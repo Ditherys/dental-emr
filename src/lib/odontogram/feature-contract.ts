@@ -2,8 +2,10 @@ import type {
   ClinicalFeatureCode,
   EndoState,
   FillingMaterial,
+  Mobility,
   RestorationMaterial,
   RestorationType,
+  Surface,
 } from "./clinical-codes";
 
 export type ClinicalFeatureDetail =
@@ -32,6 +34,20 @@ export type ClinicalFeatureDetail =
     }
   | { code: "OTHER"; controlledCode: string };
 
+/** A canonical bridge unit's role at one tooth. Relationship-owned, never a detail. */
+export type ToothBridgeRole = "ABUTMENT" | "PONTIC";
+
+/**
+ * One clinical feature with the surfaces it was recorded against and whether it
+ * is planned. The renderer needs the surface list to choose per-surface anatomy;
+ * `current`/`planned` below stay detail-only for callers that predate it.
+ */
+export interface ToothRenderFeature {
+  detail: ClinicalFeatureDetail;
+  surfaces: readonly Surface[];
+  planned: boolean;
+}
+
 export interface ToothRenderState {
   fdi: number;
   anatomy: "NATURAL" | "MISSING" | "EXTRACTION_WOUND" | "IMPLANT_FIXTURE" | "IMPLANT_ABUTMENT" | "IMPLANT_CROWN";
@@ -39,6 +55,10 @@ export interface ToothRenderState {
   rootTreatment: "NONE" | "MEDICAMENT" | "COMPLETE" | "INCOMPLETE";
   current: readonly ClinicalFeatureDetail[];
   planned: readonly ClinicalFeatureDetail[];
+  features: readonly ToothRenderFeature[];
+  bridgeRole: ToothBridgeRole | null;
+  mobility: Mobility;
+  perioAlert: boolean;
   layers: readonly string[];
 }
 
