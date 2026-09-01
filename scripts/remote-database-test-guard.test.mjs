@@ -346,6 +346,7 @@ describe("registered database suites", () => {
       "treatment_plan_estimated_fee_contract.test.sql",
       "treatment_plan_rpcs.test.sql",
       "treatment_plans.test.sql",
+      "unified_clinical_visit.test.sql",
       "workforce_invitations.test.sql",
     ];
     const onDisk = readdirSync(testsDirectory)

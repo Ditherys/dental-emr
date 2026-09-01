@@ -13,6 +13,7 @@ import {
   clinicalNoteMutationRowSchema,
   clinicalPrescriptionMutationRowSchema,
   clinicalRecordMutationRowSchema,
+  clinicalVisitRowSchema,
   createClinicalEncounterInputSchema,
   createClinicalNoteInputSchema,
   createPatientMedicalRecordInputSchema,
@@ -24,6 +25,7 @@ import {
   listClinicalEncountersInputSchema,
   listPatientMedicalRecordsInputSchema,
   medicalRecordListRowSchema,
+  startOrResumeClinicalVisitInputSchema,
   updateClinicalNoteInputSchema,
   voidPatientMedicalRecordInputSchema,
 } from "./schema";
@@ -33,6 +35,7 @@ import type {
   ClinicalEncounterMutationResult,
   ClinicalNoteMutationResult,
   ClinicalRecordMutationResult,
+  ClinicalVisitStartResult,
   MedicalRecord,
   PrescriptionMutationResult,
 } from "./types";
@@ -51,6 +54,29 @@ function firstRow(data: unknown) {
   return Array.isArray(data) ? data[0] : undefined;
 }
 
+export async function startOrResumeClinicalVisit(input: unknown): Promise<ClinicalVisitStartResult> {
+  const value = startOrResumeClinicalVisitInputSchema.parse(input);
+  const row = clinicalVisitRowSchema.parse(firstRow(await callRpc("start_or_resume_clinical_visit", {
+    p_branch_id: value.branchId,
+    p_patient_id: value.patientId,
+    p_appointment_id: value.appointmentId ?? null,
+    p_idempotency_key: value.idempotencyKey ?? null,
+  })));
+  return {
+    encounterId: row.encounter_id,
+    clinicalDate: row.clinical_date,
+    status: row.status,
+    version: row.version,
+    resumed: row.resumed,
+  };
+}
+
+/**
+ * Superseded by `startOrResumeClinicalVisit`. `create_clinical_encounter_v2` is
+ * no longer executable by `authenticated`, so this binding now fails closed with
+ * NOT_AUTHORIZED. It is retained only until the superseded clinical paths are
+ * removed; do not wire new callers to it.
+ */
 export async function createClinicalEncounter(input: unknown): Promise<ClinicalEncounterMutationResult> {
   const value = createClinicalEncounterInputSchema.parse(input);
   const row = clinicalEncounterMutationRowSchema.parse(firstRow(await callRpc("create_clinical_encounter_v2", {

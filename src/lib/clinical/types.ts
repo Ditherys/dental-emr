@@ -16,6 +16,7 @@ import type {
   getClinicalEncounterDetailInputSchema,
   listClinicalEncountersInputSchema,
   listPatientMedicalRecordsInputSchema,
+  startOrResumeClinicalVisitInputSchema,
   updateClinicalNoteInputSchema,
   voidPatientMedicalRecordInputSchema,
 } from "./schema";
@@ -38,6 +39,29 @@ export type FinalizePrescriptionInput = z.infer<typeof finalizePrescriptionInput
 export type ListClinicalEncountersInput = z.infer<typeof listClinicalEncountersInputSchema>;
 export type GetClinicalEncounterDetailInput = z.infer<typeof getClinicalEncounterDetailInputSchema>;
 export type ListPatientMedicalRecordsInput = z.infer<typeof listPatientMedicalRecordsInputSchema>;
+
+export type StartOrResumeClinicalVisitInput = z.infer<typeof startOrResumeClinicalVisitInputSchema>;
+
+/**
+ * The Clinical Chart workspace's view of the active visit. `NOT_STARTED` means
+ * no managed visit exists yet for the acting branch, patient, provider, and
+ * clinical date; the workspace renders read-only until one is opened.
+ */
+export type ClinicalVisitState = {
+  encounterId: string | null;
+  status: "NOT_STARTED" | ClinicalEncounterStatus;
+  clinicalDate: string;
+  providerDisplay: string | null;
+  version: number | null;
+};
+
+export type ClinicalVisitStartResult = {
+  encounterId: string;
+  clinicalDate: string;
+  status: ClinicalEncounterStatus;
+  version: number;
+  resumed: boolean;
+};
 
 export type ClinicalEncounter = {
   encounterId: string;

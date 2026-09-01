@@ -1398,10 +1398,12 @@ export type Database = {
         Row: {
           appointment_id: string | null
           branch_id: string
+          clinical_date: string | null
           created_at: string
           created_by: string | null
           finalized_at: string | null
           id: string
+          managed_visit: boolean
           organization_id: string
           patient_id: string
           status: string
@@ -1412,10 +1414,12 @@ export type Database = {
         Insert: {
           appointment_id?: string | null
           branch_id: string
+          clinical_date?: string | null
           created_at?: string
           created_by?: string | null
           finalized_at?: string | null
           id?: string
+          managed_visit?: boolean
           organization_id: string
           patient_id: string
           status?: string
@@ -1426,10 +1430,12 @@ export type Database = {
         Update: {
           appointment_id?: string | null
           branch_id?: string
+          clinical_date?: string | null
           created_at?: string
           created_by?: string | null
           finalized_at?: string | null
           id?: string
+          managed_visit?: boolean
           organization_id?: string
           patient_id?: string
           status?: string
@@ -10295,6 +10301,21 @@ export type Database = {
           target_role_id: string
         }
         Returns: string
+      }
+      start_or_resume_clinical_visit: {
+        Args: {
+          p_appointment_id?: string
+          p_branch_id: string
+          p_idempotency_key?: string
+          p_patient_id: string
+        }
+        Returns: {
+          clinical_date: string
+          encounter_id: string
+          resumed: boolean
+          status: string
+          version: number
+        }[]
       }
       summarize_procedure_charges: {
         Args: {

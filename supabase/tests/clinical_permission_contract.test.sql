@@ -1,6 +1,6 @@
 begin;
 
-select extensions.plan(4);
+select extensions.plan(6);
 
 select extensions.set_eq(
   $$
@@ -65,6 +65,36 @@ select extensions.is(
   ),
   0,
   'reception cannot write clinical notes'
+);
+
+-- Reception keeps its billing authority. Recording or allocating a payment must
+-- never imply the authority to open a clinical visit.
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.role_permissions as role_permission
+    join public.roles as role on role.id = role_permission.role_id
+    join public.permissions as permission on permission.id = role_permission.permission_id
+    where role.organization_id is null
+      and role.is_system
+      and role.code = 'RECEPTIONIST'
+      and permission.code = 'payment.record'
+  ),
+  1,
+  'reception may record and allocate payments while holding no clinical permission'
+);
+
+select extensions.ok(
+  (
+    select count(*) = 1
+      and bool_and(proc.proname = 'start_or_resume_clinical_visit')
+    from pg_proc as proc
+    join pg_namespace as namespace on namespace.oid = proc.pronamespace
+    where namespace.nspname = 'public'
+      and proc.prosrc ~* 'insert into public\.clinical_encounters'
+      and has_function_privilege('authenticated', proc.oid, 'execute')
+  ),
+  'the managed visit lifecycle is the only browser-callable clinical encounter creation boundary'
 );
 
 with test_failures as (

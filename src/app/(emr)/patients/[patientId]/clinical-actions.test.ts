@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requirePermission, revalidatePath, createClinicalEncounter, createClinicalNote, updateClinicalNote, finalizeClinicalNote, amendClinicalNote, finalizeClinicalEncounter, createPatientMedicalRecord, voidPatientMedicalRecord, createPrescription, finalizePrescription, getClinicalEncounterDetail } = vi.hoisted(() => ({
+const { requirePermission, revalidatePath, startOrResumeClinicalVisit, createClinicalNote, updateClinicalNote, finalizeClinicalNote, amendClinicalNote, finalizeClinicalEncounter, createPatientMedicalRecord, voidPatientMedicalRecord, createPrescription, finalizePrescription, getClinicalEncounterDetail } = vi.hoisted(() => ({
   requirePermission: vi.fn(),
   revalidatePath: vi.fn(),
-  createClinicalEncounter: vi.fn(),
+  startOrResumeClinicalVisit: vi.fn(),
   createClinicalNote: vi.fn(),
   updateClinicalNote: vi.fn(),
   finalizeClinicalNote: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@/lib/authorization", () => ({ AuthorizationError: class AuthorizationE
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("@/lib/clinical/service", () => ({
   ClinicalServiceError: class ClinicalServiceError extends Error { constructor(public readonly code: string) { super(code); } },
-  createClinicalEncounter,
+  startOrResumeClinicalVisit,
   createClinicalNote,
   updateClinicalNote,
   finalizeClinicalNote,
@@ -66,7 +66,7 @@ const detail = {
 beforeEach(() => {
   vi.clearAllMocks();
   requirePermission.mockResolvedValue({});
-  createClinicalEncounter.mockResolvedValue({ encounterId, version: 1 });
+  startOrResumeClinicalVisit.mockResolvedValue({ encounterId, clinicalDate: "2026-09-01", status: "OPEN", version: 1, resumed: false });
   createClinicalNote.mockResolvedValue({ noteId, version: 1 });
   updateClinicalNote.mockResolvedValue({ noteId, version: 2 });
   finalizeClinicalNote.mockResolvedValue({ noteId, version: 2 });
@@ -83,7 +83,7 @@ describe("createClinicalEncounterAction", () => {
   it("rechecks live clinical-write at the submitted branch before opening the encounter", async () => {
     await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: true });
     expect(requirePermission).toHaveBeenCalledWith({ permission: "patient.clinical.write", branchId });
-    expect(createClinicalEncounter).toHaveBeenCalledWith(encounterInput);
+    expect(startOrResumeClinicalVisit).toHaveBeenCalledWith({ branchId, patientId, appointmentId: null });
     expect(revalidatePath).toHaveBeenCalledWith(`/patients/${patientId}`, "page");
   });
 
@@ -91,7 +91,7 @@ describe("createClinicalEncounterAction", () => {
     await expect(createClinicalEncounterAction({ ...encounterInput, patientId: "forged" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
     await expect(createClinicalEncounterAction({ ...encounterInput, organizationId: "foreign-org" })).resolves.toMatchObject({ ok: false, code: "INVALID_INPUT" });
     expect(requirePermission).not.toHaveBeenCalled();
-    expect(createClinicalEncounter).not.toHaveBeenCalled();
+    expect(startOrResumeClinicalVisit).not.toHaveBeenCalled();
   });
 
   it("maps authorization and service failures to safe codes", async () => {
@@ -99,9 +99,9 @@ describe("createClinicalEncounterAction", () => {
     const { ClinicalServiceError } = await import("@/lib/clinical/service");
     requirePermission.mockRejectedValueOnce(new AuthorizationError("PERMISSION_DENIED"));
     await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "NOT_AUTHORIZED" });
-    createClinicalEncounter.mockRejectedValueOnce(new ClinicalServiceError("INVALID_STATE"));
+    startOrResumeClinicalVisit.mockRejectedValueOnce(new ClinicalServiceError("INVALID_STATE"));
     await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "INVALID_STATE" });
-    createClinicalEncounter.mockRejectedValueOnce(new Error("unexpected"));
+    startOrResumeClinicalVisit.mockRejectedValueOnce(new Error("unexpected"));
     await expect(createClinicalEncounterAction(encounterInput)).resolves.toEqual({ ok: false, code: "FAILED" });
   });
 });

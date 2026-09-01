@@ -19,6 +19,7 @@ import {
   getClinicalEncounterDetail,
   listClinicalEncounters,
   listPatientMedicalRecords,
+  startOrResumeClinicalVisit,
   updateClinicalNote,
   voidPatientMedicalRecord,
 } from "./service";
@@ -32,6 +33,7 @@ const prescriptionId = "c6000000-0000-0000-0000-000000000006";
 const providerId = "c7000000-0000-0000-0000-000000000007";
 const parentNoteId = "c8000000-0000-0000-0000-000000000008";
 const appointmentId = "c9000000-0000-0000-0000-000000000009";
+const idempotencyKey = "ca000000-0000-0000-0000-00000000000a";
 
 const createdAt = "2026-08-27T09:00:00+00:00";
 
@@ -150,6 +152,80 @@ describe("clinical service input validation boundary", () => {
     await expect(getClinicalEncounterDetail({ actingBranchId: branchId, encounterId: "nope" })).rejects.toBeInstanceOf(z.ZodError);
     await expect(listPatientMedicalRecords({ actingBranchId: branchId, patientId, recordType: "PRESCRIPTION" })).rejects.toBeInstanceOf(z.ZodError);
     expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("managed clinical visit lifecycle boundary", () => {
+  beforeEach(() => rpc.mockReset());
+
+  const visitInput = { branchId, patientId };
+
+  it("never accepts a provider, organization, or actor identifier from the caller", async () => {
+    await expect(startOrResumeClinicalVisit({ ...visitInput, treatingProviderId: providerId })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, providerId })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, organizationId: "foreign-org" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, createdBy: "u-1" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, clinicalDate: "2026-09-01" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, actingBranchId: branchId })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed identifiers before any RPC", async () => {
+    await expect(startOrResumeClinicalVisit({ branchId: "not-a-uuid", patientId })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ branchId, patientId: "not-a-uuid" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, appointmentId: "nope" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ ...visitInput, idempotencyKey: "nope" })).rejects.toBeInstanceOf(z.ZodError);
+    await expect(startOrResumeClinicalVisit({ patientId })).rejects.toBeInstanceOf(z.ZodError);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("binds the lifecycle RPC to its exact contract and defaults both nullable arguments", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "2026-09-01", status: "OPEN", version: 1, resumed: false }], error: null });
+    await expect(startOrResumeClinicalVisit(visitInput)).resolves.toEqual({
+      encounterId, clinicalDate: "2026-09-01", status: "OPEN", version: 1, resumed: false,
+    });
+    expect(rpc).toHaveBeenLastCalledWith("start_or_resume_clinical_visit", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+      p_appointment_id: null,
+      p_idempotency_key: null,
+    });
+
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "2026-09-01", status: "OPEN", version: 1, resumed: true }], error: null });
+    await expect(startOrResumeClinicalVisit({ ...visitInput, appointmentId, idempotencyKey })).resolves.toEqual({
+      encounterId, clinicalDate: "2026-09-01", status: "OPEN", version: 1, resumed: true,
+    });
+    expect(rpc).toHaveBeenLastCalledWith("start_or_resume_clinical_visit", {
+      p_branch_id: branchId,
+      p_patient_id: patientId,
+      p_appointment_id: appointmentId,
+      p_idempotency_key: idempotencyKey,
+    });
+  });
+
+  it("rejects a lifecycle row that does not match the return contract", async () => {
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "2026-09-01", status: "OPEN", version: 1 }], error: null });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toBeInstanceOf(z.ZodError);
+
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "not-a-date", status: "OPEN", version: 1, resumed: false }], error: null });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toBeInstanceOf(z.ZodError);
+
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "2026-09-01", status: "NOT_STARTED", version: 1, resumed: false }], error: null });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toBeInstanceOf(z.ZodError);
+
+    rpc.mockResolvedValueOnce({ data: [{ encounter_id: encounterId, clinical_date: "2026-09-01", status: "OPEN", version: 1, resumed: false, treating_provider_id: providerId }], error: null });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toBeInstanceOf(z.ZodError);
+  });
+
+  it("maps lifecycle failures through the safe clinical error mapper", async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "42501", message: "not authorized" } });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toEqual(new ClinicalServiceError("NOT_AUTHORIZED"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "22023", message: "invalid input" } });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toEqual(new ClinicalServiceError("INVALID_INPUT"));
+
+    rpc.mockResolvedValueOnce({ data: null, error: { code: "XX000", message: "boom" } });
+    await expect(startOrResumeClinicalVisit(visitInput)).rejects.toEqual(new ClinicalServiceError("FAILED"));
   });
 });
 

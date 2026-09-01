@@ -6,7 +6,6 @@ import { AuthorizationError, requirePermission } from "@/lib/authorization";
 import {
   ClinicalServiceError,
   amendClinicalNote,
-  createClinicalEncounter,
   createClinicalNote,
   createPatientMedicalRecord,
   createPrescription,
@@ -14,6 +13,7 @@ import {
   finalizeClinicalNote,
   finalizePrescription,
   getClinicalEncounterDetail,
+  startOrResumeClinicalVisit,
   updateClinicalNote,
   voidPatientMedicalRecord,
 } from "@/lib/clinical/service";
@@ -55,12 +55,20 @@ async function authorizeRead(branchId: string) {
   await requirePermission({ permission: "patient.clinical.read", branchId });
 }
 
+// Opening an encounter now goes through the managed visit lifecycle, which owns
+// visit identity, the server-derived clinical date, and idempotent resume. The
+// route-context input is unchanged; the RPC re-derives and revalidates the
+// organization, provider, and date regardless of what the browser sends.
 export async function createClinicalEncounterAction(input: unknown): Promise<ClinicalMutationResult> {
   const invalidResult = invalid(createClinicalEncounterInputSchema, input); if (invalidResult) return invalidResult;
   try {
-    const value = input as { actingBranchId: string; patientId: string };
+    const value = input as { actingBranchId: string; patientId: string; appointmentId?: string | null };
     await authorizeWrite(value.actingBranchId);
-    await createClinicalEncounter(input as never);
+    await startOrResumeClinicalVisit({
+      branchId: value.actingBranchId,
+      patientId: value.patientId,
+      appointmentId: value.appointmentId ?? null,
+    });
     revalidatePath(`/patients/${value.patientId}`, "page");
     return { ok: true };
   } catch (error) { return result(error); }

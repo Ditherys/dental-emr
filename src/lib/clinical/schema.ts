@@ -42,6 +42,23 @@ export const createClinicalEncounterInputSchema = z.object({
   appointmentId: databaseUuid.nullable().optional(),
 }).strict();
 
+// The managed visit lifecycle never accepts an organization, provider, actor, or
+// clinical date: the RPC derives every one of them on the server.
+export const startOrResumeClinicalVisitInputSchema = z.object({
+  branchId: databaseUuid,
+  patientId: databaseUuid,
+  appointmentId: databaseUuid.nullable().optional(),
+  idempotencyKey: databaseUuid.nullable().optional(),
+}).strict();
+
+export const clinicalVisitRowSchema = z.object({
+  encounter_id: databaseUuid,
+  clinical_date: z.iso.date(),
+  status: clinicalEncounterStatusSchema,
+  version: z.number().int().positive(),
+  resumed: z.boolean(),
+}).strict();
+
 export const createClinicalNoteInputSchema = z.object({
   actingBranchId: databaseUuid,
   encounterId: databaseUuid,

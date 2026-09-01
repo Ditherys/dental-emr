@@ -474,6 +474,8 @@ const CLINICAL_RPCS_GRANTS_MIGRATION =
   "20260827013001_clinical_rpcs_grants.sql";
 const CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION =
   "20260901010001_clinical_encounter_actor_provider_grants.sql";
+const UNIFIED_CLINICAL_VISIT_LIFECYCLE_GRANTS_MIGRATION =
+  "20260901010101_unified_clinical_visit_lifecycle_grants.sql";
 const CLINICAL_PHOTO_RPCS_GRANTS_MIGRATION =
   "20260830010601_clinical_photo_rpcs_grants.sql";
 const CLINICAL_PHOTO_PROCESSING_LIFECYCLE_GRANTS_MIGRATION =
@@ -814,8 +816,21 @@ const clinicalEncounterActorProviderGrants = Object.freeze([
   object,
   privilege: "execute",
   columns: [],
-  reason: "The encounter creation boundary derives the treating provider from the authenticated user's active same-tenant provider profile at the acting branch. The provider ID is never accepted from the browser, while tenant, branch, clinical.write, appointment, audit, and clinical record invariants remain enforced in the SECURITY DEFINER body.",
+  supersededFrom: UNIFIED_CLINICAL_VISIT_LIFECYCLE_GRANTS_MIGRATION,
+  supersededBy: "public.start_or_resume_clinical_visit(uuid,uuid,uuid,uuid)",
+  reason: "The encounter creation boundary derives the treating provider from the authenticated user's active same-tenant provider profile at the acting branch. The provider ID is never accepted from the browser, while tenant, branch, clinical.write, appointment, audit, and clinical record invariants remain enforced in the SECURITY DEFINER body. Superseded by the managed visit lifecycle, which additionally owns visit identity, the server-derived clinical date, and idempotent resume.",
 })));
+
+const unifiedClinicalVisitLifecycleGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.start_or_resume_clinical_visit(uuid,uuid,uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason: "The only browser-callable clinical encounter creation boundary. It derives organization, actor, treating provider, and the Philippine clinical date inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch plus an active linked provider there, validates the patient and any appointment against the derived tenant, and converges repeated or concurrent calls on one managed OPEN visit under a transaction-scoped identity lock and a partial unique index. Only the create path appends one bounded audit event; a finalized visit is never reopened and pre-workspace encounters are never resumed or rewritten.",
+  },
+]);
 
 const clinicalPhotoRpcGrants = Object.freeze([
   "public.create_clinical_photo(uuid,uuid,uuid,uuid,text,text,text,timestamptz,text[],text[],text)",
@@ -1715,6 +1730,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_ENCOUNTER_ACTOR_PROVIDER_GRANTS_MIGRATION,
     grants: clinicalEncounterActorProviderGrants,
+  }),
+  Object.freeze({
+    file: UNIFIED_CLINICAL_VISIT_LIFECYCLE_GRANTS_MIGRATION,
+    grants: unifiedClinicalVisitLifecycleGrants,
   }),
 ]);
 
