@@ -577,12 +577,23 @@ const PROCEDURE_INSTALLMENT_SCHEDULE_IDEMPOTENCY_CONCURRENCY_GRANTS_MIGRATION = 
 const PROCEDURE_INSTALLMENT_SCHEDULE_LIFECYCLE_ORDERING_GRANTS_MIGRATION = "20260830010411_installment_schedule_lifecycle_ordering_grants.sql";
 const ODONTOGRAM_DTO_FEATURE_DETAIL_GRANTS_MIGRATION = "20260830010417_odontogram_dto_feature_detail_projection_grants.sql";
 const ATOMIC_CASE_COMPLETION_GRANTS_MIGRATION = "20260830010419_atomic_case_completion_grants.sql";
-const TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION = "20260830010424_treatment_plan_completion_context_grants.sql";// The object migration that REVOKES the browser grant on the reason-less
+const TREATMENT_PLAN_COMPLETION_CONTEXT_GRANTS_MIGRATION = "20260830010424_treatment_plan_completion_context_grants.sql";
+
+// The object migration that REVOKES the browser grant on the reason-less
 // three-argument periodontal amend boundary. It is the supersede pivot recorded
 // below; a grants file is never the pivot. No replacement exists yet, so no
 // entry carries `supersededBy`: task 11 owns amend_periodontal_examination_v2.
 const PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION =
   "20260901010210_periodontal_classification_staleness_repair.sql";
+
+// The object migrations that DROP the superseded treatment-execution signatures
+// registered below. A dropped function cannot be granted, so the registry must
+// record the pivot or it goes on claiming an approved `authenticated` privilege
+// on something that no longer exists.
+const TREATMENT_EXECUTION_CONTRACT_REPAIR_MIGRATION =
+  "20260828020526_treatment_execution_contract_repair.sql";
+const ATOMIC_TREATMENT_COMPLETION_MIGRATION =
+  "20260828020527_atomic_treatment_completion.sql";
 
 const odontogramRevampRpcGrants = Object.freeze([
   "public.get_patient_odontogram_v3(uuid,uuid)",
@@ -661,6 +672,41 @@ const odontogramO5O8FinalReconciliationGrants = Object.freeze([
   },
 ]);
 
+// Supersede markers for the O5-era signatures. `supersededFrom` always names the
+// migration whose application ENDS the privilege - the object migration that
+// revokes or drops it - never the grants file that replaces it. `supersededBy`
+// names the signature that took over, and must itself be a registered grant.
+//
+// The last three were found during task 9 review round 4: their functions were
+// dropped by 20260828020526 / 20260828020527 and no marker was ever recorded, so
+// the registry still asserted an approved `authenticated` privilege on three
+// signatures that have not existed for more than a hundred migrations.
+const ODONTOGRAM_O5_SUPERSEDED = Object.freeze({
+  "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,text)": {
+    supersededFrom: "20260828020516_odontogram_resolution_and_lineage_serialization.sql",
+    supersededBy: "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
+  },
+  "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)": {
+    supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
+    supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
+  },
+  "public.amend_periodontal_examination(uuid,uuid,uuid)": {
+    supersededFrom: PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION,
+  },
+  "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)": {
+    supersededFrom: TREATMENT_EXECUTION_CONTRACT_REPAIR_MIGRATION,
+    supersededBy: "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+  },
+  "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)": {
+    supersededFrom: TREATMENT_EXECUTION_CONTRACT_REPAIR_MIGRATION,
+    supersededBy: "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)",
+  },
+  "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)": {
+    supersededFrom: ATOMIC_TREATMENT_COMPLETION_MIGRATION,
+    supersededBy: "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,bigint,text,jsonb,text)",
+  },
+});
+
 const odontogramO5Grants = Object.freeze([
   "public.get_patient_odontogram(uuid,uuid)",
   "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)",
@@ -690,21 +736,7 @@ const odontogramO5Grants = Object.freeze([
   object,
   privilege: "execute",
   columns: [],
-  ...(object === "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,text)"
-    ? {
-        supersededBy:
-          "public.resolve_legacy_odontogram_entry(uuid,uuid,text,uuid,uuid,uuid,text)",
-        supersededFrom:
-          "20260828020516_odontogram_resolution_and_lineage_serialization.sql",
-      }
-    : object === "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,text)"
-      ? {
-          supersededFrom: "20260830010002_odontogram_feature_details_rpc.sql",
-          supersededBy: "public.record_tooth_clinical_entry(uuid,uuid,text,text[],text,text,text,jsonb,text,timestamptz,text)",
-        }
-      : object === "public.amend_periodontal_examination(uuid,uuid,uuid)"
-        ? { supersededFrom: PERIODONTAL_CLASSIFICATION_STALENESS_MIGRATION }
-        : {}),
+  ...(ODONTOGRAM_O5_SUPERSEDED[object] ?? {}),
   reason:
     "O5 odontogram clinical boundary (ADR-028). Derives organization_id from an active acting branch (status='active'), binds actor via auth.uid(), gates on patient.clinical permissions (read/write plus elevated patient.clinical.correct for legacy resolution, bridge/implant/perio correction and nonterminal execution correction), validates patient membership via FOR KEY SHARE, uses optimistic versions, caps projections at 200 rows / bounded batches, and emits one atomic CLINICAL audit event per mutation. Base tables remain RLS-locked with zero policies.",
 })));

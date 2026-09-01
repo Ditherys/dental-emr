@@ -240,9 +240,12 @@ const APPROVED_FINAL_PRIVILEGES = [
     // amendment reason, so the DRAFT it creates can never be finalized and
     // permanently consumes the predecessor's only successor slot. Its browser
     // grant was revoked adjacent to the task 9 staleness repair.
-    "public.transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
-    "public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)",
-    "public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)",
+    // The three O5-era execution signatures are deliberately absent: their
+    // functions were DROPPED by 20260828020526 and 20260828020527 and replaced
+    // by the six- and seven-argument forms below, so the live catalog cannot
+    // hold the privilege. The registry recorded no supersede marker for them
+    // until task 9 review round 4, and so went on claiming an approved
+    // `authenticated` privilege on signatures that no longer existed.
     "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint)",
     "public.update_treatment_plan_item_centavos(uuid,uuid,uuid,integer,uuid,text,text,bigint)",
     "public.add_treatment_plan_item_centavos(uuid,uuid,integer,uuid,text,text,bigint,text,integer,text[],text)",
@@ -1460,7 +1463,7 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(265);
+    expect(approved.size).toBe(262);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

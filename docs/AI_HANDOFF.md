@@ -1,12 +1,12 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 3)
+# AI Handoff - Unified Clinical Chart workspace, Task 9 (review fixes, round 4)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
 
-This checkpoint is the fourth commit of Task 9. Rounds 1, 2 and 3 of the review
-were applied on top of `5dce284` as `372f1e0`, `6b5eaa2` and this commit. The
-sections below describe the task as it now stands, with the review-fix sections
-at the end, in order.
+This checkpoint is the fifth commit of Task 9. Rounds 1-4 of the review were
+applied on top of `5dce284` as `372f1e0`, `6b5eaa2`, `4c8e3c5` and this commit.
+The sections below describe the task as it now stands, with the review-fix
+sections at the end, in order.
 
 ## Task 9 - Expand the canonical periodontal and peri-implant data model (2026-09-01)
 
@@ -642,6 +642,11 @@ countdown still counts down. Only the definition of "today" moved, from the
 server's timezone to the clinic's. `20260901010231` asserts that all **four**
 repaired billing functions now agree, because a partial repair is the failure
 mode worth catching: it would leave the ledger internally inconsistent.
+**Framing correction (round 4):** that migration's own header says it asserts
+"the whole billing surface now agrees on what today means". That was overstated
+and the file is applied, so the sentence cannot be edited. What it actually
+asserts - correctly - is that the **four repaired functions** agree. See the
+round-4 section for the exact list of what agrees and what does not.
 
 ### Ruling accepted: the repository-wide sweep is NOT done here
 
@@ -670,9 +675,12 @@ task by task by whichever agent happens to be nearby.
    `scripts/migration-privilege-lint.mjs` already parses every migration into
    statements and is the natural place to host it.
 
-Until that sweep runs, the eight declined sites still misbehave between 16:00 and
+Until that sweep runs, the declined sites still misbehave between 16:00 and
 24:00 UTC. All fail closed - they reject rather than corrupt - which is why they
-can wait; none of them blocks the database gate.
+can wait; none of them blocks the database gate. The exact count and list are in
+the round-4 section, which supersedes the "eight" stated here: the correct
+figure is **eight**, and round 4 verified it against the live catalog rather
+than by enumeration from memory.
 
 ### Files added this round
 
@@ -730,4 +738,147 @@ object was touched.
 - `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
 - `npx vitest run scripts/` - **13 files, 287/287 passed** after the file-count
   update.
+- `git diff --check` - clean.
+
+## Review fixes applied in this commit (round 4)
+
+Round 4 asked for one substantive fix: a ninth UTC-date site at
+`20260828020400_odontogram_rpcs.sql:3074`, inside
+`public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)`.
+
+### The ninth site does not exist, and the live path is already correct
+
+That function was **dropped**, by
+`20260828020527_atomic_treatment_completion.sql:13`:
+
+```
+drop function if exists public.complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date);
+```
+
+The line the review cited is dead code inside an applied historical migration; it
+can never execute again. The live catalog holds only the seven-argument
+replacement `(uuid,uuid,integer,bigint,text,jsonb,text)`, which takes **no
+service date at all**. It delegates to
+`private.complete_treatment_plan_item_with_charge_serialized_impl`, which calls
+`public.post_charge` and then reads the posted `service_date` back out of the
+charge row to stamp the clinical entry, bridge and implant components.
+
+So the path is already correct - and correct **because of round 2**. Fixing
+`post_charge` transitively fixed the service date on this charge-creating
+clinical path, including the `effective_at` of everything materialized from it.
+That was not something round 2 set out to do and is worth recording.
+
+No migration was written for a function that does not exist, and there is no
+fifth function for the `20260901010231`-style assertions to cover.
+
+### The real defect was in the registry, and there were three of them
+
+The review's other observation was exact: `scripts/approved-final-grants.mjs`
+carried neither `supersededBy` nor `supersededFrom` for that signature, so on the
+registry's own account it remained an approved `authenticated` privilege.
+
+Rather than check the one entry, every registered function grant was
+cross-checked against the live catalog with `to_regprocedure`. **Three** entries
+name functions that no longer exist and carried no supersede marker - all in
+`odontogramO5Grants`, all dropped long ago:
+
+| Registry entry | Dropped by | Replaced by |
+| --- | --- | --- |
+| `transition_treatment_plan_item_execution(uuid,uuid,integer,text,text)` | `20260828020526` | `(uuid,uuid,integer,text,text,text)` |
+| `correct_treatment_plan_item_execution(uuid,uuid,integer,text,text)` | `20260828020526` | `(uuid,uuid,integer,text,text,text)` |
+| `complete_treatment_plan_item_with_charge(uuid,uuid,integer,uuid,bigint,date)` | `20260828020527` | `(uuid,uuid,integer,bigint,text,jsonb,text)` |
+
+All three now carry `supersededFrom` naming the **object migration that drops
+them** - never a grants file - and `supersededBy` naming the registered
+replacement. The nested-ternary marker chain became a named lookup map,
+`ODONTOGRAM_O5_SUPERSEDED`, because six markers in a ternary chain is not
+readable. **The refactor was proved equivalent**: the full resolved
+`TERMINAL_MIGRATIONS` structure was dumped before and after and differed in
+exactly the three intended markers and nothing else.
+
+Effect: the observable final boundary set drops from 265 to 262 browser-reachable
+keys, and `scripts/boundary-privilege-invariant.test.mjs` no longer expects three
+privileges the database cannot hold.
+
+### Framing correction: precisely who agrees on what "today" means
+
+`20260901010231`'s header claims it asserts that "the whole billing surface now
+agrees". That was overstated, and the file is applied so the sentence stands.
+What it actually asserts, correctly, is that the four repaired functions agree.
+Verified against the live catalog rather than from memory:
+
+**Derive the Philippine clinical date (repaired in rounds 2 and 3) - 4:**
+`post_charge`, `post_charge_with_attribution_override`,
+`correct_charge_attribution`, `list_pending_pdc`. Eleven functions in total
+reference `Asia/Manila`, the other seven being the clinical stack that always
+did.
+
+**Still derive from the server clock - 8, all deferred to the sweep by the
+controller's round-3 ruling:** `private.validate_patient_birth_date`,
+`public.create_patient` (two signatures), `public.find_duplicate_candidates`,
+`public.public_submit_booking_request`, `public.search_patients`,
+`public.update_patient` - the seven patient birth-date guards - and
+`public.get_treatment_plan_completion_context`, which offers `current_date` as a
+default service date.
+
+Eight is the correct figure and it was measured, not counted from memory. The
+recommended sweep - `private.clinic_today()` plus a lint that fails on any new
+bare occurrence - is unchanged and remains the named residual.
+
+### Nits
+
+- `scripts/approved-final-grants.mjs` - the round-1 comment block was glued to
+  the end of an unrelated constant line. Separated.
+- `supabase/tests/periodontal_full_chart.test.sql` - the unused
+  `perio_reset_probe` temporary table is removed. It was dead scaffolding from an
+  approach I abandoned.
+- `20260901010231`'s bounds assertions check substring presence of the
+  `if p_service_date >` prefix rather than that the branch still raises. The
+  review was right that this reads stronger than it is. The file is applied and
+  cannot be edited; no new migration was written for a readability point alone.
+  Recorded here so the next reader is not misled about what that assertion
+  proves.
+
+### Files changed this round
+
+- `scripts/approved-final-grants.mjs` - three supersede markers added, marker
+  chain turned into a verified-equivalent lookup map, glued comment separated.
+- `scripts/boundary-privilege-invariant.test.mjs` - three non-existent
+  signatures removed from the effective-final fixture with a comment saying why;
+  approved-key count 265 -> 262.
+- `supabase/tests/periodontal_full_chart.test.sql` - dead temporary table
+  removed.
+- `docs/AI_HANDOFF.md` - this section, the framing correction, and two further
+  Task 11 requirements.
+
+**No migration was added this round**, because the reported defect had no live
+target. No test assertion was weakened, deleted or inverted.
+
+### Round-4 commands and observed results
+
+- **Catalog proof that the ninth site is gone**: the exhaustive scan for
+  `(statement_timestamp|now|clock_timestamp|transaction_timestamp)()::date` and
+  `current_date` across every `public`/`private` function returns eight
+  functions, none of them a treatment-completion RPC; and
+  `complete_treatment_plan_item_with_charge` exists only in its seven-argument
+  form, with no UTC date expression.
+- **Registry cross-check**: all 271 registered function grants tested with
+  `to_regprocedure`; exactly three resolve to nothing and lacked a marker.
+- **Registry refactor equivalence**: before/after dump of `TERMINAL_MIGRATIONS`
+  differed in exactly 3 markers, 0 other changes, same terminal order, same
+  grant counts.
+- Billing and PDC suites, unchanged by this round because no database object
+  changed: `billing_charge_ledger`, `billing_authorization`, `postdated_cheques`,
+  `financial_analytics`, `clinical_treatment_events_v2` all **P1_TEST_PASS**;
+  `procedure_installment_schedules` still no sentinel.
+  `periodontal_full_chart` and `odontogram_permission_contract` **P1_TEST_PASS**.
+- `npm run test:db:local` - **82 suites pass, then halts at
+  `treatment_plans.test.sql`**, the documented pre-existing point.
+- **All 109 pgTAP suites run directly and serially: 106 pass**, only the three
+  documented pre-existing failures.
+- `npm run security:migrations` - **passed**; 327 files, 398 approved final
+  privileges, unchanged.
+- `npm run typecheck` - **passed, no output.**
+- `npm run lint` - **0 errors**, the same 3 pre-existing warnings.
+- `npx vitest run scripts/` - **13 files, 287/287 passed.**
 - `git diff --check` - clean.

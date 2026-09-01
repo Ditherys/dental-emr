@@ -837,9 +837,6 @@ declare
   v_before text;
   v_after text;
 begin
-  -- Helper: write a complete, truthful derived classification.
-  create temporary table if not exists perio_reset_probe (label text) on commit drop;
-
   -- 1. A NEW child measurement resets the classification.
   update public.periodontal_examinations
      set derived_diagnosis = 'PERIODONTITIS', derived_stage = 'III', derived_grade = 'B',
