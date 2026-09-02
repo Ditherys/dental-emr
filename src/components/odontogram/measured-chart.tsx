@@ -70,6 +70,11 @@ export type AnatomicalChartProps = {
    * occlusal template falls back to its front template in the renderer.
    */
   renderAngle?: RendererToothView;
+  /**
+   * Include the third molars (FDI 18/28/38/48) in the grid. Presentation only:
+   * hiding them removes no canonical record and no clinical finding.
+   */
+  showWisdomTeeth?: boolean;
 };
 
 type ArchRow = "upper" | "lower";
@@ -82,6 +87,13 @@ function archRowFor(fdi: number): ArchRow {
 function isPrimary(fdi: number): boolean {
   const quadrant = Math.trunc(fdi / 10);
   return quadrant >= 5 && quadrant <= 8;
+}
+
+const THIRD_MOLAR_POSITION = 8;
+
+function isThirdMolar(fdi: number): boolean {
+  const quadrant = Math.trunc(fdi / 10);
+  return quadrant >= 1 && quadrant <= 4 && fdi % 10 === THIRD_MOLAR_POSITION;
 }
 
 /**
@@ -219,6 +231,7 @@ export function MeasuredChart({
   showBoneGum = true,
   showPulp = true,
   renderAngle = "front",
+  showWisdomTeeth = true,
 }: AnatomicalChartProps): React.ReactElement {
   const [multiSelect, setMultiSelect] = React.useState(false);
   const anchorRef = React.useRef<number | null>(null);
@@ -244,8 +257,9 @@ export function MeasuredChart({
   const resolvedViewport: ClinicalChartViewport = auto ? "FULL" : viewport;
   const ordered = React.useMemo(() => {
     const teeth = viewportFdiTeeth(resolvedViewport, { includePrimary });
-    return dentition === "PRIMARY" ? teeth.filter(isPrimary) : teeth;
-  }, [dentition, includePrimary, resolvedViewport]);
+    const dentitionScoped = dentition === "PRIMARY" ? teeth.filter(isPrimary) : teeth;
+    return showWisdomTeeth ? dentitionScoped : dentitionScoped.filter((fdi) => !isThirdMolar(fdi));
+  }, [dentition, includePrimary, resolvedViewport, showWisdomTeeth]);
   const chart = React.useMemo(
     () => projectRendererChart(projection, ordered, renderAngle),
     [ordered, projection, renderAngle],

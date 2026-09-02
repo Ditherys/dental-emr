@@ -50,6 +50,7 @@ function Harness({
   dentition,
   proposals,
   renderAngle,
+  showWisdomTeeth,
 }: {
   projection?: ReturnType<typeof projectPatientChart>;
   initial?: readonly number[];
@@ -59,6 +60,7 @@ function Harness({
   dentition?: ChartDentition;
   proposals?: ReadonlyMap<number, { count: number; priority: "URGENT" | "HIGH" | "ROUTINE" | "ELECTIVE"; surfaces: readonly string[] }>;
   renderAngle?: RendererToothView;
+  showWisdomTeeth?: boolean;
 }) {
   const [selected, setSelected] = React.useState<readonly number[]>(initial);
   return (
@@ -71,6 +73,7 @@ function Harness({
       readOnly={readOnly}
       proposals={proposals}
       renderAngle={renderAngle}
+      showWisdomTeeth={showWisdomTeeth}
       onSelectionChange={(next) => {
         onChange?.(next);
         setSelected(next);
@@ -503,5 +506,26 @@ describe("occlusal rendering angle", () => {
     const rendered = tooth(11);
     expect(rendered.querySelector('[data-layer="gold-inlay"]')).toHaveAttribute("data-active", "1");
     expect(rendered.querySelector('[data-layer="gold-onlay"]')).toBeNull();
+  });
+});
+
+describe("wisdom-teeth visibility", () => {
+  const THIRD_MOLARS = [18, 28, 38, 48];
+
+  it("includes the third molars by default", () => {
+    render(<Harness viewport="FULL" />);
+    for (const fdi of THIRD_MOLARS) {
+      expect(screen.queryByTestId(`tooth-${fdi}`), `FDI ${fdi}`).not.toBeNull();
+    }
+  });
+
+  it("removes the third molars from the grid when hidden", () => {
+    render(<Harness viewport="FULL" showWisdomTeeth={false} />);
+    for (const fdi of THIRD_MOLARS) {
+      expect(screen.queryByTestId(`tooth-${fdi}`), `FDI ${fdi}`).toBeNull();
+    }
+    // Every other permanent tooth is untouched.
+    expect(screen.queryByTestId("tooth-17")).not.toBeNull();
+    expect(screen.queryByTestId("tooth-11")).not.toBeNull();
   });
 });
