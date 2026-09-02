@@ -9,6 +9,7 @@ import { projectPatientChart, type PatientChartDTO } from "@/lib/odontogram/char
 import type { ClinicalEntry } from "@/lib/odontogram/state";
 
 import { MeasuredChart, resolveSelection, type ChartDentition, type ChartViewportChoice } from "./measured-chart";
+import type { RendererToothView } from "@/lib/odontogram/renderer-projection";
 
 afterEach(cleanup);
 
@@ -48,6 +49,7 @@ function Harness({
   viewport = "QUADRANT_1" as ChartViewportChoice,
   dentition,
   proposals,
+  renderAngle,
 }: {
   projection?: ReturnType<typeof projectPatientChart>;
   initial?: readonly number[];
@@ -56,6 +58,7 @@ function Harness({
   viewport?: ChartViewportChoice;
   dentition?: ChartDentition;
   proposals?: ReadonlyMap<number, { count: number; priority: "URGENT" | "HIGH" | "ROUTINE" | "ELECTIVE"; surfaces: readonly string[] }>;
+  renderAngle?: RendererToothView;
 }) {
   const [selected, setSelected] = React.useState<readonly number[]>(initial);
   return (
@@ -67,6 +70,7 @@ function Harness({
       selectedFdi={selected}
       readOnly={readOnly}
       proposals={proposals}
+      renderAngle={renderAngle}
       onSelectionChange={(next) => {
         onChange?.(next);
         setSelected(next);
@@ -456,4 +460,24 @@ describe("MeasuredChart", () => {
     expect(container.innerHTML.toLowerCase()).not.toContain("localstorage");
     expect(container.textContent?.toLowerCase()).not.toContain("classic");
   }, 30_000);
+});
+
+describe("occlusal rendering angle", () => {
+  it("renders the occlusal template for a posterior tooth", () => {
+    render(<Harness renderAngle="occlusal" />);
+    const tooth = screen.getByTestId("tooth-16");
+    expect(tooth.getAttribute("data-view")).toBe("occlusal");
+    expect(tooth.querySelector("svg")).not.toBeNull();
+  });
+
+  it("falls back to the front template for an anterior tooth instead of a bare number", () => {
+    render(<Harness renderAngle="occlusal" />);
+    // FDI 11 has no occlusal template. It must still draw a tooth.
+    expect(screen.getByTestId("tooth-11").querySelector("svg")).not.toBeNull();
+  });
+
+  it("renders front templates by default", () => {
+    render(<Harness />);
+    expect(screen.getByTestId("tooth-16").getAttribute("data-view")).toBe("front");
+  });
 });

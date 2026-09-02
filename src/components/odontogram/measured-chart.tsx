@@ -11,6 +11,7 @@ import {
   projectionHasPrimaryDentition,
   viewportFdiTeeth,
   type RendererToothProjection,
+  type RendererToothView,
 } from "@/lib/odontogram/renderer-projection";
 
 import type { ChartAnatomyDisplay } from "./measured-fork-layers";
@@ -64,6 +65,11 @@ export type AnatomicalChartProps = {
   showBoneGum?: boolean;
   /** Draw the healthy pulp chamber. Presentation only; defaults to today's behaviour. */
   showPulp?: boolean;
+  /**
+   * The angle every tooth is drawn from. Presentation only. A tooth with no
+   * occlusal template falls back to its front template in the renderer.
+   */
+  renderAngle?: RendererToothView;
 };
 
 type ArchRow = "upper" | "lower";
@@ -212,6 +218,7 @@ export function MeasuredChart({
   proposals,
   showBoneGum = true,
   showPulp = true,
+  renderAngle = "front",
 }: AnatomicalChartProps): React.ReactElement {
   const [multiSelect, setMultiSelect] = React.useState(false);
   const anchorRef = React.useRef<number | null>(null);
@@ -239,7 +246,10 @@ export function MeasuredChart({
     const teeth = viewportFdiTeeth(resolvedViewport, { includePrimary });
     return dentition === "PRIMARY" ? teeth.filter(isPrimary) : teeth;
   }, [dentition, includePrimary, resolvedViewport]);
-  const chart = React.useMemo(() => projectRendererChart(projection, ordered, "front"), [ordered, projection]);
+  const chart = React.useMemo(
+    () => projectRendererChart(projection, ordered, renderAngle),
+    [ordered, projection, renderAngle],
+  );
   const selected = React.useMemo(() => new Set(selectedFdi), [selectedFdi]);
 
   const handleActivate = React.useCallback(

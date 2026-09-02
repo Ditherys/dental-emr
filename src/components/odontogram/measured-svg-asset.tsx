@@ -93,7 +93,12 @@ export function MeasuredToothAsset({
   label: string;
   display?: ChartAnatomyDisplay;
 }): React.ReactElement | null {
-  const assetKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
+  // Only posterior teeth have an occlusal template. An anterior tooth in the
+  // occlusal view draws its front template rather than degrading to a bare
+  // number: a chart must never show an empty slot for a tooth that exists.
+  const assetKey =
+    measuredAssetKeyForFdi(tooth.fdi, tooth.view) ??
+    (tooth.view === "occlusal" ? measuredAssetKeyForFdi(tooth.fdi, "front") : null);
   if (!assetKey) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
 
   return (
