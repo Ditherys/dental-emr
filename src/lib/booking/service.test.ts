@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
@@ -25,6 +25,27 @@ const managementToken = "11111111-2222-3333-4444-555555555555";
 const managementTokenHash = "a".repeat(64);
 const requestedStartsAt = "2026-09-01T09:00:00+00:00";
 const requestedEndsAt = "2026-09-01T09:30:00+00:00";
+
+/**
+ * The submission schema refuses a requested start that is not in the FUTURE, so
+ * a fixture timestamp is only valid relative to a clock. Left on the real
+ * clock, these fixtures pass until the wall clock passes them and then fail
+ * forever - which is exactly what happened on 2026-09-02.
+ *
+ * The clock is therefore injected, not the date bumped: bumping a literal only
+ * re-arms the same bomb further out. Only `Date` is faked, so timers, promises
+ * and Testing Library's own scheduling stay real.
+ */
+const FIXED_CLOCK = new Date("2026-08-27T09:00:00.000Z");
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FIXED_CLOCK);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const submission = {
   firstName: "Juan",

@@ -1,54 +1,24 @@
-"use client";
+/**
+ * The protected patient odontogram DTO, mapped into the domain aggregate the
+ * canonical chart projection consumes.
+ *
+ * This lived inside the fork compatibility wrapper until Task 17 removed it. It
+ * is pure: no React, no DOM, no persistence, no renderer type. The chart, the
+ * print sheet and the export composer all read the SAME projection, so they can
+ * never disagree about what the record says.
+ */
 
-import * as React from "react";
-
-import { getCalSeverity } from "@/lib/odontogram/perio";
 import type {
   BridgeChartInput,
   PatientChartDTO,
   PeriodontalChartInput,
-} from "@/lib/odontogram/chart-projection";
-import { projectPatientChart } from "@/lib/odontogram/chart-projection";
-import type { ClinicalFeatureCode, Mobility, Surface } from "@/lib/odontogram/clinical-codes";
-import type { ClinicalFeatureDetail } from "@/lib/odontogram/feature-contract";
-import type { ImplantComponentRecord } from "@/lib/odontogram/implant";
-import type { ClinicalEntry, ClinicalStatus } from "@/lib/odontogram/state";
-import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "@/lib/odontogram/types";
-import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
-import type { NumberingSystem } from "@/lib/odontogram/dentition";
-
-import { useClinicalChartView } from "./clinical-chart-toolbar";
-import { MeasuredChart } from "./measured-chart";
-import type { ToothProposalMarker } from "./measured-tooth";
-import "./styles.css";
-
-/**
- * Compatibility wrapper around the EMR-owned `MeasuredChart`.
- *
- * The controlled fork is no longer a runtime dependency of the chart: this
- * component projects the protected patient DTO into the canonical chart
- * projection and hands that to the anatomical renderer. It keeps the existing
- * prop signature so the patient workspace can cut over in one place; Task 17
- * removes it together with the remaining fork payload adapter.
- *
- * The renderer is projection-only, so `onDraftChange` is never called. Clinical
- * writes go through the tooth inspector and, from Task 4, the record composer.
- */
-export type ForkOdontogramProps = {
-  patientKey: string;
-  dto: PatientOdontogramDTO;
-  canWriteClinical: boolean;
-  onSelect: (fdi: number) => void;
-  /** Retained for prop compatibility. The projection-only renderer never emits drafts. */
-  onDraftChange: (drafts: readonly ForkClinicalDraft[]) => void;
-  onError: (message: string) => void;
-  /**
-   * Proposed treatment per tooth, projected from treatment plan items by the
-   * Treatment plan chart mode. It is never derived from the patient DTO and
-   * never written to it.
-   */
-  proposals?: ReadonlyMap<number, ToothProposalMarker>;
-};
+} from "./chart-projection";
+import type { ClinicalFeatureCode, Mobility, Surface } from "./clinical-codes";
+import type { ClinicalFeatureDetail } from "./feature-contract";
+import type { ImplantComponentRecord } from "./implant";
+import { getCalSeverity } from "./perio";
+import type { ClinicalEntry, ClinicalStatus } from "./state";
+import type { PatientOdontogramDTO, ToothClinicalEntryDTO } from "./types";
 
 const RELATIONSHIP_OWNED_CODES = new Set(["BRIDGE", "IMPLANT"]);
 
@@ -215,71 +185,4 @@ export function toPatientChartDTO(dto: PatientOdontogramDTO): PatientChartDTO {
     bridges: toBridges(dto),
     periodontal: toPeriodontal(dto),
   };
-}
-
-export function ForkOdontogram({
-  patientKey,
-  dto,
-  canWriteClinical,
-  onSelect,
-  onError,
-  proposals,
-}: ForkOdontogramProps): React.ReactElement {
-  // The Clinical chart workspace owns notation, dentition, region and selection
-  // through its single toolbar. Mounted outside that workspace this falls back
-  // to a bounded local view and keeps its own notation control.
-  const view = useClinicalChartView();
-  const { setView } = view;
-
-  const projection = React.useMemo(() => {
-    try {
-      return projectPatientChart(toPatientChartDTO(dto));
-    } catch {
-      onError("The chart could not be prepared from the clinical record. Refresh to try again.");
-      return projectPatientChart({ entries: [], implants: [] });
-    }
-  }, [dto, onError]);
-
-  const handleSelectionChange = React.useCallback(
-    (next: readonly number[]) => {
-      setView({ selectedFdi: next });
-      const last = next.at(-1);
-      if (last !== undefined) onSelect(last);
-    },
-    [onSelect, setView],
-  );
-
-  return (
-    <div className="dental-emr-fork" data-testid="fork-odontogram" data-patient-key={patientKey}>
-      {!view.managed && (
-        <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-          <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">
-            Tooth notation
-          </label>
-          <select
-            id={`fork-numbering-${patientKey}`}
-            data-testid="fork-numbering"
-            value={view.notation}
-            onChange={(event) => setView({ notation: event.target.value as NumberingSystem })}
-            className="min-h-11 rounded-md border bg-background px-2 text-sm"
-          >
-            <option value="FDI">FDI</option>
-            <option value="UNIVERSAL">Universal</option>
-            <option value="PALMER">Palmer</option>
-          </select>
-        </div>
-      )}
-      <MeasuredChart
-        key={patientKey}
-        projection={projection}
-        notation={view.notation}
-        viewport={view.viewport}
-        dentition={view.dentition}
-        selectedFdi={view.selectedFdi}
-        proposals={proposals}
-        onSelectionChange={handleSelectionChange}
-        readOnly={!canWriteClinical}
-      />
-    </div>
-  );
 }

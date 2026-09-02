@@ -41,6 +41,10 @@ describe("ClinicalChartWorkspace information architecture", () => {
     renderWorkspace();
 
     expect(screen.getAllByRole("region", { name: "Clinical chart" })).toHaveLength(1);
+    // The stable anchor the end-to-end specifications wait for.
+    expect(screen.getByTestId("clinical-chart-workspace")).toBe(
+      screen.getByRole("region", { name: "Clinical chart" }),
+    );
     expect(screen.getByRole("heading", { name: "Clinical chart" })).toBeVisible();
     expect(screen.getByTestId("visit-header-slot")).toBeVisible();
     expect(screen.getByRole("region", { name: "Medical safety summary" })).toBeVisible();
@@ -324,5 +328,70 @@ describe("ClinicalChartWorkspace patient scoping", () => {
     fireEvent.click(screen.getByRole("button", { name: "Treatment plan" }));
 
     expect(screen.getByTestId("selection-probe")).toHaveTextContent("16,17");
+  });
+});
+
+/**
+ * Task 17. Leaving a chart mode UNMOUNTS its panel, and an unmounted panel's
+ * state is gone. The periodontal mode is the one that holds clinician-entered
+ * measurements that are not yet on the record, so switching mode away from it
+ * silently destroyed unsaved readings: the panel's own unsaved-state cleanup
+ * reported `false` on the way out, which is exactly when a warning would have
+ * been the only signal that anything was lost.
+ *
+ * The workspace owns `mode`, so the confirmation belongs here. Nothing else in
+ * the tree can see both the outgoing panel's unsaved state and the mode change
+ * that is about to discard it.
+ */
+describe("ClinicalChartWorkspace unsaved chart work", () => {
+  function renderWithUnsavedPerio(overrides: Partial<Parameters<typeof ClinicalChartWorkspace>[0]> = {}) {
+    return renderWorkspace({ defaultMode: "PERIODONTAL", chartHasUnsavedWork: true, ...overrides });
+  }
+
+  it("switches mode without asking when the mounted chart holds nothing unsaved", () => {
+    renderWorkspace({ defaultMode: "PERIODONTAL" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Current status" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chart-panel")).toBeVisible();
+  });
+
+  it("warns before a mode switch that would discard unsaved chart work, and keeps the mode on cancel", async () => {
+    const user = userEvent.setup();
+    renderWithUnsavedPerio();
+
+    await user.click(screen.getByRole("button", { name: "Current status" }));
+
+    const confirmation = await screen.findByRole("alertdialog");
+    expect(confirmation).toHaveTextContent(/unsaved/i);
+
+    await user.click(within(confirmation).getByRole("button", { name: "Keep charting" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("perio-panel")).toBeVisible();
+    expect(screen.queryByTestId("chart-panel")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Periodontal" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("changes mode only after the discard is confirmed", async () => {
+    const user = userEvent.setup();
+    renderWithUnsavedPerio();
+
+    await user.click(screen.getByRole("button", { name: "Treatment plan" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Discard and switch" }));
+
+    await waitFor(() => expect(screen.getByTestId("plan-panel")).toBeVisible());
+    expect(screen.queryByTestId("perio-panel")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Treatment plan" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("does not interrupt a re-press of the mode that is already showing", () => {
+    renderWithUnsavedPerio();
+
+    fireEvent.click(screen.getByRole("button", { name: "Periodontal" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByTestId("perio-panel")).toBeVisible();
   });
 });

@@ -4,14 +4,14 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
-import { ForkOdontogram, toPatientChartDTO } from "@/components/odontogram/fork-odontogram";
 import { ClinicalChartPrint } from "@/components/odontogram/clinical-chart-print";
+import { MeasuredChart } from "@/components/odontogram/measured-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
 import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
-import type { ForkClinicalDraft } from "@/lib/odontogram/fork-adapter";
+import { toPatientChartDTO } from "@/lib/odontogram/patient-chart-dto";
 import type { ToothProposalMarker } from "@/components/odontogram/measured-tooth";
+import "@/components/odontogram/styles.css";
 import type { PlanAuthoringContext } from "@/components/odontogram/planned-treatment-form";
 import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
@@ -23,12 +23,8 @@ import type { ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
 
-/**
- * The projection-only renderer never emits fork drafts. The prop stays until
- * Task 17 removes the wrapper; a stable no-op keeps it from allocating a new
- * closure on every render.
- */
-const NO_FORK_DRAFTS: (drafts: readonly ForkClinicalDraft[]) => void = () => {};
+/** A procedure case the follow-up dialog may be recorded against. */
+export type ProcedureCaseChoice = { procedureCaseId: string; display: string };
 
 type Props = {
   patientId: string;
@@ -109,7 +105,7 @@ export function OdontogramSection({
   // never leave the chart painted as selected while the section believes
   // nothing is.
   const view = useClinicalChartView();
-  const { managed, setView, selectedFdi: viewSelection } = view;
+  const { setView, selectedFdi: viewSelection } = view;
   const selectedFdi = viewSelection.at(-1) ?? null;
 
   // Render only state whose owner matches the route parameter. Effects clear
@@ -133,21 +129,21 @@ export function OdontogramSection({
   // mounted, so it fires in every chart mode rather than only the one this
   // section happens to occupy. This section deliberately keeps no second copy.
 
-  const handleSelect = React.useCallback(
-    (fdi: number) => {
+  const handleSelectionChange = React.useCallback(
+    (next: readonly number[]) => {
       const active = document.activeElement as HTMLElement | null;
       if (active?.matches?.("[data-fdi]")) lastFocusedRef.current = active;
-      // A managed chart already published the full selection, including a
-      // multi-tooth one, before it reported the last tooth. Only an unmanaged
-      // chart — a compatibility mount with no workspace above it — needs this
-      // section to record the selection on its behalf.
-      if (!managed) setView({ selectedFdi: [fdi] });
+      // The chart is projection-only: it reports a selection and this section
+      // publishes it into the one chart view the workspace owns. The full
+      // selection is published, including a multi-tooth one, so the toolbar
+      // readout and the record drawer always agree with the painted chart.
+      setView({ selectedFdi: next });
       // Selecting a tooth opens the temporary record drawer. It is a bounded
       // side panel rather than the removed permanent inspector column, so the
       // chart keeps the whole workspace row when nothing is selected.
-      setDrawerOpen(true);
+      if (next.length > 0) setDrawerOpen(true);
     },
-    [managed, setView],
+    [setView],
   );
 
   const refetch = React.useCallback(async () => {
@@ -192,6 +188,29 @@ export function OdontogramSection({
     setLoading(true);
     void refetch();
   }, [hasMismatchedInitialDto, initialDto, loadFailed, patientId, refetch]);
+
+  // One projection for one patient: the on-screen chart, the print sheet and
+  // the export composer all read this same value, so they can never disagree
+  // about what the canonical record says. A malformed row degrades the whole
+  // chart to an empty projection with a visible message rather than throwing.
+  const chart = React.useMemo(() => {
+    if (!dto) return null;
+    try {
+      return { projection: projectPatientChart(toPatientChartDTO(dto)), failed: false };
+    } catch {
+      // A malformed row must not blank the whole work surface. The empty
+      // projection still draws the dentition; the message below says the record
+      // could not be read, so nothing is presented as a clinical negative.
+      return { projection: projectPatientChart({ entries: [], implants: [] }), failed: true };
+    }
+  }, [dto]);
+  const chartProjection = chart?.projection ?? null;
+  const chartFailed = chart?.failed === true;
+  React.useEffect(() => {
+    if (chartFailed) {
+      setError("The chart could not be prepared from the clinical record. Refresh to try again.");
+    }
+  }, [chartFailed]);
 
   const progressEvents = React.useMemo(
     () => isCurrentPatientSnapshot ? (suppliedProgressEvents ?? (dto ? progressEventsFromOdontogram(dto) : [])) : [],
@@ -256,26 +275,35 @@ export function OdontogramSection({
         </p>
       )}
 
-      {!isCurrentPatientSnapshot || loading || !dto ? (
+      {!isCurrentPatientSnapshot || loading || !dto || chartProjection === null ? (
         <div className="rounded-md border p-6 text-sm text-muted-foreground">Loading odontogram…</div>
       ) : (
         // The chart owns the whole workspace row. Nothing clips or scrolls it,
         // so a squeezed composition would be visible rather than masked.
         <div className="flex w-full min-w-0 flex-col gap-3">
-          <ForkOdontogram
-            patientKey={patientId}
-            dto={dto}
-            canWriteClinical={canWriteClinical}
-            proposals={proposals}
-            onSelect={handleSelect}
-            onDraftChange={NO_FORK_DRAFTS}
-            onError={setError}
-          />
+          {/* `dental-emr-fork` is the on-screen chart host hook the print
+              stylesheet uses to hide the INTERACTIVE chart while the print
+              sheet reproduces the same anatomy on paper. The compatibility
+              wrapper that introduced the name is gone; the two surviving rules
+              are documented in styles.css. */}
+          <div className="dental-emr-fork" data-testid="clinical-chart-anatomy" data-patient-key={patientId}>
+            <MeasuredChart
+              key={patientId}
+              projection={chartProjection}
+              notation={view.notation}
+              viewport={view.viewport}
+              dentition={view.dentition}
+              selectedFdi={view.selectedFdi}
+              proposals={proposals}
+              onSelectionChange={handleSelectionChange}
+              readOnly={!canWriteClinical}
+            />
+          </div>
           {printHeader !== null && (
             <ClinicalChartPrint
               header={printHeader}
               dto={dto}
-              chart={projectPatientChart(toPatientChartDTO(dto))}
+              chart={chartProjection}
               record={progressRecord}
               branchName={printBranchName}
               providerDisplay={printProviderName}
@@ -285,23 +313,28 @@ export function OdontogramSection({
         </div>
       )}
 
+      {/* One status row, not two. The retired Current status panel repeated the
+          selection readout and offered a second button that opened the same
+          record drawer as "Open tooth record"; only the follow-up affordance was
+          its own, so that is what moved here. */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground print:hidden">
-        <span>{canWriteClinical ? "Select a tooth to open its record drawer and add a clinical record." : "Read-only access. Selection shows the current clinical record."}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+          <span>{canWriteClinical ? "Select a tooth to open its record drawer and add a clinical record." : "Read-only access. Selection shows the current clinical record."}</span>
+          {selectedFdiForCurrentPatient !== null && (
+            <span className="font-medium text-foreground">{`Tooth ${selectedFdiForCurrentPatient} selected`}</span>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setDrawerOpen(true)}>
             Open tooth record
           </Button>
+          {followupAvailable && (
+            <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setFollowupOpen(true)}>
+              Record follow-up
+            </Button>
+          )}
         </div>
       </div>
-
-      <CurrentStatusPanel
-        selectedTooth={selectedFdiForCurrentPatient}
-        canWriteClinical={canWriteClinical}
-        procedureCases={procedureCases}
-        followupAvailable={followupAvailable}
-        onRecordDirectTreatment={() => setDrawerOpen(true)}
-        onOpenFollowup={() => setFollowupOpen(true)}
-      />
 
       <ToothRecordDrawer
         open={drawerOpen && selectedFdiForCurrentPatient !== null}

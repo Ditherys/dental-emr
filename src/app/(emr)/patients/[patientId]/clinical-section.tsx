@@ -2,7 +2,7 @@
 
 import { Ellipsis, LoaderCircle, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-workspace";
 import { ClinicalVisitHeader } from "@/components/clinical/clinical-visit-header";
@@ -144,6 +144,18 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
   // One key per mounted workspace: a double-pressed Start visit serializes on the
   // same token server-side. It is never the visit identity, which the RPC derives.
   const visitKeyRef = useRef<string | null>(null);
+  // The mounted chart mode's unsaved work, mirrored here so the workspace can
+  // warn before a mode change unmounts the panel holding it. Leaving the route
+  // still warns through `onUnsavedClinicalChange`; the two guards cover the two
+  // different ways the same entries can be lost.
+  const [chartHasUnsavedWork, setChartHasUnsavedWork] = useState(false);
+  const reportChartUnsavedWork = useCallback(
+    (unsaved: boolean) => {
+      setChartHasUnsavedWork(unsaved);
+      onUnsavedClinicalChange?.(unsaved);
+    },
+    [onUnsavedClinicalChange],
+  );
 
   const providersById = new Map(initialProviders.map((provider) => [provider.providerId, provider.displayName]));
   const providerName = (providerId: string) => providersById.get(providerId) ?? "Unknown provider";
@@ -374,7 +386,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       loadFailed={loadFailed}
       chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} periodontalClassification={printPerioClassification} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
     />,
-    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={onUnsavedClinicalChange} />,
+    PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={reportChartUnsavedWork} />,
   };
 
   return <section id="clinical" className="border-t py-6">
@@ -416,6 +428,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
         onImported: () => router.refresh(),
       }}
       chartLoadFailed={loadFailed}
+      chartHasUnsavedWork={chartHasUnsavedWork}
       // A missing record is a failed record. The region offers a bounded retry
       // rather than rendering nothing, which would read as "no history".
       recordLoadFailed={(recordLoadFailed ?? loadFailed) || clinicalProgressRecord === null}

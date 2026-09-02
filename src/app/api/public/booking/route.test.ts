@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { BookingServiceError, submitBookingRequest } = vi.hoisted(() => {
   class BookingServiceError extends Error {
@@ -19,6 +19,13 @@ import { POST } from "./route";
 const orgSlug = "smilelab-demo-dental";
 const providerId = "c6000000-0000-0000-0000-000000000006";
 const requestedStartsAt = "2026-09-01T09:00:00+00:00";
+/**
+ * The route validates the submission with the same future-dated schema the
+ * service uses, so the fixture is only valid relative to a clock. The clock is
+ * injected rather than the literal bumped; a later literal only re-arms the
+ * same failure. Only `Date` is faked so request/response plumbing is untouched.
+ */
+const FIXED_CLOCK = new Date("2026-08-27T09:00:00.000Z");
 const managementToken = "11111111-2222-3333-4444-555555555555";
 const requestId = "c7000000-0000-0000-0000-000000000007";
 
@@ -42,6 +49,15 @@ function postRequest(body: unknown) {
     body: JSON.stringify(body),
   });
 }
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FIXED_CLOCK);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

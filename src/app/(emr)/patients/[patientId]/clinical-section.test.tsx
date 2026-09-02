@@ -25,8 +25,17 @@ const router = { refresh: vi.fn() };
 vi.mock("./clinical-actions", () => actions);
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("./odontogram-section", () => ({ OdontogramSection: () => <div data-testid="odontogram-section" /> }));
-vi.mock("./treatment-plan-section", () => ({ TreatmentPlanSection: () => <div data-testid="treatment-plan-section" /> }));
 vi.mock("@/components/odontogram/progress-record-table", () => ({ ProgressRecordTable: () => <div data-testid="progress-record-table" /> }));
+// Stands in for the real periodontal work surface, keeping only the part this
+// file is about: the panel reports whether it holds entries that are not on the
+// record yet.
+vi.mock("@/components/odontogram/periodontal-exam-workspace", () => ({
+  PeriodontalExamWorkspace: ({ onUnsavedChange }: { onUnsavedChange?: (unsaved: boolean) => void }) => (
+    <div data-testid="perio-workspace-stub">
+      <button type="button" onClick={() => onUnsavedChange?.(true)}>enter perio reading</button>
+    </div>
+  ),
+}));
 
 import { ClinicalSection } from "./clinical-section";
 
@@ -403,5 +412,45 @@ describe("ClinicalSection bounded load failures", () => {
     const failure = within(screen.getByTestId("clinical-chart-surface")).getByRole("alert");
     expect(failure).toHaveTextContent("dental chart could not be loaded");
     expect(within(failure).getByRole("button", { name: "Retry" })).toBeVisible();
+  });
+});
+
+/**
+ * Task 17. The route-level unsaved guard only fires on navigation. Switching
+ * chart mode never navigates - it unmounts the periodontal panel - so the same
+ * unsaved readings were discarded with no warning at all. The section reports
+ * the panel's unsaved state to the workspace, which owns the mode.
+ */
+describe("ClinicalSection unsaved periodontal work", () => {
+  it("warns before a chart mode change discards unsaved periodontal readings", async () => {
+    const user = userEvent.setup();
+    const onUnsavedClinicalChange = vi.fn();
+    render(<ClinicalSection
+      patientId={patientId}
+      actingBranchId={branchId}
+      canWriteClinical
+      visit={openVisit}
+      initialEncounters={[openEncounter]}
+      initialMedicalRecords={[condition]}
+      initialProviders={[provider]}
+      onUnsavedClinicalChange={onUnsavedClinicalChange}
+      clinicalProgressRecord={{ rows: [], limit: 200, offset: 0, hasMore: false, financialVisible: false }}
+    />);
+
+    await user.click(screen.getByRole("button", { name: "Periodontal" }));
+    await user.click(await screen.findByRole("button", { name: "enter perio reading" }));
+
+    // The route guard still learns about it.
+    expect(onUnsavedClinicalChange).toHaveBeenCalledWith(true);
+
+    await user.click(screen.getByRole("button", { name: "Current status" }));
+
+    const confirmation = await screen.findByRole("alertdialog");
+    expect(confirmation).toHaveTextContent(/unsaved/i);
+    await user.click(within(confirmation).getByRole("button", { name: "Keep charting" }));
+
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("perio-workspace-stub")).toBeVisible();
+    expect(screen.queryByTestId("odontogram-section")).not.toBeInTheDocument();
   });
 });

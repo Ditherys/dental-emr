@@ -309,6 +309,7 @@ describe("registered database suites", () => {
       "odontogram_revamp_rpcs.test.sql",
       "odontogram_rpcs_v2.test.sql",
       "operational_analytics.test.sql",
+      "out_parameter_ambiguity_guard.test.sql",
       "owner_full_access.test.sql",
       "patient_attribution_columns.test.sql",
       "patient_attribution_rpcs.test.sql",
@@ -370,6 +371,36 @@ describe("registered database suites", () => {
     expect(onDisk).toEqual(expectedSuites);
   });
 
+  /**
+   * The `.local.mjs` harnesses are the repository's only concurrency proofs.
+   * They are plain Node modules, so nothing links them to a gate on its own:
+   * an authored harness that no runner imports reads as coverage while proving
+   * nothing, exactly like an unregistered pgTAP suite.
+   *
+   * `scripts/run-local-database-tests.mjs` executes docker at import time, so
+   * this asserts against its SOURCE rather than importing it. It requires both
+   * halves of registration — the import specifier and the PASS line that names
+   * the harness in the runner's output — so a harness cannot be imported and
+   * then silently never awaited.
+   */
+  it("registers every local concurrency harness in the local database gate", () => {
+    const runnerSource = readFileSync(
+      resolve(testsDirectory, "..", "..", "scripts", "run-local-database-tests.mjs"),
+      "utf8",
+    );
+    const harnesses = readdirSync(testsDirectory)
+      .filter((name) => name.endsWith(".local.mjs"))
+      .sort();
+
+    expect(harnesses.length).toBeGreaterThan(0);
+    const unregistered = harnesses.filter(
+      (name) =>
+        !runnerSource.includes(`../supabase/tests/${name}`) ||
+        !runnerSource.includes(`supabase/tests/${name}"`),
+    );
+    expect(unregistered).toEqual([]);
+  });
+
   it("requires every suite to be transaction-bounded", () => {
     for (const suite of DATABASE_TEST_SUITES) {
       expect(() =>
@@ -395,6 +426,38 @@ describe("odontogram O14 deferred E2E registration", () => {
     expect(readFileSync(odontogramSpec, "utf8")).toContain("@odontogram");
     expect(readFileSync(responsiveSpec, "utf8")).toContain("@responsive the odontogram");
     expect(readFileSync(e2eReadme, "utf8")).toContain("E2E_DENTIST_EMAIL");
+  });
+
+  /**
+   * Task 17. `loadE2EEnvironment()` and `createAdminHarness()` throw without the
+   * Cloud TEST metadata. Called at MODULE scope they throw during collection,
+   * so `playwright test --list` reports "0 tests in 0 files" and the specs
+   * cannot be syntax-checked at all without hosted secrets - the one check that
+   * IS available locally.
+   *
+   * The two specifications written in task 17 build their harness inside the
+   * test bodies instead. This keeps them that way. It deliberately does not
+   * cover the older specs, whose import-time harness is a known residual.
+   */
+  it("keeps the task 17 specifications collectable without hosted credentials", () => {
+    for (const name of ["clinical-chart-workspace.spec.ts", "periodontal-workspace.spec.ts"]) {
+      const spec = resolve(repositoryRoot, "e2e", name);
+      expect(existsSync(spec)).toBe(true);
+      const source = readFileSync(spec, "utf8");
+
+      expect(source).toContain("PENDING: WRITTEN, NEVER EXECUTED");
+      // The environment is reached through a lazy accessor, never bound at
+      // module scope.
+      expect(source).toContain("loadE2EEnvironment");
+      expect(source).not.toMatch(/^const\s+environment\s*=\s*loadE2EEnvironment\(\)/m);
+      expect(source).not.toMatch(/^const\s+\w+\s*=\s*createAdminHarness\(/m);
+      for (const line of source.split("\n")) {
+        if (/loadE2EEnvironment\(\)|createAdminHarness\(/.test(line)) {
+          // Every call site is indented, i.e. inside a function body.
+          expect(line).toMatch(/^\s+/);
+        }
+      }
+    }
   });
 });
 

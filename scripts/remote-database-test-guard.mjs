@@ -87,6 +87,10 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   // integrity check placed later would never execute.
   "approved_grant_registry_integrity.test.sql",
   "audit_metadata_contract.test.sql",
+  // Registered early with the other integrity guards: the local gate halts at
+  // treatment_plans.test.sql, so a suite placed after it would never run
+  // locally. Reads only pg_catalog metadata, so it is cheap and order-safe.
+  "out_parameter_ambiguity_guard.test.sql",
   "odontogram_domain_expansion.test.sql",
   "odontogram_feature_details.test.sql",
   "odontogram_o2_o4_contract_repair.test.sql",

@@ -18,50 +18,37 @@ vi.mock("./odontogram-actions", async (importOriginal) => ({
   getPatientOdontogramAction: actionMocks.getPatientOdontogramAction,
 }));
 
-// Stands in for the real chart, including the part that matters here: a managed
-// chart publishes its selection into the workspace chart view before reporting
-// the tooth, and only an unmanaged mount leaves that to the section.
-vi.mock("@/components/odontogram/fork-odontogram", async () => {
-  const { useClinicalChartView } = await import("@/components/odontogram/clinical-chart-toolbar");
-  // `toPatientChartDTO` is the real pure mapper: the print sheet renders the
-  // canonical projection, so stubbing it would prove nothing about the chart
-  // that is actually printed.
-  const { toPatientChartDTO } = await vi.importActual<
-    typeof import("@/components/odontogram/fork-odontogram")
-  >("@/components/odontogram/fork-odontogram");
-  return {
-    toPatientChartDTO,
-    ForkOdontogram: ({
-      patientKey,
-      canWriteClinical,
-      onSelect,
-    }: {
-      patientKey: string;
-      canWriteClinical: boolean;
-      onSelect: (fdi: number) => void;
-    }) => {
-      const { managed, setView } = useClinicalChartView();
-      return (
-        <div data-testid="fork-odontogram" data-patient-key={patientKey} data-read-only={String(!canWriteClinical)}>
-          {[11, 16, 24].map((fdi) => (
-            <button
-              key={fdi}
-              type="button"
-              aria-label={`Tooth ${fdi}`}
-              data-tooth={fdi}
-              onClick={() => {
-                if (managed) setView({ selectedFdi: [fdi] });
-                onSelect(fdi);
-              }}
-            >
-              Tooth {fdi}
-            </button>
-          ))}
-        </div>
-      );
-    },
-  };
-});
+// Stands in for the reviewed anatomy, which loads through a code-splitting
+// boundary and is proven by its own test file. What matters here is the
+// contract between the section and the chart: the chart is projection-only and
+// reports a selection, and the SECTION publishes that selection into the one
+// chart view the workspace owns.
+//
+// `toPatientChartDTO` is deliberately NOT stubbed: the print sheet renders the
+// canonical projection, so a stub would prove nothing about the printed chart.
+vi.mock("@/components/odontogram/measured-chart", () => ({
+  MeasuredChart: ({
+    readOnly,
+    onSelectionChange,
+  }: {
+    readOnly?: boolean;
+    onSelectionChange: (next: readonly number[]) => void;
+  }) => (
+    <div data-testid="measured-chart" data-read-only={String(readOnly === true)}>
+      {[11, 16, 24].map((fdi) => (
+        <button
+          key={fdi}
+          type="button"
+          aria-label={`Tooth ${fdi}`}
+          data-tooth={fdi}
+          onClick={() => onSelectionChange([fdi])}
+        >
+          Tooth {fdi}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 
 const mockDto: PatientOdontogramDTO = {
   patientId: "00000000-0000-4000-a000-000000000020",
@@ -136,8 +123,11 @@ describe("OdontogramSection O7", () => {
     );
 
     expect(screen.getByTestId("odontogram-section")).toBeInTheDocument();
-    expect(screen.getByTestId("fork-odontogram")).toHaveAttribute("data-patient-key", mockDto.patientId);
-    expect(screen.queryByTestId("measured-chart")).not.toBeInTheDocument();
+    expect(screen.getByTestId("clinical-chart-anatomy")).toHaveAttribute("data-patient-key", mockDto.patientId);
+    // The section mounts the EMR-owned chart directly: there is no fork
+    // compatibility wrapper and no renderer-owned toolbar between them.
+    expect(screen.queryByTestId("fork-odontogram")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fork-numbering")).not.toBeInTheDocument();
     expect(screen.queryByTestId("odontogram-toolbar")).not.toBeInTheDocument();
     // tooth 11 should be rendered
     expect(screen.getByRole("button", { name: /Tooth 11/i })).toBeInTheDocument();
@@ -182,7 +172,7 @@ describe("OdontogramSection O7", () => {
       // after patient change the drawer closes and the new patient's chart owns the row
       expect(screen.queryByTestId("tooth-record-drawer")).not.toBeInTheDocument();
       expect(screen.queryByTestId("tooth-inspector")).not.toBeInTheDocument();
-      expect(screen.getByTestId("fork-odontogram")).toHaveAttribute(
+      expect(screen.getByTestId("clinical-chart-anatomy")).toHaveAttribute(
         "data-patient-key",
         "00000000-0000-4000-a000-000000000022",
       );
@@ -310,9 +300,13 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByRole("button", { name: "Open tooth record" })).toHaveClass("min-h-11");
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
-    await user.click(screen.getByRole("button", { name: /record direct treatment/i }));
+    // Task 17 removed the duplicate Current status panel, whose "Record direct
+    // treatment" button opened this same drawer. One explicit affordance
+    // remains, and it must still reach the write path from a selected tooth.
+    expect(screen.queryByRole("button", { name: /record direct treatment/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Open tooth record" }));
 
-    // The approved workflow is now the record drawer and its composer, not the
+    // The approved workflow is the record drawer and its composer, not the
     // removed fork-era record dialog.
     expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Add clinical record" }));
@@ -349,7 +343,7 @@ describe("OdontogramSection O7", () => {
       />,
     );
 
-    expect(screen.getByTestId("fork-odontogram")).toBeInTheDocument();
+    expect(screen.getByTestId("clinical-chart-anatomy")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "primary" })).not.toBeInTheDocument();
     expect(screen.queryByText(/classic/i)).not.toBeInTheDocument();
   });
@@ -371,7 +365,7 @@ describe("OdontogramSection O7", () => {
     // A scroll or clip container around the chart would hide a squeezed
     // composition rather than fix it. (The progress-record data table keeps its
     // own horizontal scroll; that is a table, not the chart.)
-    const chartRegion = screen.getByTestId("fork-odontogram").parentElement!;
+    const chartRegion = screen.getByTestId("clinical-chart-anatomy").parentElement!;
     expect(chartRegion.querySelector(".overflow-x-auto, .overflow-x-scroll")).toBeNull();
     expect(chartRegion.className).not.toContain("overflow-");
     expect(section.className).not.toContain("overflow-");

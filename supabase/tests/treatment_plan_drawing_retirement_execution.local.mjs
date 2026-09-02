@@ -290,14 +290,22 @@ export function mutateDeleteBeforeAbort(block) {
   return mutated;
 }
 
-export async function runTreatmentPlanDrawingRetirementExecutionTest({ command } = {}) {
+export async function runTreatmentPlanDrawingRetirementExecutionTest({
+  command,
+  dockerEnvironment,
+} = {}) {
   const resolved = command ?? resolveCommand();
   const source = readFileSync(
     join(repositoryRoot, "supabase", "migrations", SWEEP_MIGRATION),
     "utf8",
   ).replaceAll("\r\n", "\n");
   const block = extractMigrationBlock(source);
-  const options = { cwd: repositoryRoot };
+  // The local database gate resolves a verified Docker environment before it
+  // runs anything; when it supplies one, this harness must spawn inside it
+  // rather than inheriting an ambient Docker context.
+  const options = dockerEnvironment
+    ? { cwd: repositoryRoot, env: dockerEnvironment }
+    : { cwd: repositoryRoot };
   const failures = [];
 
   // ---------------------------------------------------------------------

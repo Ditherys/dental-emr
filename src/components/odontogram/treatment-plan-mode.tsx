@@ -184,11 +184,10 @@ export function TreatmentPlanMode({
             planTitle: detail.plan.title,
             planVersion: detail.plan.version,
             status: detail.plan.status,
-            nextSequenceNo: items.reduce((highest, item) => Math.max(highest, item.sequenceNo), 0) + 1,
             procedures,
           }
         : null,
-    [detail, items, procedures],
+    [detail, procedures],
   );
 
   // The chart's proposal markers, projected from the clinician-authored tooth

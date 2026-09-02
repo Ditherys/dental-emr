@@ -29,6 +29,7 @@ import { runProcedureInstallmentSchedulesConcurrencyTest } from "../supabase/tes
 import { runClinicalVisitResumeConcurrencyTest } from "../supabase/tests/clinical_visit_resume_concurrency.local.mjs";
 import { runTreatmentCaseCompletionConcurrencyTest } from "../supabase/tests/treatment_case_completion_concurrency.local.mjs";
 import { runPeriodontalAutosaveConcurrencyTest } from "../supabase/tests/periodontal_autosave_concurrency.local.mjs";
+import { runTreatmentPlanDrawingRetirementExecutionTest } from "../supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -101,39 +102,20 @@ function assertVerifiedLocalDockerRuntime() {
 try {
   const { dockerEnvironment, containerName } = assertVerifiedLocalDockerRuntime();
 
-  for (const suite of suites) {
-    const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
-    const source = readFileSync(suite, "utf8");
-    validateTransactionalSuite(source, suiteLabel);
-
-    const command = resolveLocalDatabaseTestCommand(suite, containerName);
-    const result = spawnSync(command[0], command.slice(1), {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-      input: source,
-      env: dockerEnvironment,
-      maxBuffer: 16 * 1024 * 1024,
-    });
-
-    if (result.error) {
-      throw new Error(`${suiteLabel} could not start local Postgres execution.`);
-    }
-
-    if (result.status !== 0) {
-      const diagnostic = formatDatabaseQueryFailure(
-        result.stderr ?? "",
-        result.stdout ?? "",
-      );
-      throw new Error(
-        `${suiteLabel} failed during local SQL execution.` +
-          (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),
-      );
-    }
-
-    parseSupabaseQueryResult(result.stdout, suiteLabel);
-    console.log(`PASS ${suiteLabel}`);
-  }
-
+  // The `*.local.mjs` harnesses run FIRST, before the pgTAP loop.
+  //
+  // They used to run last, which meant they never ran at all: the local pgTAP
+  // loop stops at the first suite that does not report P1_TEST_PASS, and it has
+  // a known pre-existing halt at treatment_plans.test.sql. Everything after that
+  // halt - every concurrency proof in the repository - was unreachable, reading
+  // as coverage while proving nothing.
+  //
+  // Ordering them first costs nothing and is not a weaker gate: the same
+  // harnesses and the same suites run, a failure in either still fails the
+  // command, and each harness is independently transaction-bounded and rolled
+  // back, so it neither depends on nor disturbs the pgTAP suites that follow.
+  // scripts/remote-database-test-guard.test.mjs asserts that every harness on
+  // disk is registered here.
   await runPatientCreateConcurrencyTest({
     command: resolveLocalDatabaseTestCommand("local concurrency test", containerName),
     repositoryRoot,
@@ -216,6 +198,49 @@ try {
     dockerEnvironment,
   });
   console.log("PASS supabase/tests/periodontal_autosave_concurrency.local.mjs");
+  // Not a concurrency proof: the two-way EXECUTION proof for the drawing
+  // retirement sweep. Registered here because a harness no gate runs proves
+  // nothing; scripts/remote-database-test-guard.test.mjs asserts every
+  // supabase/tests/*.local.mjs harness is registered in this file.
+  await runTreatmentPlanDrawingRetirementExecutionTest({
+    command: resolveLocalDatabaseTestCommand("local execution test", containerName),
+    dockerEnvironment,
+  });
+  console.log("PASS supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs");
+
+
+  for (const suite of suites) {
+    const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
+    const source = readFileSync(suite, "utf8");
+    validateTransactionalSuite(source, suiteLabel);
+
+    const command = resolveLocalDatabaseTestCommand(suite, containerName);
+    const result = spawnSync(command[0], command.slice(1), {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      input: source,
+      env: dockerEnvironment,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+
+    if (result.error) {
+      throw new Error(`${suiteLabel} could not start local Postgres execution.`);
+    }
+
+    if (result.status !== 0) {
+      const diagnostic = formatDatabaseQueryFailure(
+        result.stderr ?? "",
+        result.stdout ?? "",
+      );
+      throw new Error(
+        `${suiteLabel} failed during local SQL execution.` +
+          (diagnostic ? ` Diagnostic: ${diagnostic}` : ""),
+      );
+    }
+
+    parseSupabaseQueryResult(result.stdout, suiteLabel);
+    console.log(`PASS ${suiteLabel}`);
+  }
 
   console.log("Local Supabase pgTAP suites passed.");
 } catch (error) {

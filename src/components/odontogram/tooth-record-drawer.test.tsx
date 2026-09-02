@@ -167,7 +167,6 @@ describe("ToothRecordDrawer summary", () => {
         planTitle: "Synthetic proposal",
         planVersion: 2,
         status: "DRAFT",
-        nextSequenceNo: 1,
         procedures: [],
       },
     });

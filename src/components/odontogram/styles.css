@@ -104,12 +104,14 @@
 
 /* ------------------------------------------------------------------ */
 /* The on-screen chart host.                                            */
-/* `ForkOdontogram` is a thin compatibility wrapper around the EMR-owned
- * renderer and is removed by task 17. Only two rules survive the fork's
- * removal, and only because dropping them would be a visible regression:
- * the wrapper must not exceed its column, and the INTERACTIVE chart must
- * not print a second time underneath the print sheet, which reproduces
- * the same anatomy in a paper composition.                             */
+/* Task 17 removed `ForkOdontogram`, the compatibility wrapper this class was
+ * named after; the patient workspace's own `OdontogramSection` now mounts the
+ * EMR-owned renderer directly and carries the class on its chart host. The
+ * NAME is kept only because these are the two rules that survive the fork's
+ * removal and renaming them would move a print regression guard for no
+ * behavioural gain. Both are load-bearing: the host must not exceed its
+ * column, and the INTERACTIVE chart must not print a second time underneath
+ * the print sheet, which reproduces the same anatomy in a paper composition. */
 /* ------------------------------------------------------------------ */
 
 .dental-emr-fork {

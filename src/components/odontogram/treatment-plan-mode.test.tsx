@@ -141,7 +141,6 @@ describe("TreatmentPlanMode", () => {
         planTitle: "Synthetic proposal",
         planVersion: 2,
         status: "DRAFT",
-        nextSequenceNo: 3,
         procedures: [],
       }),
     );

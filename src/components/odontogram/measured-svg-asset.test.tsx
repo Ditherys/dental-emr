@@ -45,9 +45,12 @@ const RUNTIME_RENDERER_FILES = [
   "src/components/odontogram/measured-fork-layers.ts",
   "src/components/odontogram/generated/measured-svg-nodes.ts",
   "src/lib/odontogram/renderer-projection.ts",
-  // The component the patient workspace actually mounts, and the file that
-  // previously held the fork DOM bridge.
-  "src/components/odontogram/fork-odontogram.tsx",
+  // The file that used to hold the fork DOM bridge was `fork-odontogram.tsx`.
+  // Task 17 deleted it: the patient workspace now mounts `MeasuredChart`
+  // directly, and the pure mapper that turns the protected patient DTO into the
+  // canonical chart projection lives here. That mapper is the last file on the
+  // path from stored record to rendered anatomy, so it is held to the same rule.
+  "src/lib/odontogram/patient-chart-dto.ts",
 ];
 
 const FORBIDDEN_RUNTIME_APIS = [

@@ -33,8 +33,6 @@ export type PlanAuthoringContext = {
   planTitle: string;
   planVersion: number;
   status: "DRAFT" | "PRESENTED" | "ACKNOWLEDGED";
-  /** First unused sequence number, so several teeth author in order. */
-  nextSequenceNo: number;
   procedures: readonly { procedureId: string; name: string }[];
 };
 

@@ -24,7 +24,6 @@ const draftPlan: PlanAuthoringContext = {
   planTitle: "Synthetic draft proposal",
   planVersion: 3,
   status: "DRAFT",
-  nextSequenceNo: 4,
   procedures: [{ procedureId, name: "Synthetic root canal" }],
 };
 

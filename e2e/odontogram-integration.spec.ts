@@ -43,7 +43,7 @@ test("@odontogram a dentist records a clinical finding and it survives a reload"
 
   await expect(inspector).toContainText("CARIES · ACTIVE");
   await page.reload();
-  await expect(page.getByTestId("fork-odontogram")).toBeVisible();
+  await expect(page.getByTestId("clinical-chart-anatomy")).toBeVisible();
   await expect(page.locator('.tooth-tile.side-view[data-tooth="16"] svg [id="caries-occlusal"]')).toHaveAttribute("data-active", "1");
 });
 
@@ -66,7 +66,7 @@ test("@odontogram a receptionist cannot open the clinical odontogram route", asy
   await expect(
     page.getByText("Your current access does not include the clinical record."),
   ).toBeVisible();
-  await expect(page.getByTestId("fork-odontogram")).toHaveCount(0);
+  await expect(page.getByTestId("clinical-chart-anatomy")).toHaveCount(0);
 });
 
 /**

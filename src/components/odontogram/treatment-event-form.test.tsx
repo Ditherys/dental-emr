@@ -3,7 +3,7 @@
  */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { recordTreatmentEventAction, refresh } = vi.hoisted(() => ({
   recordTreatmentEventAction: vi.fn(),
@@ -14,6 +14,29 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("@/app/(emr)/patients/[patientId]/odontogram-actions", () => ({ recordTreatmentEventAction }));
 
 import { TreatmentEventForm, deriveTreatmentRequestKey, manilaToday } from "./treatment-event-form";
+
+/**
+ * The form compares its service date against the Philippine clinic day, so the
+ * fixture dates below only mean "today" and "backdated" relative to a clock.
+ * The clock is injected rather than the literals bumped: a later literal drifts
+ * back into ambiguity the moment the wall clock passes it. `2026-09-01T02:00Z`
+ * is 10:00 on 2026-09-01 in Asia/Manila, so `manilaToday()` is the default
+ * fixture's own service date and "2026-08-25" is genuinely backdated.
+ *
+ * Only `Date` is faked; userEvent's own timers stay real.
+ */
+const FIXED_CLOCK = new Date("2026-09-01T02:00:00.000Z");
+const CLINIC_TODAY = "2026-09-01";
+const BACKDATED_SERVICE_DATE = "2026-08-25";
+
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FIXED_CLOCK);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const patientId = "c2000000-0000-0000-0000-000000000002";
 const branchId = "c1000000-0000-0000-0000-000000000001";
@@ -41,7 +64,7 @@ function renderForm(overrides: Partial<React.ComponentProps<typeof TreatmentEven
     branchId,
     patientIdentifier: "TEV-A-1 · Patient A1",
     toothCodes: ["16"] as readonly string[],
-    serviceDate: "2026-09-01",
+    serviceDate: CLINIC_TODAY,
     onServiceDateChange,
     procedures,
     activeFindings,
@@ -59,6 +82,13 @@ afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
   recordTreatmentEventAction.mockResolvedValue({ ok: true, replayed: false });
+});
+
+describe("the injected clinic clock", () => {
+  it("drives manilaToday, so no fixture depends on the wall clock", () => {
+    expect(manilaToday()).toBe(CLINIC_TODAY);
+    expect(BACKDATED_SERVICE_DATE < CLINIC_TODAY).toBe(true);
+  });
 });
 
 describe("deriveTreatmentRequestKey", () => {
@@ -133,7 +163,7 @@ describe("TreatmentEventForm", () => {
       branchId,
       procedureId: fillingId,
       eventKind: "PERFORMED",
-      serviceDate: "2026-09-01",
+      serviceDate: CLINIC_TODAY,
       chargeAmountCentavos: 250000,
       resolvedFindingIds: ["c7000000-0000-0000-0000-000000000007"],
     });
@@ -212,14 +242,14 @@ describe("TreatmentEventForm", () => {
     // clinic workflow. The clinical record keeps the performed date; the ledger
     // keeps the receipt date, and the form says so rather than sending a payment
     // date the boundary will refuse.
-    renderForm({ serviceDate: "2026-08-25" });
+    renderForm({ serviceDate: BACKDATED_SERVICE_DATE });
 
     await user.click(screen.getByLabelText(/occlusal/i));
     fireEvent.change(screen.getByLabelText(/actual cost/i), { target: { value: "2500.00" } });
     await user.selectOptions(screen.getByLabelText(/payment option/i), "PAY_NOW");
     fireEvent.change(screen.getByLabelText(/payment amount/i), { target: { value: "2500.00" } });
 
-    const notice = screen.getByText(/performed on 2026-08-25/i);
+    const notice = screen.getByText(new RegExp(`performed on ${BACKDATED_SERVICE_DATE}`, "i"));
     expect(notice).toHaveTextContent(manilaToday());
 
     await user.click(screen.getByRole("button", { name: /review charge/i }));
@@ -227,9 +257,9 @@ describe("TreatmentEventForm", () => {
 
     await waitFor(() => expect(recordTreatmentEventAction).toHaveBeenCalledTimes(1));
     const submitted = recordTreatmentEventAction.mock.calls[0][0];
-    expect(submitted.serviceDate).toBe("2026-08-25");
+    expect(submitted.serviceDate).toBe(BACKDATED_SERVICE_DATE);
     expect(submitted.immediatePayment.paymentDate).toBe(manilaToday());
-    expect(submitted.immediatePayment.paymentDate).not.toBe("2026-08-25");
+    expect(submitted.immediatePayment.paymentDate).not.toBe(BACKDATED_SERVICE_DATE);
   });
 
   it("says a replayed submission recorded nothing again", async () => {

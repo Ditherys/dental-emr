@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 16
+# AI Handoff - Unified Clinical Chart workspace, Task 17
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -7,785 +7,411 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff`, `e7d98ae`, `ce34e0b` and
-this commit.
+and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is
+`9a823ff`, `e7d98ae`, `ce34e0b` and `73735f4`. Task 17 is this commit.
 
-## Task 16 - print, help, and the end of the runtime fork package (2026-09-02)
+**This commit completes the plan LOCALLY only.** Cloud TEST, hosted E2E,
+device-based responsive/accessibility verification, Supabase database advisors,
+security acceptance, clinical-owner periodontal-classification validation and
+final human approval all remain open release gates. Nothing here authorizes
+deployment or real patient use.
+
+## Task 17 - remove superseded UI, author the end-to-end specifications, run the local gate (2026-09-02)
 
 ### Bounded slice implemented
 
-Four things, in this order:
+1. Deleted the proven-dead compatibility UI and relocated the one pure mapper
+   that lived inside it.
+2. Closed a clinical data-loss defect: switching chart mode discarded unsaved
+   periodontal readings with no warning.
+3. Fixed the three date-coupled test files with an injected clock.
+4. Made every `*.local.mjs` harness actually execute in the local database gate,
+   and added a registry-integrity test so a new one cannot go unregistered.
+5. Added a pgTAP guard for the OUT-parameter ambiguity defect class, derived
+   from `pg_proc`.
+6. Wrote (did not execute) two end-to-end specifications, built so they collect
+   without hosted credentials.
+7. Ran the complete local gate.
 
-1. a **fail-closed data migration** that retires the freehand treatment-plan
-   drawing canvas;
-2. a **dedicated React print view** that replaces the fork print composition,
-   with `@media print` rules so the browser makes the PDF;
-3. **rewritten contextual help** for the EMR's own workspace;
-4. **removal of the `react-advanced-odontogram` runtime package**, its vendored
-   directory and its transitive `jspdf`, behind repository-boundary tests.
+### 1. Deletions - and the two the brief got wrong
 
-### The deletion - `20260901010500`
+Every candidate was searched **by import specifier**, never by bare filename
+stem, before deletion:
 
-This is the only migration in the plan that deletes clinical-adjacent rows, so
-its ordering is the design:
+```
+rg 'from "[^"]*<module>"|from '\''[^'\'']*<module>'\''|require\("[^"]*<module>"\)|vi\.mock\("[^"]*<module>"'
+```
 
-- **The preflight runs first and aborts the whole migration** if a single row
-  cannot be positively identified. The recognition rule is narrow and positive:
-  a row is recognized only when its `plan_id` resolves, **in the row's own
-  organization**, to a `public.treatment_plans` row whose organization matches
-  `(id, slug, legal_name)` exactly against one of the two deterministic
-  synthetic fixtures declared in `supabase/seed.sql` -
-  `22000000-…-0001 / smilelab-demo-dental / SmileLab Demo Dental (Synthetic)` or
-  `22000000-…-0002 / other-dental-demo / Other Dental Demo (Synthetic)`.
-  Matching on id alone would recognize a real organization restored under a
-  fixture identifier. Anything else - a missing plan, a cross-organization plan,
-  any real tenant - is unrecognized and stops the chain.
-- **Only counts are reported.** `raise notice` carries `v_recognized`; the abort
-  carries `v_unrecognized`. Neither the deletion block nor any message ever
-  names `drawing.drawing`. On this local database the preflight counted
-  **0 unrecognized rows and deleted 0 recognized rows** - the table was already
-  empty.
-- **The tombstone is sealed after the delete**, not before, or the migration's
-  own delete would be impossible. `public.treatment_plan_drawings` stays, empty,
-  RLS-enabled, policy-free and grant-free, with a BEFORE ROW guard on
-  INSERT/UPDATE/DELETE and a BEFORE STATEMENT guard on TRUNCATE, both raising
-  `42501 treatment plan drawings are retired`. **It is not dropped in this
-  window.**
-- Three projections stop reading it through guarded replaces:
-  `get_treatment_plan_detail` (the `drawing` key survives as `null::jsonb`),
-  `list_treatment_plans` (`has_drawing` survives as a constant `false`), and
-  `generate_document` (the drawing section is removed; the `drawing` include key
-  is still ACCEPTED so no existing caller is rejected). The wire shapes are kept
-  deliberately: the application parses both with `.strict()` Zod objects, and
-  narrowing them is a separate reviewed change.
-- Each guarded replace **normalises carriage returns on BOTH the fetched
-  definition and its anchor literals** - task 15 round 3 proved a one-sided
-  strip breaks replay on this CRLF checkout - asserts the anchor is present, and
-  asserts the replacement actually removed the reference before executing it.
+Deleted (13 files):
 
-`20260901010501` grants nothing. It revokes `execute` on
-`public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)` from every browser
-role and restates the (already absent) table revoke. The function is left in
-place: a deployment that still calls it now fails closed twice - no privilege,
-and the tombstone trigger behind it.
+- `src/components/odontogram/current-status-panel.tsx` + test
+- `src/components/odontogram/plan-mode-panel.tsx` + test
+- `src/components/odontogram/fork-odontogram.tsx` + test
+- `src/lib/odontogram/fork-adapter.ts` + test
+- `src/app/(emr)/patients/[patientId]/treatment-plan-section.tsx` + test
+- `src/components/odontogram/perio-workspace.tsx` + test
+- `src/components/odontogram/perio-chart.tsx`
 
-Migration numbers were allocated after verifying the maximum was
-`20260901010414` both on disk and in `supabase_migrations.schema_migrations`.
+Also removed: the dead `PlanAuthoringContext.nextSequenceNo` field (declared and
+passed by four call sites, read by none) and the dead
+`vi.mock("./treatment-plan-section", …)` in `clinical-section.test.tsx`.
 
-### Print
+**NOT deleted, against the brief's file list:**
 
-`src/components/odontogram/clinical-chart-print.tsx` is the print view. **No PDF
-dependency was added and `jspdf` left the lockfile with the package.** The
-`@media print` rules in `styles.css` turn the composition into A4 and "Save as
-PDF" produces the file.
+- `src/components/odontogram/tooth-inspector.tsx` **is live**. The chain is
+  `clinical-section` -> `odontogram-section` -> `tooth-record-drawer` ->
+  `tooth-inspector`, and the drawer imports **both** `ToothInspector` and
+  `isLegacyToothEntry`. `isLegacyToothEntry` is the read path for historical
+  clinical data: it recognizes entries by `provenance = 'LEGACY_PHASE15'`, a
+  status containing `LEGACY`, or the codes `LEGACY_BRIDGE_MARKER`,
+  `LEGACY_UNLINKED_PLANNED`, `LEGACY_TERMINAL_UNCLASSIFIED` and
+  `LEGACY_REFERRED`. Deleting it would either break the build or, if "repaired"
+  by deleting the call sites, silently stop rendering historical clinical
+  entries - and no fixture in this repository carries LEGACY provenance, so no
+  test would have caught it. The brief's own Step 4 prose ("do not delete …
+  needed for read compatibility") is the binding intent; its file list is stale.
+- `src/components/odontogram/treatment-plan-mode.tsx` is live
+  (`clinical-section.tsx:13`). Only its dead field was removed.
 
-Everything it renders is an authorized server projection:
+`perio-chart.tsx` looked referenced by the live `periodontal-exam-workspace.tsx`;
+that is a **false positive** - the matches are the label id `perio-charting-arch`
+at `:1209` and `:1213`, a string that merely contains the stem. Searching by
+import specifier is what distinguishes the two.
 
-- identity and chart date come from `clinicalPrintHeader` /
-  `clinicalPrintHeaderFrom`, the second of which takes task 15's canonical
-  `ClinicalExportProjection`. Both strip the patient code to the safe alphabet
-  and **refuse a non-ISO clinical date**. With no code or a bad date the sheet
-  is **not rendered at all** rather than printed anonymously;
-- the anatomy is the canonical chart projection rendered by `MeasuredChart`
-  read-only, so the printed picture is the one on screen - including the
-  orientation transforms and the hidden-layer rule, which travel because
-  `styles.css` is loaded by the app;
-- the chronology is `get_clinical_progress_record_v1`'s own rows in the order it
-  returned them, with provider attribution and the three procedure-case money
-  columns. Nothing sorts, merges or totals. Where billing read is absent the
-  sheet **says the amounts are withheld** rather than printing an empty column.
+### The prerequisite relocation
 
-The sheet carries no patient name, no identifier, no URL and no `href` - a
-signed media URL is a credential and must never travel on paper - and is
-`hidden print:block`, so the workspace never shows two charts of the same mouth.
+`toPatientChartDTO` lived in `fork-odontogram.tsx` and is imported by the live
+`odontogram-section.tsx`. It moved **before** the deletion, verbatim with its
+five private helpers, to `src/lib/odontogram/patient-chart-dto.ts` - a pure
+module with no React, DOM, persistence or renderer dependency. Its four existing
+cases moved with it into `patient-chart-dto.test.ts` and no longer need jsdom.
 
-`patient-workspace.tsx` now passes `printPatientCode={patient.patientNumber}`
-instead of the display name; `clinical-section.tsx` derives the Philippine
-clinical day (`visit.clinicalDate` when a visit is open, otherwise the current
-Asia/Manila day) and passes the canonical `clinicalProgressRecord` down. None of
-those three files is on the brief's list; they are the only holders of the
-patient number, the clinical date and the progress record.
+`odontogram-section.tsx` now mounts `MeasuredChart` directly. Behaviour
+preserved deliberately:
 
-### Help
+- The chart host keeps the class `dental-emr-fork`. The name is now wrong, but
+  the two surviving rules are load-bearing (the host must not exceed its column;
+  the interactive chart must not print underneath the print sheet) and renaming
+  it would move a print-regression guard and an E2E locator for no behavioural
+  gain. The stylesheet comment says so. **Cosmetic residual, flagged.**
+- The host carries `data-testid="clinical-chart-anatomy"`, replacing
+  `fork-odontogram`. `MeasuredChart` already renders `data-chart-export-root`,
+  so chart-image export is untouched.
+- The single projection is computed once and shared by the on-screen chart and
+  the print sheet, so they cannot disagree. A malformed row degrades to an empty
+  projection plus a visible message, as the wrapper did - it never throws and
+  never prints a clinical negative.
+- The retired Current status panel's only unique affordance was **Record
+  follow-up**; its "Record direct treatment" opened the same drawer as the
+  surviving "Open tooth record", and its selection readout duplicated the
+  toolbar's. The follow-up button and the readout moved into the existing status
+  row; nothing was dropped.
+- `ClinicalChartWorkspace` now carries `data-testid="clinical-chart-workspace"`
+  on its landmark - the anchor the plan's Step 1 requires and which did not
+  exist.
 
-`odontogram-help.tsx` now explains the three chart modes, FDI-canonical
-notation, selection (which records nothing), the clinical record kinds and the
-derived provider, immutable confirmed charges, autosave/finalize/amend, and a
-legend that is not colour-only. It documents **no** reset action, no Classic
-renderer, no freehand drawing and no browser-local persistence, and a test
-asserts those six strings are absent.
+### 2. Clinical data loss on a chart mode change (fixed)
 
-### The package removal, in the required order
+`periodontal-exam-workspace.tsx:810-812` did
+`onUnsavedChange?.(hasUnsavedEdits); return () => onUnsavedChange?.(false);`.
+`clinical-section.tsx` selects the mode panel from an object literal keyed by
+chart mode, so leaving PERIODONTAL **unmounts** the panel and destroys its
+state - and the cleanup's `(false)` guaranteed no warning could fire. Unsaved
+periodontal measurements were discarded silently. The route-level guard never
+helped, because a mode change is not a navigation.
 
-1. **The MIT notice was preserved first.** `THIRD_PARTY_NOTICES.md` already
-   carried the upstream notice; it was verified **byte-identical** to
-   `vendor/react-advanced-odontogram/LICENSE` before anything was deleted, and
-   both it and `docs/ODONTOGRAM_FORK_SOURCE_MANIFEST.md` now record the removal,
-   the package version, the two patch commits and the build provenance that
-   lived in the deleted `SOURCE_REVISION.md`.
-2. `src/components/odontogram/runtime-package-boundary.test.ts` replaces
-   `fork-package.test.ts` and `fork-style-scope.test.ts`. Those asserted the
-   package **resolved**; this asserts the opposite property, which is the one
-   that now needs defending. It scans every `.ts/.tsx/.js/.jsx/.mjs/.css` file
-   under `src/` and `scripts/` - including `generated/` - plus `package.json`
-   and `package-lock.json`, for `react-advanced-odontogram`, `jspdf`,
-   `emr-style.css` and `vendor/react-advanced-odontogram`, refuses any `file:`
-   dependency, and asserts the MIT notice is still in a repository-owned file.
-   It was **proven to fail** by temporarily adding all four imports to
-   `src/lib/odontogram/errors.ts`: 4 failed / 4 passed, each naming the
-   offending file. The file was restored and `git status` confirmed clean.
-3. `npm uninstall react-advanced-odontogram`, which also removed `jspdf` and its
-   optional `dompurify`, `canvg`, `html2canvas` from the lockfile (246 lines).
+The confirmation is owned by `ClinicalChartWorkspace`, which owns `mode`; it is
+the only place that can see both the outgoing panel's unsaved state and the
+change about to discard it. `ClinicalSection` mirrors the panel's flag into
+`chartHasUnsavedWork` while still forwarding it to `onUnsavedClinicalChange`, so
+both guards stay armed. Re-pressing the mode already showing does not prompt; a
+patient change clears any outstanding prompt.
 
-### Files added
+The flag itself was **not** merely "fixed" - as written it is the only signal of
+the loss, and suppressing it without a warning would have hidden the defect
+rather than closed it.
 
-- `supabase/migrations/20260901010500_retire_treatment_plan_drawings.sql`
-- `supabase/migrations/20260901010501_retire_treatment_plan_drawings_grants.sql`
-- `supabase/tests/treatment_plan_drawing_retirement.test.sql` (23 assertions)
-- `scripts/treatment-plan-drawing-retirement-migration.test.mjs` (11 assertions)
-- `src/components/odontogram/clinical-chart-print.tsx` (+ suite, 15 tests)
-- `src/components/odontogram/runtime-package-boundary.test.ts` (8 tests)
+Red first: four new cases in `clinical-chart-workspace.test.tsx` (two failed with
+`Unable to find role="alertdialog"`), and one in `clinical-section.test.tsx`
+proven red by removing the prop.
 
-### Files deleted, each with no remaining importer
+### 3. The injected clock
 
-| File | `rg` evidence |
-| --- | --- |
-| `src/components/odontogram/fork-print-chart.tsx` (+ suite) | importers were `fork-odontogram.tsx` and `odontogram-section.tsx`; **both rewired first** |
-| `src/components/odontogram/fork-feature-parity.test.tsx` | no importer outside `docs/` |
-| `src/components/odontogram/fork-package.test.ts` | no importer outside `docs/` |
-| `src/components/odontogram/fork-style-scope.test.ts` | no importer outside `docs/` |
-| `scripts/scope-odontogram-css.mjs` | only the `odontogram:scope-css` npm script, removed with it |
-| `vendor/react-advanced-odontogram/` (18 files) | last runtime import was `src/app/layout.tsx`, removed first |
+`main` was RED at the start of this task, and not from this work: the wall clock
+passed `2026-09-01T09:00:00+00:00`, which two files hardcode as a **future**
+booking time, so `publicBookingSubmissionSchema`'s future-date refinement
+correctly rejected it. Observed baseline before any change:
+**9 failed / 2452 passed (206 files)** - 7 deterministic booking failures
+(`src/lib/booking/service.test.ts` x3, `src/app/api/public/booking/route.test.ts`
+x4) plus the flaky `perio-workspace.test.tsx`, which contributed 1 or 2
+depending on parallel load.
 
-**`src/components/odontogram/fork-save-controller.tsx` and its suite do not
-exist** and did not need deleting.
+Fixed with `vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime(...)`
+pinned to a fixed instant in three files. Only `Date` is faked, so timers,
+promises and Testing Library scheduling stay real. A later literal would only
+re-arm the same bomb; a pinned clock cannot expire. `treatment-event-form.test.tsx`
+was pinned to `2026-09-01T02:00Z` (10:00 Asia/Manila) so `manilaToday()` equals
+the default fixture's own service date, and its dates are now named constants
+with an assertion that the injected clock actually drives `manilaToday()`.
 
-**`src/components/odontogram/styles.css` was NOT deleted.** See the deviation
-below.
+The eighth/ninth failure, `perio-workspace.test.tsx`, tested code deleted by this
+task and disappeared with its subject rather than being papered over.
+
+### 4. The unreachable `*.local.mjs` harnesses - the real finding
+
+The brief said fifteen harnesses were unreachable because no `package.json`
+script references `.local.mjs`. That is **not** what the repository shows.
+`scripts/run-local-database-tests.mjs` (which `npm run test:db:local` runs)
+already imported 14 of the 15. Exactly one was unregistered:
+`treatment_plan_drawing_retirement_execution.local.mjs`.
+
+But all fifteen were still effectively dead, for a different reason: the
+harnesses ran **after** the pgTAP loop, and that loop stops at the first suite
+that does not report `P1_TEST_PASS` - a known pre-existing halt at
+`treatment_plans.test.sql`. Every concurrency proof in the repository sat behind
+it and had never run in the gate.
+
+Both halves are fixed:
+
+- The fifteenth harness is registered (and gained an optional
+  `dockerEnvironment` so it spawns inside the verified Docker environment the
+  runner resolves).
+- The harness block now runs **first**, before the pgTAP loop. This is not a
+  weaker gate: the same harnesses and the same suites run, a failure in either
+  still fails the command, and each harness is independently transaction-bounded
+  and rolled back.
+- `scripts/remote-database-test-guard.test.mjs` gained a registry-integrity test
+  requiring **both** the import specifier and the PASS line for every
+  `supabase/tests/*.local.mjs` on disk, so a harness cannot be imported and then
+  never awaited. Proven red before the fix (it named the one missing file).
+
+Observed: all **15 harnesses now execute and PASS** in `npm run test:db:local`.
+
+### 5. The OUT-parameter ambiguity guard
+
+New suite `supabase/tests/out_parameter_ambiguity_guard.test.sql`, registered
+early in `DATABASE_TEST_SUITES` (before the local halt, with the other integrity
+guards).
+
+Two granted clinical functions in this plan had **never worked** -
+`rename_clinical_photo` and `record_procedure_followup` - because a
+`RETURNS TABLE` OUT parameter named `version` collided with a `version` column,
+which PostgreSQL rejects at runtime with `42702`. Only denial-path tests existed,
+so nothing caught it.
+
+The live function set is derived from **`pg_proc`**, not from migration text:
+there are 288 `returns table` occurrences across the migrations including
+superseded definitions, and only what is installed matters. For every
+set-returning PL/pgSQL function in `public`/`private`, each OUT/TABLE parameter
+name is checked against the body for an occurrence immediately after `returning`
+or `=` that is not dot-qualified. That is exactly the shape of all three
+defective statements and exactly not the shape of any repaired one - a repaired
+statement writes `=alias.version` and `returning alias.version`, and its only
+bare `version` is the SET target, where a column reference is the sole legal
+reading.
+
+Non-vacuity and teeth are both asserted: the candidate set is required to be
+large (observed **869 OUT parameters across 226 functions**) and to contain both
+repaired functions, and the rule must still fire on the three pre-repair
+statement texts and not on the three repaired ones. Observed on the local
+database: **8/8 assertions pass, 0 ambiguous functions.**
+
+### 6. End-to-end specifications - written, NOT executed
+
+`e2e/clinical-chart-workspace.spec.ts` and `e2e/periodontal-workspace.spec.ts`
+were authored and cover the plan's Step 1-3 list: canonical reload, finding ->
+treatment resolution, immutable charge confirmation, partial payment with
+per-case balances, plan authoring and execution, bridge / implant / root canal,
+photo upload and rename, staged import review and apply, canonical export
+registration, chronological record, provider attribution; receptionist
+payment-only behaviour, cross-tenant denial, patient A -> B with no stale state,
+failed write with no false overlay, duplicate submit, finalized-record
+amendment, stale periodontal save, the unsaved mode-switch warning; and
+desktop / tablet / phone assertions for page overflow, 32-tooth desktop
+visibility, touch targets, keyboard reachability, dialog labelling, axe
+`wcag2a`/`wcag2aa`, and the primary action under a shrunken visual viewport.
+
+**Not one assertion has been observed passing.** Hosted execution needs the
+Cloud TEST credentials of `e2e/README.md` and was not authorized. Both files
+carry a `PENDING: WRITTEN, NEVER EXECUTED` banner.
+
+They deliberately build the harness **inside test bodies**. `npx playwright test
+--list` fails today with "0 tests in 0 files" because
+`e2e/session-boundaries.spec.ts:27` calls `createAdminHarness()` at module scope
+and throws during collection; `loadE2EEnvironment()` at module scope in the other
+specs does the same. The new files use a lazy accessor, so collection is
+credential-free - the only verification available locally.
+
+Observed: `npx playwright test --list e2e/clinical-chart-workspace.spec.ts
+e2e/periodontal-workspace.spec.ts` -> **Total: 67 tests in 2 files.**
+
+A guard in `remote-database-test-guard.test.mjs` keeps them that way (proven red
+by hoisting one call to module scope). The existing specs' import-time side
+effect was **not** restructured - out of scope, recorded as a residual below.
 
 ### Files changed
 
-- `src/lib/odontogram/clinical-export.ts` (+ suite) - `ClinicalPrintHeader`,
-  `clinicalPrintHeader`, `clinicalPrintHeaderFrom`.
-- `src/components/odontogram/styles.css` - the fork host block, the fork print
-  block and every `.dental-emr-fork` cosmetic rule removed; the five
-  measured-asset rules kept verbatim; a `.clinical-chart-print` paper block
-  added; two `.dental-emr-fork` rules kept deliberately (see risks).
-- `src/components/odontogram/print-history.tsx` (+ suite) - the fake "measured
-  chart preview" tooth grid removed, the stale "no PDF or export path is
-  present" claim corrected, and a negative test added.
-- `src/components/odontogram/generated/measured-svg-nodes.ts` - one comment: the
-  licence pointer moves from the deleted vendor path to `THIRD_PARTY_NOTICES.md`.
-- `src/app/layout.tsx` - the fork global stylesheet import removed.
-- `src/components/odontogram/fork-odontogram.tsx` - the print bridge removed.
-- `scripts/remote-database-test-guard.mjs` (+ suite) - the new pgTAP suite
-  registered **before** `treatment_plans.test.sql`, because the local gate halts
-  there.
-- `scripts/approved-final-grants.mjs` - one supersede marker, no
-  `supersededBy` (the capability is gone, not moved).
-- `scripts/boundary-privilege-invariant.test.mjs` - mirror list loses the
-  signature; `approved.size` 274 -> 273.
-- `scripts/migration-privilege-lint.test.mjs` - files 346 -> 348, functions
-  517 -> 518, SECURITY DEFINER 378 -> 379 (the one new trigger function).
-- `supabase/tests/approved_grant_registry_integrity.test.sql` - 263 -> 262.
-- `package.json`, `package-lock.json`, `THIRD_PARTY_NOTICES.md`,
-  `docs/ODONTOGRAM_FORK_SOURCE_MANIFEST.md`.
+Added: `src/lib/odontogram/patient-chart-dto.ts` + test,
+`supabase/tests/out_parameter_ambiguity_guard.test.sql`,
+`e2e/clinical-chart-workspace.spec.ts`, `e2e/periodontal-workspace.spec.ts`.
 
-`src/types/database.generated.ts` is on the brief's list but **`npm run
-db:types:local` produced no diff**: the retirement changes no signature and no
-column, only bodies and privileges.
+Deleted: the 13 files listed above.
 
-### Existing assertions changed, and why
+Changed: `clinical-chart-workspace.tsx` + test, `clinical-section.tsx` + test,
+`odontogram-section.tsx` + test, `planned-treatment-form.tsx` + test,
+`treatment-plan-mode.tsx` + test, `tooth-record-drawer.test.tsx`,
+`treatment-event-form.test.tsx`, `measured-svg-asset.test.tsx`, `styles.css`,
+`src/lib/booking/service.test.ts`, `src/app/api/public/booking/route.test.ts`,
+`scripts/run-local-database-tests.mjs`, `scripts/remote-database-test-guard.mjs`
++ test, `supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs`,
+`e2e/support/odontogram.ts`, `e2e/odontogram-integration.spec.ts`.
 
-Four pgTAP suites asserted the drawing capability that this task retires. Each
-assertion was **inverted to its negative, not deleted or weakened**:
+**No migration was added or edited.** The highest applied migration is still
+`20260901010502`. The migration privilege counters are unchanged: 349 files, 94
+grant-terminal migrations, 410 approved final privileges.
 
-- `treatment_plan_rpcs.test.sql` - the grant assertion becomes `not
-  has_function_privilege` for all three browser roles; three "a drawing saves"
-  assertions become `throws_ok 42501 permission denied for function
-  save_treatment_plan_drawing`; the two value-domain rejections become the same
-  `42501`, which is a strictly earlier and stronger refusal; `has_drawing`
-  becomes constantly false; detail's drawing becomes `null`; the fixture audit
-  count 19 -> 17, because two `treatment.plan.drawing_saved` events no longer
-  happen.
-- `document_treatment_plan.test.sql` - the drawing save becomes `throws_ok
-  42501`; the "drawing canvas included verbatim" assertion becomes "**no**
-  drawing section even though `drawing` was in the include set"; the audit count
-  8 -> 7 **plus a new assertion that zero `treatment.plan.drawing_saved` events
-  exist**, so the refusal cannot silently record an act that did not happen.
-- `treatment_plans.test.sql` - the five direct-SQL constraint probes keep the
-  identical statements and now assert `42501 treatment plan drawings are
-  retired`. The column, CHECK and unique-index assertions above them are
-  untouched: the constraints still exist, nothing can reach them.
-- `approved_grant_registry_integrity.test.sql` - regenerated from the registry.
+### Security and tenancy decisions
 
-No other assertion in the repository was changed.
+- No new grant, policy, RLS change, `security definer` function or migration.
+  The one new database artefact is a read-only pgTAP suite over `pg_catalog`.
+- The public action boundary is untouched. No `organizationId`,
+  `treatingProviderId`, `createdBy` or provider display name is accepted from
+  the browser, and no provider selector was introduced - the new E2E
+  specification asserts the absence of one.
+- The deleted `fork-adapter` was the last module that could turn a renderer
+  payload into a clinical draft. Nothing canonical now depends on a
+  renderer-specific format.
+- The unsaved-work confirmation is a browser affordance only. It decides no
+  authorization and writes nothing; the server remains the authority for every
+  periodontal write and its version check.
+- Only deterministic synthetic data is used. The new E2E photo fixture is a 1x1
+  JPEG built in the spec; no real image, name, token or signed URL appears
+  anywhere. One new E2E assertion checks that no signature parameter is present
+  in the readable document text.
+- Negative cases covered by the new/changed tests: mode switch with unsaved
+  work refused until confirmed; the retired "Record direct treatment" affordance
+  asserted absent; read-only chart still hides every write affordance; a
+  mismatched-patient DTO still refuses; a chart projection failure degrades to a
+  message rather than a fabricated empty record.
 
-### Security decisions and negative cases
+### Exact commands run and observed results
 
-- **Fail closed before deleting.** One unrecognized row aborts the whole
-  migration; there is no `delete … where` that could remove "the rest".
-- **Counts, never content.** Proven by a contract test that scans the deletion
-  block for `drawing.drawing` and restricts message interpolation to the two
-  bigint counters.
-- **No residual grant**, asserted for PUBLIC/anon/authenticated/service_role on
-  the table, on the writer and on the new trigger function; RLS still on; zero
-  policies; the guard pins an empty search path.
-- **Only the revoked writer still names the retired table**, asserted by a
-  catalog query over every `public`/`private` function.
-- **Structured plan history intact**: a synthetic plan with an item, an
-  alternative and a discussion survives, and all three projections still project
-  them.
-- **The print sheet cannot leak.** No name, no id, no `href`, no `img[src]`, no
-  URL other than the SVG namespace; a name-shaped patient code is stripped
-  (`Juan Dela Cruz <b>` -> `JuanDelaCruzb`); a non-ISO date refuses the header
-  and the sheet is not rendered.
-
-### Tests run and observed results
-
-RED first:
+Run in the plan's Step 5 order.
 
 ```
-npx vitest run src/components/odontogram/clinical-chart-print.test.tsx
-                                 -> Failed to resolve import "./clinical-chart-print"
-npx vitest run src/lib/odontogram/clinical-export.test.ts
-                                 -> 4 failed: clinicalPrintHeaderFrom is not a function
+git status --short                                  -> 40 entries, all intended
+npm run security:migrations                         -> PASS (349 files / 3298 statements /
+                                                       1370 grants / 94 terminal / 410 approved)
+npm run lint                                        -> 0 errors, 2 warnings (pre-existing,
+                                                       src/lib/treatment-plan/schema.ts)
+npm run typecheck                                   -> clean
+npm run test:unit                                   -> 201 files / 2423 tests, ALL PASS
+npm run test:unit  (repeat 2)                       -> 201 / 2423 pass
+npm run test:unit  (repeat 3)                       -> 201 / 2423 pass
+npm run test:db:local                               -> 15 *.local.mjs harnesses PASS
+                                                       + 90 pgTAP suites PASS,
+                                                       then the PRE-EXISTING halt at
+                                                       treatment_plans.test.sql (exit 1)
+npm run storage:start:local                         -> PASS (dental-emr-local ready)
+npm run storage:smoke:local                         -> PASS (all 11 steps)
+node --test scripts/remote-database-test-guard.test.mjs
+                                                    -> FAILS, and fails identically on an
+                                                       unmodified HEAD (verified by stash).
+                                                       The file is a VITEST suite; its real
+                                                       runner is `npm run test:unit`, whose
+                                                       include covers scripts/**/*.test.mjs,
+                                                       and there it is 32/32 green.
+npm run build                                       -> Compiled successfully
+npm run security:secrets                            -> clean
+npm run security:audit                              -> found 0 vulnerabilities
+git diff --check                                    -> clean
+node scripts/generate-database-types.mjs --local --check
+                                                    -> Generated database types are current.
+npx playwright test --list <the two new specs>      -> Total: 67 tests in 2 files
 ```
 
-Task gate, run as the brief lists it:
+Whole-suite flake count, re-measured: **0 across three consecutive full runs**
+(2423/2423 each time). The previous flaky file, `perio-workspace.test.tsx`, was
+deleted with its subject.
 
-```
-npm run db:migrate:local     -> applied 010500 and 010501; re-run {"upToDate":true}
-npm run db:types:local       -> "Updated"; git diff EMPTY (no signature moved)
-npm run security:migrations  -> passed (348 files, 3297 statements, 94 terminals,
-                                410 approved)
-node --test scripts/treatment-plan-drawing-retirement-migration.test.mjs
-                             -> FAILS inside @vitest/runner
-                                ("Cannot read properties of undefined (reading
-                                'config')"). This is the known plan defect: the
-                                file is a Vitest suite and node's runner cannot
-                                execute it. Run through the project runner:
-npx vitest run scripts/treatment-plan-drawing-retirement-migration.test.mjs
-                             -> 11 passed
-rg -n "react-advanced-odontogram|jspdf|localStorage|Reset|Classic|freehand|drawing history" src package.json package-lock.json
-                             -> no runtime import, control or persistence path.
-                                Every hit is a negative test, a comment, a vitest
-                                `mockReset`, or the pre-existing branch/sidebar
-                                UI preference in localStorage.
-npm run test:unit -- <the brief's five files + the boundary suite + the section>
-                             -> Test Files 7 passed / Tests 116 passed
-npm run test:db:local        -> 89 suites PASS, then halts at
-                                supabase/tests/treatment_plans.test.sql
-                                (PRE-EXISTING: "treatment_plan_items has only the
-                                approved fields and the canonical centavo
-                                estimate", unchanged by this commit). Reached and
-                                PASSED on the way:
-                                PASS supabase/tests/treatment_plan_drawing_retirement.test.sql
-                                PASS supabase/tests/approved_grant_registry_integrity.test.sql
-                                PASS supabase/tests/document_treatment_plan.test.sql
-                                PASS supabase/tests/treatment_plan_rpcs.test.sql
-npm run security:audit       -> found 0 vulnerabilities
-npm run typecheck            -> clean
-npm run lint                 -> 0 errors, 3 warnings (all pre-existing, in files
-                                this commit does not touch)
-npm run build                -> Compiled successfully
-```
+### Tests NOT run, and why
 
-Run directly, because the gate halts before the end:
+- **Playwright execution** (`npm run test:e2e`, `npm run test:e2e:responsive`)
+  and full **`npm run test:e2e:list`** - needs the designated synthetic Cloud
+  TEST credentials. Not authorized; no credential was fabricated or loaded.
+- **Cloud TEST database suite** (`npm run test:db:cloud`), **`db:push:test`**,
+  **`db:advisors:test`**, **`db:lint:test`**, **`security:auth`** - hosted, not
+  authorized.
+- **`npm run db:reset:local`** - prohibited by the plan.
+- Everything above is **local evidence only**. There is no Cloud TEST evidence
+  in this commit.
 
-```
-<psql runner> supabase/tests/treatment_plan_drawing_retirement.test.sql -> P1_TEST_PASS (23)
-<psql runner> supabase/tests/treatment_plan_rpcs.test.sql               -> P1_TEST_PASS
-<psql runner> supabase/tests/document_treatment_plan.test.sql           -> P1_TEST_PASS
-<psql runner> supabase/tests/approved_grant_registry_integrity.test.sql -> P1_TEST_PASS
-<psql runner> supabase/tests/treatment_plans.test.sql                   -> only the
-                                pre-existing "not ok 9"; the five retirement
-                                probes pass
-npx vitest run scripts/ + the boundary suite -> 15 files, 307 passed
-npm run test:unit (whole)    -> 2425 passed | 9 failed (206 files)
-```
+### Known residual risks
 
-The nine: **7 booking failures** in `src/lib/booking/service.test.ts` and
-`src/app/api/public/booking/route.test.ts` - the same seven recorded in the task
-12, 13, 14 and 15 handoffs and reproduced there on a clean stash - and **2
-`perio-workspace.test.tsx` timeouts** under the 206-file parallel run, which
-pass alone (`11 passed`). Neither set touches anything in this commit.
+1. **`npm run test:db:local` still exits 1** at `treatment_plans.test.sql`. This
+   is the documented pre-existing halt (recorded identically in the Task 15 and
+   Task 16 handoffs), caused by the drawing-retirement refusal, not by this
+   commit. It is now less damaging - the harnesses run before it - but the
+   suites registered after it still never execute locally. They do execute in
+   the remote runner.
+2. **`node --test scripts/remote-database-test-guard.test.mjs`** cannot pass: the
+   file is written for vitest. The gate line in the plan names the wrong runner.
+   Pre-existing; not changed here.
+3. **The older E2E specs still load their harness at import time**
+   (`session-boundaries.spec.ts:27`, and `loadE2EEnvironment()` at module scope
+   in `odontogram-integration.spec.ts`, `responsive-accessibility.spec.ts`,
+   `odontogram-responsive-accessibility.spec.ts`, `clinical-chart-print.spec.ts`).
+   Repository-wide `playwright test --list` therefore still needs Cloud TEST
+   secrets. Restructuring them was out of scope.
+4. **The `dental-emr-fork` CSS class name outlives the fork wrapper.** Cosmetic.
+   Renaming it touches a print-regression guard and an E2E locator.
+5. **The new E2E specifications are unverified beyond collection.** Selector
+   drift is likely and expected on the first hosted run.
+6. **The OUT-parameter rule is a static heuristic.** It catches the exact shape
+   of the two real defects and is asserted non-vacuous, but it is not a proof
+   that every granted function's success path works. Only success-path coverage
+   is that.
+7. **The unsaved-work confirmation warns; it does not preserve the draft.** A
+   clinician who chooses "Discard and switch" still loses the readings. Carrying
+   the draft across a mode change is a larger change than this task authorizes.
+8. `ALTER TABLE … DISABLE TRIGGER` in `20260901010502` still needs the hosted
+   ownership check at the first authorized Cloud TEST push.
 
-### Tests not run, and why
+### Pending release gates (none of these passed; all remain open)
 
-- **Playwright / hosted E2E** - a release gate, not authorized here.
-- `npm run test:db` (Cloud TEST) - no hosted project was contacted.
-- `npm run storage:*` - nothing here touches object storage.
-- No new `.local.mjs` concurrency test: the retirement adds no concurrent path.
+- Cloud TEST database suite
+- hosted E2E execution, including `e2e/clinical-chart-print.spec.ts` and the two
+  specifications added here
+- representative-device responsive/accessibility pass
+- Supabase database advisors
+- security review
+- clinical-owner validation of the periodontal classification
+- final human acceptance
 
-### Local-only versus Cloud TEST evidence
-
-Everything above is **local only**. Cloud TEST, hosted E2E, responsive and
-accessibility device verification, database advisors and final security
-acceptance remain release gates. In particular the `@media print` behaviour -
-A4 pagination, `hidden print:block`, and that the interactive chart does not
-print twice - is asserted only by class name and by reading `styles.css` in
-jsdom, which applies no CSS at all. **No printed output has been observed.**
-
-### Known residual risks and open questions
-
-1. **DEVIATION: `src/components/odontogram/styles.css` was not deleted**, though
-   the brief lists it. It has a live importer that Task 17 does not remove -
-   `measured-svg-asset.tsx`, the production anatomical renderer - and
-   `measured-svg-asset.test.tsx` asserts both the exact import string and the
-   hidden-layer rule's text. Those five measured-asset rules are the ones whose
-   loss caused defects in three earlier contexts. The file was instead **cleaned
-   of every fork rule**; the fork global stylesheet the brief's boundary test
-   targets is `react-advanced-odontogram/emr-style.css`, which **is** gone.
-2. **Two `.dental-emr-fork` rules were kept**: `max-width: 100%` and an
-   `@media print { display: none }`. The second replaces the fork stylesheet's
-   own print rule; without it the interactive chart would print underneath the
-   print sheet. Both die with `fork-odontogram.tsx` in task 17.
-3. **`odontogram-section.tsx` imports `toPatientChartDTO` from
-   `fork-odontogram.tsx`**, which task 17 deletes. That pure mapper must move to
-   `src/lib/odontogram/` then; it was left in place here to keep this commit's
-   diff inside its slice.
-4. **The `drawing` key and `has_drawing` column still exist** on two projections
-   as constant `null`/`false`, because `src/lib/treatment-plan/schema.ts` parses
-   both with `.strict()`. Removing the keys is a separate reviewed change across
-   the treatment-plan and documents domains.
-5. **`generate_document` still accepts `drawing` in the include set** and simply
-   produces nothing. That keeps `src/lib/documents/include-set.ts` working
-   unchanged; the offered "Drawing" include is now a no-op in the documents UI
-   and should be removed there.
-6. **`renderTreatmentPlanDrawing` in `src/lib/documents/render.ts` is now dead
-   code** - the snapshot can never carry a `drawing` key. Left in place; it is
-   in the documents domain, outside this slice.
-7. **The preflight has never met a non-empty table.** It counted zero on this
-   database, so its recognition rule is proven by the contract test's reading of
-   it, not by a deletion it actually performed.
-8. **`scripts/generate-odontogram-svg-nodes.ps1` still names the package** in a
-   comment. It is not scanned by the boundary test (`.ps1`), and the brief
-   forbids touching it.
-9. **The periodontal classification the print sheet shows arrives as a prop and
-   is not currently supplied by the route**, so a printed sheet says "staging
-   and grading are not finalized". The measured summary (sites, deep sites, BOP,
-   deepest pocket) is always printed. Wiring the workspace's derived
-   classification through is a small follow-up.
-10. **`private.audit_metadata_is_safe` was not widened** and no audit event was
-    added: a retirement is a schema act, not a clinical one.
+Local implementation of the 17-task plan is complete. **Release acceptance is
+not**, and nothing in this commit may be read as authorization for production
+deployment or real patient or provider use.
 
 ### Areas Codex should scrutinize
 
-- That the preflight genuinely cannot be reached after a delete on any path, and
-  that no message can carry drawing content.
-- That the recognition rule cannot admit a real tenant - particularly the
-  `plan.organization_id = drawing.organization_id` clause.
-- That the tombstone triggers fail closed for a superuser-owned SECURITY DEFINER
-  writer as well as for a browser role, and that the truncate guard is reached.
-- That the three guarded replaces are replay-safe on a CRLF checkout, and that
-  the `still reads the retired drawing table` post-conditions really run before
-  `execute`.
-- That inverting the four pgTAP suites' drawing assertions removed no coverage
-  of anything that still exists.
-- That nothing in `src/` can reach the removed package by a path the boundary
-  test does not scan.
-- The claim that the print sheet can carry no patient name, identifier or URL.
-
-## Task 16 round 2 - review fixes: 1 Critical, 4 Important, 1 Minor (2026-09-02)
-
-The retirement migration came back as the strongest part of `9a823ff`: the
-reviewer confirmed the recognition rule is a pure positive whitelist, that the
-unqualified `delete` is correct, that no drawing content reaches any message,
-and that the MIT notice provably predates the deletion. Six items were fixed.
-
-### C1 - the printed chart rendered no anatomy at all
-
-```css
-.clinical-chart-print button { display: none !important; }
-```
-
-`MeasuredTooth` renders every tooth tile as a `<button>`, so that rule matched
-all 32 teeth with `!important` and nothing restored them. **Every printed or
-PDF-saved chart was a header, three text lists, and an empty bordered box where
-the mouth should be** - and the anatomical projection is the first item in the
-print specification. The rule was written for the two genuine screen
-affordances (`Select multiple`, `Clear selection`) and it does hide those.
-
-The unit suite passed because **jsdom applies no CSS**: the stylesheet
-assertion asked whether the five asset rules were present, never whether
-something else in the same file cancelled them.
-
-Fixed with `button:not(.odontogram-tooth)`; the tiles already carry that class.
-
-**This was the fourth defect in this family** - task 3 (component not importing
-the stylesheet), task 12 (a surface inheriting the constraint without it), task
-15 (an export that could not carry it), and now a print rule that cancelled it.
-So the class is closed, not just the instance:
-
-- the stylesheet assertion is now two-sided - a positive match on the `:not()`
-  form and a **negative match on the unscoped form**, plus a check that exactly
-  one such rule exists and that the exempt class still exists in
-  `measured-tooth.tsx`. Proven to fail: reverting to the unscoped rule turns the
-  suite red;
-- `e2e/clinical-chart-print.spec.ts` is **written and PENDING**. Under
-  `page.emulateMedia({ media: "print" })` it asserts
-  `.clinical-chart-print .odontogram-measured-asset` is visible, that more than
-  16 assets are painted, that the tiles are not hidden, that the two screen
-  affordances ARE hidden, and that the interactive chart does not print twice.
-  **It was NOT run** - hosted E2E is a release gate and is unauthorized. Only
-  that check closes the class; the CSS assertion closes this instance.
-
-### I1 - the TOCTOU window, closed forward-only
-
-The count and the delete in `20260901010500` are separate statements in one `DO`
-block, so under READ COMMITTED a row committed between them is invisible to the
-preflight and then deleted unrecognized. The window is widest exactly where it
-matters: the revoke lives in `...010501`, which sorts **after** `...010500`.
-
-`20260901010502_retire_treatment_plan_drawings_locked_sweep.sql` re-runs the
-character-identical preflight and delete with
-`lock table public.treatment_plan_drawings in access exclusive mode` as the
-**first executable statement in the block**. `...010500` is applied and was
-**not edited**. The sweep suspends the row guard for its own delete and restores
-it in the same transaction - the guard refuses every mutation, including the
-retirement's own sweep, which is why `...010500` installed it after its delete.
-
-The contract test now asserts lock -> count -> abort -> delete, that the lock is
-literally the first statement after `begin`, that the guard is suspended only
-between the lock and the delete and re-enabled after, that the sweep's
-recognition predicate is **character-identical** to `...010500`'s once
-whitespace is normalized, and that `...010500` was not edited.
-
-**Deploy note**, recorded in the migration header: in any environment that has
-ever held rows, apply `20260901010501` (the revoke) **before** `20260901010500`
-(the delete). Alphabetical order does the opposite.
-
-### I2 - the two-way execution proof
-
-`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs` extracts
-the `do $migration$ ... $migration$;` block **from the migration file by
-regex**, so the file stays the single source of truth, and runs it against real
-rows in rolled-back transactions:
-
-```
-node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
--> DRAWING_RETIREMENT_EXECUTION_PASS
-     deletion : one recognized fixture row deleted, reported as one
-     abort    : one unrecognized row aborted the block and SURVIVED it
-```
-
-The surviving-row assertion is the one static reading structurally cannot give:
-the difference between "the migration raised" and "the migration raised
-**without having already deleted something**". It also exercises what reading is
-weakest on - row-constructor `IN` semantics, the cross-organization join, and a
-non-fixture organization. The survival probe runs **without** `ON_ERROR_STOP`,
-because psql otherwise abandons the script at the expected raise.
-
-Proven non-vacuous: pointing the abort scenario at a recognized fixture id turns
-it red with four named failures.
-
-### I3 - the periodontal classification, and a clinical falsehood
-
-The sheet printed *"Staging and grading are not finalized for this
-examination"* whenever the prop was absent - which was **always**, since nothing
-supplied it - including for an examination the same sheet printed as `FINAL` two
-lines above.
-
-The decision not to re-derive staging in the print view stands. Instead
-`clinical-section.tsx` loads `get_periodontal_workspace_v2`'s own **confirmed**
-classification (falling back to its stored derivation), formats it with the new
-tested `formatPerioClassification`, and threads it through `OdontogramSection`.
-The load is keyed by patient so one patient's classification can never render
-for another, is skipped entirely when the chart shows no FINAL examination, and
-sets no state synchronously inside the effect.
-
-The fallback now reads *"Staging and grading are not shown on this printout."* -
-declining to show a fact rather than asserting its negative.
-
-### I4 - a failed chronology printed as an empty record
-
-`progressRecord === null` was substituted with an empty record, so the sheet
-printed *"No recorded event"* and *"Amounts are withheld"* - a fabricated
-clinical negative plus a permission claim that may be false, on paper that
-outlives the session. The page already knew better: `clinical-section.tsx`
-treats the same null as `recordLoadFailed` on screen.
-
-`record` is now `ClinicalProgressRecord | null` and `null` prints an explicit
-alert: *"The clinical record could not be loaded, so it is not printed here.
-This is not a statement that there is none."* No empty table, no withheld
-sentence. The chronology body moved into `RecordBody` so the failure branch
-reads as one decision.
-
-### M1 - the generator would have reintroduced the dead path
-
-`scripts/generate-odontogram-svg-nodes.ps1` still emitted
-`// vendor/react-advanced-odontogram/LICENSE.` into the generated header. The
-hand-corrected `measured-svg-nodes.ts` would have been reverted on the next
-regeneration - and because the boundary test scans `generated/`, that would then
-**fail the gate**. `.ps1` is outside the test's extension set, so nothing would
-have caught it until then. It now emits the `THIRD_PARTY_NOTICES.md` pointer,
-byte-identical to the hand-corrected header.
-
-### Round 2 files
-
-Added: `supabase/migrations/20260901010502_retire_treatment_plan_drawings_locked_sweep.sql`,
-`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs`,
-`e2e/clinical-chart-print.spec.ts` (pending).
-
-Changed: `src/components/odontogram/styles.css`,
-`src/components/odontogram/clinical-chart-print.tsx` (+ suite),
-`src/app/(emr)/patients/[patientId]/clinical-section.tsx`,
-`src/app/(emr)/patients/[patientId]/odontogram-section.tsx` (+ suite),
-`src/lib/odontogram/perio-classification.ts` (+ suite),
-`scripts/treatment-plan-drawing-retirement-migration.test.mjs`,
-`scripts/migration-privilege-lint.test.mjs` (files 348 -> 349),
-`scripts/generate-odontogram-svg-nodes.ps1`.
-
-No grant moved, so `approved-final-grants.mjs`,
-`boundary-privilege-invariant.test.mjs` and
-`approved_grant_registry_integrity.test.sql` are unchanged; their counters still
-stand at 410 / 273 / 262. `src/types/database.generated.ts` regenerated to no
-diff again.
-
-### Round 2 tests run and observed results
-
-```
-npm run db:migrate:local     -> applied 20260901010502; re-run {"upToDate":true}
-npm run db:types:local       -> "Updated"; git diff EMPTY
-npm run security:migrations  -> passed (349 files, 3298 statements, 94 terminals,
-                                410 approved)
-npx vitest run scripts/      -> 15 files, 306 passed
-node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
-                             -> DRAWING_RETIREMENT_EXECUTION_PASS
-npm run test:unit -- <nine focused files>
-                             -> Test Files 9 passed / Tests 213 passed
-npm run test:db:local        -> 89 suites PASS, halts at treatment_plans.test.sql
-                                (pre-existing "not ok 9"); the retirement suite,
-                                the registry suite, document_treatment_plan and
-                                treatment_plan_rpcs all PASS on the way
-npm run security:audit       -> found 0 vulnerabilities
-npm run typecheck            -> clean
-npm run lint                 -> 0 errors, 3 warnings (pre-existing)
-npm run build                -> Compiled successfully
-npm run test:unit (whole)    -> 2443 passed | 8 failed (206 files)
-```
-
-Run directly: the retirement pgTAP suite -> `P1_TEST_PASS` (23 assertions).
-
-The eight whole-suite failures, none from this commit:
-
-- **7 booking** in `src/lib/booking/service.test.ts` and
-  `src/app/api/public/booking/route.test.ts`. Both files hardcode
-  `2026-09-01T09:00:00+00:00`; the clock rolled to 2026-09-02 during this task,
-  so the schema now rejects it as a past booking. Confirmed by the controller as
-  pre-existing and date-triggered, and assigned to task 17 for an injected
-  clock. Both files are unmodified here.
-- **1 `perio-workspace.test.tsx`** parallel-run timeout. Unmodified by this
-  commit and passes alone (`11 passed`).
-
-Playwright was not run; hosted E2E remains unauthorized.
-
-## Task 16 round 3 - review fixes: 2 Important, 1 Minor (2026-09-02)
-
-C1, I1, I4 and M1 came back fixed, and the reviewer independently confirmed the
-locked sweep's recognition predicate is character-identical to `...010500`'s and
-that the trigger suspension is correct in mechanism. Three items remained.
-
-### F1 - the staging line could belong to a different examination
-
-`clinical-section.tsx` loaded the classification with `examinationId: null`, and
-that RPC's default branch orders `(status = 'DRAFT') desc, recorded_at desc`
-(`20260901010242`). The print sheet chose independently, by the greatest
-`finalized_at ?? examined_at`. My `hasFinalPeriodontalExam` gate only asked
-whether *some* examination was FINAL.
-
-So for a patient with an open draft plus a more-recently-finalized examination,
-the sheet printed the FINAL examination's kind, status, version and site counts
-**under staging taken from the DRAFT** - with nothing on the paper to reveal the
-substitution. This is I3's defect reintroduced through a second **selection**
-authority rather than a second derivation.
-
-Fixed by making one authority, at two levels:
-
-- **`selectPeriodontalExaminationForPrint`** (new, in
-  `src/lib/odontogram/perio-classification.ts`, 4 tests) is the single answer to
-  "which examination is this sheet about". It orders by recency and breaks an
-  exact tie by id so the answer is stable. `perioSummary` uses it, and
-  `clinical-section.tsx` uses it to derive the id and **loads by that id** rather
-  than asking for the RPC's default.
-- **The sheet refuses a mismatch.** `periodontalClassification` is now
-  `{ examinationId, label }`, and the staging line prints only when its
-  `examinationId` equals the summarized examination's. Whatever rule a future
-  caller uses to load, a classification for another examination is not printed.
-  Proven: neutralising that comparison turns the suite red.
-
-The load is also keyed by patient *and* examination in state, so a value loaded
-for one can never render for the other.
-
-### F2 - the survival probe could not fail, and its comment was false
-
-The probe took `savepoint before_block`, ran the block, then **rolled back to
-that savepoint before counting**. The count was the seeded state by
-construction: it read `1` whether the block aborted before deleting, deleted and
-then aborted, or succeeded outright. The comment claiming "if the preflight had
-deleted before aborting, that count would be zero" was false.
-
-It was doubly unfalsifiable: a `DO` block is a single statement, so a partial
-delete is never externally observable anyway. **The controller's framing that
-this was the decisive proof was wrong, and is corrected in the file**: PostgreSQL
-guarantees statement atomicity, so such a check tests the engine, not the
-recognition rule. The static `abort < delete` ordering assertion is the real
-evidence.
-
-Both halves done:
-
-1. The probe and its false comment are **removed**, and the harness header now
-   states plainly what it can and cannot prove.
-2. **The harness now has demonstrable teeth.** A BEFORE DELETE trigger raises
-   `HARNESS_ROW_DELETED`; a NOTICE reaches the client the moment it is raised
-   and is *not* undone by the rollback, so "did a delete ever execute" is
-   genuinely observable. The abort checks moved into `abortScenarioFailures`,
-   and a third scenario mutates the extracted block so the delete precedes the
-   raise (`mutateDeleteBeforeAbort`, which throws if its anchor is missing) and
-   **requires those same checks to fail**, specifically via the delete probe.
-
-   ```
-   node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
-   -> DRAWING_RETIREMENT_EXECUTION_PASS
-        deletion : one recognized fixture row deleted, reported as one
-        abort    : one unrecognized row aborted the block, deleting nothing
-        teeth    : a delete-before-abort mutant was caught (1 failure(s))
-   ```
-
-   Proven non-vacuous in both directions: neutralising the probe makes the run
-   report `teeth check: a block mutated to DELETE BEFORE ABORTING passed the
-   abort checks. The checks above prove nothing.`
-
-### M2 - the stylesheet guard matched only a direct selector
-
-`.clinical-chart-print .odontogram-chart button { display: none }` would have
-reintroduced C1 while evading both the positive and the negative pattern. The
-guard now strips CSS comments, enumerates **every** rule whose selector mentions
-`.clinical-chart-print` and ends in `button` at any depth, requires exactly one,
-and requires `:not(.odontogram-tooth)` on each. Proven to catch both the nested
-evasion and the unscoped form.
-
-### Round 3 files
-
-Changed: `src/lib/odontogram/perio-classification.ts` (+ suite),
-`src/components/odontogram/clinical-chart-print.tsx` (+ suite),
-`src/app/(emr)/patients/[patientId]/clinical-section.tsx`,
-`src/app/(emr)/patients/[patientId]/odontogram-section.tsx`,
-`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs`.
-
-No migration added, no grant moved, no counter changed: 349 / 94 / 410 / 273 /
-262 all stand, and `src/types/database.generated.ts` regenerates to no diff.
-
-### Round 3 tests run and observed results
-
-```
-npm run db:migrate:local     -> {"upToDate":true}
-npm run db:types:local       -> "Updated"; git diff EMPTY
-npm run security:migrations  -> passed (349 files, 410 approved)
-npx vitest run scripts/      -> 306 passed (contract test 18)
-node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
-                             -> DRAWING_RETIREMENT_EXECUTION_PASS (3 scenarios)
-npx vitest run <eight print/section/lib suites>
-                             -> Test Files 8 passed / Tests 190 passed
-npm run test:db:local        -> 89 suites PASS, halts at treatment_plans.test.sql
-                                (pre-existing "not ok 9")
-npm run typecheck            -> clean
-npm run lint                 -> 0 errors, 3 warnings (pre-existing)
-npm run build                -> Compiled successfully
-npm run test:unit (whole)    -> 2450 passed | 8 failed (206 files)
-```
-
-Run directly: the retirement pgTAP suite -> `P1_TEST_PASS` (23 assertions).
-
-The 8 failures are exactly the expected baseline: 7 date-triggered booking
-failures (both files hardcode `2026-09-01`, unmodified here, Task 17 owns the
-injected clock) and 1 `perio-workspace.test.tsx` parallel-run timeout that
-passes alone.
-
-Playwright was not run; hosted E2E remains unauthorized.
-
-## Task 16 round 4 - review fixes: 2 Minor (2026-09-02)
-
-Round 3 was approved: F1, F2 and M2 were hand-traced against the real files and
-confirmed at the root. Two Minor items remained, both on surfaces this plan has
-been bitten on repeatedly. No migration, no pgTAP and no harness change.
-
-### R1 - the widened gate let unfinalized staging print as fact
-
-Passing the summarized examination's id to the loader (round 3, F1) also
-replaced the `hasFinalPeriodontalExam` gate with `printedPerioExaminationId !==
-null`. Correct for F1, but it means a patient whose ONLY periodontal record is
-an unsigned DRAFT now HAS a staging line to print, where previously they had
-none. The F1 guard still prevents cross-examination mislabeling, so this is not
-a reintroduction - but staging and grading sourced from an unfinalized
-examination, printed on a document that leaves the building, is the same family
-as I3 and I4: paper asserting a clinical conclusion more firmly than the record
-supports.
-
-The classification is still printed - declining would lose real clinical
-information - but a non-FINAL examination's staging now carries a bordered
-`PROVISIONAL` marker immediately before the text and the sentence "Taken from an
-unsigned draft examination. Not a finalized diagnosis." underneath.
-
-The marker is deliberately **adjacent to the classification**, not left to the
-`DRAFT` status printed two lines above: a clinician holding only the paper reads
-the diagnosis line, not the header. Two tests, and neutralising the marker turns
-the DRAFT-only one red.
-
-### R2 - the @media blind spot in the M2 guard
-
-The M2 guard split the stylesheet on brace pairs, which hands the **first** rule
-inside any `@media` block the `@media print` opener as its "selector". It does
-not affect the current file - `styles.css`'s button rule is not first in its
-block - but a future `@media print { .clinical-chart-print button {…} }` whose
-button rule came first, or alone, would have been filtered out and counted as
-zero. The C1 Critical returning through a construction neither tested evasion
-covers, inside the guard whose job is closing evasion classes.
-
-The scanner is now a named function that strips comments **and every at-rule
-opener** (`@media`, `@supports`, `@layer`) before splitting, so a selector
-survives regardless of its position. A stray closing brace can only prefix the
-next selector slice, which the filter ignores.
-
-It is now exercised against synthetic stylesheets as well as the real one: four
-constructions must each be SEEN and FLAGGED - button rule first in its own
-`@media print` block, alone in a nested `@supports`, a descendant selector
-outside any at-rule, and first in an `@layer` block - plus the legitimate rule in
-the same position must be seen and accepted, and an unrelated
-`.dental-emr-fork button` must not be swept up.
-
-Removing the at-rule stripping turns it red with `the guard must SEE the rule:
-first rule in its own @media print block: expected +0 to be 1`, so the fix is
-load-bearing rather than defensive.
-
-### Round 4 files
-
-Changed: `src/components/odontogram/clinical-chart-print.tsx` (+ suite, 19 -> 25
-tests). Nothing else. No migration, no grant, no counter: 349 / 94 / 410 / 273 /
-262 all stand.
-
-### Round 4 tests run and observed results
-
-```
-npx vitest run <print, section, clinical-section, perio-classification>
-                             -> Test Files 4 passed / Tests 139 passed
-npm run typecheck            -> clean
-npm run lint                 -> 0 errors, 3 warnings (pre-existing)
-npm run build                -> Compiled successfully
-npm run test:unit (whole)    -> 2453 passed | 8 failed (206 files)
-```
-
-The 8 are the unchanged expected baseline: 7 date-triggered booking failures and
-1 `perio-workspace.test.tsx` parallel-run timeout. Playwright was not run.
+- The `tooth-inspector` retention decision, and whether any other file in the
+  brief's stale deletion list is likewise still live.
+- `odontogram-section.tsx`: the direct `MeasuredChart` mount, the shared
+  projection, the selection publication that replaced the wrapper's, and whether
+  any behaviour of the deleted `ForkOdontogram` or `CurrentStatusPanel` was lost
+  rather than moved.
+- The mode-switch confirmation: whether the workspace is genuinely the only
+  owner that can see the discard, and whether the flag can be stranded true.
+- The reordering of `scripts/run-local-database-tests.mjs` - whether running the
+  harnesses first can mask a pgTAP failure (it should not; both still fail the
+  command).
+- The OUT-parameter rule's false-negative surface.
+- Whether the new E2E specifications assert anything that could pass while the
+  underlying behaviour is wrong.
 
 ### Next bounded task
 
-Task 17 - delete the superseded UI (`current-status-panel`, `tooth-inspector`,
-`plan-mode-panel`, `fork-odontogram`, `fork-adapter`, `treatment-plan-section`),
-relocate `toPatientChartDTO`, fix the two hardcoded booking dates with an
-injected clock, make the repository's unreachable `*.local.mjs` harnesses part
-of a gate, and run the complete local gate. The pending print spec
-`e2e/clinical-chart-print.spec.ts` should run at the first authorized hosted E2E
-pass, along with the hosted check that `ALTER TABLE … DISABLE TRIGGER` in
-`20260901010502` has the table ownership it needs.
+None in this plan. The next step is the authorized **Cloud TEST** window: push
+the migrations, run the remote database suite and the advisors, then the hosted
+E2E pass across the desktop, iPad and phone projects, and correct the selector
+drift the two new specifications will surface.
