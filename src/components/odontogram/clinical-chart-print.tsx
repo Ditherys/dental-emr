@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import type { PatientChartProjection } from "@/lib/odontogram/chart-projection";
+import { selectPeriodontalExaminationForPrint } from "@/lib/odontogram/perio-classification";
 import type { ClinicalPrintHeader } from "@/lib/odontogram/clinical-export";
 import {
   clinicalProgressAmountLabel,
@@ -69,12 +70,20 @@ export type ClinicalChartPrintProps = {
   providerDisplay?: string | null;
   /**
    * Staging, grading and extent exactly as the SERVER decided them, formatted
-   * by `formatPerioClassification`. Print derives nothing: a second
-   * classification authority could disagree with the one the clinician
-   * confirmed. Absent means "not shown on this printout" - never "not
+   * by `formatPerioClassification`, TOGETHER WITH the examination they belong
+   * to. Print derives nothing: a second classification authority could disagree
+   * with the one the clinician confirmed.
+   *
+   * REVIEW F1. The `examinationId` is not decoration. A staging line printed
+   * under another examination's measurements is a clinical misstatement that
+   * nothing on the paper reveals, so this sheet refuses to print a
+   * classification whose examination is not the one it summarized - whatever
+   * rule the caller used to load it.
+   *
+   * Absent, or mismatched, means "not shown on this printout" - never "not
    * finalized", which would be a clinical assertion this sheet cannot make.
    */
-  periodontalClassification?: string | null;
+  periodontalClassification?: { examinationId: string; label: string | null } | null;
 };
 
 const NO_SELECTION: readonly number[] = [];
@@ -117,6 +126,7 @@ function findingRows(dto: PatientOdontogramDTO): readonly FindingRow[] {
 }
 
 type PerioSummary = {
+  examinationId: string;
   kind: string;
   status: string;
   version: number;
@@ -131,14 +141,12 @@ type PerioSummary = {
 /**
  * A count of what was measured, not a re-derivation of what it means. The
  * staging/grading judgement is the workspace's and arrives as a prop.
+ *
+ * REVIEW F1: the examination is chosen by the SHARED authority, so the staging
+ * line and these measurements can never describe two different examinations.
  */
 function perioSummary(dto: PatientOdontogramDTO): PerioSummary | null {
-  const examinations = [...dto.periodontalExaminations].sort((a, b) =>
-    String(a.finalized_at ?? a.examined_at ?? "").localeCompare(
-      String(b.finalized_at ?? b.examined_at ?? ""),
-    ),
-  );
-  const latest = examinations.at(-1);
+  const latest = selectPeriodontalExaminationForPrint(dto.periodontalExaminations);
   if (!latest) return null;
 
   let bleedingSites = 0;
@@ -157,6 +165,7 @@ function perioSummary(dto: PatientOdontogramDTO): PerioSummary | null {
   }
 
   return {
+    examinationId: latest.id,
     kind: latest.examination_kind,
     status: latest.status,
     version: latest.version,
@@ -435,9 +444,11 @@ export function ClinicalChartPrint({
               {perio.maxProbingDepthMm === null ? "—" : `${perio.maxProbingDepthMm} mm`}
             </p>
             <p className="mt-1">
-              {periodontalClassification === null || periodontalClassification === undefined
-                ? "Staging and grading are not shown on this printout."
-                : periodontalClassification}
+              {periodontalClassification?.label !== null &&
+              periodontalClassification?.label !== undefined &&
+              periodontalClassification.examinationId === perio.examinationId
+                ? periodontalClassification.label
+                : "Staging and grading are not shown on this printout."}
             </p>
           </div>
         )}

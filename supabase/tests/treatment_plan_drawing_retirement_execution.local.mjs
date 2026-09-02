@@ -16,14 +16,29 @@ import { fileURLToPath } from "node:url";
  * directions, inside a transaction that is always rolled back:
  *
  *   DELETION  a drawing on a plan in a recognized fixture organization is
- *             deleted, and the block reports one row.
+ *             deleted, and the block reports exactly one row.
  *   ABORT     a drawing on a plan in a THIRD, non-fixture organization aborts
- *             the block with the expected message AND LEAVES THE ROW IN PLACE.
+ *             the block with the expected message, having DELETED NOTHING.
+ *   TEETH     the same abort checks, run against a block deliberately mutated
+ *             to delete BEFORE aborting, must fail.
  *
- * That last assertion is the one static reading structurally cannot give, and
- * it is the property that matters most. It also exercises what reading is
- * weakest on: PostgreSQL's row-constructor `IN` semantics, NULL `slug`
- * behaviour, and the cross-organization join.
+ * WHAT THIS FILE CAN AND CANNOT PROVE. It cannot prove "the row survived" by
+ * counting rows after the abort. A `DO` block is a single statement, so
+ * PostgreSQL rolls back its partial effects whatever happened inside it: a
+ * post-abort count reports the seeded state by construction and reads the same
+ * whether the block aborted before deleting, deleted and then aborted, or never
+ * ran. Such a check tests the engine, not this migration. An earlier version of
+ * this harness contained exactly that check, and it could not fail.
+ *
+ * What IS observable is whether a delete ever EXECUTED. A `raise notice` from a
+ * BEFORE DELETE trigger reaches the client the moment it is raised and is not
+ * undone by the rollback, so the probe reports what the block actually did.
+ * That, together with the static `abort < delete` ordering assertion in
+ * scripts/treatment-plan-drawing-retirement-migration.test.mjs, is what carries
+ * the weight - and the TEETH scenario is what proves those checks can fail.
+ *
+ * It also exercises what static reading is weakest on: PostgreSQL's
+ * row-constructor `IN` semantics and the cross-organization join.
  *
  * The SQL is EXTRACTED FROM THE MIGRATION FILE, never retyped, so the file
  * stays the single source of truth and this harness cannot drift into testing
@@ -33,7 +48,7 @@ import { fileURLToPath } from "node:url";
  *   node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
  *
  * All data is synthetic. No drawing content is ever logged: the harness asserts
- * on row COUNTS and on the abort message, exactly as the migration reports.
+ * on row COUNTS, on the abort message, and on the probe's notice.
  */
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -144,6 +159,27 @@ alter table public.treatment_plan_drawings enable trigger treatment_plan_drawing
 
 select 'SEEDED=' || count(*)::text from public.treatment_plan_drawings where plan_id = ${uuid(plan)};
 
+-- THE DELETE PROBE. A NOTICE is written to the client the moment it is raised
+-- and is NOT undone by the rollback that follows, so it is the one signal that
+-- survives an aborted block. Row counts do not: a DO block is a single
+-- statement, so PostgreSQL rolls back its partial effects whatever the block
+-- did, and reading the table afterwards therefore reports the seeded state by
+-- construction. This trigger reports what the block ACTUALLY DID.
+--
+-- The block suspends only treatment_plan_drawings_retired_row_guard by name,
+-- so this probe stays armed throughout it.
+create function public.harness_drawing_delete_probe()
+returns trigger language plpgsql as $probe$
+begin
+  raise notice 'HARNESS_ROW_DELETED';
+  return old;
+end;
+$probe$;
+
+create trigger harness_drawing_delete_probe
+before delete on public.treatment_plan_drawings
+for each row execute function public.harness_drawing_delete_probe();
+
 ${block}
 
 select 'SURVIVING=' || count(*)::text from public.treatment_plan_drawings where plan_id = ${uuid(plan)};
@@ -191,6 +227,69 @@ function spawnSyncCapture(command, args) {
   return result.stdout ?? "";
 }
 
+/**
+ * Runs the abort scenario against `block` and returns everything wrong with it.
+ * Returning failures rather than throwing is what lets the teeth check below
+ * run the SAME checks against a deliberately broken block and require them to
+ * fire.
+ */
+async function abortScenarioFailures(block, command, options) {
+  const failures = [];
+  const abort = await execute(
+    command,
+    scenarioSql({ block, organizationId: FOREIGN_ORGANIZATION, seedFixtureOrganization: false }),
+    options,
+  );
+  const output = abort.stdout + abort.stderr;
+
+  if (!output.includes("SEEDED=1")) {
+    failures.push("abort scenario: the unrecognized drawing row was not seeded.");
+    return failures; // nothing below means anything without the row.
+  }
+  if (abort.status === 0) {
+    failures.push(
+      "abort scenario: the block SUCCEEDED on an unrecognized row. It must abort instead.",
+    );
+  }
+  if (!output.includes("treatment plan drawing retirement aborted before deleting anything")) {
+    failures.push("abort scenario: the expected abort message was not raised.");
+  }
+  if (!output.includes("are not linked to a repository synthetic fixture")) {
+    failures.push("abort scenario: the abort did not report the unrecognized count.");
+  }
+  if (output.includes("recognized synthetic row(s) deleted")) {
+    failures.push("abort scenario: the block reported a deletion despite aborting.");
+  }
+  // THE ONE THAT MATTERS: the probe fires per deleted row, whatever the
+  // transaction does afterwards.
+  if (output.includes("HARNESS_ROW_DELETED")) {
+    failures.push(
+      "abort scenario: the block deleted a row before aborting. An unrecognized row was removed.",
+    );
+  }
+  return failures;
+}
+
+/**
+ * Moves the delete ahead of the abort, which is precisely the defect the whole
+ * fail-closed design exists to prevent. Fails closed if the anchor is not
+ * found: a mutation that did not apply would make the teeth check vacuous.
+ */
+export function mutateDeleteBeforeAbort(block) {
+  const anchor = "  if v_unrecognized > 0 then";
+  if (!block.includes(anchor)) {
+    throw new Error("Could not find the abort guard to mutate; the teeth check would be vacuous.");
+  }
+  const mutated = block.replace(
+    anchor,
+    `  delete from public.treatment_plan_drawings;\n${anchor}`,
+  );
+  if (mutated === block) {
+    throw new Error("The delete-before-abort mutation did not apply.");
+  }
+  return mutated;
+}
+
 export async function runTreatmentPlanDrawingRetirementExecutionTest({ command } = {}) {
   const resolved = command ?? resolveCommand();
   const source = readFileSync(
@@ -226,72 +325,40 @@ export async function runTreatmentPlanDrawingRetirementExecutionTest({ command }
   }
 
   // ---------------------------------------------------------------------
-  // 2. ABORT. An unrecognized row aborts the block AND SURVIVES.
+  // 2. ABORT. An unrecognized row aborts the block, and the block deletes
+  //    NOTHING on its way there.
   //
-  // The surviving-row assertion is the one static reading cannot give: it is
-  // the difference between "the migration raised" and "the migration raised
-  // WITHOUT having already deleted something".
+  //    "The row survived" is deliberately NOT asserted by counting rows
+  //    afterwards. A `DO` block is a single statement, so PostgreSQL rolls
+  //    back its partial effects whatever happened inside it; a post-abort
+  //    count reports the seeded state by construction and would read the same
+  //    whether the block aborted before deleting, deleted and then aborted, or
+  //    never ran at all. That check would test the engine, not this migration.
+  //
+  //    What IS observable is whether a delete ever EXECUTED, because the probe
+  //    trigger's NOTICE reaches the client the moment it is raised and is not
+  //    undone by the rollback. That, plus the static `abort < delete` ordering
+  //    assertion in
+  //    scripts/treatment-plan-drawing-retirement-migration.test.mjs, is what
+  //    actually carries the weight here.
   // ---------------------------------------------------------------------
-  const abort = await execute(
-    resolved,
-    scenarioSql({ block, organizationId: FOREIGN_ORGANIZATION, seedFixtureOrganization: false }),
-    options,
-  );
+  failures.push(...(await abortScenarioFailures(block, resolved, options)));
 
-  const abortOutput = abort.stdout + abort.stderr;
-  if (abort.status === 0) {
+  // ---------------------------------------------------------------------
+  // 3. THE HARNESS HAS TEETH. Mutate the extracted block so the delete runs
+  //    BEFORE the abort, and require that the abort checks above turn red.
+  //    A harness that stays green on a migration that deletes what it does
+  //    not recognize is worse than no harness.
+  // ---------------------------------------------------------------------
+  const mutated = mutateDeleteBeforeAbort(block);
+  const mutantFailures = await abortScenarioFailures(mutated, resolved, options);
+  if (mutantFailures.length === 0) {
     failures.push(
-      "abort scenario: the block SUCCEEDED on an unrecognized row. It must abort instead.",
+      "teeth check: a block mutated to DELETE BEFORE ABORTING passed the abort checks. The checks above prove nothing.",
     );
-  }
-  if (!abortOutput.includes("treatment plan drawing retirement aborted before deleting anything")) {
-    failures.push("abort scenario: the expected abort message was not raised.");
-  }
-  if (!abortOutput.includes("are not linked to a repository synthetic fixture")) {
-    failures.push("abort scenario: the abort did not report the unrecognized count.");
-  }
-  if (abortOutput.includes("recognized synthetic row(s) deleted")) {
-    failures.push("abort scenario: the block reported a deletion despite aborting.");
-  }
-  if (!abortOutput.includes("SEEDED=1")) {
-    failures.push("abort scenario: the unrecognized drawing row was not seeded.");
-  }
-
-  // psql aborts the whole script at the raise under ON_ERROR_STOP, so
-  // `SURVIVING` never prints in the scenario above. Prove survival separately,
-  // WITHOUT ON_ERROR_STOP, so execution continues past the expected raise: roll
-  // back to a savepoint taken before the block and read the row count. If the
-  // preflight had deleted before aborting, that count would be zero.
-  const survival = await execute(
-    resolved.filter((argument) => argument !== "-v" && argument !== "ON_ERROR_STOP=1"),
-    `begin;
-insert into public.organizations (id, legal_name, business_name, slug)
-values (${uuid(FOREIGN_ORGANIZATION)}, 'Not A Fixture Inc.', 'Not A Fixture', 'not-a-fixture-org')
-on conflict (id) do nothing;
-insert into public.branches (id, organization_id, name, slug, code, address_line1, city, province)
-values ('9f000000-0000-4000-a000-0000000000b2'::uuid, ${uuid(FOREIGN_ORGANIZATION)}, 'Harness Main 2', 'drawing-harness-main-2', 'DH2', '1 Synthetic St', 'Test City', 'Test Province');
-insert into public.patients (id, organization_id, patient_number, first_name, last_name, birth_date, preferred_branch_id)
-values ('9f000000-0000-4000-a000-0000000000c2'::uuid, ${uuid(FOREIGN_ORGANIZATION)}, 'DH-2', 'Synthetic', 'Patient', date '1990-01-01', '9f000000-0000-4000-a000-0000000000b2'::uuid);
-insert into public.treatment_plans (id, organization_id, patient_id, title)
-values ('9f000000-0000-4000-a000-0000000000d2'::uuid, ${uuid(FOREIGN_ORGANIZATION)}, '9f000000-0000-4000-a000-0000000000c2'::uuid, 'Harness plan 2');
-alter table public.treatment_plan_drawings disable trigger treatment_plan_drawings_retired_row_guard;
-insert into public.treatment_plan_drawings (organization_id, plan_id, drawing, version)
-values (${uuid(FOREIGN_ORGANIZATION)}, '9f000000-0000-4000-a000-0000000000d2'::uuid, '{"strokes":[]}'::jsonb, 1);
-alter table public.treatment_plan_drawings enable trigger treatment_plan_drawings_retired_row_guard;
-
-savepoint before_block;
-${block}
-rollback to savepoint before_block;
-
-select 'SURVIVED=' || count(*)::text from public.treatment_plan_drawings where organization_id = ${uuid(FOREIGN_ORGANIZATION)};
-rollback;`,
-    options,
-  );
-
-  const survivalOutput = survival.stdout + survival.stderr;
-  if (!survivalOutput.includes("SURVIVED=1")) {
+  } else if (!mutantFailures.some((failure) => failure.includes("deleted a row"))) {
     failures.push(
-      "abort scenario: the unrecognized row did NOT survive the aborted block. The preflight deleted something it did not recognize.",
+      `teeth check: the mutant was caught, but not by the delete probe, so the probe is not what is catching it: ${mutantFailures.join("; ")}`,
     );
   }
 
@@ -301,7 +368,10 @@ rollback;`,
 
   console.log("DRAWING_RETIREMENT_EXECUTION_PASS");
   console.log("  deletion : one recognized fixture row deleted, reported as one");
-  console.log("  abort    : one unrecognized row aborted the block and SURVIVED it");
+  console.log("  abort    : one unrecognized row aborted the block, deleting nothing");
+  console.log(
+    `  teeth    : a delete-before-abort mutant was caught (${mutantFailures.length} failure(s))`,
+  );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

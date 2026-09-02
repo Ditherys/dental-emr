@@ -20,6 +20,8 @@ import { ClinicalChartPrint } from "./clinical-chart-print";
 afterEach(() => cleanup());
 
 const PATIENT_ID = "00000000-0000-4000-a000-000000000020";
+const PERIO_EXAM_ID = "e0000000-0000-4000-a000-000000000003";
+const OTHER_PERIO_EXAM_ID = "e0000000-0000-4000-a000-0000000000ff";
 
 function chartProjection() {
   return projectPatientChart({
@@ -231,7 +233,10 @@ function renderPrint(overrides: Partial<React.ComponentProps<typeof ClinicalChar
       record={progressRecord()}
       branchName="Makati"
       providerDisplay="Dr Reyes"
-      periodontalClassification="Periodontitis · Stage III · Grade B · Generalized"
+      periodontalClassification={{
+        examinationId: PERIO_EXAM_ID,
+        label: "Periodontitis · Stage III · Grade B · Generalized",
+      }}
       {...overrides}
     />,
   );
@@ -314,12 +319,32 @@ describe("ClinicalChartPrint", () => {
       resolve(process.cwd(), "src/components/odontogram/styles.css"),
       "utf8",
     );
-    const rules = css.match(/\.clinical-chart-print\s+button[^{]*\{[^}]*\}/g) ?? [];
-    expect(rules.length).toBe(1);
-    // Positive: the rule is scoped away from the tooth tiles.
-    expect(rules[0]).toMatch(/\.clinical-chart-print\s+button:not\(\.odontogram-tooth\)/);
-    // Negative: the unscoped form must not appear anywhere in the file.
-    expect(css).not.toMatch(/\.clinical-chart-print\s+button\s*\{/);
+    // REVIEW M2. Matching only a DIRECT `.clinical-chart-print button` selector
+    // left an obvious escape: `.clinical-chart-print .odontogram-chart button
+    // { display: none }` would reintroduce the Critical while evading both
+    // patterns. So look at EVERY print-scoped rule whose selector ends in
+    // `button`, however deeply nested, and require the exception on each.
+    // Comments are stripped first: their prose otherwise lands in the
+    // "selector" slice and both matches and diagnostics become nonsense.
+    const declarations = css.replaceAll(/\/\*[\s\S]*?\*\//g, "");
+    const printScopedButtonRules = (declarations.match(/[^{}]*\{[^}]*\}/g) ?? [])
+      .map((rule) => ({ selector: rule.slice(0, rule.indexOf("{")).trim(), rule }))
+      .filter(
+        ({ selector }) =>
+          selector.includes(".clinical-chart-print") && /\bbutton\b[^,]*$/.test(selector),
+      );
+
+    expect(printScopedButtonRules.length).toBe(1);
+    for (const { selector, rule } of printScopedButtonRules) {
+      // Positive: every such rule is scoped away from the tooth tiles.
+      expect(selector, `print-scoped button rule must exempt the tooth tiles: ${rule}`).toMatch(
+        /button:not\(\.odontogram-tooth\)/,
+      );
+      // Negative: no such rule may target a bare `button` at any depth.
+      expect(selector, `unscoped print button rule: ${rule}`).not.toMatch(
+        /\bbutton\s*$/,
+      );
+    }
     // And the tile class the exception depends on must still exist.
     const tile = readFileSync(
       resolve(process.cwd(), "src/components/odontogram/measured-tooth.tsx"),
@@ -386,6 +411,58 @@ describe("ClinicalChartPrint", () => {
     expect(within(charge).getByTestId("clinical-chart-print-case-charge")).toHaveTextContent("₱2,500.00");
     expect(within(charge).getByTestId("clinical-chart-print-case-paid")).toHaveTextContent("₱1,000.00");
     expect(within(charge).getByTestId("clinical-chart-print-case-balance")).toHaveTextContent("₱1,500.00");
+  });
+
+  it("refuses a staging line that belongs to a different examination", async () => {
+    // REVIEW F1. The sheet summarizes ONE examination. A staging line loaded
+    // for another - which is exactly what the workspace RPC's DRAFT-first
+    // default branch returns for a patient with an open draft - would print one
+    // examination's measurements under the other's diagnosis, with nothing on
+    // the paper to reveal it.
+    renderPrint({
+      periodontalClassification: {
+        examinationId: OTHER_PERIO_EXAM_ID,
+        label: "Periodontitis · Stage IV · Grade C · Generalized",
+      },
+    });
+    const perio = screen.getByTestId("clinical-chart-print-periodontal");
+    expect(perio.textContent).not.toMatch(/Stage IV/);
+    expect(perio).toHaveTextContent("Staging and grading are not shown on this printout.");
+    // The measurements it DOES summarize are still printed and still the
+    // examination's own.
+    expect(perio).toHaveTextContent(/FINAL/);
+    expect(perio).toHaveTextContent(/2 site/);
+  });
+
+  it("prints the staging line when it belongs to the summarized examination", () => {
+    renderPrint();
+    expect(screen.getByTestId("clinical-chart-print-periodontal")).toHaveTextContent(
+      "Periodontitis · Stage III · Grade B · Generalized",
+    );
+  });
+
+  it("summarizes the examination the shared selection authority chose, not a DRAFT", () => {
+    // The DTO below carries an open DRAFT examined AFTER the FINAL one was
+    // examined but BEFORE it was finalized. The RPC's default branch would
+    // return the draft; the sheet must summarize the finalized one.
+    const dto = odontogramDto();
+    const draft = {
+      ...dto.periodontalExaminations[0]!,
+      id: OTHER_PERIO_EXAM_ID,
+      status: "DRAFT" as const,
+      examined_at: "2026-08-06T02:30:00+00:00",
+      finalized_at: null,
+      sites: [],
+    };
+    renderPrint({
+      dto: { ...dto, periodontalExaminations: [draft, ...dto.periodontalExaminations] },
+    });
+    const perio = screen.getByTestId("clinical-chart-print-periodontal");
+    expect(perio).toHaveTextContent(/FINAL/);
+    expect(perio.textContent).not.toMatch(/DRAFT/);
+    expect(perio).toHaveTextContent(/2 site/);
+    // And the staging line, keyed to the FINAL examination, is still printed.
+    expect(perio).toHaveTextContent("Periodontitis · Stage III · Grade B · Generalized");
   });
 
   it("does not assert staging is unfinalized when the classification is simply not supplied", () => {

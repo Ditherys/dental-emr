@@ -19,7 +19,10 @@ import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, Cli
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import { chartExportSvgFrom } from "@/lib/odontogram/clinical-export";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
-import { formatPerioClassification } from "@/lib/odontogram/perio-classification";
+import {
+  formatPerioClassification,
+  selectPeriodontalExaminationForPrint,
+} from "@/lib/odontogram/perio-classification";
 import { progressEventsFromOdontogram, type ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
@@ -290,50 +293,74 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
   // record. The confirmed value is preferred over the stored derivation,
   // because a clinician who overrode the derivation meant the override.
   //
-  // Loaded only when the chart already shows a FINAL examination, so a patient
-  // with no periodontal history costs no request.
-  const hasFinalPeriodontalExam = (initialOdontogram?.periodontalExaminations ?? []).some(
-    (examination) => examination.status === "FINAL",
+  // REVIEW F1. ONE authority decides WHICH examination the sheet is about, and
+  // the load asks for that examination BY ID. Asking for the RPC's default
+  // instead returns its own choice - its null branch orders DRAFT first - so an
+  // open draft alongside a later finalization printed one examination's staging
+  // under the other's measurements, undetectably.
+  //
+  // Loaded only when there is an examination to load, so a patient with no
+  // periodontal history costs no request.
+  const printedPerioExamination = selectPeriodontalExaminationForPrint(
+    initialOdontogram?.periodontalExaminations ?? [],
   );
-  // Keyed by patient so a value loaded for one patient can never be rendered
-  // for another during a route change, and so no state is set synchronously
-  // inside the effect.
+  const printedPerioExaminationId = printedPerioExamination?.id ?? null;
+  // Keyed by patient AND by examination, so a value loaded for one patient or
+  // one examination can never be rendered for another, and so no state is set
+  // synchronously inside the effect.
   const [loadedPerioClassification, setLoadedPerioClassification] = useState<
-    { patientId: string; label: string | null } | null
+    { patientId: string; examinationId: string; label: string | null } | null
   >(null);
   useEffect(() => {
-    if (!hasFinalPeriodontalExam) return;
+    if (printedPerioExaminationId === null) return;
     let cancelled = false;
     void (async () => {
       try {
         const result = await getPeriodontalWorkspaceAction({
           patientId,
           actingBranchId,
-          examinationId: null,
+          examinationId: printedPerioExaminationId,
         });
         if (cancelled) return;
         const examination = result.ok
           ? (result.payload as PeriodontalWorkspacePayload).examination
           : null;
+        // Belt and braces: even asking by id, only a payload that came back
+        // FOR THAT EXAMINATION may become a staging line.
+        const label =
+          examination !== null && examination.id === printedPerioExaminationId
+            ? (formatPerioClassification(examination.confirmed ?? null) ??
+              formatPerioClassification(examination.stored_derived ?? null))
+            : null;
         setLoadedPerioClassification({
           patientId,
-          label:
-            formatPerioClassification(examination?.confirmed ?? null) ??
-            formatPerioClassification(examination?.stored_derived ?? null),
+          examinationId: printedPerioExaminationId,
+          label,
         });
       } catch {
         // A classification that cannot be loaded is simply not printed. The
         // sheet says so; it never asserts staging is unfinalized.
-        if (!cancelled) setLoadedPerioClassification({ patientId, label: null });
+        if (!cancelled) {
+          setLoadedPerioClassification({
+            patientId,
+            examinationId: printedPerioExaminationId,
+            label: null,
+          });
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [actingBranchId, hasFinalPeriodontalExam, patientId]);
+  }, [actingBranchId, patientId, printedPerioExaminationId]);
   const printPerioClassification =
-    hasFinalPeriodontalExam && loadedPerioClassification?.patientId === patientId
-      ? loadedPerioClassification.label
+    printedPerioExaminationId !== null &&
+    loadedPerioClassification?.patientId === patientId &&
+    loadedPerioClassification.examinationId === printedPerioExaminationId
+      ? {
+          examinationId: printedPerioExaminationId,
+          label: loadedPerioClassification.label,
+        }
       : null;
   const progressEvents = initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : [];
   const chart: Record<ClinicalChartMode, ReactNode> = {

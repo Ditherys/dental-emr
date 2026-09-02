@@ -515,3 +515,41 @@ export function formatPerioClassification(
     .filter((part): part is string => part !== null)
     .join(" · ");
 }
+
+/**
+ * WHICH periodontal examination a printed chart is about.
+ *
+ * REVIEW F1. There must be exactly ONE answer to this question. The print
+ * sheet summarizes an examination and prints a staging line for it, and those
+ * two facts were previously chosen by two different rules: the sheet took the
+ * greatest `finalized_at ?? examined_at`, while the workspace RPC's own default
+ * branch orders DRAFT first. For a patient with an open draft and a
+ * more-recently-finalized examination, the sheet printed one examination's
+ * measurements under the other's staging, with nothing on the paper to reveal
+ * the substitution.
+ *
+ * Every caller that needs "the examination this sheet is about" must come here,
+ * and the loader must ask for that id explicitly rather than for a default.
+ *
+ * Structurally typed on purpose: it takes only the four fields the ordering
+ * uses, so no module has to import a DTO to ask the question.
+ */
+export function selectPeriodontalExaminationForPrint<
+  T extends {
+    id: string;
+    status: string;
+    examined_at: string | null;
+    finalized_at: string | null;
+  },
+>(examinations: readonly T[]): T | null {
+  // Stable: the recency key first, then the id, so two examinations recorded at
+  // the same instant always resolve the same way on every render and on every
+  // machine.
+  const ordered = [...examinations].sort((a, b) => {
+    const recency = String(a.finalized_at ?? a.examined_at ?? "").localeCompare(
+      String(b.finalized_at ?? b.examined_at ?? ""),
+    );
+    return recency !== 0 ? recency : a.id.localeCompare(b.id);
+  });
+  return ordered.at(-1) ?? null;
+}

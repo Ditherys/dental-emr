@@ -7,7 +7,7 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff` and this
+and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff`, `e7d98ae` and this
 commit.
 
 ## Task 16 - print, help, and the end of the runtime fork package (2026-09-02)
@@ -581,11 +581,137 @@ The eight whole-suite failures, none from this commit:
 
 Playwright was not run; hosted E2E remains unauthorized.
 
+## Task 16 round 3 - review fixes: 2 Important, 1 Minor (2026-09-02)
+
+C1, I1, I4 and M1 came back fixed, and the reviewer independently confirmed the
+locked sweep's recognition predicate is character-identical to `...010500`'s and
+that the trigger suspension is correct in mechanism. Three items remained.
+
+### F1 - the staging line could belong to a different examination
+
+`clinical-section.tsx` loaded the classification with `examinationId: null`, and
+that RPC's default branch orders `(status = 'DRAFT') desc, recorded_at desc`
+(`20260901010242`). The print sheet chose independently, by the greatest
+`finalized_at ?? examined_at`. My `hasFinalPeriodontalExam` gate only asked
+whether *some* examination was FINAL.
+
+So for a patient with an open draft plus a more-recently-finalized examination,
+the sheet printed the FINAL examination's kind, status, version and site counts
+**under staging taken from the DRAFT** - with nothing on the paper to reveal the
+substitution. This is I3's defect reintroduced through a second **selection**
+authority rather than a second derivation.
+
+Fixed by making one authority, at two levels:
+
+- **`selectPeriodontalExaminationForPrint`** (new, in
+  `src/lib/odontogram/perio-classification.ts`, 4 tests) is the single answer to
+  "which examination is this sheet about". It orders by recency and breaks an
+  exact tie by id so the answer is stable. `perioSummary` uses it, and
+  `clinical-section.tsx` uses it to derive the id and **loads by that id** rather
+  than asking for the RPC's default.
+- **The sheet refuses a mismatch.** `periodontalClassification` is now
+  `{ examinationId, label }`, and the staging line prints only when its
+  `examinationId` equals the summarized examination's. Whatever rule a future
+  caller uses to load, a classification for another examination is not printed.
+  Proven: neutralising that comparison turns the suite red.
+
+The load is also keyed by patient *and* examination in state, so a value loaded
+for one can never render for the other.
+
+### F2 - the survival probe could not fail, and its comment was false
+
+The probe took `savepoint before_block`, ran the block, then **rolled back to
+that savepoint before counting**. The count was the seeded state by
+construction: it read `1` whether the block aborted before deleting, deleted and
+then aborted, or succeeded outright. The comment claiming "if the preflight had
+deleted before aborting, that count would be zero" was false.
+
+It was doubly unfalsifiable: a `DO` block is a single statement, so a partial
+delete is never externally observable anyway. **The controller's framing that
+this was the decisive proof was wrong, and is corrected in the file**: PostgreSQL
+guarantees statement atomicity, so such a check tests the engine, not the
+recognition rule. The static `abort < delete` ordering assertion is the real
+evidence.
+
+Both halves done:
+
+1. The probe and its false comment are **removed**, and the harness header now
+   states plainly what it can and cannot prove.
+2. **The harness now has demonstrable teeth.** A BEFORE DELETE trigger raises
+   `HARNESS_ROW_DELETED`; a NOTICE reaches the client the moment it is raised
+   and is *not* undone by the rollback, so "did a delete ever execute" is
+   genuinely observable. The abort checks moved into `abortScenarioFailures`,
+   and a third scenario mutates the extracted block so the delete precedes the
+   raise (`mutateDeleteBeforeAbort`, which throws if its anchor is missing) and
+   **requires those same checks to fail**, specifically via the delete probe.
+
+   ```
+   node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
+   -> DRAWING_RETIREMENT_EXECUTION_PASS
+        deletion : one recognized fixture row deleted, reported as one
+        abort    : one unrecognized row aborted the block, deleting nothing
+        teeth    : a delete-before-abort mutant was caught (1 failure(s))
+   ```
+
+   Proven non-vacuous in both directions: neutralising the probe makes the run
+   report `teeth check: a block mutated to DELETE BEFORE ABORTING passed the
+   abort checks. The checks above prove nothing.`
+
+### M2 - the stylesheet guard matched only a direct selector
+
+`.clinical-chart-print .odontogram-chart button { display: none }` would have
+reintroduced C1 while evading both the positive and the negative pattern. The
+guard now strips CSS comments, enumerates **every** rule whose selector mentions
+`.clinical-chart-print` and ends in `button` at any depth, requires exactly one,
+and requires `:not(.odontogram-tooth)` on each. Proven to catch both the nested
+evasion and the unscoped form.
+
+### Round 3 files
+
+Changed: `src/lib/odontogram/perio-classification.ts` (+ suite),
+`src/components/odontogram/clinical-chart-print.tsx` (+ suite),
+`src/app/(emr)/patients/[patientId]/clinical-section.tsx`,
+`src/app/(emr)/patients/[patientId]/odontogram-section.tsx`,
+`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs`.
+
+No migration added, no grant moved, no counter changed: 349 / 94 / 410 / 273 /
+262 all stand, and `src/types/database.generated.ts` regenerates to no diff.
+
+### Round 3 tests run and observed results
+
+```
+npm run db:migrate:local     -> {"upToDate":true}
+npm run db:types:local       -> "Updated"; git diff EMPTY
+npm run security:migrations  -> passed (349 files, 410 approved)
+npx vitest run scripts/      -> 306 passed (contract test 18)
+node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
+                             -> DRAWING_RETIREMENT_EXECUTION_PASS (3 scenarios)
+npx vitest run <eight print/section/lib suites>
+                             -> Test Files 8 passed / Tests 190 passed
+npm run test:db:local        -> 89 suites PASS, halts at treatment_plans.test.sql
+                                (pre-existing "not ok 9")
+npm run typecheck            -> clean
+npm run lint                 -> 0 errors, 3 warnings (pre-existing)
+npm run build                -> Compiled successfully
+npm run test:unit (whole)    -> 2450 passed | 8 failed (206 files)
+```
+
+Run directly: the retirement pgTAP suite -> `P1_TEST_PASS` (23 assertions).
+
+The 8 failures are exactly the expected baseline: 7 date-triggered booking
+failures (both files hardcode `2026-09-01`, unmodified here, Task 17 owns the
+injected clock) and 1 `perio-workspace.test.tsx` parallel-run timeout that
+passes alone.
+
+Playwright was not run; hosted E2E remains unauthorized.
+
 ### Next bounded task
 
 Task 17 - delete the superseded UI (`current-status-panel`, `tooth-inspector`,
 `plan-mode-panel`, `fork-odontogram`, `fork-adapter`, `treatment-plan-section`),
 relocate `toPatientChartDTO`, fix the two hardcoded booking dates with an
-injected clock, and run the complete local gate. The pending print spec
+injected clock, make the repository's unreachable `*.local.mjs` harnesses part
+of a gate, and run the complete local gate. The pending print spec
 `e2e/clinical-chart-print.spec.ts` should run at the first authorized hosted E2E
-pass.
+pass, along with the hosted check that `ALTER TABLE … DISABLE TRIGGER` in
+`20260901010502` has the table ownership it needs.

@@ -62,10 +62,12 @@ type Props = {
    */
   progressRecord?: ClinicalProgressRecord | null;
   /**
-   * Staging, grading and extent as the SERVER decided them, already formatted.
-   * The print sheet never derives its own.
+   * Staging, grading and extent as the SERVER decided them, already formatted,
+   * together with the examination they belong to. The print sheet never derives
+   * its own, and refuses to print one whose examination is not the one it
+   * summarized.
    */
-  periodontalClassification?: string | null;
+  periodontalClassification?: { examinationId: string; label: string | null } | null;
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
   loadFailed?: boolean;

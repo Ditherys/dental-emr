@@ -8,6 +8,7 @@ import {
   derivePerioClassification,
   formatPerioClassification,
   reducePerioTooth,
+  selectPeriodontalExaminationForPrint,
   type PerioToothReduction,
 } from "./perio-classification";
 
@@ -638,5 +639,53 @@ describe("formatPerioClassification", () => {
     expect(
       formatPerioClassification({ diagnosis: null, stage: "III", grade: "B", extent: null }),
     ).toBeNull();
+  });
+});
+
+describe("selectPeriodontalExaminationForPrint", () => {
+  const exam = (id: string, status: string, examined: string | null, finalized: string | null) => ({
+    id,
+    status,
+    examined_at: examined,
+    finalized_at: finalized,
+  });
+
+  it("is null for a patient with no examination", () => {
+    expect(selectPeriodontalExaminationForPrint([])).toBeNull();
+  });
+
+  it("takes the most recent by finalized_at, falling back to examined_at", () => {
+    const chosen = selectPeriodontalExaminationForPrint([
+      exam("a", "FINAL", "2026-08-01T00:00:00Z", "2026-08-02T00:00:00Z"),
+      exam("b", "FINAL", "2026-08-05T00:00:00Z", "2026-08-06T00:00:00Z"),
+      exam("c", "FINAL", "2026-08-03T00:00:00Z", null),
+    ]);
+    expect(chosen?.id).toBe("b");
+  });
+
+  it("does NOT prefer a DRAFT, which is where the two authorities used to diverge", () => {
+    // The workspace RPC's default branch orders DRAFT first. The printed sheet
+    // must not: an open draft recorded before a later finalization is not what
+    // the sheet is about.
+    const chosen = selectPeriodontalExaminationForPrint([
+      exam("draft", "DRAFT", "2026-08-01T00:00:00Z", null),
+      exam("final", "FINAL", "2026-08-02T00:00:00Z", "2026-08-03T00:00:00Z"),
+    ]);
+    expect(chosen?.id).toBe("final");
+    expect(chosen?.status).toBe("FINAL");
+  });
+
+  it("breaks an exact tie by id, so the answer is stable across renders", () => {
+    const at = "2026-08-04T00:00:00Z";
+    const first = selectPeriodontalExaminationForPrint([
+      exam("aaa", "FINAL", at, at),
+      exam("bbb", "FINAL", at, at),
+    ]);
+    const reversed = selectPeriodontalExaminationForPrint([
+      exam("bbb", "FINAL", at, at),
+      exam("aaa", "FINAL", at, at),
+    ]);
+    expect(first?.id).toBe("bbb");
+    expect(reversed?.id).toBe("bbb");
   });
 });
