@@ -298,6 +298,10 @@ export function OdontogramSection({
               proposals={proposals}
               onSelectionChange={handleSelectionChange}
               readOnly={!canWriteClinical}
+              showBoneGum={view.showBoneGum}
+              showPulp={view.showPulp}
+              showWisdomTeeth={view.showWisdomTeeth}
+              renderAngle={view.renderAngle}
             />
           </div>
           {printHeader !== null && (

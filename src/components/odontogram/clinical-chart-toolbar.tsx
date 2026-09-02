@@ -6,14 +6,17 @@ import { Ellipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { NumberingSystem } from "@/lib/odontogram/dentition";
+import type { RendererToothView } from "@/lib/odontogram/renderer-projection";
 import { cn } from "@/lib/utils";
 
 import { ChartViewportControls } from "./chart-viewport-controls";
@@ -33,6 +36,14 @@ export type ClinicalChartView = {
   dentition: ChartDentition;
   viewport: ChartViewportChoice;
   selectedFdi: readonly number[];
+  /** Draw the bone/gum backdrop. Presentation only. */
+  showBoneGum: boolean;
+  /** Draw the healthy pulp chamber. Presentation only. */
+  showPulp: boolean;
+  /** Include FDI 18/28/38/48 in the grid. Presentation only. */
+  showWisdomTeeth: boolean;
+  /** The angle every tooth is drawn from. Presentation only. */
+  renderAngle: RendererToothView;
 };
 
 export type ClinicalChartViewState = ClinicalChartView & {
@@ -46,6 +57,10 @@ export const DEFAULT_CLINICAL_CHART_VIEW: ClinicalChartView = Object.freeze({
   dentition: "AUTO",
   viewport: "AUTO",
   selectedFdi: Object.freeze([]) as readonly number[],
+  showBoneGum: true,
+  showPulp: true,
+  showWisdomTeeth: true,
+  renderAngle: "front",
 });
 
 const ChartViewContext = React.createContext<ClinicalChartViewState | null>(null);
@@ -264,6 +279,33 @@ export function ClinicalChartToolbar({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuCheckboxItem
+            checked={view.showBoneGum}
+            onCheckedChange={(checked) => onViewChange({ showBoneGum: checked === true })}
+          >
+            Bone and gum
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={view.showPulp}
+            onCheckedChange={(checked) => onViewChange({ showPulp: checked === true })}
+          >
+            Pulp chamber
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuCheckboxItem
+            checked={view.showWisdomTeeth}
+            onCheckedChange={(checked) => onViewChange({ showWisdomTeeth: checked === true })}
+          >
+            Wisdom teeth
+          </DropdownMenuCheckboxItem>
+          {/* The rendering angle every tooth is drawn from, not the per-tooth
+              `occlusal` finding surface used elsewhere in this app. */}
+          <DropdownMenuCheckboxItem
+            checked={view.renderAngle === "occlusal"}
+            onCheckedChange={(checked) => onViewChange({ renderAngle: checked === true ? "occlusal" : "front" })}
+          >
+            Occlusal view
+          </DropdownMenuCheckboxItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setHelpOpen(true)}>Chart help</DropdownMenuItem>
           {onPrint && <DropdownMenuItem onSelect={() => onPrint()}>Print chart</DropdownMenuItem>}
           {onOpenGallery && (

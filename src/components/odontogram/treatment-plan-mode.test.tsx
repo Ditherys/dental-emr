@@ -88,7 +88,17 @@ function renderMode(overrides: Partial<Parameters<typeof TreatmentPlanMode>[0]> 
   ));
   render(
     <ClinicalChartViewProvider
-      value={{ notation: "FDI", dentition: "AUTO", viewport: "AUTO", selectedFdi, setView: vi.fn() }}
+      value={{
+        notation: "FDI",
+        dentition: "AUTO",
+        viewport: "AUTO",
+        selectedFdi,
+        showBoneGum: true,
+        showPulp: true,
+        showWisdomTeeth: true,
+        renderAngle: "front",
+        setView: vi.fn(),
+      }}
     >
       <TreatmentPlanMode
         patientId={patientId}

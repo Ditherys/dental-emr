@@ -227,6 +227,10 @@ describe("clinical chart view state", () => {
           dentition: "MIXED",
           viewport: "LOWER",
           selectedFdi: [36],
+          showBoneGum: true,
+          showPulp: true,
+          showWisdomTeeth: true,
+          renderAngle: "front",
           setView: vi.fn(),
         }}
       >
@@ -399,5 +403,46 @@ describe("the chart image export, wired the way the route wires it", () => {
     expect(await screen.findByRole("menuitem", { name: "FHIR R4 Bundle" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Chart image (SVG)" })).not.toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: "Chart image (PNG)" })).not.toBeInTheDocument();
+  });
+});
+
+describe("anatomy display controls", () => {
+  it("defaults to drawing everything from the front", () => {
+    expect(DEFAULT_CLINICAL_CHART_VIEW.showBoneGum).toBe(true);
+    expect(DEFAULT_CLINICAL_CHART_VIEW.showPulp).toBe(true);
+    expect(DEFAULT_CLINICAL_CHART_VIEW.showWisdomTeeth).toBe(true);
+    expect(DEFAULT_CLINICAL_CHART_VIEW.renderAngle).toBe("front");
+  });
+
+  it("turns the bone and gum backdrop off from the More menu", async () => {
+    const user = userEvent.setup();
+    const { onViewChange } = renderToolbar();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /bone and gum/i }));
+    expect(onViewChange).toHaveBeenCalledWith({ showBoneGum: false });
+  });
+
+  it("turns the pulp chamber off from the More menu", async () => {
+    const user = userEvent.setup();
+    const { onViewChange } = renderToolbar();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /pulp/i }));
+    expect(onViewChange).toHaveBeenCalledWith({ showPulp: false });
+  });
+
+  it("hides the third molars from the More menu", async () => {
+    const user = userEvent.setup();
+    const { onViewChange } = renderToolbar();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /wisdom teeth/i }));
+    expect(onViewChange).toHaveBeenCalledWith({ showWisdomTeeth: false });
+  });
+
+  it("switches to the occlusal angle from the More menu", async () => {
+    const user = userEvent.setup();
+    const { onViewChange } = renderToolbar();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(screen.getByRole("menuitemcheckbox", { name: /occlusal view/i }));
+    expect(onViewChange).toHaveBeenCalledWith({ renderAngle: "occlusal" });
   });
 });
