@@ -8,7 +8,7 @@ import { ClinicalChartPrint } from "@/components/odontogram/clinical-chart-print
 import { MeasuredChart } from "@/components/odontogram/measured-chart";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
-import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
+import { selectionSummary, useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
 import { toPatientChartDTO } from "@/lib/odontogram/patient-chart-dto";
 import type { ToothProposalMarker } from "@/components/odontogram/measured-tooth";
 import "@/components/odontogram/styles.css";
@@ -112,6 +112,7 @@ export function OdontogramSection({
   // the old state afterwards, but this synchronous gate prevents a one-frame
   // cross-patient clinical disclosure during a deferred fetch.
   const selectedFdiForCurrentPatient = isCurrentPatientSnapshot ? selectedFdi : null;
+  const selectionForCurrentPatient = isCurrentPatientSnapshot ? viewSelection : [];
   const suppliedProgressEvents = initialProgressEvents?.patientId === patientId && Array.isArray(initialProgressEvents.events)
     ? initialProgressEvents.events
     : null;
@@ -313,27 +314,41 @@ export function OdontogramSection({
         </div>
       )}
 
-      {/* One status row, not two. The retired Current status panel repeated the
-          selection readout and offered a second button that opened the same
-          record drawer as "Open tooth record"; only the follow-up affordance was
-          its own, so that is what moved here. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground print:hidden">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2">
-          <span>{canWriteClinical ? "Select a tooth to open its record drawer and add a clinical record." : "Read-only access. Selection shows the current clinical record."}</span>
-          {selectedFdiForCurrentPatient !== null && (
-            <span className="font-medium text-foreground">{`Tooth ${selectedFdiForCurrentPatient} selected`}</span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setDrawerOpen(true)}>
-            Open tooth record
-          </Button>
-          {followupAvailable && (
-            <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setFollowupOpen(true)}>
-              Record follow-up
+      {/* One status row, not two. The retired Current status panel offered a
+          second button that opened the same record drawer as "Open tooth
+          record"; its follow-up affordance, its selection readout and - the
+          part that actually mattered - its billing sentence moved here.
+          Both readouts come from `selectionSummary`, the toolbar's own
+          formatter, so a multi-tooth selection can never read one way here and
+          another way there. */}
+      <div className="flex flex-col gap-1 text-xs text-muted-foreground print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2">
+            <span>{canWriteClinical ? "Select a tooth to open its record drawer and add a clinical record." : "Read-only access. Selection shows the current clinical record."}</span>
+            {selectionForCurrentPatient.length > 0 && (
+              <span className="font-medium text-foreground">{selectionSummary(selectionForCurrentPatient)}</span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" disabled={!selectedFdiForCurrentPatient} onClick={() => setDrawerOpen(true)}>
+              Open tooth record
             </Button>
-          )}
+            {followupAvailable && (
+              <Button type="button" variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => setFollowupOpen(true)}>
+                Record follow-up
+              </Button>
+            )}
+          </div>
         </div>
+        {/* The only place in the workspace that says a follow-up does NOT bill
+            the patient. In a record whose confirmed charges are immutable, a
+            clinician pressing "Record follow-up" has to be able to read that
+            before pressing it, not discover it from the ledger afterwards. */}
+        <p className="text-xs text-muted-foreground">
+          {procedureCases.length > 0 && !followupAvailable
+            ? "Follow-up recording requires the authorized case workflow."
+            : "Follow-ups link to an existing procedure case and do not create a charge. Additional charges use the separate confirmed-procedure workflow."}
+        </p>
       </div>
 
       <ToothRecordDrawer

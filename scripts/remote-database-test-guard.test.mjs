@@ -378,10 +378,19 @@ describe("registered database suites", () => {
    * nothing, exactly like an unregistered pgTAP suite.
    *
    * `scripts/run-local-database-tests.mjs` executes docker at import time, so
-   * this asserts against its SOURCE rather than importing it. It requires both
-   * halves of registration — the import specifier and the PASS line that names
-   * the harness in the runner's output — so a harness cannot be imported and
-   * then silently never awaited.
+   * this asserts against its SOURCE rather than importing it, and it requires
+   * all THREE halves of registration:
+   *
+   *   1. the import specifier,
+   *   2. an `await <binding>(` call on the identifier that import bound, and
+   *   3. the exact `console.log("PASS supabase/tests/<name>")` line.
+   *
+   * (2) is the one that matters. An earlier version of this test checked only
+   * that the runner text contained `supabase/tests/<name>` followed by a double
+   * quote - which the IMPORT LINE alone satisfies, because the specifier's own
+   * closing quote supplies it. It therefore caught a completely unregistered
+   * harness but not "imported and then never awaited", which is the exact shape
+   * of the regression that left every harness in this directory dead.
    */
   it("registers every local concurrency harness in the local database gate", () => {
     const runnerSource = readFileSync(
@@ -393,11 +402,35 @@ describe("registered database suites", () => {
       .sort();
 
     expect(harnesses.length).toBeGreaterThan(0);
-    const unregistered = harnesses.filter(
-      (name) =>
-        !runnerSource.includes(`../supabase/tests/${name}`) ||
-        !runnerSource.includes(`supabase/tests/${name}"`),
-    );
+
+    const unregistered = [];
+    const runnerLines = runnerSource.split("\n").map((line) => line.trim());
+    // The harness name is matched as a plain SUBSTRING, never interpolated
+    // into a regular expression: a filename is not a trusted pattern.
+    for (const name of harnesses) {
+      const importLine = runnerLines.find(
+        (line) =>
+          line.startsWith("import ") && line.includes(`"../supabase/tests/${name}"`),
+      );
+
+      if (importLine === undefined) {
+        unregistered.push(`${name}: not imported`);
+        continue;
+      }
+
+      const binding = /^import\s*\{\s*([A-Za-z0-9_$]+)/.exec(importLine)?.[1];
+      if (binding === undefined) {
+        unregistered.push(`${name}: imported without a named binding this test can follow`);
+        continue;
+      }
+      if (!runnerSource.includes(`await ${binding}(`)) {
+        unregistered.push(`${name}: imported as ${binding} but never awaited`);
+      }
+      if (!runnerSource.includes(`console.log("PASS supabase/tests/${name}")`)) {
+        unregistered.push(`${name}: no PASS line naming it in the runner output`);
+      }
+    }
+
     expect(unregistered).toEqual([]);
   });
 

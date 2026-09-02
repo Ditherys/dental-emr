@@ -70,16 +70,56 @@ where n.nspname in ('public', 'private')
   and a.mode in ('o', 'b', 't')
   and a.name is not null;
 
+-- THE ALLOWLIST, and why there is one.
+--
+-- The `=` half of the rule is deliberately broad, and a legitimate future
+-- statement can match it: `where some_column = out_param` reads an OUT
+-- parameter as a VALUE, which is correct code, not an ambiguity. Without an
+-- escape hatch a maintainer meeting that case has exactly two options - weaken
+-- the rule for everyone, or delete the guard - and both lose the protection.
+--
+-- So an entry may be added here instead. It is deliberately awkward: it names
+-- the exact function, the exact parameter and a written reason, it lives in the
+-- reviewed suite rather than in a config file, and a stale entry FAILS the
+-- suite, so an allowlisted function that later changes shape cannot stay
+-- silently exempt.
+--
+-- It is EMPTY today. Every live function passes the unmodified rule.
+create temporary table out_parameter_ambiguity_allowlist (
+  schema_name text not null,
+  function_name text not null,
+  out_parameter text not null,
+  reason text not null,
+  primary key (schema_name, function_name, out_parameter)
+) on commit drop;
+
 -- The detection pattern, written once so the property and the teeth check can
 -- never drift apart.
+--
+-- The parameter name is REGEX-ESCAPED before interpolation. A PostgreSQL
+-- identifier is normally `[a-z0-9_]`, but a quoted one may contain `.`, `|`,
+-- `(`, `*` and friends, and an unescaped `|` in particular would turn this
+-- pattern into an unrelated alternation that silently matches almost anything.
+-- A catalog value is data, not a trusted pattern.
 create temporary view out_parameter_ambiguity as
 select
-  schema_name,
-  function_name,
-  identity_arguments,
-  out_parameter
-from out_parameter_candidate
-where body ~* ('(returning|=)[[:space:]]*' || out_parameter || '[^[:alnum:]_.]');
+  candidate.schema_name,
+  candidate.function_name,
+  candidate.identity_arguments,
+  candidate.out_parameter
+from out_parameter_candidate as candidate
+where candidate.body ~* (
+        '(returning|=)[[:space:]]*'
+        || regexp_replace(candidate.out_parameter, '([^[:alnum:]_])', '\\\1', 'g')
+        || '[^[:alnum:]_.]'
+      )
+  and not exists (
+    select 1
+    from out_parameter_ambiguity_allowlist as allowed
+    where allowed.schema_name = candidate.schema_name
+      and allowed.function_name = candidate.function_name
+      and allowed.out_parameter = candidate.out_parameter
+  );
 
 -- 1. NON-VACUITY. A guard that examines nothing passes for the wrong reason.
 select extensions.ok(
@@ -128,6 +168,31 @@ select extensions.ok(
   not (' update public.procedure_cases as procedure_case set version=procedure_case.version+1 where procedure_case.organization_id=v_organization_id and procedure_case.id=v_case.id returning procedure_case.version into record_procedure_followup.version;'
     ~* '(returning|=)[[:space:]]*version[^[:alnum:]_.]'),
   'the rule does not fire on the repaired procedure case version statement'
+);
+
+-- 2b. THE ESCAPING WORKS, and a stale allowlist entry cannot hide.
+select extensions.is(
+  regexp_replace('weird|name.x', '([^[:alnum:]_])', '\\\1', 'g'),
+  'weird\|name\.x',
+  'a quoted identifier is escaped before it becomes a pattern'
+);
+
+select extensions.is(
+  (select coalesce(
+     string_agg(
+       allowed.schema_name || '.' || allowed.function_name || ' OUT ' || allowed.out_parameter,
+       ', ' order by allowed.schema_name, allowed.function_name, allowed.out_parameter),
+     '')
+   from out_parameter_ambiguity_allowlist as allowed
+   where not exists (
+     select 1
+     from out_parameter_candidate as candidate
+     where candidate.schema_name = allowed.schema_name
+       and candidate.function_name = allowed.function_name
+       and candidate.out_parameter = allowed.out_parameter
+   )),
+  '',
+  'every ambiguity allowlist entry still names a live OUT parameter'
 );
 
 -- 3. THE PROPERTY. No installed function may carry the ambiguity.

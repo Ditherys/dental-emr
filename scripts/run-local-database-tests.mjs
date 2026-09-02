@@ -208,7 +208,6 @@ try {
   });
   console.log("PASS supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs");
 
-
   for (const suite of suites) {
     const suiteLabel = relative(repositoryRoot, suite).replaceAll("\\", "/");
     const source = readFileSync(suite, "utf8");

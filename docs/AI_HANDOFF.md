@@ -101,11 +101,23 @@ preserved deliberately:
   the print sheet, so they cannot disagree. A malformed row degrades to an empty
   projection plus a visible message, as the wrapper did - it never throws and
   never prints a clinical negative.
-- The retired Current status panel's only unique affordance was **Record
-  follow-up**; its "Record direct treatment" opened the same drawer as the
-  surviving "Open tooth record", and its selection readout duplicated the
-  toolbar's. The follow-up button and the readout moved into the existing status
-  row; nothing was dropped.
+- The retired Current status panel carried three things worth keeping: the
+  **Record follow-up** button, the selection readout, and - the one this
+  commit's first revision wrongly called a duplicate - the **billing guidance**:
+  *"Follow-ups link to an existing procedure case and do not create a charge.
+  Additional charges use the separate confirmed-procedure workflow."* and its
+  no-workflow variant *"Follow-up recording requires the authorized case
+  workflow."* That was the ONLY in-UI statement telling a clinician that
+  "Record follow-up" does not bill the patient, which in a record of immutable
+  confirmed charges is clinical safety text, not decoration. All three moved
+  into the status row; both guidance variants are asserted in
+  `odontogram-section.test.tsx`. Only "Record direct treatment" was genuinely
+  dropped, because it opened the same drawer as the surviving "Open tooth
+  record" - an absence the suite also asserts.
+- The moved readout renders `selectionSummary(...)`, the **toolbar's own**
+  formatter, rather than the last-selected tooth. Two visible readouts formatted
+  independently would disagree on every multi-tooth selection - the toolbar
+  saying "Teeth 11, 16 selected" while the section said "Tooth 16 selected".
 - `ClinicalChartWorkspace` now carries `data-testid="clinical-chart-workspace"`
   on its landmark - the anchor the plan's Step 1 requires and which did not
   exist.
@@ -181,9 +193,25 @@ Both halves are fixed:
   still fails the command, and each harness is independently transaction-bounded
   and rolled back.
 - `scripts/remote-database-test-guard.test.mjs` gained a registry-integrity test
-  requiring **both** the import specifier and the PASS line for every
-  `supabase/tests/*.local.mjs` on disk, so a harness cannot be imported and then
-  never awaited. Proven red before the fix (it named the one missing file).
+  requiring **three** things of every `supabase/tests/*.local.mjs` on disk: the
+  import specifier, an `await <binding>(` call on the identifier that import
+  bound, and the exact `console.log("PASS supabase/tests/<name>")` line.
+
+  The `await` check is the one that matters, and the first revision of this test
+  did not have it: it asserted only that the runner text contained
+  `supabase/tests/<name>` followed by a double quote, **which the import line
+  alone satisfies** because the specifier's own closing quote supplies it. It
+  therefore caught a completely unregistered harness but not "imported and then
+  never awaited" - the exact regression that left every harness here dead - while
+  its comment claimed otherwise. Corrected in review.
+
+  The harness name is matched as a plain substring and never interpolated into a
+  regular expression: a filename is data, not a trusted pattern.
+
+  Three red proofs: an unregistered harness (the original fix), deleting only
+  the PASS line (`no PASS line naming it in the runner output`), and deleting
+  only the awaited call while leaving the import
+  (`imported as runPeriodontalAutosaveConcurrencyTest but never awaited`).
 
 Observed: all **15 harnesses now execute and PASS** in `npm run test:db:local`.
 
@@ -213,8 +241,20 @@ reading.
 Non-vacuity and teeth are both asserted: the candidate set is required to be
 large (observed **869 OUT parameters across 226 functions**) and to contain both
 repaired functions, and the rule must still fire on the three pre-repair
-statement texts and not on the three repaired ones. Observed on the local
-database: **8/8 assertions pass, 0 ambiguous functions.**
+statement texts and not on the three repaired ones.
+
+Two review corrections: the parameter name is now **regex-escaped** before
+interpolation (a quoted identifier may legally contain `.` or `|`, and an
+unescaped `|` would turn the pattern into an unrelated alternation matching
+almost anything - a catalog value is data, not a trusted pattern); and the `=`
+half of the rule, which can legitimately match `where col = out_param`, gained a
+documented **allowlist** keyed on schema/function/parameter and requiring a
+written reason. The allowlist is **empty today** - every live function passes
+the unmodified rule - and a stale entry naming a parameter that no longer exists
+fails the suite, so an allowlisted function cannot drift into silent exemption.
+
+Observed on the local database: **10/10 assertions pass, 0 ambiguous
+functions.**
 
 ### 6. End-to-end specifications - written, NOT executed
 
@@ -348,12 +388,27 @@ deleted with its subject.
 
 ### Known residual risks
 
-1. **`npm run test:db:local` still exits 1** at `treatment_plans.test.sql`. This
-   is the documented pre-existing halt (recorded identically in the Task 15 and
-   Task 16 handoffs), caused by the drawing-retirement refusal, not by this
-   commit. It is now less damaging - the harnesses run before it - but the
-   suites registered after it still never execute locally. They do execute in
-   the remote runner.
+1. **`npm run test:db:local` still exits 1** at `treatment_plans.test.sql`. It is
+   the documented pre-existing halt (recorded identically in the Task 15 and
+   Task 16 handoffs), not caused by this commit.
+
+   **Correction to the earlier handoffs and to this one's first revision:** the
+   failure is **not** the drawing-retirement refusal. It is assertion **`not ok
+   9`**, `extensions.columns_are('public','treatment_plan_items', …)` at
+   `supabase/tests/treatment_plans.test.sql:35` - a column-set assertion with
+   nothing to do with drawings, byte-identical in the baseline and head versions
+   of the file and untouched by either plan commit. It was baseline `not ok 7`
+   and is head `not ok 9` purely because Task 16 inserted two assertions above
+   it; assertions 1-3 pass, so the two new ones are green. Same failure,
+   renumbered.
+
+   Consequence worth stating plainly: the suite's **five rewritten drawing
+   probes at `:128-132` are assertions 65-69**, far past the halt, so they
+   **never execute locally**. That is unexecuted coverage. It is partly offset
+   by `treatment_plan_drawing_retirement_execution.local.mjs`, which now really
+   does run in this gate, and fully closed only by the remote runner. Every
+   other suite registered after `treatment_plans.test.sql` is in the same
+   position.
 2. **`node --test scripts/remote-database-test-guard.test.mjs`** cannot pass: the
    file is written for vitest. The gate line in the plan names the wrong runner.
    Pre-existing; not changed here.
@@ -371,9 +426,16 @@ deleted with its subject.
    of the two real defects and is asserted non-vacuous, but it is not a proof
    that every granted function's success path works. Only success-path coverage
    is that.
-7. **The unsaved-work confirmation warns; it does not preserve the draft.** A
-   clinician who chooses "Discard and switch" still loses the readings. Carrying
-   the draft across a mode change is a larger change than this task authorizes.
+7. **The unsaved-work confirmation warns; it does not preserve the draft**, and
+   **only the PERIODONTAL panel reports the flag at all.** The gap is not closed
+   generally: `TreatmentPlanMode` and the record composer hold their own
+   unentered work and report nothing, so a mode switch still discards a
+   half-written plan proposal or composer draft **silently**, exactly as
+   periodontal did before this commit. What changed is that the mechanism now
+   exists and one panel uses it; widening it to the other two is a separate
+   bounded task. And even where it fires, "Discard and switch" still loses the
+   readings - carrying a draft across a mode change is larger than this task
+   authorizes.
 8. `ALTER TABLE … DISABLE TRIGGER` in `20260901010502` still needs the hosted
    ownership check at the first authorized Cloud TEST push.
 

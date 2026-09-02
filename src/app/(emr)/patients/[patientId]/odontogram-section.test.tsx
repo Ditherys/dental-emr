@@ -46,6 +46,9 @@ vi.mock("@/components/odontogram/measured-chart", () => ({
           Tooth {fdi}
         </button>
       ))}
+      <button type="button" aria-label="Select 11 and 16" onClick={() => onSelectionChange([11, 16])}>
+        Select 11 and 16
+      </button>
     </div>
   ),
 }));
@@ -326,11 +329,90 @@ describe("OdontogramSection O7", () => {
 
     await user.click(screen.getByRole("button", { name: /Tooth 11/i }));
     expect(screen.getAllByText(/Read-only access/i).length).toBeGreaterThan(0);
+    // The chart itself must be mounted read-only, not merely surrounded by
+    // hidden buttons. This assertion moved here from the deleted fork wrapper's
+    // suite; without it `readOnly={!canWriteClinical}` could be deleted and
+    // nothing would go red.
+    expect(screen.getByTestId("measured-chart")).toHaveAttribute("data-read-only", "true");
     expect(await screen.findByTestId("tooth-record-drawer")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add clinical record" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Corrections" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Record finding/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Amend/i })).not.toBeInTheDocument();
+  });
+
+  it("mounts a writable chart as writable, so the read-only assertion above can fail", () => {
+    render(
+      <OdontogramSection
+        patientId="00000000-0000-4000-a000-000000000020"
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    expect(screen.getByTestId("measured-chart")).toHaveAttribute("data-read-only", "false");
+  });
+
+  /**
+   * The retired Current status panel carried the only in-UI statement that a
+   * follow-up does NOT bill the patient. In a record whose confirmed charges are
+   * immutable, that sentence is clinical safety text, not decoration, so it
+   * moved into the status row rather than being deleted with the panel.
+   */
+  it("keeps the follow-up billing guidance the retired panel used to carry", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Follow-ups link to an existing procedure case and do not create a charge. Additional charges use the separate confirmed-procedure workflow.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says why follow-up recording is unavailable when a case exists but the workflow is not wired", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+        procedureCases={[{ procedureCaseId: "00000000-0000-4000-a000-000000000077", display: "Synthetic composite filling" }]}
+      />,
+    );
+
+    // A case exists, but no authorized recorder was supplied, so the affordance
+    // is absent AND the reason is stated rather than left blank.
+    expect(screen.queryByRole("button", { name: "Record follow-up" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Follow-up recording requires the authorized case workflow."),
+    ).toBeInTheDocument();
+  });
+
+  it("reports a multi-tooth selection the same way the toolbar does", async () => {
+    const user = userEvent.setup();
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Select 11 and 16/i }));
+
+    // Both readouts come from `selectionSummary`. A last-tooth-only readout here
+    // would disagree with the toolbar on every multi-tooth selection.
+    expect(screen.getByText("Teeth 11, 16 selected")).toBeInTheDocument();
+    expect(screen.queryByText("Tooth 16 selected")).not.toBeInTheDocument();
   });
 
   it("does not expose the removed classic/dentition renderer controls", () => {
