@@ -19,32 +19,35 @@ Read the smallest set of authoritative documents needed for the task:
 3. `docs/SECURITY_ARCHITECTURE.md` — security/privacy requirements and production gates
 4. `docs/DATABASE_DESIGN.md` — schema, tenancy, RLS, constraints, migration strategy
 5. `docs/FRONTEND_ARCHITECTURE.md` — frontend/UI/library decisions
-6. `docs/plans/002-patient-foundation.md` — accepted Phase 2 implementation plan
-7. Relevant ADRs in `docs/decisions/`
+6. `docs/plans/odontogram-integration-plan.md` and
+   `docs/plans/billing-ledger-provider-compensation-plan.md` — accepted plans
+   for the current phase
+7. Relevant ADRs in `docs/decisions/`, in particular ADR-028, ADR-029, and
+   ADR-030
 
-`docs/plans/001-foundation.md` remains the accepted Phase 1 record. The complete
-Phase 2 plan and ADR-019 were independently reviewed and explicitly approved on
-2026-08-19. Execute only its ordered task/checkpoint currently authorized. Do not
-implement later product domains merely because they appear in architecture docs.
+`docs/plans/001-foundation.md` and `docs/plans/002-patient-foundation.md` remain
+the accepted Phase 1 and Phase 2 records. Execute only the ordered task/
+checkpoint currently authorized. Do not implement later product domains merely
+because they appear in architecture docs.
 
-## Current Phase: Phase 2 Patient Foundation — P2-01
+## Current Phase: Odontogram integration — Local completion authorized
 
-Phase 1 is formally accepted. Phase 2 planning approval is complete. Current
-implementation authority is limited to `P2-01 — Patient permission contract`.
-The accepted Phase 2 scope is limited to:
+Phase 1 and Phase 2 (patient foundation) are formally accepted. The project
+owner accepted billing B0-B11 and odontogram O0-O4 on 2026-08-28, then
+explicitly re-accepted O0 and authorized local completion of O1-O14 on
+2026-08-29 in ADR-029. Execute on `main` without a branch or worktree. Use only
+guarded forward-only local migrations; `db:reset:local` is prohibited. Cloud
+TEST is deferred, not waived.
 
-- organization-level patient identity and demographics;
-- patient contacts and guardian/family relationships;
-- patient list/search and bounded patient workspace;
-- duplicate warning using normalized name + birthday without a hard uniqueness
-  constraint;
-- patient permissions, RLS, audit events, synthetic fixtures, and concurrency
-  controls.
+Until the separately authorized hosted database, E2E, responsive/accessibility,
+advisor, and security gates pass, O14 may be recorded only as locally
+implemented/verified, with Cloud TEST and final release acceptance pending.
+Local completion never authorizes production deployment or real provider/
+patient use.
 
-Do NOT advance to `P2-02` until P2-01 is independently reviewed and accepted.
-Providers, scheduling, clinical history, Google Calendar, odontogram, treatment
-plans, files, billing, inventory, communications, analytics, and AI/MCP remain
-outside this phase.
+Do not begin a later product phase (scheduling beyond what O0-O14 requires,
+Google Calendar, files, inventory, communications, analytics, or AI/MCP) until
+its bounded plan has been independently reviewed and explicitly approved.
 
 ## Approved Core Stack
 
