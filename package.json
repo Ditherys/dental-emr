@@ -89,7 +89,7 @@
     "secretlint": "13.0.4",
     "supabase": "2.113.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^7",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.10"
   }
