@@ -5,7 +5,7 @@ import type { ToothRenderFeature } from "@/lib/odontogram/feature-contract";
 import { dentitionFor } from "@/lib/odontogram/dentition";
 
 import { measuredAssetKeyForFdi, measuredTemplateLayerIds } from "./measured-assets";
-import { MEASURED_FORK_LAYER_IDS, measuredForkLayers } from "./measured-fork-layers";
+import { DEFAULT_ANATOMY_DISPLAY, MEASURED_FORK_LAYER_IDS, measuredForkLayers, type ChartAnatomyDisplay } from "./measured-fork-layers";
 
 function feature(
   detail: ToothRenderFeature["detail"],
@@ -38,6 +38,16 @@ function active(projection: RendererToothProjection): ReadonlySet<string> {
   const key = measuredAssetKeyForFdi(projection.fdi, projection.view);
   if (!key) throw new Error(`No measured asset for FDI ${projection.fdi} (${projection.view})`);
   return measuredForkLayers(projection, measuredTemplateLayerIds(key));
+}
+
+/** Activation with an explicit display preference, against the real asset. */
+function activeWith(
+  projection: RendererToothProjection,
+  display: ChartAnatomyDisplay,
+): ReadonlySet<string> {
+  const key = measuredAssetKeyForFdi(projection.fdi, projection.view);
+  if (!key) throw new Error(`No measured asset for FDI ${projection.fdi} (${projection.view})`);
+  return measuredForkLayers(projection, measuredTemplateLayerIds(key), display);
 }
 
 describe("measured fork layer registry", () => {
@@ -482,5 +492,46 @@ describe("measured fork layer activation — relationship anatomy", () => {
     expect(zircon.has("zircon-crown")).toBe(true);
     expect(zircon.has("zircon-bridge-connector")).toBe(true);
     expect(zircon.has("prosthesis-connector")).toBe(false);
+  });
+});
+
+describe("pulp visibility", () => {
+  it("draws the healthy pulp chamber by default", () => {
+    expect(active(tooth(11)).has("tooth-healthy-pulp")).toBe(true);
+    expect(activeWith(tooth(11), DEFAULT_ANATOMY_DISPLAY).has("tooth-healthy-pulp")).toBe(true);
+  });
+
+  it("hides the healthy pulp chamber when the clinician turns pulp off", () => {
+    const result = activeWith(tooth(11), { ...DEFAULT_ANATOMY_DISPLAY, showPulp: false });
+    expect(result.has("tooth-healthy-pulp")).toBe(false);
+  });
+
+  it("hides the primary healthy pulp chamber too", () => {
+    const milk = tooth(51);
+    expect(activeWith(milk, DEFAULT_ANATOMY_DISPLAY).has("milktooth-healthy-pulp")).toBe(true);
+    expect(
+      activeWith(milk, { ...DEFAULT_ANATOMY_DISPLAY, showPulp: false }).has("milktooth-healthy-pulp"),
+    ).toBe(false);
+  });
+
+  // The load-bearing safety rule. A view preference must never remove a
+  // clinical finding from the chart.
+  it("still draws endodontic treatment when pulp display is off", () => {
+    const off: ChartAnatomyDisplay = { ...DEFAULT_ANATOMY_DISPLAY, showPulp: false };
+
+    for (const state of ["endo-filling", "endo-medical-filling", "endo-metal-pin"] as const) {
+      const endo = tooth(11, { features: [feature({ code: "ROOT_CANAL", state })] });
+      expect(activeWith(endo, off).has(state), `${state} suppressed by a display preference`).toBe(true);
+    }
+  });
+
+  // Containment guard. The suppression set must stay exactly the two baseline
+  // ids, so a later edit cannot quietly add a pathology layer to it and turn
+  // this rule into a comment.
+  it("suppresses only the two baseline pulp layers", () => {
+    const on = activeWith(tooth(11), DEFAULT_ANATOMY_DISPLAY);
+    const off = activeWith(tooth(11), { ...DEFAULT_ANATOMY_DISPLAY, showPulp: false });
+    const removed = [...on].filter((id) => !off.has(id));
+    expect(removed).toEqual(["tooth-healthy-pulp"]);
   });
 });

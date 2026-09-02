@@ -19,6 +19,26 @@ import type { RendererToothProjection, RendererToothView } from "@/lib/odontogra
 
 type RestorationDetail = Extract<ClinicalFeatureDetail, { code: "RESTORATION" }>;
 
+/**
+ * Presentation-only anatomy preferences.
+ *
+ * These hide *baseline* artwork so a clinician can read a dense chart. They
+ * never hide a clinical finding: pathology and treatment layers are activated
+ * from the canonical projection and are unaffected by them.
+ */
+export type ChartAnatomyDisplay = {
+  showBoneGum: boolean;
+  showPulp: boolean;
+};
+
+export const DEFAULT_ANATOMY_DISPLAY: ChartAnatomyDisplay = Object.freeze({
+  showBoneGum: true,
+  showPulp: true,
+});
+
+/** Baseline layers a display preference is permitted to suppress. */
+const HEALTHY_PULP_LAYERS: ReadonlySet<string> = new Set(["tooth-healthy-pulp", "milktooth-healthy-pulp"]);
+
 const NATURAL_CROWN_LAYERS = ["tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"] as const;
 const MILK_CROWN_LAYERS = ["milktooth", "milktooth-base", "milktooth-beauty", "milktooth-healthy-pulp"] as const;
 const IMPLANT_LAYERS = ["implant", "implant-base"] as const;
@@ -255,6 +275,7 @@ function bridgeMaterial(features: readonly ToothRenderFeature[]): string | null 
 export function measuredForkLayers(
   tooth: RendererToothProjection,
   availableLayerIds: ReadonlySet<string>,
+  display: ChartAnatomyDisplay = DEFAULT_ANATOMY_DISPLAY,
 ): ReadonlySet<string> {
   const requested = new Set<string>();
   const add = (id: string) => {
@@ -277,7 +298,12 @@ export function measuredForkLayers(
     if (tooth.anatomy === "IMPLANT_CROWN") for (const id of IMPLANT_CROWN_LAYERS) add(id);
   } else if (!missing && !extracted) {
     const useMilkAnatomy = tooth.dentition === "primary" && availableLayerIds.has("milktooth-base");
-    for (const id of useMilkAnatomy ? MILK_CROWN_LAYERS : NATURAL_CROWN_LAYERS) add(id);
+    for (const id of useMilkAnatomy ? MILK_CROWN_LAYERS : NATURAL_CROWN_LAYERS) {
+      // Baseline pulp artwork only. Inflamed pulp and endodontics are
+      // activated from the projection below and are never suppressed here.
+      if (!display.showPulp && HEALTHY_PULP_LAYERS.has(id)) continue;
+      add(id);
+    }
   }
 
   for (const feature of tooth.features) activateFeature(add, feature, tooth.view);
