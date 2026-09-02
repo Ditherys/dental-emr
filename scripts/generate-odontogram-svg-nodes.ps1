@@ -121,6 +121,9 @@ $DynamicLayerIds = [System.Collections.Generic.HashSet[string]]::new([string[]]@
     'tooth-base', 'tooth-healthy-pulp', 'tooth-inflam-pulp', 'tooth-bruxism-wear', 'tooth-bruxism-neck-wear',
     'tooth-base-beauty', 'milktooth', 'milktooth-base', 'milktooth-beauty', 'milktooth-healthy-pulp',
     'milktooth-inflam-pulp',
+    # baseline anatomy the clinician may hide (EMR display preference, not a
+    # fork-authored clinical layer)
+    'bone-base', 'gum-base',
     # tooth variants
     'tooth-broken-incisal', 'tooth-broken-distal-incisal', 'tooth-broken-distal',
     'tooth-broken-mesial-distal-incisal', 'tooth-broken-mesial-distal', 'tooth-broken-mesial-incisal',

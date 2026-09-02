@@ -116,6 +116,8 @@ function buildRegistry(): ReadonlySet<string> {
     "implant-connector",
     ...IMPLANT_CROWN_LAYERS,
     ...GENERIC_BRIDGE_LAYERS,
+    "bone-base",
+    "gum-base",
     "missing-closed",
     "no-tooth-after-extraction",
     "tooth-under-gum",
@@ -304,6 +306,13 @@ export function measuredForkLayers(
       if (!display.showPulp && HEALTHY_PULP_LAYERS.has(id)) continue;
       add(id);
     }
+  }
+
+  // Baseline socket artwork. Periodontal and peri-implant findings are
+  // activated from the projection and are never suppressed by this preference.
+  if (display.showBoneGum) {
+    add("bone-base");
+    add("gum-base");
   }
 
   for (const feature of tooth.features) activateFeature(add, feature, tooth.view);

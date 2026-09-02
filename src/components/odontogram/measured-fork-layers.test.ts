@@ -138,7 +138,7 @@ describe("measured fork layer registry", () => {
 describe("measured fork layer activation — permanent anatomy", () => {
   it("renders a healthy permanent tooth from natural anatomy only", () => {
     const result = active(tooth(11));
-    expect([...result].sort()).toEqual(["tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"]);
+    expect([...result].sort()).toEqual(["bone-base", "gum-base", "tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"]);
   });
 
   it("renders a missing tooth without natural crown artwork", () => {
@@ -340,7 +340,7 @@ describe("measured fork layer activation — permanent anatomy", () => {
   it("renders no artwork for a controlled code that collides with Object.prototype", () => {
     for (const hostile of ["constructor", "toString", "__proto__", "valueOf"]) {
       const result = active(tooth(11, { features: [feature({ code: "OTHER", controlledCode: hostile })] }));
-      expect([...result].sort()).toEqual(["tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"]);
+      expect([...result].sort()).toEqual(["bone-base", "gum-base", "tooth-base", "tooth-base-beauty", "tooth-healthy-pulp"]);
     }
   });
 
@@ -533,5 +533,31 @@ describe("pulp visibility", () => {
     const off = activeWith(tooth(11), { ...DEFAULT_ANATOMY_DISPLAY, showPulp: false });
     const removed = [...on].filter((id) => !off.has(id));
     expect(removed).toEqual(["tooth-healthy-pulp"]);
+  });
+});
+
+describe("bone and gum visibility", () => {
+  it("draws the bone and gum backdrop by default", () => {
+    const result = activeWith(tooth(11), DEFAULT_ANATOMY_DISPLAY);
+    expect(result.has("bone-base")).toBe(true);
+    expect(result.has("gum-base")).toBe(true);
+  });
+
+  it("hides the backdrop when the clinician turns bone and gum off", () => {
+    const result = activeWith(tooth(11), { ...DEFAULT_ANATOMY_DISPLAY, showBoneGum: false });
+    expect(result.has("bone-base")).toBe(false);
+    expect(result.has("gum-base")).toBe(false);
+  });
+
+  // The load-bearing safety rule.
+  it("still draws periodontal and peri-implant findings when the backdrop is off", () => {
+    const off: ChartAnatomyDisplay = { ...DEFAULT_ANATOMY_DISPLAY, showBoneGum: false };
+
+    expect(activeWith(tooth(11, { perioAlert: true }), off).has("parodontal")).toBe(true);
+
+    const subgingival = tooth(11, {
+      features: [feature({ code: "TOOTH_STATE", state: "SUBGINGIVAL" })],
+    });
+    expect(activeWith(subgingival, off).has("tooth-under-gum")).toBe(true);
   });
 });
