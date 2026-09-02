@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import type { ClinicalFeatureDetail } from "@/lib/odontogram/feature-contract";
-import type { RendererToothProjection } from "@/lib/odontogram/renderer-projection";
+import type { RendererToothProjection, RendererToothView } from "@/lib/odontogram/renderer-projection";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
 import { DEFAULT_ANATOMY_DISPLAY, type ChartAnatomyDisplay } from "./measured-fork-layers";
 
@@ -113,6 +113,19 @@ export function MeasuredTooth({
     [forceToggle, onActivate, tooth.fdi],
   );
 
+  // The anatomy layer decides which template it can actually draw: a tooth
+  // with no occlusal artwork, or whose occlusal artwork would drop a recorded
+  // finding, is drawn from its lateral template instead. `data-view` reports
+  // what was drawn, so the report is stored against the angle it answers and
+  // is discarded the moment the chart asks for a different one.
+  const [drawn, setDrawn] = React.useState<{ requested: RendererToothView; view: RendererToothView } | null>(null);
+  const drawnView = drawn?.requested === tooth.view ? drawn.view : tooth.view;
+  const handleViewResolved = React.useCallback((requested: RendererToothView, view: RendererToothView) => {
+    setDrawn((current) =>
+      current?.requested === requested && current.view === view ? current : { requested, view },
+    );
+  }, []);
+
   const hasRecord = tooth.features.length > 0 || tooth.anatomy !== "NATURAL" || tooth.bridgeRole !== null;
   const hasPlanned = tooth.features.some((feature) => feature.planned);
 
@@ -121,7 +134,7 @@ export function MeasuredTooth({
       type="button"
       data-testid={`tooth-${tooth.fdi}`}
       data-fdi={String(tooth.fdi)}
-      data-view={tooth.view}
+      data-view={drawnView}
       data-anatomy={tooth.anatomy}
       data-notation={notation}
       data-selected={selected ? "1" : "0"}
@@ -170,7 +183,12 @@ export function MeasuredTooth({
       )}
       <span className="relative flex h-[74px] w-full items-center justify-center overflow-hidden" aria-hidden="true">
         <React.Suspense fallback={<span className="text-xs text-muted-foreground">{tooth.fdi}</span>}>
-          <MeasuredToothAsset tooth={tooth} label={ariaLabel} display={display} />
+          <MeasuredToothAsset
+            tooth={tooth}
+            label={ariaLabel}
+            display={display}
+            onViewResolved={handleViewResolved}
+          />
         </React.Suspense>
       </span>
       <span className="sr-only">{ariaLabel}</span>

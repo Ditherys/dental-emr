@@ -507,6 +507,78 @@ describe("occlusal rendering angle", () => {
     expect(rendered.querySelector('[data-layer="gold-inlay"]')).toHaveAttribute("data-active", "1");
     expect(rendered.querySelector('[data-layer="gold-onlay"]')).toBeNull();
   });
+
+  it("keeps a posterior tooth with no finding on its real occlusal artwork", () => {
+    // The guard against an over-broad fallback. A lateral template depicts a
+    // pulp chamber and a "beauty" highlight the top-down view has no
+    // equivalent for; treating those as lost findings would send every tooth
+    // back to its front template and neuter the whole toggle.
+    render(<Harness renderAngle="occlusal" />);
+
+    const rendered = tooth(16);
+    expect(rendered.querySelector("[data-measured-asset]")).toHaveAttribute("data-measured-asset", "16_occl");
+    expect(rendered.getAttribute("data-view")).toBe("occlusal");
+  });
+
+  it("draws a posterior tooth laterally when its occlusal template would drop a recorded finding", () => {
+    // The occlusal templates carry no endodontic or periodontal artwork, so
+    // drawing them would silently delete a recorded root canal and a
+    // periodontal alert from the chart. A view preference must never remove a
+    // clinical finding: the tooth falls back to the template that depicts it.
+    const projection = chartWith({
+      entries: [entry(16, { entryId: "endo-16", kind: "TREATMENT", clinicalCode: "ROOT_CANAL", surfaces: [] })],
+      implants: [],
+      periodontal: [{ toothFdi: 16, mobility: "none", perioAlert: true }],
+    });
+    render(<Harness projection={projection} renderAngle="occlusal" />);
+
+    const rendered = tooth(16);
+    expect(rendered.querySelector("[data-measured-asset]")).toHaveAttribute("data-measured-asset", "16");
+    expect(rendered.querySelector('[data-layer="endo-filling"]')).toHaveAttribute("data-active", "1");
+    expect(rendered.querySelector('[data-layer="parodontal"]')).toHaveAttribute("data-active", "1");
+  });
+
+  it("reports the angle actually drawn in data-view, for both fallback reasons", () => {
+    const projection = chartWith({
+      entries: [entry(16, { entryId: "endo-16", kind: "TREATMENT", clinicalCode: "ROOT_CANAL", surfaces: [] })],
+      implants: [],
+    });
+    render(<Harness projection={projection} renderAngle="occlusal" />);
+
+    // No occlusal template at all.
+    expect(tooth(11).getAttribute("data-view")).toBe("front");
+    // An occlusal template exists but would drop the recorded root canal.
+    expect(tooth(16).getAttribute("data-view")).toBe("front");
+    // Untouched neighbour: still drawn from the requested angle.
+    expect(tooth(17).getAttribute("data-view")).toBe("occlusal");
+  });
+
+  // Containment guard for the rendering-angle toggle, matching the guards the
+  // bone/gum and pulp toggles already carry: choosing the occlusal angle must
+  // remove no clinical finding from the chart, whatever registry class it
+  // belongs to.
+  it("keeps every recorded finding class active when the occlusal angle is requested", () => {
+    const projection = chartWith({
+      entries: [
+        entry(16, { entryId: "endo-16", kind: "TREATMENT", clinicalCode: "ROOT_CANAL", surfaces: [] }),
+        entry(16, {
+          entryId: "ortho-16",
+          kind: "TREATMENT",
+          clinicalCode: "ORTHODONTIC",
+          surfaces: [],
+          detail: { code: "ORTHODONTIC", appliance: "BRACKET", movement: "INTRUSION" },
+        }),
+      ],
+      implants: [],
+      periodontal: [{ toothFdi: 16, mobility: "m2", perioAlert: true }],
+    });
+    render(<Harness projection={projection} renderAngle="occlusal" />);
+
+    const rendered = tooth(16);
+    for (const layer of ["endo-filling", "parodontal", "mobility", "ortho-bracket", "arrow-down"]) {
+      expect(rendered.querySelector(`[data-layer="${layer}"]`), layer).toHaveAttribute("data-active", "1");
+    }
+  });
 });
 
 describe("wisdom-teeth visibility", () => {
@@ -528,4 +600,35 @@ describe("wisdom-teeth visibility", () => {
     expect(screen.queryByTestId("tooth-17")).not.toBeNull();
     expect(screen.queryByTestId("tooth-11")).not.toBeNull();
   });
+
+  // Containment guard: the toggle removes exactly the four third molars and
+  // no other site, so a later edit to the predicate cannot quietly widen it.
+  it("removes exactly the four third molars and no other tooth", () => {
+    const { unmount } = render(<Harness viewport="FULL" />);
+    const all = [...document.querySelectorAll<HTMLElement>("[data-fdi]")].map((node) => node.dataset.fdi!);
+    unmount();
+
+    render(<Harness viewport="FULL" showWisdomTeeth={false} />);
+    const hidden = [...document.querySelectorAll<HTMLElement>("[data-fdi]")].map((node) => node.dataset.fdi!);
+
+    expect(all.filter((fdi) => !hidden.includes(fdi))).toEqual(["18", "28", "48", "38"]);
+  }, 30_000);
+
+  // The removal is deliberately total: it is an explicit product decision that
+  // hiding wisdom teeth hides them all, including one carrying a record. This
+  // test exists so that decision cannot be mistaken for an oversight and
+  // "fixed" into a record-aware exception. Nothing leaves the patient's chart
+  // — the canonical record stands, and the progress-record table still shows
+  // it — only this grid view stops drawing the site.
+  it("removes a third molar that carries a clinical finding, exactly like an empty one", () => {
+    const projection = chartWith({ entries: [entry(18), entry(38, { entryId: "entry-38b" })], implants: [] });
+    render(<Harness projection={projection} viewport="FULL" showWisdomTeeth={false} />);
+
+    for (const fdi of THIRD_MOLARS) {
+      expect(screen.queryByTestId(`tooth-${fdi}`), `FDI ${fdi}`).toBeNull();
+    }
+    // The record itself is untouched: only the grid stopped drawing the site.
+    expect(projection.teeth.get(18)?.features).toHaveLength(1);
+    expect(projection.teeth.get(38)?.features).toHaveLength(1);
+  }, 30_000);
 });

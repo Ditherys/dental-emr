@@ -6,9 +6,28 @@ import { resolve } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MEASURED_ASSET_KEYS, measuredSvgTree, type MeasuredSvgNode } from "./measured-assets";
-import { immutableStringSet } from "./measured-fork-layers";
-import { MeasuredSvgAsset } from "./measured-svg-asset";
+import { dentitionFor } from "@/lib/odontogram/dentition";
+import type { ToothRenderFeature } from "@/lib/odontogram/feature-contract";
+import type { RendererToothProjection, RendererToothView } from "@/lib/odontogram/renderer-projection";
+
+import {
+  MEASURED_ASSET_KEYS,
+  measuredAssetKeyForFdi,
+  measuredSvgTree,
+  measuredTemplateLayerIds,
+  type MeasuredSvgNode,
+} from "./measured-assets";
+import {
+  DEFAULT_ANATOMY_DISPLAY,
+  immutableStringSet,
+  measuredForkLayers,
+  type ChartAnatomyDisplay,
+} from "./measured-fork-layers";
+import {
+  MeasuredSvgAsset,
+  OCCLUSAL_ABSENT_BASELINE_LAYERS,
+  resolveMeasuredToothAsset,
+} from "./measured-svg-asset";
 
 afterEach(cleanup);
 
@@ -220,5 +239,125 @@ describe("MeasuredSvgAsset", () => {
       <MeasuredSvgAsset assetKey="99" activeLayers={immutableStringSet([])} orientation="normal" label="unknown" />,
     );
     expect(container.querySelector("svg")).toBeNull();
+  });
+});
+
+describe("occlusal template resolution", () => {
+  /** Every FDI the occlusal templates cover, across all four quadrants. */
+  const OCCLUSAL_FDIS: readonly number[] = [
+    ...[1, 2, 3, 4].flatMap((quadrant) => [4, 5, 6, 7, 8].map((position) => quadrant * 10 + position)),
+    ...[5, 6, 7, 8].flatMap((quadrant) => [4, 5].map((position) => quadrant * 10 + position)),
+  ];
+
+  const DISPLAYS: readonly ChartAnatomyDisplay[] = [
+    { showBoneGum: true, showPulp: true },
+    { showBoneGum: true, showPulp: false },
+    { showBoneGum: false, showPulp: true },
+    { showBoneGum: false, showPulp: false },
+  ];
+
+  function healthy(fdi: number, view: RendererToothView): RendererToothProjection {
+    return {
+      fdi,
+      dentition: dentitionFor(fdi) ?? "permanent",
+      view,
+      anatomy: "NATURAL",
+      features: [],
+      bridgeRole: null,
+      mobility: "none",
+      perioAlert: false,
+    };
+  }
+
+  function withFeature(fdi: number, feature: ToothRenderFeature): RendererToothProjection {
+    return { ...healthy(fdi, "occlusal"), features: [feature] };
+  }
+
+  // The false-positive/false-negative guard on the exclusion list, recomputed
+  // from the installed templates rather than trusted. Too broad and every
+  // tooth falls back; too narrow and a real finding is dropped in silence.
+  it("excludes exactly the baseline artwork no occlusal template depicts", () => {
+    const absent = new Set<string>();
+    for (const fdi of OCCLUSAL_FDIS) {
+      const frontKey = measuredAssetKeyForFdi(fdi, "front")!;
+      const occlusalIds = measuredTemplateLayerIds(measuredAssetKeyForFdi(fdi, "occlusal")!);
+      for (const display of DISPLAYS) {
+        const lateral = measuredForkLayers(healthy(fdi, "front"), measuredTemplateLayerIds(frontKey), display);
+        for (const id of lateral) if (!occlusalIds.has(id)) absent.add(id);
+      }
+    }
+    expect([...absent].sort()).toEqual([...OCCLUSAL_ABSENT_BASELINE_LAYERS].sort());
+  });
+
+  it("keeps every tooth with no finding on its own occlusal template", () => {
+    for (const fdi of OCCLUSAL_FDIS) {
+      for (const display of DISPLAYS) {
+        const resolved = resolveMeasuredToothAsset(healthy(fdi, "occlusal"), display);
+        expect(resolved?.view, `FDI ${fdi}`).toBe("occlusal");
+        expect(resolved?.assetKey, `FDI ${fdi}`).toBe(measuredAssetKeyForFdi(fdi, "occlusal"));
+      }
+    }
+  });
+
+  // Every id in this list is genuine clinical artwork the occlusal templates
+  // do not carry. Requesting the occlusal angle must not delete any of them.
+  it("falls back to the lateral template for every finding the occlusal artwork cannot draw", () => {
+    const cases: ReadonlyArray<readonly [string, ToothRenderFeature]> = [
+      ["endo-filling", { detail: { code: "ROOT_CANAL", state: "endo-filling" }, surfaces: [], planned: false }],
+      ["endo-medical-filling", { detail: { code: "ROOT_CANAL", state: "endo-medical-filling" }, surfaces: [], planned: false }],
+      ["tooth-radix", { detail: { code: "TOOTH_STATE", state: "RADIX" }, surfaces: [], planned: false }],
+      ["tooth-under-gum", { detail: { code: "TOOTH_STATE", state: "SUBGINGIVAL" }, surfaces: [], planned: false }],
+      ["no-tooth-after-extraction", { detail: { code: "TOOTH_STATE", state: "EXTRACTION_WOUND" }, surfaces: [], planned: false }],
+      ["caries-root", { detail: { code: "CARIES", depth: "DENTIN", icdas: null, cars: null, radiographicDepth: null }, surfaces: [], planned: false }],
+      ["arrow-down", { detail: { code: "ORTHODONTIC", appliance: "BRACKET", movement: "INTRUSION" }, surfaces: [], planned: false }],
+    ];
+
+    for (const [layer, feature] of cases) {
+      const resolved = resolveMeasuredToothAsset(withFeature(16, feature), DEFAULT_ANATOMY_DISPLAY);
+      expect(resolved?.view, layer).toBe("front");
+      expect(resolved?.assetKey, layer).toBe("16");
+    }
+
+    for (const tooth of [
+      { ...healthy(16, "occlusal"), perioAlert: true },
+      { ...healthy(16, "occlusal"), mobility: "m2" as const },
+    ]) {
+      const resolved = resolveMeasuredToothAsset(tooth, DEFAULT_ANATOMY_DISPLAY);
+      expect(resolved?.view).toBe("front");
+    }
+  });
+
+  // The reviewed list of clinical artwork the occlusal templates structurally
+  // lack. Each id is a real finding or treatment - endodontics, mobility, a
+  // periodontal alert, a retained root, an extraction wound, an implant
+  // connector, root caries, crown-margin leakage, an orthodontic arrow - so a
+  // tooth carrying one may never be drawn from its occlusal template.
+  it("holds every clinical layer the occlusal templates lack outside the excluded baseline", () => {
+    const OCCLUSAL_ABSENT_CLINICAL_LAYERS = [
+      "arrow-down", "arrow-up", "caries-root", "crown-leakage",
+      "endo-filling", "endo-filling-incomplete", "endo-glass-pin",
+      "endo-medical-filling", "endo-metal-pin", "implant-connector", "mobility",
+      "no-tooth-after-extraction", "parodontal", "tooth-radix", "tooth-under-gum",
+    ];
+
+    for (const fdi of OCCLUSAL_FDIS) {
+      const front = measuredTemplateLayerIds(measuredAssetKeyForFdi(fdi, "front")!);
+      const occlusal = measuredTemplateLayerIds(measuredAssetKeyForFdi(fdi, "occlusal")!);
+      for (const id of OCCLUSAL_ABSENT_CLINICAL_LAYERS) {
+        expect(front.has(id), `FDI ${fdi} front is missing ${id}`).toBe(true);
+        expect(occlusal.has(id), `FDI ${fdi} occlusal unexpectedly carries ${id}`).toBe(false);
+        expect(OCCLUSAL_ABSENT_BASELINE_LAYERS.has(id), `${id} excused as baseline`).toBe(false);
+      }
+    }
+  });
+
+  it("keeps a finding the occlusal template does carry on the occlusal template", () => {
+    const caries: ToothRenderFeature = {
+      detail: { code: "CARIES", depth: "ENAMEL", icdas: null, cars: null, radiographicDepth: null },
+      surfaces: ["O"],
+      planned: false,
+    };
+    const resolved = resolveMeasuredToothAsset(withFeature(16, caries), DEFAULT_ANATOMY_DISPLAY);
+    expect(resolved).toEqual({ assetKey: "16_occl", view: "occlusal" });
   });
 });

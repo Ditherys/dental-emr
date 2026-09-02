@@ -66,13 +66,17 @@ export type AnatomicalChartProps = {
   /** Draw the healthy pulp chamber. Presentation only; defaults to today's behaviour. */
   showPulp?: boolean;
   /**
-   * The angle every tooth is drawn from. Presentation only. A tooth with no
-   * occlusal template falls back to its front template in the renderer.
+   * The angle every tooth is drawn from. Presentation only, and never lossy: a
+   * tooth with no occlusal template — or whose occlusal template carries none
+   * of the artwork for a finding it actually has — is drawn from its front
+   * template instead, so no recorded finding disappears with the angle.
    */
   renderAngle?: RendererToothView;
   /**
    * Include the third molars (FDI 18/28/38/48) in the grid. Presentation only:
-   * hiding them removes no canonical record and no clinical finding.
+   * hiding them removes no canonical record. The removal is deliberately total
+   * and applies to a third molar carrying a finding as well - see
+   * `isThirdMolar`.
    */
   showWisdomTeeth?: boolean;
 };
@@ -91,6 +95,23 @@ function isPrimary(fdi: number): boolean {
 
 const THIRD_MOLAR_POSITION = 8;
 
+/**
+ * Hiding the wisdom teeth is deliberately total.
+ *
+ * Unlike `projectionHasPrimaryDentition`, which keeps a recorded primary
+ * finding visible, this toggle removes FDI 18/28/38/48 from the grid whether
+ * or not a third molar carries a clinical record. That is an explicit product
+ * decision, not an oversight: a clinician who has turned wisdom teeth off has
+ * said this chart is about the other 28 sites, and a grid that silently
+ * reinstated one tooth would be less predictable, not safer.
+ *
+ * Nothing leaves the patient's chart. The canonical record is untouched and
+ * still readable in the progress-record table; only this grid view stops
+ * drawing the site. `measured-chart.test.tsx` locks the decision in place with
+ * a test that a third molar carrying a finding is removed exactly like an
+ * empty one, so this cannot be "fixed" into a record-aware exception by
+ * accident.
+ */
 function isThirdMolar(fdi: number): boolean {
   const quadrant = Math.trunc(fdi / 10);
   return quadrant >= 1 && quadrant <= 4 && fdi % 10 === THIRD_MOLAR_POSITION;

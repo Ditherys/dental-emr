@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import type { RendererToothProjection } from "@/lib/odontogram/renderer-projection";
+import type { RendererToothProjection, RendererToothView } from "@/lib/odontogram/renderer-projection";
 
 import {
   measuredAssetKeyForFdi,
@@ -76,6 +76,69 @@ export function MeasuredSvgAsset({
 }
 
 /**
+ * Baseline artwork a lateral template carries that an occlusal template
+ * legitimately does not: a top-down projection has no pulp-chamber
+ * cross-section and no lateral "beauty" shading. Their absence is an
+ * anatomical difference between the two views, not a clinical finding that
+ * went missing, so they must never trigger the fallback below.
+ *
+ * This list is deliberately small and closed. `tooth-healthy-pulp` alone is
+ * unconditional baseline artwork for almost every natural tooth, so widening
+ * the fallback test to "anything the occlusal template lacks" would send every
+ * tooth back to its front template and silently neuter the whole angle toggle.
+ * `measured-svg-asset.test.tsx` recomputes this set from the installed
+ * templates so it can drift in neither direction.
+ */
+export const OCCLUSAL_ABSENT_BASELINE_LAYERS: ReadonlySet<string> = Object.freeze(
+  new Set(["tooth-healthy-pulp", "milktooth-healthy-pulp", "tooth-base-beauty", "milktooth-beauty"]),
+);
+
+/**
+ * Which installed template a tooth is actually drawn from, and the view that
+ * template depicts.
+ *
+ * A chart-wide occlusal request resolves back to the lateral template in two
+ * cases, both of which are the same rule — the chart must never lose a tooth
+ * or a recorded finding to a presentation preference:
+ *
+ *  1. no occlusal template exists at all (every anterior tooth), so the
+ *     alternative is an empty slot for a tooth that exists;
+ *  2. an occlusal template exists but structurally carries none of the artwork
+ *     for a finding this tooth actually has. The occlusal templates depict no
+ *     endodontics, mobility, periodontal alert, retained root, extraction
+ *     wound, implant connector, root caries, crown-margin leakage or
+ *     orthodontic arrow, so drawing them would delete a real clinical finding
+ *     from the chart.
+ */
+export function resolveMeasuredToothAsset(
+  tooth: RendererToothProjection,
+  display: ChartAnatomyDisplay,
+): { assetKey: string; view: RendererToothView } | null {
+  const requestedKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
+  if (tooth.view !== "occlusal") {
+    return requestedKey === null ? null : { assetKey: requestedKey, view: tooth.view };
+  }
+
+  const frontKey = measuredAssetKeyForFdi(tooth.fdi, "front");
+  if (frontKey === null) {
+    return requestedKey === null ? null : { assetKey: requestedKey, view: "occlusal" };
+  }
+  if (requestedKey === null) return { assetKey: frontKey, view: "front" };
+
+  const occlusalLayerIds = measuredTemplateLayerIds(requestedKey);
+  const lateralLayers = measuredForkLayers(
+    { ...tooth, view: "front" },
+    measuredTemplateLayerIds(frontKey),
+    display,
+  );
+  for (const id of lateralLayers) {
+    if (occlusalLayerIds.has(id) || OCCLUSAL_ABSENT_BASELINE_LAYERS.has(id)) continue;
+    return { assetKey: frontKey, view: "front" };
+  }
+  return { assetKey: requestedKey, view: "occlusal" };
+}
+
+/**
  * The whole anatomy entry point for one tooth.
  *
  * This module — and only this module — pulls in the ~3.5 MB checked-in node
@@ -88,18 +151,26 @@ export function MeasuredToothAsset({
   tooth,
   label,
   display = DEFAULT_ANATOMY_DISPLAY,
+  onViewResolved,
 }: {
   tooth: RendererToothProjection;
   label: string;
   display?: ChartAnatomyDisplay;
+  /**
+   * Reports the angle actually drawn back to the tooth tile. Only this module
+   * can decide it, because only this module may load the anatomy: the tile
+   * stays on the eager side of the code-splitting boundary.
+   */
+  onViewResolved?: (requested: RendererToothView, drawn: RendererToothView) => void;
 }): React.ReactElement | null {
-  // Only posterior teeth have an occlusal template. An anterior tooth in the
-  // occlusal view draws its front template rather than degrading to a bare
-  // number: a chart must never show an empty slot for a tooth that exists.
-  const requestedKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
-  const usedFrontFallback = requestedKey === null && tooth.view === "occlusal";
-  const assetKey = requestedKey ?? (usedFrontFallback ? measuredAssetKeyForFdi(tooth.fdi, "front") : null);
-  if (!assetKey) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
+  const resolved = resolveMeasuredToothAsset(tooth, display);
+  const drawnView = resolved?.view ?? tooth.view;
+  const requestedView = tooth.view;
+  React.useEffect(() => {
+    onViewResolved?.(requestedView, drawnView);
+  }, [drawnView, onViewResolved, requestedView]);
+
+  if (!resolved) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
 
   // Layer selection (e.g. an onlay-vs-inlay restoration id) is driven by
   // `tooth.view` too, not just the asset key. A fallen-back tooth must feed
@@ -107,12 +178,12 @@ export function MeasuredToothAsset({
   // occlusal-only (like an onlay) would compute an id the front template
   // never carries and silently vanish instead of falling back to its lateral
   // equivalent.
-  const layerTooth = usedFrontFallback ? { ...tooth, view: "front" as const } : tooth;
+  const layerTooth = resolved.view === tooth.view ? tooth : { ...tooth, view: resolved.view };
 
   return (
     <MeasuredSvgAsset
-      assetKey={assetKey}
-      activeLayers={measuredForkLayers(layerTooth, measuredTemplateLayerIds(assetKey), display)}
+      assetKey={resolved.assetKey}
+      activeLayers={measuredForkLayers(layerTooth, measuredTemplateLayerIds(resolved.assetKey), display)}
       orientation={measuredOrientation(tooth.fdi)}
       label={label}
     />
