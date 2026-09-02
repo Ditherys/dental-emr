@@ -19,6 +19,44 @@ import { ClinicalChartPrint } from "./clinical-chart-print";
 
 afterEach(() => cleanup());
 
+/**
+ * Every print-scoped rule whose selector ends in `button`, at any nesting depth.
+ *
+ * REVIEW M2 established that matching only a DIRECT `.clinical-chart-print
+ * button` selector left an escape: `.clinical-chart-print .odontogram-chart
+ * button { display: none }` would reintroduce the C1 Critical while evading
+ * both the positive and the negative pattern.
+ *
+ * REVIEW R2 found the remaining blind spot. Splitting on `{...}` pairs makes
+ * the FIRST rule inside any `@media` block inherit `@media print` as its
+ * "selector", so a `@media print { .clinical-chart-print button {…} }` whose
+ * button rule came first would be filtered out and counted as zero - the C1
+ * defect returning through a construction the two tested evasions do not cover,
+ * inside the very guard whose job is closing evasion classes. The `@media`
+ * opener is therefore removed before splitting, so a selector survives
+ * regardless of its position in the block.
+ *
+ * Exported through the test's own scope so the guard can be exercised against
+ * synthetic stylesheets as well as the real one.
+ */
+function printScopedButtonRules(css: string): Array<{ selector: string; rule: string }> {
+  const declarations = css
+    // Comments first: their prose otherwise lands in the "selector" slice and
+    // both the matches and the diagnostics become nonsense.
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "")
+    // Then every at-rule opener - @media, @supports, @layer - so the rule that
+    // follows it keeps its own selector. The block's stray closing brace is
+    // harmless: it can only prefix the next selector slice.
+    .replaceAll(/@[a-z-]+[^{]*\{/gi, " ");
+
+  return (declarations.match(/[^{}]*\{[^}]*\}/g) ?? [])
+    .map((rule) => ({ selector: rule.slice(0, rule.indexOf("{")).trim(), rule }))
+    .filter(
+      ({ selector }) =>
+        selector.includes(".clinical-chart-print") && /\bbutton\b[^,]*$/.test(selector),
+    );
+}
+
 const PATIENT_ID = "00000000-0000-4000-a000-000000000020";
 const PERIO_EXAM_ID = "e0000000-0000-4000-a000-000000000003";
 const OTHER_PERIO_EXAM_ID = "e0000000-0000-4000-a000-0000000000ff";
@@ -319,31 +357,15 @@ describe("ClinicalChartPrint", () => {
       resolve(process.cwd(), "src/components/odontogram/styles.css"),
       "utf8",
     );
-    // REVIEW M2. Matching only a DIRECT `.clinical-chart-print button` selector
-    // left an obvious escape: `.clinical-chart-print .odontogram-chart button
-    // { display: none }` would reintroduce the Critical while evading both
-    // patterns. So look at EVERY print-scoped rule whose selector ends in
-    // `button`, however deeply nested, and require the exception on each.
-    // Comments are stripped first: their prose otherwise lands in the
-    // "selector" slice and both matches and diagnostics become nonsense.
-    const declarations = css.replaceAll(/\/\*[\s\S]*?\*\//g, "");
-    const printScopedButtonRules = (declarations.match(/[^{}]*\{[^}]*\}/g) ?? [])
-      .map((rule) => ({ selector: rule.slice(0, rule.indexOf("{")).trim(), rule }))
-      .filter(
-        ({ selector }) =>
-          selector.includes(".clinical-chart-print") && /\bbutton\b[^,]*$/.test(selector),
-      );
-
-    expect(printScopedButtonRules.length).toBe(1);
-    for (const { selector, rule } of printScopedButtonRules) {
+    const found = printScopedButtonRules(css);
+    expect(found.length).toBe(1);
+    for (const { selector, rule } of found) {
       // Positive: every such rule is scoped away from the tooth tiles.
       expect(selector, `print-scoped button rule must exempt the tooth tiles: ${rule}`).toMatch(
         /button:not\(\.odontogram-tooth\)/,
       );
       // Negative: no such rule may target a bare `button` at any depth.
-      expect(selector, `unscoped print button rule: ${rule}`).not.toMatch(
-        /\bbutton\s*$/,
-      );
+      expect(selector, `unscoped print button rule: ${rule}`).not.toMatch(/\bbutton\s*$/);
     }
     // And the tile class the exception depends on must still exist.
     const tile = readFileSync(
@@ -351,6 +373,54 @@ describe("ClinicalChartPrint", () => {
       "utf8",
     );
     expect(tile).toContain("odontogram-tooth");
+  });
+
+  it("finds a print-scoped button rule wherever it sits, including first in an @media block", () => {
+    // REVIEW R2. The guard above is only worth anything if it SEES the rule.
+    // Splitting on brace pairs used to hand the first rule in any @media block
+    // an "@media print" selector, so this exact construction - the button rule
+    // first, or alone, in its own block - would have been filtered out and
+    // counted as zero. Each case below must be found AND flagged.
+    const evasions = [
+      {
+        name: "first rule in its own @media print block",
+        css: "@media print {\n  .clinical-chart-print button { display: none !important; }\n}",
+      },
+      {
+        name: "only rule in a nested @supports inside @media print",
+        css:
+          "@media print {\n  @supports (display: grid) {\n" +
+          "    .clinical-chart-print .odontogram-chart button { display: none; }\n  }\n}",
+      },
+      {
+        name: "descendant selector outside any at-rule",
+        css: ".clinical-chart-print .odontogram-chart button { display: none; }",
+      },
+      {
+        name: "first rule in an @layer block",
+        css: "@layer print {\n  .clinical-chart-print button { display: none; }\n}",
+      },
+    ];
+
+    for (const { name, css } of evasions) {
+      const found = printScopedButtonRules(css);
+      expect(found.length, `the guard must SEE the rule: ${name}`).toBe(1);
+      expect(found[0]!.selector, `the guard must FLAG the rule: ${name}`).not.toMatch(
+        /button:not\(\.odontogram-tooth\)/,
+      );
+    }
+
+    // And the legitimate rule, in the same position, is seen and accepted.
+    const legitimate = printScopedButtonRules(
+      "@media print {\n  .clinical-chart-print button:not(.odontogram-tooth) { display: none; }\n}",
+    );
+    expect(legitimate.length).toBe(1);
+    expect(legitimate[0]!.selector).toMatch(/button:not\(\.odontogram-tooth\)/);
+
+    // A rule that has nothing to do with the print sheet is not swept up.
+    expect(
+      printScopedButtonRules("@media print { .dental-emr-fork button { display: none; } }"),
+    ).toEqual([]);
   });
 
   it("keeps every tooth tile inside the print root carrying the exempt class", () => {
@@ -463,6 +533,47 @@ describe("ClinicalChartPrint", () => {
     expect(perio).toHaveTextContent(/2 site/);
     // And the staging line, keyed to the FINAL examination, is still printed.
     expect(perio).toHaveTextContent("Periodontitis · Stage III · Grade B · Generalized");
+  });
+
+  it("marks staging from an unsigned DRAFT as provisional, adjacent to the line", () => {
+    // REVIEW R1. Passing the summarized examination id to the loader means a
+    // patient whose ONLY periodontal record is a DRAFT now HAS a staging line
+    // to print. Staging and grading from an unfinalized examination is a
+    // provisional conclusion, and this sheet leaves the building.
+    //
+    // The marker must sit NEXT TO the classification: a clinician holding only
+    // the paper reads the diagnosis line, not the status in the header.
+    const dto = odontogramDto();
+    const draftOnly = {
+      ...dto.periodontalExaminations[0]!,
+      status: "DRAFT" as const,
+      finalized_at: null,
+    };
+    renderPrint({
+      dto: { ...dto, periodontalExaminations: [draftOnly] },
+      periodontalClassification: {
+        examinationId: PERIO_EXAM_ID,
+        label: "Periodontitis · Stage III · Grade B · Generalized",
+      },
+    });
+
+    const staging = screen.getByTestId("clinical-chart-print-staging");
+    // The classification IS printed - declining to show it would lose real
+    // clinical information - but never as a settled finding.
+    expect(staging).toHaveTextContent("Periodontitis · Stage III · Grade B · Generalized");
+    expect(within(staging).getByTestId("clinical-chart-print-staging-provisional")).toHaveTextContent(
+      /provisional/i,
+    );
+    expect(staging).toHaveTextContent(/unsigned draft examination/i);
+    expect(staging).toHaveTextContent(/not a finalized diagnosis/i);
+  });
+
+  it("prints a FINAL examination's staging without a provisional marker", () => {
+    renderPrint();
+    const staging = screen.getByTestId("clinical-chart-print-staging");
+    expect(staging).toHaveTextContent("Periodontitis · Stage III · Grade B · Generalized");
+    expect(within(staging).queryByTestId("clinical-chart-print-staging-provisional")).toBeNull();
+    expect(staging.textContent).not.toMatch(/provisional/i);
   });
 
   it("does not assert staging is unfinalized when the classification is simply not supplied", () => {

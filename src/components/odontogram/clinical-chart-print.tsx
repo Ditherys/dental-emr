@@ -443,13 +443,43 @@ export function ClinicalChartPrint({
               {perio.bleedingSites}/{perio.assessedBleedingSites} assessed · deepest{" "}
               {perio.maxProbingDepthMm === null ? "—" : `${perio.maxProbingDepthMm} mm`}
             </p>
-            <p className="mt-1">
-              {periodontalClassification?.label !== null &&
-              periodontalClassification?.label !== undefined &&
-              periodontalClassification.examinationId === perio.examinationId
-                ? periodontalClassification.label
-                : "Staging and grading are not shown on this printout."}
-            </p>
+            {periodontalClassification?.label !== null &&
+            periodontalClassification?.label !== undefined &&
+            periodontalClassification.examinationId === perio.examinationId ? (
+              <p className="mt-1" data-testid="clinical-chart-print-staging">
+                {/*
+                  REVIEW R1. Passing the summarized examination's id to the
+                  loader also means a patient whose ONLY periodontal record is
+                  an unsigned DRAFT now has a staging line to print. Staging and
+                  grading taken from an unfinalized examination is a provisional
+                  conclusion, and this sheet leaves the building: it must not
+                  read as settled.
+
+                  The marker is deliberately ADJACENT to the classification
+                  rather than relying on the status printed two lines above. A
+                  clinician holding only the paper reads the diagnosis line, not
+                  the header.
+                */}
+                {perio.status === "FINAL" ? null : (
+                  <span
+                    data-testid="clinical-chart-print-staging-provisional"
+                    className="mr-2 border border-foreground/60 px-1 text-[10px] font-medium uppercase tracking-wide"
+                  >
+                    Provisional
+                  </span>
+                )}
+                <span>{periodontalClassification.label}</span>
+                {perio.status !== "FINAL" && (
+                  <span className="block text-[11px]">
+                    Taken from an unsigned draft examination. Not a finalized diagnosis.
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1" data-testid="clinical-chart-print-staging">
+                Staging and grading are not shown on this printout.
+              </p>
+            )}
           </div>
         )}
       </section>

@@ -7,8 +7,8 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff`, `e7d98ae` and this
-commit.
+and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff`, `e7d98ae`, `ce34e0b` and
+this commit.
 
 ## Task 16 - print, help, and the end of the runtime fork package (2026-09-02)
 
@@ -704,6 +704,80 @@ injected clock) and 1 `perio-workspace.test.tsx` parallel-run timeout that
 passes alone.
 
 Playwright was not run; hosted E2E remains unauthorized.
+
+## Task 16 round 4 - review fixes: 2 Minor (2026-09-02)
+
+Round 3 was approved: F1, F2 and M2 were hand-traced against the real files and
+confirmed at the root. Two Minor items remained, both on surfaces this plan has
+been bitten on repeatedly. No migration, no pgTAP and no harness change.
+
+### R1 - the widened gate let unfinalized staging print as fact
+
+Passing the summarized examination's id to the loader (round 3, F1) also
+replaced the `hasFinalPeriodontalExam` gate with `printedPerioExaminationId !==
+null`. Correct for F1, but it means a patient whose ONLY periodontal record is
+an unsigned DRAFT now HAS a staging line to print, where previously they had
+none. The F1 guard still prevents cross-examination mislabeling, so this is not
+a reintroduction - but staging and grading sourced from an unfinalized
+examination, printed on a document that leaves the building, is the same family
+as I3 and I4: paper asserting a clinical conclusion more firmly than the record
+supports.
+
+The classification is still printed - declining would lose real clinical
+information - but a non-FINAL examination's staging now carries a bordered
+`PROVISIONAL` marker immediately before the text and the sentence "Taken from an
+unsigned draft examination. Not a finalized diagnosis." underneath.
+
+The marker is deliberately **adjacent to the classification**, not left to the
+`DRAFT` status printed two lines above: a clinician holding only the paper reads
+the diagnosis line, not the header. Two tests, and neutralising the marker turns
+the DRAFT-only one red.
+
+### R2 - the @media blind spot in the M2 guard
+
+The M2 guard split the stylesheet on brace pairs, which hands the **first** rule
+inside any `@media` block the `@media print` opener as its "selector". It does
+not affect the current file - `styles.css`'s button rule is not first in its
+block - but a future `@media print { .clinical-chart-print button {…} }` whose
+button rule came first, or alone, would have been filtered out and counted as
+zero. The C1 Critical returning through a construction neither tested evasion
+covers, inside the guard whose job is closing evasion classes.
+
+The scanner is now a named function that strips comments **and every at-rule
+opener** (`@media`, `@supports`, `@layer`) before splitting, so a selector
+survives regardless of its position. A stray closing brace can only prefix the
+next selector slice, which the filter ignores.
+
+It is now exercised against synthetic stylesheets as well as the real one: four
+constructions must each be SEEN and FLAGGED - button rule first in its own
+`@media print` block, alone in a nested `@supports`, a descendant selector
+outside any at-rule, and first in an `@layer` block - plus the legitimate rule in
+the same position must be seen and accepted, and an unrelated
+`.dental-emr-fork button` must not be swept up.
+
+Removing the at-rule stripping turns it red with `the guard must SEE the rule:
+first rule in its own @media print block: expected +0 to be 1`, so the fix is
+load-bearing rather than defensive.
+
+### Round 4 files
+
+Changed: `src/components/odontogram/clinical-chart-print.tsx` (+ suite, 19 -> 25
+tests). Nothing else. No migration, no grant, no counter: 349 / 94 / 410 / 273 /
+262 all stand.
+
+### Round 4 tests run and observed results
+
+```
+npx vitest run <print, section, clinical-section, perio-classification>
+                             -> Test Files 4 passed / Tests 139 passed
+npm run typecheck            -> clean
+npm run lint                 -> 0 errors, 3 warnings (pre-existing)
+npm run build                -> Compiled successfully
+npm run test:unit (whole)    -> 2453 passed | 8 failed (206 files)
+```
+
+The 8 are the unchanged expected baseline: 7 date-triggered booking failures and
+1 `perio-workspace.test.tsx` parallel-run timeout. Playwright was not run.
 
 ### Next bounded task
 
