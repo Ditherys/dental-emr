@@ -75,12 +75,23 @@ A display toggle may hide **baseline anatomy only**. It must never hide a
 clinical finding.
 
 - `showBoneGum: false` hides `bone-base` and `gum-base`. It must **not** hide
-  `peri-implant-bone-loss`, `parodontal`, or `tooth-under-gum` (the SUBGINGIVAL
-  state layer set at `measured-fork-layers.ts:184`).
+  `parodontal` (set from `perioAlert`) or `tooth-under-gum` (the SUBGINGIVAL
+  state layer, `measured-fork-layers.ts:184`).
 - `showPulp: false` hides `tooth-healthy-pulp` and `milktooth-healthy-pulp`. It
-  must **not** hide `tooth-inflam-pulp`, `milktooth-inflam-pulp`, the
-  `pulp-inflam-path-*` group, or any endodontic layer (`endo-filling`,
+  must **not** hide any endodontic layer (`endo-filling`, `endo-medical-filling`,
   `endo-metal-pin`, …).
+
+**What is testable today, and what is not.** `tooth-inflam-pulp`,
+`milktooth-inflam-pulp`, the `pulp-inflam-path-*` group and
+`peri-implant-bone-loss` exist in the artwork and in the generator's
+`$DynamicLayerIds`, but they are **not** in `buildRegistry()` and the EMR never
+activates them. A test asserting they "stay visible" would pass vacuously. The
+rule still governs them if they are ever wired up; the layers listed above are
+what it can be enforced against now.
+
+Enforcement therefore also needs a **containment guard**: a test asserting that
+turning a preference off removes *exactly* the baseline ids and nothing else.
+Without it the rule degrades into a comment the moment the registry grows.
 
 A clinician must not be able to make a pathology disappear by changing a view
 preference. This mirrors the rule already applied in this codebase to the
