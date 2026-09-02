@@ -65,8 +65,10 @@ insert into approved_grant_objects (signature) values
   ('public.amend_periodontal_examination_v2(uuid,text,uuid)'),
   ('public.amend_procedure_installment_schedule(uuid,uuid,text,jsonb,text,text)'),
   ('public.amend_tooth_clinical_entry(uuid,uuid,integer,text,text[],text)'),
+  ('public.apply_clinical_import_batch_v1(uuid,uuid,uuid,uuid[],uuid)'),
   ('public.approve_charge_direct_cost(uuid,uuid,text,bigint,text,text)'),
   ('public.archive_branch(uuid)'),
+  ('public.archive_clinical_import_batch_v1(uuid,uuid,uuid,text)'),
   ('public.archive_clinical_photo(uuid,uuid,uuid,integer,text)'),
   ('public.archive_file(uuid,uuid,integer)'),
   ('public.archive_patient(uuid, uuid, integer)'),
@@ -96,6 +98,7 @@ insert into approved_grant_objects (signature) values
   ('public.correct_treatment_plan_item_execution(uuid,uuid,integer,text,text,text)'),
   ('public.create_appointment(uuid,uuid,jsonb)'),
   ('public.create_branch(uuid, text, text, text, text, text, text, text, text, text, text, text, text, numeric, numeric, boolean)'),
+  ('public.create_clinical_import_batch_v1(uuid,uuid,text,text,jsonb,uuid)'),
   ('public.create_clinical_note(uuid,uuid,text,text)'),
   ('public.create_clinical_photo(uuid,uuid,uuid,uuid,text,text,text,timestamptz,text[],text[],text)'),
   ('public.create_clinical_photo_source_upload(uuid,uuid,text,bigint)'),
@@ -146,6 +149,7 @@ insert into approved_grant_objects (signature) values
   ('public.get_acquisition_summary(uuid,integer)'),
   ('public.get_clinical_composer_context(uuid,uuid)'),
   ('public.get_clinical_encounter_detail(uuid,uuid)'),
+  ('public.get_clinical_import_batch_v1(uuid,uuid,uuid)'),
   ('public.get_clinical_photo_derivative(uuid,uuid,uuid,text)'),
   ('public.get_clinical_photo_source_upload(uuid,uuid,uuid)'),
   ('public.get_clinical_progress_record_v1(uuid,uuid,integer,integer)'),
@@ -223,6 +227,7 @@ insert into approved_grant_objects (signature) values
   ('public.public_submit_intake_form(text,text,jsonb,boolean)'),
   ('public.reactivate_patient(uuid, uuid, integer)'),
   ('public.receive_stock(uuid,uuid,integer,text,date)'),
+  ('public.record_clinical_export_v1(uuid,uuid,text,text,uuid)'),
   ('public.record_current_bridge_v3(uuid,uuid,jsonb,timestamptz,text)'),
   ('public.record_current_implant_component_v3(uuid,uuid,jsonb,timestamptz,text)'),
   ('public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)'),
@@ -301,7 +306,7 @@ insert into approved_grant_objects (signature) values
 
 select extensions.is(
   (select pg_catalog.count(*)::integer from approved_grant_objects),
-  258,
+  263,
   'the approved-grant registry projection carries every unmarked function grant'
 );
 

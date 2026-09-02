@@ -17,6 +17,8 @@ import type { NumberingSystem } from "@/lib/odontogram/dentition";
 import { cn } from "@/lib/utils";
 
 import { ChartViewportControls } from "./chart-viewport-controls";
+import { ClinicalExportMenu } from "./clinical-export-menu";
+import { ClinicalImportDialog } from "./clinical-import-dialog";
 import type { ChartDentition, ChartViewportChoice } from "./measured-chart";
 import { OdontogramHelp } from "./odontogram-help";
 
@@ -104,6 +106,25 @@ export function selectionSummary(selectedFdi: readonly number[]): string {
   return `Teeth ${sorted.join(", ")} selected`;
 }
 
+/**
+ * The interchange context the toolbar needs to offer import and export.
+ *
+ * It is route context and presentation only. No organization, no provider
+ * identifier and no author: the provider display is a line of confirmation text
+ * and is never sent back to the server, which derives the treating provider
+ * from the signed-in user on every clinical write.
+ */
+export type ClinicalChartInterchange = {
+  patientId: string;
+  branchId: string;
+  /** False for a clinical reader, who may export but may not import. */
+  canImport: boolean;
+  providerDisplay?: string | null;
+  clinicalDate?: string | null;
+  getChartSvg?: () => string | null;
+  onImported?: () => void;
+};
+
 export type ClinicalChartToolbarProps = {
   mode: ClinicalChartMode;
   onModeChange: (mode: ClinicalChartMode) => void;
@@ -113,6 +134,8 @@ export type ClinicalChartToolbarProps = {
   onPrint?: () => void;
   /** Omitted when the workspace holds no clinical photographs. */
   onOpenGallery?: () => void;
+  /** Omitted where the surrounding screen has no authorized patient context. */
+  interchange?: ClinicalChartInterchange;
 };
 
 /**
@@ -130,10 +153,21 @@ export function ClinicalChartToolbar({
   onViewChange,
   onPrint,
   onOpenGallery,
+  interchange,
 }: ClinicalChartToolbarProps): React.ReactElement {
   const [helpOpen, setHelpOpen] = React.useState(false);
+  const [importOpen, setImportOpen] = React.useState(false);
   const notationId = React.useId();
   const dentitionId = React.useId();
+
+  // An open import review belongs to the patient it was opened on. The reset
+  // runs during render, so no frame can show one patient's proposed records
+  // against another patient's chart.
+  const [interchangePatientId, setInterchangePatientId] = React.useState(interchange?.patientId);
+  if (interchangePatientId !== interchange?.patientId) {
+    setInterchangePatientId(interchange?.patientId);
+    setImportOpen(false);
+  }
 
   return (
     <div
@@ -210,6 +244,15 @@ export function ClinicalChartToolbar({
         {selectionSummary(view.selectedFdi)}
       </p>
 
+      {interchange && (
+        <ClinicalExportMenu
+          patientId={interchange.patientId}
+          branchId={interchange.branchId}
+          getChartSvg={interchange.getChartSvg}
+          onPrint={onPrint}
+        />
+      )}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="outline" size="sm" className="min-h-11" aria-label="More chart actions">
@@ -222,8 +265,25 @@ export function ClinicalChartToolbar({
           {onOpenGallery && (
             <DropdownMenuItem onSelect={() => onOpenGallery()}>Clinical photographs</DropdownMenuItem>
           )}
+          {interchange?.canImport && (
+            <DropdownMenuItem onSelect={() => setImportOpen(true)}>
+              Import clinical records
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {interchange?.canImport && (
+        <ClinicalImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          patientId={interchange.patientId}
+          branchId={interchange.branchId}
+          providerDisplay={interchange.providerDisplay}
+          clinicalDate={interchange.clinicalDate}
+          onApplied={interchange.onImported}
+        />
+      )}
 
       <Sheet open={helpOpen} onOpenChange={setHelpOpen}>
         <SheetContent side="right" className="w-full overflow-auto sm:max-w-md">

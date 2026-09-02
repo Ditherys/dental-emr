@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 14 (round 2)
+# AI Handoff - Unified Clinical Chart workspace, Task 15
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -7,320 +7,358 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and this commit.
+and `eb442f6`. Task 15 is this commit.
 
-## Task 14 - the private clinical photograph gallery in the chart toolbar (2026-09-02)
+## Task 15 - the staged clinical interchange (2026-09-02)
 
 ### Bounded slice implemented
 
-Four things, all inside the photo domain:
+Import and export for the clinical chart, built around one organising rule:
 
-1. `RADIOGRAPH` added to the canonical clinical photo categories, additively.
-2. The gallery moved out of an always-open page region into a toolbar-opened
-   `Sheet`, so private clinical images are not mounted underneath every
-   charting session.
-3. The composer's `PHOTO` record kind stopped being a dead signpost and now
-   hands the photo workflow the teeth and clinical date already selected.
-4. A latent defect found while writing the rename test: `rename_clinical_photo`
-   could never succeed. Repaired.
+> **Parsing is not a clinical write.**
 
-### RADIOGRAPH is additive, and why it is not carved out of DIAGNOSTIC
+A bounded upload becomes a tenant- and patient-scoped staging batch of
+normalized candidates classified `NEW`, `DUPLICATE`, `CONFLICT` or
+`UNSUPPORTED`. Nothing about that touches the chart. Only afterwards, and only a
+clinician with an active provider link at the acting branch, may select
+supported candidates and apply them - in one transaction, through the existing
+managed-visit writer, appending records and never replacing anything.
 
-A radiograph is a distinct clinical artefact from a clinical DIAGNOSTIC
-photograph, so it becomes its own category **alongside** the existing seven.
-Nothing was removed and no stored row was rewritten: reclassifying the
-diagnostic photographs already recorded would be a clinical claim, not a code
-change. The suite proves both directions - the widened constraint admits
-`RADIOGRAPH`, still admits all seven legacy categories, still rejects an unknown
-one (`23514`), and a pre-existing `DIAGNOSTIC` row created before the widening
-is asserted still present and still listed afterwards.
+Export is the mirror: registered and audited server-side **before** any document
+exists or any download is offered, generated from authorized projections, and
+never carrying a signed media URL or clinical text in a filename.
 
-`20260901010400_clinical_photo_radiograph_category.sql` widens
-`clinical_photographs_category_check` and the `p_category` guard inside
-`public.create_clinical_photo`. The function is replaced through the guarded
-`pg_get_functiondef` DO-block pattern, never a top-level `CREATE OR REPLACE`:
-ADR-017 would require an adjacent REVOKE that would destroy the `authenticated`
-grant this migration has no authority to re-issue. Guards fail closed on `55000`
-- pre-guards on `SECURITY DEFINER` and empty search_path, the anchor counted
-exactly once against the **applied** body before writing, post-guards asserting
-the new category present AND every legacy category still present AND the posture
-unchanged AND the grant boundary intact in both directions (`authenticated` may
-execute; `anon` and `service_role` may not).
+### What ADR-030 actually authorizes
 
-**No paired grants migration.** Neither migration creates a callable surface,
-grants anything, or revokes anything, so `scripts/approved-final-grants.mjs`,
-`scripts/boundary-privilege-invariant.test.mjs` and
-`supabase/tests/approved_grant_registry_integrity.test.sql` are unchanged and
-their counters stand at 405 / 269 / 258. No `supersededFrom` pivot is recorded
-because no registered grant is revoked.
+ADR-030 decision 2 amends O12 to include "staged FHIR/JSON import, authorized
+FHIR/JSON/PDF/SVG/PNG output, and private clinical photographs", and its
+consequences section states the contract this task implements almost verbatim:
+"Import is staged, tenant-scoped, bounded, reviewable, and dentist-confirmed;
+parsing alone never writes canonical clinical state. Export is generated from
+authorized canonical data, server-side permission-checked, and audited."
 
-### PHOTO_RENAME - inherited decision, and what was chosen
+It authorizes a **mapping**, not a widening. Its revisit triggers name "the
+interchange needs unsupported clinical mappings" explicitly, so the accepted
+subset here is deliberately exactly the seven clinical codes the clinical record
+composer already writes and the surfaces the canonical model already has.
+`fhir-candidates.ts` moves from documentation-only to the tested mapping under
+that authority, and says so at the top of the file.
 
-**Option (b): renames do not belong in a clinical progress note.** Task 13 left
-`PHOTO_RENAME` in the event union unproduced and asked the photo domain to
-settle it. A rename changes a display label; it changes no clinical fact, no
-date, no tooth, no image and no attribution. A clinical progress note is a
-chronology of clinical facts, so a label edit is not a member of it. The change
-is not unrecorded: `rename_clinical_photo` writes `clinical.photo.renamed` to
-`audit_events` with the actor, branch and patient, which is the correct home for
-an administrative edit under audit retention.
+### The staging schema - `20260901010410`
 
-Neither declined shortcut was taken: `private.audit_metadata_is_safe` was not
-widened, and the clinical chronology was not sourced from the security audit
-log. The union member stays so the row contract remains exhaustive over
-everything the record could say about a photograph, with the reasoning recorded
-at the declaration in `src/lib/odontogram/progress-record.ts` and the existing
-pgTAP assertion continuing to prove nothing fabricates it.
+Three public tables, one private request-key table, three append-only guards.
 
-### The latent defect: a clinical photograph could never be renamed
+- `public.clinical_import_batches` - format, **source digest**, staged count,
+  `STAGED`/`APPLIED`/`ARCHIVED` lifecycle, tenant-safe composite foreign keys to
+  branch, patient, `organization_members` and the applied encounter, plus shape
+  checks pairing each lifecycle timestamp with its actor and reason.
+- `public.clinical_import_candidates` - the normalized candidate in **typed,
+  constrained columns**: FDI tooth pattern, the seven clinical codes, a
+  containment/cardinality check on `surfaces`, a bounded note, and for an
+  unrecognized resource a bounded `unsupported_label` plus a fixed
+  `unsupported_reason`. A cross-column shape check makes the two candidate kinds
+  mutually exclusive, and `applied_at` can only ever exist on a `TOOTH_FINDING`.
+- `public.clinical_export_records` - who exported what shape of record, and
+  nothing about the content.
+- `private.clinical_interchange_idempotency` - actor-scoped request keys for
+  staging, apply and export.
 
-`public.rename_clinical_photo` declares `RETURNS TABLE(..., version integer)`,
-which makes `version` a PL/pgSQL OUT variable. Its UPDATE said
-`version=version+1 ... returning version into v_version` against
-`public.clinical_photographs`, and PostgreSQL rejects that at runtime with
-`42702 column reference "version" is ambiguous`. **Every authorized rename
-failed.** `clinical_photographs.test.sql` only ever asserted rename's rejection
-paths, so nothing caught it. Task 14's brief requires a safe display-name
-rename, so `20260901010401_clinical_photo_rename_version_ambiguity_repair.sql`
-aliases the target relation. The statement still writes only `display_filename`
-and the concurrency `version` - no object key, no byte, no checksum moves. Same
-guarded replace pattern, with pre-guards additionally requiring the archive,
-stale-version and source-MIME guards to already be present so the repair cannot
-resurrect an older body.
+**The uploaded file is never stored, in any form.** What is retained is its
+SHA-256 digest and the fields the reviewed parser produced. There is no jsonb
+blob column and no place for one, which is the strongest available form of "do
+not keep the untrusted document".
 
-A sibling of this defect in `public.record_procedure_followup` was escalated in
-round 1 rather than repaired unasked. The controller confirmed it independently
-and assigned it here; it is repaired in round 2 below.
+All three public tables have RLS enabled and **no policy at all**, and every
+browser role is revoked on them - the same deny-by-default posture
+`clinical_photographs` uses. The only reachable surface is the RPC boundary.
 
-### Originals, derivatives and the private-media boundary
+### The boundary - `20260901010411`
 
-Nothing in this commit touches storage. The source original is still uploaded
-once through the presigned adapter URL, verified by `stat` for size and MIME,
-and never re-encoded or replaced. Derivatives are still `thumbnail`, `preview`
-and `display` requested as semantic variants through the same provider-neutral
-adapter, still permission-checked by `public.get_clinical_photo_derivative`, and
-still never the sole clinical copy. No Cloudinary, no client-supplied
-transformation parameter, no new dependency of any kind. No presigned URL,
-object key or token appears in any log, audit metadata or error path added here
-- greped over the whole diff.
+`private.clinical_import_candidate_classification` decides what a candidate is
+against the patient's **live** canonical findings. Liveness is the projection's
+own definition of `CURRENT`: not voided in place, **not withdrawn by an
+append-only `tooth_clinical_entry_voids` row**, and not superseded. The
+`voided_at` column alone would have been wrong here.
 
-Archiving remains archive, not delete: the row is retained with `archived_at`,
-`archived_by` and `archive_reason`, the source object stays attached, and the
-suite asserts all three plus the photo leaving the active gallery list.
+- `create_clinical_import_batch_v1(branch, patient, format, digest, candidates, key)`
+  requires `patient.clinical.write`, derives organization and actor, validates
+  the patient against the derived tenant, and **writes no clinical record and
+  opens no encounter**. It revalidates every candidate: a **closed key
+  allowlist** (which is what refuses `__proto__`, `constructor`, `prototype` and
+  equally any embedded `organizationId`/`branchId`/`providerId`/`createdBy`), the
+  FDI ranges, the accepted codes, surface membership and distinctness,
+  whole-tooth versus surface compatibility, the bounded note, and the Philippine
+  clinical-date bound. It then **re-derives the classification from the canonical
+  chart and refuses a submitted classification that disagrees**, so a client can
+  neither hide a conflict nor invent a duplicate.
+- `get_clinical_import_batch_v1(branch, patient, batch)` - read-only projection,
+  `patient.clinical.read`, foreign batch refused as unauthorized rather than
+  reported absent, page bounded at 500. Every column reference is qualified
+  against its own OUT parameter names, and it has a **success-path test**.
+- `apply_clinical_import_batch_v1(branch, patient, batch, candidate_ids, key)` -
+  requires `patient.clinical.write` **plus** `private.require_active_actor_provider`
+  at the acting branch, taken *before* anything is written. Only a `STAGED`
+  batch of this tenant, patient and branch; only candidate ids in that batch (a
+  foreign id is `42501`, not a validation message); only supported `NEW` or
+  `DUPLICATE` candidates. Each selected candidate is written through
+  **`public.record_visit_tooth_findings`** with a deterministic per-candidate
+  request key, so the managed visit, the derived provider, the clinical
+  revalidation and the per-entry audit event are the reviewed ones and no
+  authorization is duplicated.
+- `archive_clinical_import_batch_v1` - bounded reason, `STAGED` only, reason
+  stays on the RLS-protected row and never enters the audit event.
+- `record_clinical_export_v1(branch, patient, format, scope, key)` - requires
+  `patient.clinical.read`, holds format and scope to server-side allowlists, and
+  returns a **synthetic-safe patient code** derived from the stored patient
+  number and stripped to a filename alphabet, plus the Philippine clinical date.
 
-### The gallery panel
+Advisory-lock **seed 8** is new and exclusive to the interchange. Seeds 0-7
+belong to the visit lifecycle, the composer and the periodontal workflows and are
+untouched; seed 8 is always taken before the seed-2 and seed-1/0 locks
+`record_visit_tooth_findings` takes, so lock ordering stays structural.
 
-`src/components/clinical/clinical-gallery-sheet.tsx` - a shadcn `Sheet`
-(`side="right"`, `sm:max-w-4xl`). Radix unmounts closed content, so while the
-panel is closed **no clinical image is in the document and no private derivative
-URL is minted at all**; that is asserted, not incidental. The gallery supplies
-the visible heading, so the sheet's own title is `sr-only` rather than a second
-title for the same thing, and the default corner close button is replaced by an
-explicit `min-h-11` "Close photographs" control that cannot collide with the
-gallery's own header row. A failed photograph load reports its bounded retry
-inside the panel, where the clinician went looking for it, instead of as an
-inline region that reads as an empty gallery.
+`private.audit_metadata_is_safe` was **not** widened. All three interchange audit
+events carry `'{}'::jsonb`; the batch or export identifier lives in `entity_id`,
+where it belongs.
 
-An open panel is closed when the route patient changes, in the same render-phase
-reset that already clears the chart view, so no frame can show one patient's
-photographs against another patient's chart.
+### Grants - `20260901010412`
 
-### Attaching a photograph from the composer
+Five `execute` grants to `authenticated` and nothing else. **No table privilege
+on any of the three new tables.** Nothing is revoked, so no registered grant is
+superseded and no `supersededFrom` pivot is recorded.
 
-The composer sits four layers below the surface that owns the upload flow, so
-the callback travels through a context - `ClinicalPhotoAttachmentProvider` /
-`useClinicalPhotoAttachment` - exactly as the chart view already does, rather
-than through a prop chain that would make four intermediate layers look like
-they had a say in clinical media. The context carries only
-`{ toothCodes, clinicalDate, procedureCaseId }`: no organization, no branch, no
-provider, no patient identity. Every one of those is re-derived server-side.
+### The parser
 
-`attach` is `null` for a user without clinical write, so the composer keeps its
-signpost rather than offering a button that does nothing. `PhotoUploadDialog`
-now re-applies the opening context on every open (a render-phase sync keyed on
-the context, not an effect), because it stays mounted between uploads and would
-otherwise carry an earlier visit's tooth selection into a new photograph.
+`src/lib/odontogram/interchange/normalize.ts` is a pure function of `(sourceText,
+format)`. It opens nothing, fetches nothing and cannot reach a clinical table -
+the only write the whole module can reach is the staging RPC, one call away in
+`service.ts`. One depth-bounded walk decides whether the file may be read at all,
+before any mapping happens:
 
-`photoCaptureAtFrom` completes the composer's clinical **date** with the
-clinician's own wall-clock time, so the prefilled instant lands on the day being
-charted rather than on a server's UTC day. It adds no ninth
-`statement_timestamp()::date` site; it is browser-local and fully editable.
+| Rejection | Proven by |
+| --- | --- |
+| `SOURCE_TOO_LARGE` (1 MiB) | parser test + action schema test |
+| `EMPTY_SOURCE` | parser test |
+| `XML_NOT_SUPPORTED` | parser test (XML and HTML) |
+| `NOT_JSON` | parser test |
+| `INVALID_ENCODING` (NUL, lone surrogate) | parser test |
+| `PROTOTYPE_POLLUTION` | parser test (3 shapes) **and** pgTAP `22023` |
+| `EXECUTABLE_CONTENT` | parser test (`<script`, `javascript:`) |
+| `EXTERNAL_REFERENCE` | parser test (`https:`, `file:`, `fullUrl`) |
+| `EMBEDDED_AUTHORITY` | parser test (6 keys) **and** pgTAP `22023` |
+| `DEPTH_EXCEEDED` | parser test |
+| `UNKNOWN_VERSION` / `UNSUPPORTED_FORMAT` | parser test |
+| `TOO_MANY_CANDIDATES` (500) | parser test **and** pgTAP `22023` |
 
-**Recording photo metadata still creates no clinical encounter.**
-`create_clinical_photo` opens none, and the suite asserts the
-`clinical_encounters` count for the patient is byte-identical across a
-radiograph being recorded. Receptionist authority is unchanged: the suite
-asserts a receptionist is refused `42501 not authorized` on a `RADIOGRAPH`
-exactly as on every other category, and no permission constant was touched.
+Only absolute URIs on a five-entry terminology allowlist survive the external
+reference check, so a document that names any other host is refused whole.
+
+**A resource-level reference is ignored rather than rejected.** A FHIR
+`Condition` may legitimately carry `subject`, `encounter`, `asserter`, `recorder`
+and `performer`; the parser never reads any of them, and a test asserts the
+normalized candidate has exactly six keys and matches none of those strings.
+Envelope-level authority keys are a different matter and refuse the file. Whose
+patient, whose branch and whose clinical authorship a record carries are decided
+by the signed-in actor and the acting branch. Always.
+
+An unrecognized record is not dropped and not applied: it becomes an
+`UNSUPPORTED` candidate carrying a bounded label and a fixed reason, visible in
+the review table with its checkbox disabled, and refused by the apply RPC.
+
+### The review surface
+
+Import is behind the toolbar's `More` menu, as the brief requires; export is its
+own control beside it, because nesting a menu inside a menu item is not a
+control. The dialog shows format, counts and a row per candidate; **only
+supported `NEW` candidates are selected by default**; `CONFLICT` and
+`UNSUPPORTED` checkboxes are disabled; and Apply stays disabled until an explicit
+confirmation naming the signed-in provider and the clinical date is ticked. A
+discarded review archives its batch rather than leaving it pending. An open
+review is cleared during render when the route patient changes.
+
+### Exports
+
+`record_clinical_export_v1` runs first, always. For the two document formats the
+server then builds them from `getPatientOdontogram` and
+`get_clinical_progress_record_v1`; for PDF, SVG and PNG it returns only the
+filename it may use and the browser produces the bytes from the **closed
+renderer's** SVG. `sanitizeChartExportSvg` removes `script`, `style`,
+`foreignObject`, `image` and anchors, strips every `on*` handler, every `href` and
+`xlink:href`, and any attribute whose value points somewhere - `url(...)` fills
+included - then clamps root width and height to 4096. `clampExportScale` holds a
+raster export to 4x. `clinicalExportFilename` throws on a non-ISO date and emits
+`clinical-chart-<code>-<date>.<ext>` and nothing else.
 
 ### Security and tenancy negatives covered
 
-All `throws_ok` with exact SQLSTATE and message:
+pgTAP, all `throws_ok` with exact SQLSTATE and message:
 
-- foreign branch recording a radiograph -> `42501 not authorized`
-- foreign-organization patient -> `42501 not authorized`
-- receptionist -> `42501 not authorized`
-- unknown category `MRI` direct insert -> `23514` on the named constraint
+- foreign-organization patient staged against -> `42501 not authorized`
+- foreign-organization branch as acting context -> `42501 not authorized`
+- receptionist staging -> `42501 not authorized`
+- dental assistant (clinical read only) staging -> `42501 not authorized`
+- foreign-organization clinician reading the batch -> `42501 not authorized`
+- receptionist applying -> `42501 not authorized`
+- clinician with no active provider link at the acting branch applying ->
+  `42501 not authorized`
+- a candidate id that is not in this batch -> `42501 not authorized`
+- a `CONFLICT` candidate -> `P0001 invalid state`
+- an `UNSUPPORTED` candidate -> `P0001 invalid state`
+- re-applying an `APPLIED` batch under a new key -> `P0001 invalid state`
+- archiving an `APPLIED` batch -> `P0001 invalid state`
+- applying an `ARCHIVED` batch -> `P0001 invalid state`
+- bad tooth code / anterior occlusal surface / `__proto__` / embedded
+  `organizationId` / mislabelled classification / unknown format / bad digest /
+  501 candidates -> `22023 invalid input`
+- unknown export format / unknown export scope -> `22023 invalid input`
+- receptionist exporting -> `42501 not authorized`
+- foreign-organization patient exported -> `42501 not authorized`
+- rewriting a stored candidate -> `42501 import candidates are append-only`
 
-Plus, in TypeScript: the action refuses `category: "MRI"` with `INVALID_INPUT`
-**before** calling the service, and the service refuses it before any RPC.
+Plus the positive properties that matter: staging leaves the tooth-entry count
+and the encounter count byte-identical; every refused apply leaves the chart
+exactly as it was; apply writes exactly the selected candidate and **not** the
+unselected `DUPLICATE`; the pre-existing entry is asserted unchanged by version
+and code; the applied entry carries the derived provider and the managed
+encounter; the replay writes no second entry; and both audit events carry
+`'{}'::jsonb`.
 
 ### Files added
 
-- `supabase/migrations/20260901010400_clinical_photo_radiograph_category.sql`
-- `supabase/migrations/20260901010401_clinical_photo_rename_version_ambiguity_repair.sql`
-- `supabase/tests/clinical_photo_radiograph.test.sql`
-- `src/components/clinical/clinical-gallery-sheet.tsx` (+ suite)
+- `supabase/migrations/20260901010410_clinical_interchange_staging.sql`
+- `supabase/migrations/20260901010411_clinical_interchange_rpcs.sql`
+- `supabase/migrations/20260901010412_clinical_interchange_rpcs_grants.sql`
+- `supabase/tests/clinical_interchange.test.sql` (72 assertions)
+- `src/lib/odontogram/interchange/{schema,normalize,service}.ts` (+ suites)
+- `src/lib/odontogram/clinical-export.ts` (+ suite)
+- `src/lib/odontogram/fhir-candidates.test.ts`
+- `src/components/odontogram/clinical-import-dialog.tsx` (+ suite)
+- `src/components/odontogram/clinical-export-menu.tsx` (+ suite)
+- `src/app/(emr)/patients/[patientId]/odontogram-interchange-actions.ts` (+ suite)
 
 Migration numbers were allocated after verifying the applied maximum was
-`20260901010311` both on disk and in the applied chain. `010400` and `010401`
-both sort last.
+`20260901010402` both on disk and in the applied chain. `010410`, `010411` and
+`010412` all sort last.
 
 ### Files changed
 
-- `src/lib/clinical-media/types.ts` - `RADIOGRAPH` in `PHOTO_CATEGORIES`, with
-  the note that this list mirrors the database constraint and is never a second
-  authority. `photoCategorySchema` derives from it, so the Zod boundary,
-  the action boundary and the upload dialog all follow from the one edit.
-- `.../photos/clinical-photo-gallery.tsx`, `.../photos/photo-upload-dialog.tsx` -
-  the `Radiograph` label; the dialog additionally re-applies its opening context.
-- `src/components/clinical/clinical-chart-workspace.tsx` - the gallery region
-  became the gallery panel; the scroll-into-view `useRef` is gone.
-- `src/components/odontogram/clinical-record-composer.tsx` - `PHOTO` offers the
-  attachment path when a photo workflow is mounted, and keeps its signpost when
-  one is not.
-- `.../patient-workspace.tsx` - mounts the provider, holds the attachment
-  context, and passes the patient's open procedure cases to the dialog so a
-  photograph can be linked to a case the clinician chooses.
-- `src/lib/odontogram/progress-record.ts` - comment only, recording the
-  `PHOTO_RENAME` decision at the declaration.
-- `scripts/remote-database-test-guard.mjs` - the suite is registered **before**
-  `treatment_plans.test.sql`, because the local gate halts there.
-- `scripts/remote-database-test-guard.test.mjs` (registered-suite list) and
-  `scripts/migration-privilege-lint.test.mjs` (files 338 -> 340) - the
-  registry-integrity property required both to move, which is the point of it.
-  No other counter moves: both migrations declare nothing at top level.
-- `src/types/database.generated.ts` - regenerated by `npm run db:types:local`;
-  **no diff**, because a CHECK constraint is not part of the generated types.
+- `src/lib/odontogram/fhir-candidates.ts` - promoted from documentation-only to
+  the accepted ADR-030 mapping subset. Every pre-ADR-030 export is retained
+  unchanged so nothing that read them breaks.
+- `src/components/odontogram/clinical-chart-toolbar.tsx` (+ suite) - the
+  `interchange` prop, the `More` menu item, the export control, and a
+  render-phase reset of the open review on a patient change.
+- `src/components/clinical/clinical-chart-workspace.tsx` and
+  `src/app/(emr)/patients/[patientId]/clinical-section.tsx` - pass the
+  interchange context through. **Neither is on the brief's file list**; they are
+  the only places holding the route patient and the acting branch, so step 5 is
+  not expressible without them.
+- `scripts/remote-database-test-guard.mjs` (+ its suite) - the new suite is
+  registered **before** `treatment_plans.test.sql`, because the local gate halts
+  there.
+- `scripts/approved-final-grants.mjs` - five new approved grants under a new
+  terminal registration, each with its own reason. No supersede pivot: nothing
+  is revoked.
+- `scripts/boundary-privilege-invariant.test.mjs` - the mirror function list
+  gains the same five signatures; `approved.size` 269 -> 274.
+- `scripts/migration-privilege-lint.test.mjs` - files 341 -> 344, tables
+  128 -> 132, functions 508 -> 517, SECURITY DEFINER 369 -> 378, each with the
+  reason recorded inline.
+- `supabase/tests/approved_grant_registry_integrity.test.sql` - 258 -> 263
+  entries, regenerated from the registry so the two cannot drift.
+- `src/types/database.generated.ts` - regenerated by `npm run db:types:local`.
 
 ### Files deleted
 
 None.
 
-### The existing assertions that changed, and why
+### Existing assertions changed
 
-**Four**, all consequences of the plan's own instruction to move the gallery
-into a toolbar-opened panel. Round 1 of this handoff said three and missed the
-fourth; round 2 corrects the count and restores the coverage. Nothing is
-weakened or deleted.
-
-1. `clinical-chart-workspace.test.tsx` - *"shows one chart mode at a time and
-   keeps the progress record and gallery mounted"*. The gallery is deliberately
-   no longer mounted, so the title dropped "and gallery" and the assertion
-   inverted to `not.toBeInTheDocument()`. A **new** test covers the gallery
-   through the toolbar: open from `More` -> panel visible -> close -> gone.
-2. `clinical-chart-workspace.test.tsx` - *"offers a bounded photograph retry..."*.
-   Same two assertions, now reached by opening the panel first. It additionally
-   asserts the gallery is still absent while the failure shows.
-3. `clinical-record-composer.test.tsx` - the signpost loop kept `Photo` with an
-   in-file comment saying Task 14 would take it. It still asserts the signpost
-   where no photo workflow is mounted; a **new** test covers the attachment path
-   where one is.
-4. `clinical-chart-workspace.test.tsx` - *"offers a bounded chart retry..."* had
-   a trailing `expect(getByTestId("gallery-panel")).toBeVisible()` carrying the
-   guarantee that **a failed chart load does not take the photographs away with
-   it**. Round 1 deleted that line with no replacement and did not disclose it.
-   The behaviour was never broken (`hasGallery` is independent of
-   `chartLoadFailed`), so this was a coverage and disclosure defect, not a
-   functional one. The guarantee is now asserted in its post-Task-14 form: while
-   the chart alert stands, the toolbar still offers `Clinical photographs` and
-   the panel still opens with the gallery inside it.
+**None.** No existing test assertion was weakened, deleted or rewritten. The
+toolbar's "does not recreate the fork control wall" count of 12 buttons still
+holds because it renders without `interchange`, and every interchange assertion
+is a new test.
 
 ### Tests run and observed results
 
 RED first, in both halves.
 
-RED, database - the migration did not exist:
+RED, TypeScript - the modules did not exist:
 
 ```
-node <single-suite runner> supabase/tests/clinical_photo_radiograph.test.sql
--> not ok 1 - the canonical category constraint admits RADIOGRAPH
--> ERROR: invalid input   (create_clinical_photo rejected RADIOGRAPH)
+npx vitest run src/lib/odontogram/interchange/schema.test.ts
+               src/lib/odontogram/interchange/normalize.test.ts
+               src/lib/odontogram/fhir-candidates.test.ts
+               src/lib/odontogram/clinical-export.test.ts
+-> Test Files 4 failed (4) / Tests 9 failed | 1 passed (10)
+   Failed to resolve import "./schema" from .../interchange/normalize.test.ts
+   Failed to resolve import "./clinical-export"
+   Failed to resolve import "./schema"
+   TypeError: snomedToClinicalCode is not a function
+   TypeError: fhirSurfaceToCanonicalSurfaces is not a function
+   TypeError: canonicalSurfaceToFhirSurface is not a function
+   TypeError: isSupportedFdiToothCode is not a function
 ```
 
-RED, TypeScript - the sheet and the attachment context did not exist:
+RED, database - the boundary did not exist:
 
 ```
-npx vitest run clinical-gallery-sheet clinical-photo-gallery photo-upload-dialog
-               clinical-chart-workspace clinical-record-composer
--> Test Files 5 failed (5) / Tests 5 failed | 28 passed (33)
-   Failed to resolve import "./clinical-gallery-sheet"
-   Failed to resolve import "@/components/clinical/clinical-gallery-sheet"
-   expected element not.toBeInTheDocument()      (gallery still page-mounted)
-   RADIOGRAPH absent from the category options
-   expected "PROGRESS" to be "RADIOGRAPH"        (prefill not re-applied)
-```
-
-Then, mid-implementation, the rename RED that found the live defect:
-
-```
-ERROR: column reference "version" is ambiguous
-  QUERY: update public.clinical_photographs set ... returning version
-  CONTEXT: PL/pgSQL function public.rename_clinical_photo(...) line 12
+node <single-suite runner> supabase/tests/clinical_interchange.test.sql
+-> ERROR: function "public.create_clinical_import_batch_v1(uuid,uuid,text,text,jsonb,uuid)"
+          does not exist
 ```
 
 Task gate, run exactly as the brief lists it:
 
 ```
-npm run db:migrate:local     -> applied 20260901010400, then 20260901010401
-npm run db:types:local       -> Updated; NO diff
-npm run test:unit -- clinical-gallery-sheet.test.tsx clinical-photo-gallery.test.tsx
-                     photo-upload-dialog.test.tsx actions.test.ts service.test.ts
-                             -> Test Files 5 passed (5) / Tests 40 passed (40)
+npm run db:migrate:local     -> applied 010410, 010411, 010412; re-run reports
+                                {"upToDate":true}
+npm run db:types:local       -> Updated; +297 lines (the five functions and the
+                                three new tables)
+npm run security:migrations  -> passed (344 files, 3283 statements,
+                                94 terminals, 410 approved)
+npm run test:unit -- <the brief's eight files>
+                             -> Test Files 8 passed (8) / Tests 117 passed (117)
 npm run test:db:local        -> halts at supabase/tests/treatment_plans.test.sql
                                 (pre-existing, unchanged), having already run:
-                                PASS supabase/tests/clinical_photo_radiograph.test.sql
-                                PASS supabase/tests/clinical_photographs.test.sql
-                                PASS supabase/tests/clinical_progress_record.test.sql
+                                PASS supabase/tests/clinical_interchange.test.sql
                                 PASS supabase/tests/approved_grant_registry_integrity.test.sql
-npm run storage:start:local  -> PASS (dental-emr-local ready, CORS preflight verified)
-npm run storage:smoke:local  -> PASS all 10 steps: put/stat/get, upload-url and
-                                download-url signature parameters verified without
-                                printing the URLs, browser preflight + PUT + GET
-                                from the pinned origin, delete, stat-after-delete
-                                READ_FAILED as expected
+                                PASS supabase/tests/clinical_record_composer.test.sql
+                                PASS supabase/tests/unified_clinical_visit.test.sql
+                                PASS supabase/tests/odontogram_permission_contract.test.sql
+                                PASS supabase/tests/clinical_progress_record.test.sql
+                                ... 88 suites PASS in total before the halt
 npm run typecheck            -> clean, no output
-npm run lint                 -> 0 errors, 3 warnings (pre-existing, untouched files)
+npm run lint                 -> 0 errors, 3 warnings (pre-existing, untouched
+                                files)
 ```
 
 Also run:
 
 ```
-npm run security:migrations  -> passed (340 files, 93 terminals, 405 approved)
-npx vitest run src/lib/odontogram/progress-record.test.ts
-               scripts/remote-database-test-guard.test.mjs
-               scripts/migration-privilege-lint.test.mjs
-                             -> 3 files, 86 tests passed
-npm run test:unit (whole)    -> 2246 passed | 10 failed (199 files)
+node <single-suite runner> supabase/tests/clinical_interchange.test.sql
+                             -> P1_TEST_PASS (72 assertions)
+node <single-suite runner> supabase/tests/approved_grant_registry_integrity.test.sql
+                             -> P1_TEST_PASS
+node <single-suite runner> supabase/tests/treatment_plans.test.sql
+                             -> not ok 9 "treatment_plan_items has only the
+                                approved fields and the canonical centavo
+                                estimate" (the pre-existing halt; nothing in this
+                                commit touches treatment_plan_items)
+npx vitest run scripts/      -> 13 files, 288 tests passed
+npm run test:unit (whole)    -> 2366 passed | 13 failed (207 files)
 ```
 
-All ten whole-suite failures were checked and none is caused by this commit:
+All thirteen whole-suite failures were checked and none is caused by this commit:
 
 - 7 in `src/app/api/public/booking/route.test.ts` and
-  `src/lib/booking/service.test.ts` - **reproduced on a clean `git stash` of
-  this working tree**, so they pre-exist.
-- 3 in `fork-print-chart.test.tsx` and `perio-workspace.test.tsx` - all three
-  are `Test timed out in 5000ms` under the 199-file parallel run, not assertion
-  failures. Run alone: `2 files, 16 tests passed`. This is the same pre-existing
-  parallel-run timeout the task 12 and task 13 handoffs recorded.
-
-Run **directly**, because the local gate halts before the end:
-
-```
-psql < supabase/tests/clinical_photo_radiograph.test.sql          -> P1_TEST_PASS
-psql < supabase/tests/clinical_photographs.test.sql               -> P1_TEST_PASS
-psql < supabase/tests/approved_grant_registry_integrity.test.sql  -> P1_TEST_PASS
-```
+  `src/lib/booking/service.test.ts` - **reproduced on a clean `git stash -u` of
+  this working tree** (`Tests 7 failed | 18 passed`), so they pre-exist. The same
+  seven are recorded in the task 12, 13 and 14 handoffs.
+- 6 in `fork-print-chart.test.tsx`, `perio-workspace.test.tsx` and
+  `fork-package.test.ts` - all `Test timed out` under the 207-file parallel run
+  rather than assertion failures. Run alone they pass, which is the same
+  pre-existing parallel-run timeout earlier handoffs recorded.
 
 ### Tests not run, and why
 
@@ -328,300 +366,87 @@ psql < supabase/tests/approved_grant_registry_integrity.test.sql  -> P1_TEST_PAS
   for this task. No E2E spec was added.
 - `npm run test:db` (Cloud TEST) - not run. No hosted project was contacted.
 - `npm run build` - not run; the task gate does not include it.
-- No `.local.mjs` concurrency test was added. Nothing here introduces a new
-  lock or a new optimistic-concurrency path; `rename_clinical_photo` keeps its
-  existing `for update` and `p_expected_version` check unchanged.
+- `npm run storage:*` - not run. Nothing in this commit touches object storage.
+- No `.local.mjs` concurrency test was added. The interchange takes a new
+  advisory-lock seed and an actor-scoped request key on the same pattern the
+  composer already has concurrency coverage for; a dedicated race test for two
+  simultaneous applies of the same batch is a genuine gap and is listed below.
 
 ### Local-only versus Cloud TEST evidence
 
-Everything above is **local only**, including the storage smoke, which ran
-against local MinIO and not against R2. Cloud TEST, hosted E2E,
+Everything above is **local only**. Cloud TEST, hosted E2E,
 responsive/accessibility device verification, database advisors and final
-security acceptance remain release gates. The sheet's responsive width and the
-44px touch targets are asserted only by class in jsdom, which applies no
-Tailwind.
+security acceptance remain release gates. The dialog's responsive table scroll
+and its 44px targets are asserted only by class in jsdom, which applies no
+Tailwind. The PNG raster path is never exercised in jsdom - `canvas.toBlob` does
+not exist there - so it is implemented and typed but not proven.
 
 ### Known residual risks and open questions
 
-1. **`public.record_procedure_followup` was broken** with the same `version`
-   ambiguity, and had no success-path test. RESOLVED in round 2: confirmed
-   independently by the controller, assigned here, repaired by
-   `20260901010402`, and covered by a new 13-assertion success-path suite.
-2. **Five files are on the brief's Modify list and are UNCHANGED.** Round 1
-   named only two of them; this is the complete set, and every one is correct
-   as-is rather than an omission:
-   - `clinical-chart-toolbar.tsx` - already rendered the `Clinical photographs`
-     menu item and already called `onOpenGallery`, so the panel needed nothing
-     from it. The workspace owns the panel, as it owns the print action.
-   - `src/types/database.generated.ts` - a CHECK constraint is not represented
-     in generated types, so `category` stays `string`. `db:types:local` was run
-     and produced no diff.
-   - `src/lib/clinical-media/schema.ts` - `photoCategorySchema` at line 4 is
-     `z.enum(PHOTO_CATEGORIES)`, so it picked `RADIOGRAPH` up from the one edit
-     to `types.ts`. Restating the list here would create a second authority.
-   - `src/lib/clinical-media/service.ts` - passes `value.category` straight
-     through to the RPC and never enumerates categories.
-   - `.../photos/actions.ts` - parses with the same schema and never enumerates
-     categories either. Both are covered by new assertions in their suites.
-3. **The brief's Modify list omitted four files this slice genuinely required**:
-   `clinical-chart-workspace.tsx` (+ suite) renders the gallery region, and
-   `clinical-record-composer.tsx` (+ suite) owns the `PHOTO` kind. Neither step 3
-   nor step 4 is expressible without them. `src/lib/clinical-media/types.ts` is
-   likewise the only place `PHOTO_CATEGORIES` lives.
-4. **A radiograph is not pairable.** Before/after pairing stays restricted to
-   `BEFORE`/`AFTER` exactly as before; a `RADIOGRAPH` behaves like `DIAGNOSTIC`
-   in that respect. If clinicians want a before/after radiograph comparison,
-   that is a pairing-semantics change and belongs in its own reviewed slice.
-5. **The capture instant is completed from the browser clock.** The date comes
-   from the composer's clinical date, which is correct, but the time-of-day is
-   the workstation's. It is resolved ONCE at open (see round 2), is a prefill
-   the clinician can correct before confirming, and is never authorization.
-6. **The gallery's own `border-t` reads oddly as the first element inside the
-   panel.** Cosmetic only; left alone rather than restyling a component the
-   brief did not ask to restyle.
+1. **Import provenance is batch-level, not entry-level.**
+   `tooth_clinical_entries.provenance` admits only `LEGACY_PHASE15` and
+   `INTERNAL`. Adding an `IMPORTED` value would mean widening a CHECK on the
+   canonical clinical table and either a second insert path or replacing an
+   applied granted function - both larger clinical decisions than this brief
+   authorizes. Provenance is therefore the join batch -> `applied_encounter_id`
+   -> entries, plus per-candidate `applied_at` and the audit event. An entry
+   recorded manually in the same visit is not distinguishable from an imported
+   one. **This is the one place where the brief's wording is met in substance
+   rather than literally, and the controller should decide whether an ADR-030
+   revisit is wanted.**
+2. **Source size is bounded in TypeScript only.** The RPC never sees the source,
+   only its digest, so SQL cannot re-check 1 MiB. Candidate count, string
+   lengths, array lengths and every value domain **are** bounded in both places.
+3. **Apply calls `record_visit_tooth_findings` once per candidate**, so a
+   500-candidate batch makes 500 nested calls in one transaction, each taking an
+   advisory lock and writing an idempotency row. Correct and bounded, but the
+   cost is linear and untested at the ceiling; grouping candidates that share a
+   code, surface set, date and note would reduce it and is a safe later
+   refinement.
+4. **No concurrency test for two simultaneous applies of one batch.** The
+   `for update` on the batch row plus the seed-8 request lock should serialize
+   them, and the per-candidate deterministic key should make the loser a replay,
+   but that is reasoned rather than proven.
+5. **A `resolved` Condition round-trips asymmetrically.** The exporter emits
+   non-active statuses honestly; the importer's accepted subset is `active` only,
+   so such a Condition re-imports as `UNSUPPORTED` rather than silently as an
+   active finding. Narrowing on the way in is the safe direction, and it is
+   documented at the builder.
+6. **Export requires only `patient.clinical.read`**, so a dental assistant may
+   export a chart. That follows the existing clinical read boundary and the
+   progress record still withholds money without `billing.read`, but it is a
+   policy point worth confirming.
+7. **The progress export is bounded by the projection's default page** (200
+   rows). A very long chronology exports its first page only, with no marker
+   saying so.
+8. **Two files outside the brief's list changed** -
+   `clinical-chart-workspace.tsx` and `clinical-section.tsx` - because they are
+   the only holders of the route patient and acting branch. Both changes are
+   pass-through props.
 
 ### Areas Codex should scrutinize
 
-- `20260901010400`: that the anchor really occurs exactly once in the applied
-  body, that the constraint drop/add cannot lose a legacy category on a chain
-  where the constraint was previously widened by hand, and that the post-guards
-  would actually fail closed if `CREATE OR REPLACE` through `EXECUTE` ever
-  dropped the ACL.
-- `20260901010401`: that the aliased UPDATE writes exactly the same two columns
-  as before, that `p_expected_version` optimistic concurrency and the `for
-  update` lock are untouched, and that the repair cannot apply to a body that
-  predates the MIME guard.
-- Whether the render-phase prefill sync in `photo-upload-dialog.tsx` can drop a
-  half-authored draft the clinician still wanted, and whether its context key
-  can collide across two genuinely different openings.
-- Whether closing the panel on a patient change is sufficient, or whether any
-  already-minted derivative URL can outlive the patient context in
-  `resolvedUrls`.
-- That `attach = null` for a read-only user really leaves no write path, and
-  that the composer's `PHOTO` branch cannot reach a write action.
-- The claim that no presigned URL, object key or token enters a log, audit
-  metadata or error path anywhere in this diff.
-
-## Task 14 round 2 - review fixes: 0 Critical, 2 Important, 5 Minor (2026-09-02)
-
-The media boundary came back clean on every axis and is UNCHANGED: originals,
-derivatives, the credential grep, the additive category proof, the privacy
-posture and the `PHOTO_RENAME` decision all stood. One migration,
-`20260901010402_procedure_followup_version_ambiguity_repair.sql`, allocated from
-the verified ceiling `20260901010401`. Task 15's brief reserves `010410`-`010412`
-and those were left alone. It grants and revokes nothing and declares nothing at
-top level.
-
-### I1 - a wall clock inside the upload dialog's reset key discarded live work
-
-`patient-workspace.tsx` computed `defaultCaptureAt={photoCaptureAtFrom(...)}`
-**inline in JSX**, so `new Date().getHours()/getMinutes()` re-ran on every
-`PatientWorkspace` render. That value was a component of `contextKey` in
-`photo-upload-dialog.tsx`, and the render-phase prefill sync clears `file`,
-`displayFilename`, `note`, `toothCodesValue`, `surfacesValue` and `error`
-whenever the key changes. With the dialog open, any parent re-render landing in
-a different minute silently discarded the clinician's chosen file, edited
-display filename and typed note. Visible rather than corrupting - the Confirm
-button disables - but clock-driven loss of half-authored clinical work.
-
-Fixed at the root and again at the boundary, because either alone would leave
-the trap set for the next caller:
-
-- `openPhotoUpload` now resolves the capture instant **once at open** and stores
-  it on the attachment state. `photoCaptureAtFrom` is no longer called during
-  render at all.
-- `contextKey` uses only `defaultCaptureAt.slice(0, 10)` - the clinical **date**.
-  Time of day is a starting value, not the identity of the clinical context, so
-  a caller that recomputes it cannot reset a form someone is still filling in.
-
-Test: *"keeps half-authored work when only the prefilled time of day changes"* -
-open prefilled, choose a file, edit the filename, type a note, re-render with a
-`defaultCaptureAt` differing **only in minutes**, and assert the file, the
-filename, the note and the enabled Confirm button all survive. Proven RED
-against the pre-fix key: `expected element to have value chosen-name.jpg`,
-received empty.
-
-### I2 - a fourth deleted assertion, and an accounting that said three
-
-`clinical-chart-workspace.test.tsx`, inside *"offers a bounded chart retry..."*,
-lost `expect(getByTestId("gallery-panel")).toBeVisible()` in round 1 with no
-replacement and no disclosure. It carried the guarantee that **a failed chart
-load does not take the photographs away with it**. The behaviour was never
-broken - `hasGallery` is independent of `chartLoadFailed` - so this was a
-coverage and disclosure defect. A review gate that runs on the implementer's
-accounting needs that accounting to be complete.
-
-The guarantee is now asserted in its post-Task-14 form: while the chart alert
-stands, the toolbar still offers `Clinical photographs` and the panel still
-opens with the gallery inside. The count in the round-1 section above is
-corrected from three to four and the fourth is described there.
-
-### M1 - public.record_procedure_followup, repaired with the success path it never had
-
-Confirmed independently by the controller and assigned here rather than to a
-dedicated slice, because the repair pattern is identical and freshly exercised
-and because Task 17's gate would not catch it - the existing tests prove only
-denial, so it would ship broken.
-
-Two applied statements referenced `version` unqualified against relations that
-also have a `version` column, ambiguous with the function's own RETURNS TABLE
-OUT parameter:
-
-```
-update public.procedure_cases set version=version+1 ... returning version into version
-update private.odontogram_revamp_idempotency set event_id=..., version=version ...
-```
-
-Both now alias the relation and address the OUT parameter through the
-function-name label (`record_procedure_followup.version`), so the two cannot be
-confused in either direction. Behaviour is otherwise untouched: the same two
-columns are written, the same `for update` lock is taken, the idempotency replay
-still short-circuits before any write, and the audit event is unchanged.
-
-**The success path is the requirement, not the qualification** - the missing
-success path IS the defect that let the ambiguity survive. New suite
-`supabase/tests/procedure_followup_success_path.test.sql`, 13 assertions on a
-self-contained synthetic tenant: the follow-up is recorded; it returns case
-version 2; exactly one FOLLOW_UP event exists; it is attributed to the
-signed-in actor; the **stored** case version agrees with the version the caller
-was told; it is audited; a replay returns the original event id and the same
-version, records no second event and does not advance the case again; a
-non-OPEN case raises `P0001 invalid state`; an OWNER acting at a branch where
-he has no active provider link raises `42501 not authorized`; and an actor who
-is not a provider here raises `42501 not authorized`. RED against the applied
-body: `ERROR: column reference "version" is ambiguous ... line 16`.
-
-### The remaining Minors
-
-- **Rename success under-asserted.** The suite checked the returned
-  `display_filename` but not the returned `version`, and never the audit row -
-  the exact gap that hid the original bug. It now asserts the returned version
-  is 2, the **stored** version is 2, `clinical.photo.renamed` is written exactly
-  once, and that audit row's `metadata` is `'{}'::jsonb`, so a rename records no
-  filename or other clinical content.
-- **Gallery category filter asserted for two of eight.** A new test renders one
-  photograph per canonical category from `PHOTO_CATEGORIES` and asserts the
-  filter's full option list, the way the upload dialog's was asserted. It uses
-  its own fixture so the shared one - whose ordering the archive and pairing
-  tests depend on - is untouched.
-- **No progress-record assertion.** The suite now reads
-  `public.get_clinical_progress_record_v1` after recording, renaming and
-  archiving the radiograph, and asserts the capture appears as `PHOTO`, the
-  archive as `PHOTO_ARCHIVE` (matched on `sourceKind` + `sourceId`, since
-  `eventId` is the composite `clinical_photograph:<uuid>`), and that the rename
-  added **no** row. That pins the Task 13 seam and the `PHOTO_RENAME` decision
-  in the same place, and proves a new category needs no projection change.
-- **A test ended on a no-op.** `photo-upload-dialog.test.tsx` closed with a bare
-  `await user.clear(...)`. It now types a note and asserts it, which is what the
-  line was reaching for.
-- **Listed-but-unchanged disclosure corrected.** Round 1 named two such files;
-  there are five. The complete set and the reason each is correct as-is are in
-  residual risk 2 above.
-
-### Ledgered by the controller, deliberately not fixed
-
-- The composer hard-coding `procedureCaseId: null`, delivering procedure context
-  as a dropdown rather than an inferred prefill. An inferred case link on a
-  clinical image is a claim rather than a fact.
-- `drop constraint` / `add constraint` in `20260901010400` takes ACCESS
-  EXCLUSIVE and re-validates the table. Correctness is fine - a widening cannot
-  fail validation - but `ADD CONSTRAINT ... NOT VALID` then `VALIDATE
-  CONSTRAINT` would avoid a long exclusive lock on a large
-  `clinical_photographs` at production scale. Recorded by the controller as a
-  deployment note for the Cloud TEST gate.
-
-### Round 2 files
-
-Added: `supabase/migrations/20260901010402_procedure_followup_version_ambiguity_repair.sql`,
-`supabase/tests/procedure_followup_success_path.test.sql`.
-
-Changed: `.../patient-workspace.tsx`, `.../photos/photo-upload-dialog.tsx`
-(+ suite), `.../photos/clinical-photo-gallery.test.tsx`,
-`src/components/clinical/clinical-chart-workspace.test.tsx`,
-`supabase/tests/clinical_photo_radiograph.test.sql` (17 -> 25 assertions),
-`scripts/remote-database-test-guard.mjs`,
-`scripts/remote-database-test-guard.test.mjs`,
-`scripts/migration-privilege-lint.test.mjs` (files 340 -> 341).
-
-No grant was added, so `scripts/approved-final-grants.mjs`,
-`scripts/boundary-privilege-invariant.test.mjs` and
-`supabase/tests/approved_grant_registry_integrity.test.sql` are unchanged and
-their counters still stand at 405 / 269 / 258.
-
-### Round 2 tests run and observed results
-
-RED first in both halves. Database, against the applied body:
-
-```
-node <single-suite runner> supabase/tests/procedure_followup_success_path.test.sql
--> ERROR: column reference "version" is ambiguous
-   QUERY: update public.procedure_cases set version=version+1 ... returning version
-   CONTEXT: PL/pgSQL function public.record_procedure_followup(...) line 16
-```
-
-TypeScript, against the pre-fix reset key:
-
-```
-npx vitest run photo-upload-dialog.test.tsx
--> FAIL keeps half-authored work when only the prefilled time of day changes
-   expected element to have value chosen-name.jpg, received ""
-   Tests 1 failed | 7 passed (8)
-```
-
-The I2 restoration is a coverage assertion over behaviour that was already
-correct, so it passed on first run by design; it is not claimed as red-green.
-
-```
-npm run db:migrate:local     -> applied 20260901010402
-npm run test:db:local        -> halts at supabase/tests/treatment_plans.test.sql
-                                (pre-existing, unchanged), having already run:
-                                PASS supabase/tests/clinical_photo_radiograph.test.sql
-                                PASS supabase/tests/procedure_followup_success_path.test.sql
-                                PASS supabase/tests/clinical_photographs.test.sql
-                                PASS supabase/tests/approved_grant_registry_integrity.test.sql
-npm run storage:start:local  -> PASS (dental-emr-local ready, CORS preflight verified)
-npm run storage:smoke:local  -> PASS all 10 steps, URLs verified without printing
-npm run security:migrations  -> passed (341 files, 93 terminals, 405 approved)
-npm run typecheck            -> clean, no output
-npm run lint                 -> 0 errors, 3 warnings (pre-existing, untouched files)
-npm run test:unit (whole)    -> 2246 passed | 12 failed (199 files)
-```
-
-Run directly, because the gate halts before the end:
-
-```
-psql < supabase/tests/clinical_photo_radiograph.test.sql          -> P1_TEST_PASS (25 assertions)
-psql < supabase/tests/procedure_followup_success_path.test.sql    -> P1_TEST_PASS (13 assertions)
-psql < supabase/tests/clinical_photographs.test.sql               -> P1_TEST_PASS (regression)
-psql < supabase/tests/approved_grant_registry_integrity.test.sql  -> P1_TEST_PASS (regression)
-```
-
-All twelve whole-suite failures were checked and none is caused by this work:
-7 in the two booking suites, reproduced on a clean stash in round 1; and 5 in
-`fork-package.test.ts`, `fork-print-chart.test.tsx` and
-`perio-workspace.test.tsx`, every one `Test timed out in 5000ms` / `15000ms`
-under the 199-file parallel run rather than an assertion failure. Run alone:
-`3 files, 18 tests passed`. Which of those five trip varies run to run, which is
-itself the signature of the pre-existing load timeout the task 12 and task 13
-handoffs recorded.
-
-Playwright was not run; hosted E2E remains unauthorized.
-
-### Round 2 residual risks
-
-1. The follow-up repair is proven against the local applied chain only. Cloud
-   TEST has never executed a successful follow-up either, so the first hosted
-   run is the first real exercise of that path.
-2. `procedure_followup_success_path.test.sql` builds its own tenant rather than
-   using the shared seed, because the seed has no procedure cases and its
-   provider rows carry no `linked_user_id`. That keeps it self-contained but
-   means it does not exercise the seed's permission graph.
-3. The upload dialog now ignores a time-of-day-only change in its prefill. A
-   future caller that genuinely needs to re-prefill the time while the dialog is
-   open would have to close and reopen it. That is the correct trade against
-   silently discarding authored work.
+- That `create_clinical_import_batch_v1` genuinely cannot reach a clinical table
+  on any path, including the replay branch and every raise.
+- That the closed key allowlist in the staging loop is exhaustive in both
+  branches, and that no candidate field can carry an identifier forward.
+- That the re-derived classification cannot disagree with
+  `private.clinical_import_candidate_classification`'s own liveness definition -
+  particularly the `tooth_clinical_entry_voids` and successor clauses.
+- That `apply_clinical_import_batch_v1` cannot write a candidate outside
+  `p_candidate_ids`, cannot write one twice across a retry, and that the
+  `for update` on the batch plus seed 8 really serialize two concurrent applies.
+- That `private.require_active_actor_provider` really runs before the first
+  `record_visit_tooth_findings` call on every path.
+- That the three append-only triggers admit exactly the intended transitions and
+  nothing else, and that `raise insufficient_privilege` in a BEFORE trigger fails
+  closed for a superuser-owned definer as well as for a browser role.
+- That `sanitizeChartExportSvg` cannot be made to keep a URL - nested quotes,
+  unquoted attributes, or an `<image>` split across a line.
+- The claim that no signed URL, object key, token or clinical text appears in any
+  filename, audit metadata, log or error path added here.
 
 ### Next bounded task
 
-Task 15 - the clinical interchange. This task deliberately contains no
-interchange and no print view.
+Task 16 - the print view and the fork removal. This task deliberately contains
+neither, and did not touch the SVG generator or the fork package.

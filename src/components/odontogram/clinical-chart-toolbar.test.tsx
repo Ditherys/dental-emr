@@ -6,6 +6,19 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const { recordClinicalExportAction, createClinicalImportBatchAction } = vi.hoisted(() => ({
+  recordClinicalExportAction: vi.fn(),
+  createClinicalImportBatchAction: vi.fn(),
+}));
+
+vi.mock("@/app/(emr)/patients/[patientId]/odontogram-interchange-actions", () => ({
+  recordClinicalExportAction,
+  createClinicalImportBatchAction,
+  getClinicalImportBatchAction: vi.fn(),
+  applyClinicalImportBatchAction: vi.fn(),
+  archiveClinicalImportBatchAction: vi.fn(),
+}));
+
 import {
   ClinicalChartToolbar,
   ClinicalChartViewProvider,
@@ -13,6 +26,12 @@ import {
   useClinicalChartView,
   type ClinicalChartView,
 } from "./clinical-chart-toolbar";
+
+const INTERCHANGE = {
+  patientId: "22222222-2222-4222-8222-222222222222",
+  branchId: "11111111-1111-4111-8111-111111111111",
+  canImport: true,
+};
 
 afterEach(cleanup);
 
@@ -219,5 +238,50 @@ describe("clinical chart view state", () => {
   it("falls back to a bounded local view when no workspace provides one", () => {
     render(<Probe />);
     expect(screen.getByTestId("probe")).toHaveTextContent("FDI/AUTO/AUTO/");
+  });
+});
+
+describe("the clinical interchange in the toolbar", () => {
+  it("offers nothing at all where the screen has no authorized patient context", async () => {
+    const user = userEvent.setup();
+    renderToolbar();
+
+    expect(screen.queryByRole("button", { name: /Export chart/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    expect(
+      screen.queryByRole("menuitem", { name: "Import clinical records" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("puts import behind More and keeps export as its own control", async () => {
+    const user = userEvent.setup();
+    renderToolbar({ interchange: INTERCHANGE });
+
+    expect(screen.getByRole("button", { name: /Export chart/ })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    expect(
+      await screen.findByRole("menuitem", { name: "Import clinical records" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the import review from the More menu", async () => {
+    const user = userEvent.setup();
+    renderToolbar({ interchange: INTERCHANGE });
+
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Import clinical records" }));
+
+    expect(await screen.findByRole("dialog", { name: "Import clinical records" })).toBeVisible();
+  });
+
+  it("offers export but not import to a clinician who may only read", async () => {
+    const user = userEvent.setup();
+    renderToolbar({ interchange: { ...INTERCHANGE, canImport: false } });
+
+    expect(screen.getByRole("button", { name: /Export chart/ })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    expect(
+      screen.queryByRole("menuitem", { name: "Import clinical records" }),
+    ).not.toBeInTheDocument();
   });
 });

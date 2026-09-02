@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(341);
+    expect(result.checked.files).toBe(344);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -340,7 +340,9 @@ describe("the active migration chain", () => {
     const count = (objectClass) =>
       created.filter((statement) => statement.objectClass === objectClass).length;
 
-    expect(count("table")).toBe(128);
+    // 132 with 20260901010410: the three interchange tables plus the private
+    // request-key table. Nothing existing is redeclared.
+    expect(count("table")).toBe(132);
     // 504 with 20260901010246, which re-declares the private periodontal
     // comparison helper with CREATE OR REPLACE. It creates no NEW object: the
     // count is of function DECLARATIONS across the corpus, and one applied
@@ -364,7 +366,12 @@ describe("the active migration chain", () => {
     // SECURITY DEFINER function would need an adjacent REVOKE that destroys the
     // grant. A statement inside a string literal is not a declaration, so
     // neither this count nor the SECURITY DEFINER count below moves for it.
-    expect(count("function")).toBe(508);
+    //
+    // 517 with 20260901010410 and 20260901010411 together: three append-only
+    // guard triggers, one private candidate-classification helper and the five
+    // interchange boundaries. All nine are genuinely new, all nine are SECURITY
+    // DEFINER with an empty search path, and none replaces an applied body.
+    expect(count("function")).toBe(517);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -372,7 +379,7 @@ describe("the active migration chain", () => {
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(369);
+    ).toBe(378);
     expect(
       created.filter(
         (statement) =>

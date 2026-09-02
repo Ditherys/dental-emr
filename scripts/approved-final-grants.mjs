@@ -844,6 +844,19 @@ const FULL_PERIODONTAL_PROJECTION_GRANTS_MIGRATION =
 const CLINICAL_PROGRESS_RECORD_PROJECTION_GRANTS_MIGRATION =
   "20260901010301_clinical_progress_record_projection_grants.sql";
 
+// ---------------------------------------------------------------------------
+// The staged clinical interchange (task 15)
+// ---------------------------------------------------------------------------
+
+// The object migrations 20260901010410 and 20260901010411 revoke no registered
+// grant. They create three new tables, one private request-key table, three
+// append-only guards, one private comparison helper and five new browser
+// boundaries, so no entry below needs a supersede pivot. Had one been revoked,
+// the pivot would have to name that revoking object migration, never this
+// grants file.
+const CLINICAL_INTERCHANGE_RPCS_GRANTS_MIGRATION =
+  "20260901010412_clinical_interchange_rpcs_grants.sql";
+
 const treatmentPlanAmendmentGrants = Object.freeze([
   {
     grantee: "authenticated",
@@ -925,6 +938,56 @@ const clinicalProgressRecordProjectionGrants = Object.freeze([
     columns: [],
     reason:
       "The one authorized chronological progress record, and the reason a clinician can read a patient's history at all without granting a browser role any table privilege. It derives organization and actor inside a stable SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, refuses a foreign patient as unauthorized rather than reporting it absent, and accepts no organization identifier from a client. It unions the append-only clinical and ledger sources into one chronology ordered oldest first and tie-broken on (source_kind, source_id), which is total across the union, so two events at the same instant are always returned in the same order. Every money value is derived at read time from one procedure case's charge, its non-reversed adjustments and its net allocations through private.charge_adjusted_amount and private.charge_net_allocated; no balance is stored, no patient-level balance is computed, and each row's balance is exactly its own charge minus its own paid, so settling one procedure case cannot move another's numbers. The ledger rows and the three money fields additionally require billing.read at the same branch, so a dental assistant sees the complete clinical chronology with the money withheld and a receptionist, who holds billing.read but no clinical permission, is refused outright. The page is bounded in both size and offset in SQL as well as at the action boundary. It writes nothing at all - no row, no state change and no audit event - so reading a patient's history never opens an encounter and no clinical content can reach the audit log through it.",
+  },
+]);
+
+const clinicalInterchangeGrants = Object.freeze([
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object:
+      "public.create_clinical_import_batch_v1(uuid,uuid,text,text,jsonb,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The staging boundary for an externally supplied clinical document, and the reason parsing one is not a clinical write. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.write at an active acting branch, and validates the patient against the derived tenant. It records NO clinical entry and opens NO encounter: it stores only the normalized candidates the reviewed parser produced, in typed constrained columns, never the uploaded file and never an organization, branch or provider identifier found inside one. Every candidate is revalidated here as well as at the action boundary through a closed key allowlist - which is what refuses __proto__, constructor, prototype and any embedded authority key - plus the FDI tooth ranges, the accepted clinical codes, surface anatomy and distinctness, whole-tooth versus surface compatibility, the bounded note and the Philippine clinical-date bound. Each candidate's NEW/DUPLICATE/CONFLICT classification is re-derived from the canonical chart, so a client can neither hide a conflict nor invent a duplicate. The batch is capped at five hundred candidates, a replayed request key returns the original batch, and the single audit event carries no candidate payload.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.get_clinical_import_batch_v1(uuid,uuid,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The read-only projection the import review table is rebuilt from, and the reason the staging tables need no browser table privilege at all. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, and refuses a batch that is not this tenant's, this patient's and this branch's as unauthorized rather than reporting it absent. Its page is bounded by the same five-hundred-candidate ceiling the staging boundary enforces, and every column reference is qualified against its own OUT parameter names so the success path cannot fail ambiguously. It writes nothing at all.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object:
+      "public.apply_clinical_import_batch_v1(uuid,uuid,uuid,uuid[],uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "The only path by which a staged import can reach the chart, and it appends rather than replaces. It requires live patient.clinical.write at an active acting branch plus an active linked provider there through private.require_active_actor_provider, so an owner who does not treat is refused before any managed visit is opened on their behalf. Only a STAGED batch of this tenant, this patient and this branch may be applied; a candidate identifier that is not in that batch is refused as unauthorized; and only supported NEW or DUPLICATE candidates the clinician explicitly selected are written, so a CONFLICT stays refused until it is excluded and an UNSUPPORTED candidate can never be applied. Each selected candidate is written through the existing public.record_visit_tooth_findings boundary rather than a second insert path, so the managed visit, the derived treating provider, the clinical revalidation and the per-entry audit event are the reviewed ones; a deterministic per-candidate request key makes a retry replay instead of appending twice. No existing chart row is rewritten, superseded or deleted, and no organization, provider, actor, encounter or visit date may be supplied by a client.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.archive_clinical_import_batch_v1(uuid,uuid,uuid,text)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Abandons a STAGED import batch with a bounded reason so a clinician can walk away from a file without it lingering as pending clinical work. It requires live patient.clinical.write at an active acting branch and refuses a batch that is not this tenant's, this patient's and this branch's as unauthorized. An APPLIED batch cannot be archived, an archived batch can never afterwards reach the chart, and the reason stays on the row-level-security protected batch row rather than entering the audit event.",
+  },
+  {
+    grantee: "authenticated",
+    objectClass: "function",
+    object: "public.record_clinical_export_v1(uuid,uuid,text,text,uuid)",
+    privilege: "execute",
+    columns: [],
+    reason:
+      "Registers and audits one authorized export BEFORE any document is generated or any download is created, which is what makes an export of a patient chart an accountable act rather than a browser convenience. It derives organization and actor inside a SECURITY DEFINER body with an empty search path, requires live patient.clinical.read at an active acting branch, validates the patient against the derived tenant, and holds both the export format and the export scope to server-side allowlists so neither is a client decision. It returns only a synthetic-safe patient code derived from the stored patient number and stripped to a filename-safe alphabet, plus the Philippine clinical date - the only two things a display filename may carry. It stores and audits no exported content, no filename, no signed URL and no token.",
   },
 ]);
 
@@ -2124,6 +2187,10 @@ export const TERMINAL_MIGRATIONS = Object.freeze([
   Object.freeze({
     file: CLINICAL_PROGRESS_RECORD_PROJECTION_GRANTS_MIGRATION,
     grants: clinicalProgressRecordProjectionGrants,
+  }),
+  Object.freeze({
+    file: CLINICAL_INTERCHANGE_RPCS_GRANTS_MIGRATION,
+    grants: clinicalInterchangeGrants,
   }),
 ]);
 

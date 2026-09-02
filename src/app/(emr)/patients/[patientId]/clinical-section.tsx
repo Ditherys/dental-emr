@@ -306,6 +306,17 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       chart={chart}
       record={clinicalProgressRecord ? <ProgressRecordTable record={clinicalProgressRecord} /> : null}
       gallery={gallery}
+      // Import needs clinical write; export needs only clinical read, which
+      // every caller of this section already holds. Both re-derive the
+      // authorized organization, branch and provider on the server.
+      interchange={{
+        patientId,
+        branchId: actingBranchId,
+        canImport: canWriteClinical,
+        providerDisplay: visit?.providerDisplay ?? null,
+        clinicalDate: visit?.clinicalDate ?? null,
+        onImported: () => router.refresh(),
+      }}
       chartLoadFailed={loadFailed}
       // A missing record is a failed record. The region offers a bounded retry
       // rather than rendering nothing, which would read as "no history".

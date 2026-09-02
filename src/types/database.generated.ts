@@ -1481,6 +1481,223 @@ export type Database = {
           },
         ]
       }
+      clinical_export_records: {
+        Row: {
+          branch_id: string
+          clinical_date: string
+          created_at: string
+          export_format: string
+          export_scope: string
+          id: string
+          organization_id: string
+          patient_id: string
+          requested_by: string
+        }
+        Insert: {
+          branch_id: string
+          clinical_date: string
+          created_at?: string
+          export_format: string
+          export_scope: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          requested_by: string
+        }
+        Update: {
+          branch_id?: string
+          clinical_date?: string
+          created_at?: string
+          export_format?: string
+          export_scope?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          requested_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_export_records_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_export_records_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_export_records_requested_by_fk"
+            columns: ["organization_id", "requested_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+        ]
+      }
+      clinical_import_batches: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          applied_encounter_id: string | null
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
+          batch_format: string
+          batch_status: string
+          branch_id: string
+          created_at: string
+          created_by: string
+          id: string
+          organization_id: string
+          patient_id: string
+          source_digest: string
+          staged_count: number
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_encounter_id?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          batch_format: string
+          batch_status?: string
+          branch_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          organization_id: string
+          patient_id: string
+          source_digest: string
+          staged_count: number
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          applied_encounter_id?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
+          batch_format?: string
+          batch_status?: string
+          branch_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          organization_id?: string
+          patient_id?: string
+          source_digest?: string
+          staged_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_import_batches_applied_by_fk"
+            columns: ["organization_id", "applied_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "clinical_import_batches_archived_by_fk"
+            columns: ["organization_id", "archived_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "clinical_import_batches_branch_fk"
+            columns: ["organization_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_import_batches_created_by_fk"
+            columns: ["organization_id", "created_by"]
+            isOneToOne: false
+            referencedRelation: "organization_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "clinical_import_batches_encounter_fk"
+            columns: ["organization_id", "applied_encounter_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_encounters"
+            referencedColumns: ["organization_id", "id"]
+          },
+          {
+            foreignKeyName: "clinical_import_batches_patient_fk"
+            columns: ["organization_id", "patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
+      clinical_import_candidates: {
+        Row: {
+          applied_at: string | null
+          batch_id: string
+          candidate_kind: string
+          classification: string
+          clinical_code: string | null
+          clinical_date: string | null
+          id: string
+          note: string | null
+          ordinal: number
+          organization_id: string
+          surfaces: string[]
+          tooth_code: string | null
+          unsupported_label: string | null
+          unsupported_reason: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          batch_id: string
+          candidate_kind: string
+          classification: string
+          clinical_code?: string | null
+          clinical_date?: string | null
+          id?: string
+          note?: string | null
+          ordinal: number
+          organization_id: string
+          surfaces?: string[]
+          tooth_code?: string | null
+          unsupported_label?: string | null
+          unsupported_reason?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          batch_id?: string
+          candidate_kind?: string
+          classification?: string
+          clinical_code?: string | null
+          clinical_date?: string | null
+          id?: string
+          note?: string | null
+          ordinal?: number
+          organization_id?: string
+          surfaces?: string[]
+          tooth_code?: string | null
+          unsupported_label?: string | null
+          unsupported_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_import_candidates_batch_fk"
+            columns: ["organization_id", "batch_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_import_batches"
+            referencedColumns: ["organization_id", "id"]
+          },
+        ]
+      }
       clinical_notes: {
         Row: {
           content: string
@@ -8033,6 +8250,20 @@ export type Database = {
           version: number
         }[]
       }
+      apply_clinical_import_batch_v1: {
+        Args: {
+          p_batch_id: string
+          p_branch_id: string
+          p_candidate_ids: string[]
+          p_idempotency_key: string
+          p_patient_id: string
+        }
+        Returns: {
+          applied_count: number
+          encounter_id: string
+          replayed: boolean
+        }[]
+      }
       approve_charge_direct_cost: {
         Args: {
           p_acting_branch_id: string
@@ -8047,6 +8278,18 @@ export type Database = {
         }[]
       }
       archive_branch: { Args: { target_branch_id: string }; Returns: string }
+      archive_clinical_import_batch_v1: {
+        Args: {
+          p_batch_id: string
+          p_branch_id: string
+          p_patient_id: string
+          p_reason: string
+        }
+        Returns: {
+          batch_id: string
+          batch_status: string
+        }[]
+      }
       archive_clinical_photo: {
         Args: {
           p_acting_branch_id: string
@@ -8445,6 +8688,21 @@ export type Database = {
         Returns: {
           encounter_id: string
           version: number
+        }[]
+      }
+      create_clinical_import_batch_v1: {
+        Args: {
+          p_branch_id: string
+          p_candidates: Json
+          p_format: string
+          p_idempotency_key: string
+          p_patient_id: string
+          p_source_digest: string
+        }
+        Returns: {
+          batch_id: string
+          replayed: boolean
+          staged_count: number
         }[]
       }
       create_clinical_note: {
@@ -9070,6 +9328,30 @@ export type Database = {
       get_clinical_encounter_detail: {
         Args: { p_acting_branch_id: string; p_encounter_id: string }
         Returns: Json
+      }
+      get_clinical_import_batch_v1: {
+        Args: { p_batch_id: string; p_branch_id: string; p_patient_id: string }
+        Returns: {
+          applied_at: string
+          applied_encounter_id: string
+          batch_format: string
+          batch_id: string
+          batch_status: string
+          candidate_id: string
+          candidate_kind: string
+          classification: string
+          clinical_code: string
+          clinical_date: string
+          created_at: string
+          note: string
+          ordinal: number
+          source_digest: string
+          staged_count: number
+          surfaces: string[]
+          tooth_code: string
+          unsupported_label: string
+          unsupported_reason: string
+        }[]
       }
       get_clinical_photo_derivative: {
         Args: {
@@ -10008,6 +10290,21 @@ export type Database = {
           item_id: string
           quantity_on_hand: number
           version: number
+        }[]
+      }
+      record_clinical_export_v1: {
+        Args: {
+          p_branch_id: string
+          p_format: string
+          p_idempotency_key: string
+          p_patient_id: string
+          p_scope: string
+        }
+        Returns: {
+          clinical_date: string
+          export_id: string
+          patient_code: string
+          replayed: boolean
         }[]
       }
       record_clinical_photo_derivatives: {

