@@ -51,9 +51,13 @@
 
 Append to `src/components/odontogram/measured-fork-layers.test.ts`. Reuse the file's existing `tooth()`, `feature()` helpers. Note `active()` is the 2-arg helper already in that file; these tests call `measuredForkLayers` directly because they need the third argument.
 
-```ts
-import { DEFAULT_ANATOMY_DISPLAY, type ChartAnatomyDisplay } from "./measured-fork-layers";
+The file already has `import { MEASURED_FORK_LAYER_IDS, measuredForkLayers } from "./measured-fork-layers";` at its top — widen that existing line rather than adding a second import from the same module:
 
+```ts
+import { DEFAULT_ANATOMY_DISPLAY, MEASURED_FORK_LAYER_IDS, measuredForkLayers, type ChartAnatomyDisplay } from "./measured-fork-layers";
+```
+
+```ts
 /** Activation with an explicit display preference, against the real asset. */
 function activeWith(
   projection: RendererToothProjection,
@@ -429,7 +433,10 @@ git commit -m "refactor: thread the anatomy display preference to the tooth rend
 **Files:**
 - Modify: `src/components/odontogram/measured-chart.tsx:228` (hardcoded `"front"`), props
 - Modify: `src/components/odontogram/measured-svg-asset.tsx:94` (fallback)
-- Test: `src/components/odontogram/measured-chart.test.tsx`
+- Test: `src/components/odontogram/measured-chart.test.tsx` — also extend the
+  file's existing `Harness` test component (not a `renderChart` helper — there
+  is no such helper in this file) with a `renderAngle` prop forwarded to
+  `MeasuredChart`
 
 **Interfaces:**
 - Consumes: Task 3's prop chain.
@@ -437,33 +444,83 @@ git commit -m "refactor: thread the anatomy display preference to the tooth rend
 
 **The trap:** only 14 posterior templates have an `_occl` variant (`MEASURED_OCCLUSAL_TEMPLATES`). `measuredAssetKeyForFdi(11, "occlusal")` returns `null`, and `MeasuredToothAsset` currently degrades to a bare `<span>{tooth.fdi}</span>`. Switching the whole chart to occlusal without a fallback would turn every anterior tooth into a plain number.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Extend the `Harness` test component, then write the failing tests**
 
-Append to `src/components/odontogram/measured-chart.test.tsx`, following the file's existing render helper:
+`measured-chart.test.tsx` has no `renderChart` helper. Tests render through a
+local `Harness` component (around line 43) that wraps `MeasuredChart` and
+already forwards `viewport`, `dentition`, `proposals`, etc. Add a `renderAngle`
+prop to `Harness`'s props type and forward it to `MeasuredChart`, the same way
+`dentition` is already forwarded — do not default it inside `Harness`; let
+`MeasuredChart`'s own default apply when it is omitted:
+
+```tsx
+function Harness({
+  projection = emptyChart,
+  initial = [] as readonly number[],
+  onChange,
+  readOnly = false,
+  viewport = "QUADRANT_1" as ChartViewportChoice,
+  dentition,
+  proposals,
+  renderAngle,
+}: {
+  projection?: ReturnType<typeof projectPatientChart>;
+  initial?: readonly number[];
+  onChange?: (next: readonly number[]) => void;
+  readOnly?: boolean;
+  viewport?: ChartViewportChoice;
+  dentition?: ChartDentition;
+  proposals?: ReadonlyMap<number, { count: number; priority: "URGENT" | "HIGH" | "ROUTINE" | "ELECTIVE"; surfaces: readonly string[] }>;
+  renderAngle?: RendererToothView;
+}) {
+  const [selected, setSelected] = React.useState<readonly number[]>(initial);
+  return (
+    <MeasuredChart
+      projection={projection}
+      notation="FDI"
+      viewport={viewport}
+      dentition={dentition}
+      selectedFdi={selected}
+      readOnly={readOnly}
+      proposals={proposals}
+      renderAngle={renderAngle}
+      onSelectionChange={(next) => {
+        onChange?.(next);
+        setSelected(next);
+      }}
+    />
+  );
+}
+```
+
+Import `RendererToothView` from `@/lib/odontogram/renderer-projection` at the
+top of the test file if it is not already imported there.
+
+Then append the tests. The default `Harness` viewport (`QUADRANT_1`) already
+covers FDI 11-18, which is both teeth this needs — tooth 16 (has an occlusal
+template) and tooth 11 (does not):
 
 ```tsx
 describe("occlusal rendering angle", () => {
   it("renders the occlusal template for a posterior tooth", () => {
-    renderChart({ renderAngle: "occlusal" });
+    render(<Harness renderAngle="occlusal" />);
     const tooth = screen.getByTestId("tooth-16");
     expect(tooth.getAttribute("data-view")).toBe("occlusal");
     expect(tooth.querySelector("svg")).not.toBeNull();
   });
 
   it("falls back to the front template for an anterior tooth instead of a bare number", () => {
-    renderChart({ renderAngle: "occlusal" });
+    render(<Harness renderAngle="occlusal" />);
     // FDI 11 has no occlusal template. It must still draw a tooth.
     expect(screen.getByTestId("tooth-11").querySelector("svg")).not.toBeNull();
   });
 
   it("renders front templates by default", () => {
-    renderChart();
+    render(<Harness />);
     expect(screen.getByTestId("tooth-16").getAttribute("data-view")).toBe("front");
   });
 });
 ```
-
-Adapt `renderChart(...)` to the helper name actually used in that file; read it first. If the helper does not accept overrides, extend it rather than duplicating a render block.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -537,26 +594,39 @@ git commit -m "feat: add a chart-wide occlusal rendering angle"
 
 **Files:**
 - Modify: `src/components/odontogram/measured-chart.tsx:224-227` (the `ordered` memo), props
-- Test: `src/components/odontogram/measured-chart.test.tsx`
+- Test: `src/components/odontogram/measured-chart.test.tsx` — also extend the
+  `Harness` test component (already extended with `renderAngle` in Task 4)
+  with a `showWisdomTeeth` prop forwarded to `MeasuredChart`
 
 **Interfaces:**
 - Produces: `MeasuredChart` accepts `showWisdomTeeth?: boolean` defaulting `true`.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Extend `Harness` again, then write the failing tests**
+
+Add `showWisdomTeeth` to `Harness`'s props (same file, same component extended
+in Task 4) and forward it to `MeasuredChart`, exactly like `renderAngle`:
+add `showWisdomTeeth?: boolean;` to the props type and
+`showWisdomTeeth={showWisdomTeeth}` to the `<MeasuredChart>` element.
+
+The default `Harness` viewport is `QUADRANT_1`, which only ever renders FDI
+11-18 — FDI 28/38/48 do not exist in that DOM regardless of this toggle, so a
+test using the default viewport cannot prove they were hidden *by the toggle*
+rather than by the viewport. Use `viewport="FULL"` for this test so all four
+third molars are actually in the tree to begin with:
 
 ```tsx
 describe("wisdom-teeth visibility", () => {
   const THIRD_MOLARS = [18, 28, 38, 48];
 
   it("includes the third molars by default", () => {
-    renderChart();
+    render(<Harness viewport="FULL" />);
     for (const fdi of THIRD_MOLARS) {
       expect(screen.queryByTestId(`tooth-${fdi}`), `FDI ${fdi}`).not.toBeNull();
     }
   });
 
   it("removes the third molars from the grid when hidden", () => {
-    renderChart({ showWisdomTeeth: false });
+    render(<Harness viewport="FULL" showWisdomTeeth={false} />);
     for (const fdi of THIRD_MOLARS) {
       expect(screen.queryByTestId(`tooth-${fdi}`), `FDI ${fdi}`).toBeNull();
     }
@@ -758,20 +828,26 @@ Import `DropdownMenuCheckboxItem` and `DropdownMenuSeparator` from `@/components
 
 - [ ] **Step 5: Pass the view fields to the chart**
 
-```bash
-grep -rn "<MeasuredChart" src/ --include="*.tsx"
-```
+Two files render `MeasuredChart` in production code:
 
-At each render site inside the workspace, forward the four fields:
+- `src/app/(emr)/patients/[patientId]/odontogram-section.tsx:291-297` — the real
+  interactive chart. It already reads `view.notation`, `view.viewport`,
+  `view.dentition`, `view.selectedFdi` from `useClinicalChartView()` (line 107)
+  and passes them to `MeasuredChart`. Add the four new fields to that same
+  prop list:
 
-```tsx
+  ```tsx
   showBoneGum={view.showBoneGum}
   showPulp={view.showPulp}
   showWisdomTeeth={view.showWisdomTeeth}
   renderAngle={view.renderAngle}
-```
+  ```
 
-Leave a print-preview or test-only mount that has no toolbar on the defaults.
+- `src/components/odontogram/clinical-chart-print.tsx:341-344` — the print
+  preview. It hardcodes `notation="FDI"` and `viewport="FULL"` rather than
+  reading the live view, and stays that way: a printed chart is a fixed
+  clinical document, not a rendering of whatever display preferences were on
+  screen at the time. **Do not change this file.**
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
