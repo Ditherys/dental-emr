@@ -688,4 +688,60 @@ describe("selectPeriodontalExaminationForPrint", () => {
     expect(first?.id).toBe("bbb");
     expect(reversed?.id).toBe("bbb");
   });
+
+  /**
+   * This is the single authority for WHICH examination a printed clinical
+   * document is about, so it has to order by INSTANT, not by the shape of the
+   * string. Two timestamps written at different UTC offsets sort the wrong way
+   * lexically: "2026-08-04T09:00:00+08:00" is 01:00Z, hours EARLIER than
+   * "2026-08-04T08:00:00+00:00", but it sorts later as text.
+   */
+  it("orders by instant, not by text, across mixed UTC offsets", () => {
+    const chosen = selectPeriodontalExaminationForPrint([
+      // 01:00Z - the earlier examination, but the greater string.
+      exam("manila", "FINAL", null, "2026-08-04T09:00:00+08:00"),
+      // 08:00Z - the later examination, and the lesser string.
+      exam("utc", "FINAL", null, "2026-08-04T08:00:00+00:00"),
+    ]);
+
+    expect(chosen?.id).toBe("utc");
+  });
+
+  it("treats the same instant written two ways as a tie, resolved by id", () => {
+    const chosen = selectPeriodontalExaminationForPrint([
+      exam("bbb", "FINAL", null, "2026-08-04T08:00:00+00:00"),
+      exam("aaa", "FINAL", null, "2026-08-04T16:00:00+08:00"),
+    ]);
+
+    expect(chosen?.id).toBe("bbb");
+  });
+
+  /**
+   * An examination with no readable instant cannot be "the most recent one".
+   * Printing it over a dated examination would put an undatable record's
+   * staging on paper, so it sorts earliest and only wins when nothing else can.
+   */
+  it("never lets an absent or unreadable timestamp outrank a real one", () => {
+    expect(
+      selectPeriodontalExaminationForPrint([
+        exam("undated", "FINAL", null, null),
+        exam("dated", "FINAL", null, "2020-01-01T00:00:00Z"),
+      ])?.id,
+    ).toBe("dated");
+
+    expect(
+      selectPeriodontalExaminationForPrint([
+        exam("unreadable", "FINAL", null, "not-a-timestamp"),
+        exam("dated", "FINAL", null, "2020-01-01T00:00:00Z"),
+      ])?.id,
+    ).toBe("dated");
+
+    // With nothing datable at all it still answers, stably, by id.
+    expect(
+      selectPeriodontalExaminationForPrint([
+        exam("aaa", "FINAL", null, null),
+        exam("bbb", "FINAL", null, null),
+      ])?.id,
+    ).toBe("bbb");
+  });
 });

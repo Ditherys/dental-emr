@@ -542,14 +542,37 @@ export function selectPeriodontalExaminationForPrint<
     finalized_at: string | null;
   },
 >(examinations: readonly T[]): T | null {
-  // Stable: the recency key first, then the id, so two examinations recorded at
-  // the same instant always resolve the same way on every render and on every
-  // machine.
+  // Ordered by INSTANT, not by the text of the timestamp. Comparing these as
+  // strings is only correct while every value carries the same UTC offset:
+  // `2026-08-04T09:00:00+08:00` is 01:00Z, hours EARLIER than
+  // `2026-08-04T08:00:00+00:00`, yet it sorts later as text. This function
+  // decides which examination a printed clinical document is about, so a
+  // mixed-offset record would put one examination's staging on paper under
+  // another's measurements - the exact substitution REVIEW F1 exists to
+  // prevent, reached by a different road.
+  //
+  // An examination with no readable instant sorts EARLIEST. It cannot be "the
+  // most recent one", and printing an undatable record over a dated one would
+  // assert a recency the record does not support. It still wins when nothing
+  // else is datable, so a patient never loses their only examination.
+  //
+  // Stable: the instant first, then the id, so two examinations recorded at the
+  // same moment resolve the same way on every render and on every machine.
+  const instantOf = (examination: T): number => {
+    const value = examination.finalized_at ?? examination.examined_at;
+    if (value === null || value === undefined) return Number.NEGATIVE_INFINITY;
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
+  };
+
   const ordered = [...examinations].sort((a, b) => {
-    const recency = String(a.finalized_at ?? a.examined_at ?? "").localeCompare(
-      String(b.finalized_at ?? b.examined_at ?? ""),
-    );
-    return recency !== 0 ? recency : a.id.localeCompare(b.id);
+    // Compared, never subtracted: two unreadable timestamps are both
+    // -Infinity, and their DIFFERENCE is NaN, which makes a comparator
+    // incoherent. `!==` reads them as the tie they are.
+    const left = instantOf(a);
+    const right = instantOf(b);
+    if (left !== right) return left < right ? -1 : 1;
+    return a.id.localeCompare(b.id);
   });
   return ordered.at(-1) ?? null;
 }

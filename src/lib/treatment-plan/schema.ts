@@ -210,6 +210,13 @@ export const treatmentPlanListRowSchema = z.object({
   created_at: isoTimestamp,
   item_count: z.number().int().nonnegative(),
   has_drawing: z.boolean(),
+  // `has_drawing` survives on the wire as a constant `false`: the drawing
+  // retirement kept `list_treatment_plans`'s shape so no existing caller is
+  // rejected, and `.strict()` would reject the key if this schema stopped
+  // declaring it. It is accepted here and dropped immediately, so nothing
+  // downstream can read a retired signal. The binding exists ONLY to remove the
+  // key, which is exactly what the unused-variable rule cannot see.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }).strict().transform(({ has_drawing: _legacyDrawingPresence, ...plan }) => plan);
 
 export const treatmentPlanJsonSchema = z.object({
@@ -271,6 +278,11 @@ export const treatmentPlanDetailJsonSchema = z.object({
   alternatives: z.array(treatmentPlanAlternativeJsonSchema),
   discussions: z.array(treatmentPlanDiscussionJsonSchema),
   drawing: legacyTreatmentPlanDrawingJsonSchema.nullable(),
+  // Same contract as `has_drawing` above: `get_treatment_plan_detail` still
+  // returns `drawing`, now always `null::jsonb`, and `.strict()` requires this
+  // schema to declare the key in order to drop it. Destructured to discard, not
+  // to use.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 }).strict().transform(({ drawing: _legacyDrawing, ...detail }) => detail);
 
 const completionPayloadSchema = z.union([

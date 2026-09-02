@@ -178,6 +178,19 @@ export const DATABASE_TEST_SUITES = Object.freeze([
   "treatment_plan_estimated_fee_contract.test.sql",
   "treatment_plan_rpcs.test.sql",
   "treatment_plan_actor_provider.test.sql",
+  // Registered ahead of treatment_plans.test.sql, with the other suites that
+  // must survive the local gate: the pgTAP loop stops at the first suite that
+  // does not report P1_TEST_PASS, and treatment_plans.test.sql is a known
+  // pre-existing halt (`not ok 9`, the treatment_plan_items columns_are
+  // assertion). This hazard was mitigated for every NEW suite in the unified
+  // clinical chart plan and for none of the MODIFIED ones, which stranded the
+  // charge-immutability proofs these two carry - including
+  // "charges are append-only at the table, not merely by convention in the
+  // RPCs" and the pg_proc-derived "no browser-reachable function updates a
+  // posted charge row". ADR-026 invariants that never executed locally.
+  // They are transaction-bounded like every other suite, so position is free.
+  "billing_authorization.test.sql",
+  "billing_charge_ledger.test.sql",
   "treatment_plans.test.sql",
   "session_authorization_boundaries.test.sql",
   "seed_security_fixtures.test.sql",
@@ -195,10 +208,8 @@ export const DATABASE_TEST_SUITES = Object.freeze([
 "operational_analytics.test.sql",
   "owner_full_access.test.sql",
   "billing_permission_contract.test.sql",
-  "billing_authorization.test.sql",
   "procedure_installment_schedules.test.sql",
   "financial_analytics.test.sql",
-  "billing_charge_ledger.test.sql",
 "billing_attribution.test.sql",
   "billing_payment_allocations.test.sql",
   "billing_corrections.test.sql",

@@ -342,14 +342,14 @@ Run in the plan's Step 5 order.
 git status --short                                  -> 40 entries, all intended
 npm run security:migrations                         -> PASS (349 files / 3298 statements /
                                                        1370 grants / 94 terminal / 410 approved)
-npm run lint                                        -> 0 errors, 2 warnings (pre-existing,
-                                                       src/lib/treatment-plan/schema.ts)
+npm run lint                                        -> 0 errors, 0 warnings
 npm run typecheck                                   -> clean
-npm run test:unit                                   -> 201 files / 2423 tests, ALL PASS
+npm run test:unit                                   -> 201 files / 2430 tests, ALL PASS
 npm run test:unit  (repeat 2)                       -> 201 / 2423 pass
 npm run test:unit  (repeat 3)                       -> 201 / 2423 pass
 npm run test:db:local                               -> 15 *.local.mjs harnesses PASS
-                                                       + 90 pgTAP suites PASS,
+                                                       + 92 pgTAP suites PASS, including
+                                                       both relocated billing suites,
                                                        then the PRE-EXISTING halt at
                                                        treatment_plans.test.sql (exit 1)
 npm run storage:start:local                         -> PASS (dental-emr-local ready)
@@ -371,8 +371,30 @@ npx playwright test --list <the two new specs>      -> Total: 67 tests in 2 file
 ```
 
 Whole-suite flake count, re-measured: **0 across three consecutive full runs**
-(2423/2423 each time). The previous flaky file, `perio-workspace.test.tsx`, was
-deleted with its subject.
+(2423/2423 each time, before the review rounds added seven more cases). The
+previous flaky file, `perio-workspace.test.tsx`, was deleted with its subject.
+
+### What the two review rounds changed
+
+**Round 2** (3 Important, 4 Minor): restored the follow-up **billing guidance**
+the retired panel carried - the only in-UI statement that "Record follow-up"
+does not bill the patient, and something the first revision of this handoff
+wrongly called nothing dropped; restored the lost `readOnly`-propagation
+assertion in both directions; rewrote the harness registry test, whose second
+condition had been satisfiable by the import line's own closing quote and so
+never caught "imported but never awaited"; routed the section's selection
+readout through the toolbar's `selectionSummary`; escaped the OUT-parameter name
+before it becomes a regex and gave the `=` case a documented, empty allowlist;
+corrected the halt cause here and in the report.
+
+**Round 3** (1 Important, 2 Minor): the cross-task suite-ordering defect above;
+`selectPeriodontalExaminationForPrint` now orders by `Date.parse` instant rather
+than by `localeCompare` text, with mixed-offset, same-instant and
+undatable-record cases (the single authority for which examination a printed
+clinical document is about must not be reorderable by a UTC offset); and the two
+`no-unused-vars` warnings in `src/lib/treatment-plan/schema.ts` resolved with
+scoped disables carrying the reason, so `npm run lint` is now **0 errors, 0
+warnings**.
 
 ### Tests NOT run, and why
 
@@ -385,6 +407,43 @@ deleted with its subject.
 - **`npm run db:reset:local`** - prohibited by the plan.
 - Everything above is **local evidence only**. There is no Cloud TEST evidence
   in this commit.
+
+### The cross-task defect the final review found: this branch's charge-immutability proofs never ran
+
+The halt hazard above was recognised and mitigated **seventeen times** in this
+plan - sixteen new pgTAP suites deliberately registered early with explanatory
+comments, plus the `.local.mjs` harnesses reordered in this task. Every one of
+those mitigations was applied to a **new** file. **None** was applied to a
+**modified pre-existing** file, and no single task review could see that,
+because the gap only appears when you compare how new suites were placed against
+how modified ones were.
+
+The cost landed on billing. `billing_charge_ledger.test.sql` (position 111) and
+`billing_authorization.test.sql` (position 108) both gained assertions in this
+branch and both sat after the halt at position 91, so the ADR-026 invariants
+they carry had **never executed**:
+
+```
+'charges are append-only at the table, not merely by convention in the RPCs'
+'no browser-reachable function updates a posted charge row'   -- pg_proc-derived
+```
+
+Both are now registered immediately before `treatment_plans.test.sql`
+(positions 91 and 92), with a comment naming the hazard. Suites are
+transaction-bounded, so position is free.
+
+**The class was checked, not just the instance.** Diffing
+`bde1b56..HEAD -- supabase/tests/` separates the 19 added files from the 16
+modified ones. Of the modified `.test.sql` files, the positions are 9, 10, 13,
+14, 15, 16, 25, 58, 59, 65, 72, 89, 91 (the halt itself), and the two billing
+suites. **Only those two sat after the halt**, so the fix is complete rather
+than representative.
+
+Observed after the move: `npm run test:db:local` runs **107 PASS** (15 harnesses
++ 92 suites, up from 105) and both billing suites pass immediately before the
+same halt. Run directly, `billing_charge_ledger.test.sql` reports
+`ok 14 - charges are append-only at the table…` and
+`ok 15 - no browser-reachable function updates a posted charge row`.
 
 ### Known residual risks
 
@@ -407,8 +466,8 @@ deleted with its subject.
    **never execute locally**. That is unexecuted coverage. It is partly offset
    by `treatment_plan_drawing_retirement_execution.local.mjs`, which now really
    does run in this gate, and fully closed only by the remote runner. Every
-   other suite registered after `treatment_plans.test.sql` is in the same
-   position.
+   suite registered after `treatment_plans.test.sql` is in the same position -
+   see the cross-task defect below, which is what that position actually cost.
 2. **`node --test scripts/remote-database-test-guard.test.mjs`** cannot pass: the
    file is written for vitest. The gate line in the plan names the wrong runner.
    Pre-existing; not changed here.
@@ -438,6 +497,19 @@ deleted with its subject.
    authorizes.
 8. `ALTER TABLE … DISABLE TRIGGER` in `20260901010502` still needs the hosted
    ownership check at the first authorized Cloud TEST push.
+9. **`20260901010144` is the one multi-line-anchor guarded replace without CR
+   normalization.** Accepted, not fixed, by explicit ruling: it is **symmetric
+   by omission** - neither side normalizes - so it replays correctly in either
+   line-ending style and fails closed. Repairing it would mean editing an
+   applied migration to fix a defect that does not bite.
+10. **Three `20260901*` clinical RPC bodies are no longer readable from source**,
+    because guarded `pg_get_functiondef` text surgery replaced statements inside
+    them. A consolidating baseline is the right answer and is ADR-scale
+    follow-up, deliberately not attempted here.
+11. **`npm run db:reset:local` was not run.** The final review names it the
+    single highest-value pre-acceptance step, but it is prohibited by this
+    plan's global constraints and by `AGENTS.md`. Escalated to the human as a
+    recommended gate rather than executed.
 
 ### Pending release gates (none of these passed; all remain open)
 
