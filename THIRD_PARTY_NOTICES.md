@@ -28,6 +28,17 @@ no fork code is consumed as a published npm package at runtime.
 `https://github.com/ZoliQua/React-Odontogram-Modul` (MIT, copyright Zoltán
 Dul 2026).
 
+**Runtime package removed (task 16, 2026-09-02):** the vendored
+`react-advanced-odontogram` package - the `file:vendor/react-advanced-odontogram`
+dependency, its built `dist/`, its generated `emr-style.css` entrypoint and its
+transitive `jspdf` - is no longer part of this repository. The MIT notice
+reproduced below is therefore the canonical, repository-owned copy of the
+upstream licence text that previously also lived at
+`vendor/react-advanced-odontogram/LICENSE`; it is retained here verbatim so the
+permission notice continues to travel with the ported measured assets, which
+remain in `src/components/odontogram/assets/measured/`. Build provenance for the
+removed package is recorded in `docs/ODONTOGRAM_FORK_SOURCE_MANIFEST.md`.
+
 **Excluded from EMR use:** the fork's demo application, Classic renderer,
 localStorage persistence, FHIR R4 export/import, PDF export, tour,
 theme/language controls, demo build/deployment infrastructure, and the

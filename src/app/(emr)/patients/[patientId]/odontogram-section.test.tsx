@@ -23,7 +23,14 @@ vi.mock("./odontogram-actions", async (importOriginal) => ({
 // the tooth, and only an unmanaged mount leaves that to the section.
 vi.mock("@/components/odontogram/fork-odontogram", async () => {
   const { useClinicalChartView } = await import("@/components/odontogram/clinical-chart-toolbar");
+  // `toPatientChartDTO` is the real pure mapper: the print sheet renders the
+  // canonical projection, so stubbing it would prove nothing about the chart
+  // that is actually printed.
+  const { toPatientChartDTO } = await vi.importActual<
+    typeof import("@/components/odontogram/fork-odontogram")
+  >("@/components/odontogram/fork-odontogram");
   return {
+    toPatientChartDTO,
     ForkOdontogram: ({
       patientKey,
       canWriteClinical,
@@ -471,11 +478,42 @@ describe("OdontogramSection O7", () => {
         actingBranchId="00000000-0000-4000-a000-0000000000aa"
         canWriteClinical
         initialOdontogram={mockDto}
+        printPatientCode="PT-000123"
+        printClinicalDate="2026-09-02"
       />,
     );
 
-    expect(screen.getByTestId("fork-print-chart")).toBeInTheDocument();
-    expect(screen.getByText(/anatomical clinical chart/i)).toBeInTheDocument();
+    expect(screen.getByTestId("clinical-chart-print")).toBeInTheDocument();
+    expect(screen.getByTestId("clinical-chart-print-header")).toHaveTextContent("PT-000123");
+    expect(screen.getByTestId("clinical-chart-print-record")).toBeInTheDocument();
+  });
+
+  it("prints nothing rather than an anonymous sheet when the route supplies no patient code", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+      />,
+    );
+
+    expect(screen.queryByTestId("clinical-chart-print")).toBeNull();
+  });
+
+  it("prints nothing when the supplied chart date is not an ISO clinical day", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+        printPatientCode="PT-000123"
+        printClinicalDate="02/09/2026"
+      />,
+    );
+
+    expect(screen.queryByTestId("clinical-chart-print")).toBeNull();
   });
 
   // Task 7 made Bridge and Implant real composer forms, so this test no longer

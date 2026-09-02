@@ -73,7 +73,10 @@ select extensions.ok(
   and not has_function_privilege('authenticated','public.add_treatment_plan_discussion(uuid,uuid,uuid,text,text)','execute')
   and not has_function_privilege('anon','public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)','execute')
   and not has_function_privilege('service_role','public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)','execute')
-  and has_function_privilege('authenticated','public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)','execute')
+  -- TASK 16: the freehand plan canvas is retired and its writer revoked.
+  and not has_function_privilege('authenticated','public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)','execute')
+  and not has_function_privilege('anon','public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)','execute')
+  and not has_function_privilege('service_role','public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)','execute')
   and has_function_privilege('authenticated','public.list_treatment_plans(uuid,uuid)','execute')
   and has_function_privilege('authenticated','public.get_treatment_plan_detail(uuid,uuid)','execute')
   and not has_function_privilege('anon','public.create_treatment_plan(uuid,uuid,text)','execute')
@@ -103,7 +106,7 @@ select extensions.ok(not exists (
     )
 ),'the clinical permission helper reused by P16-02 stays revoked from every browser and service role');
 
--- Plan P1 lifecycle: create -> update -> items/alternative/discussion/drawing
+-- Plan P1 lifecycle: create -> update -> items/alternative/discussion
 -- -> present -> acknowledge, with immutability enforced at every stage.
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
@@ -180,11 +183,15 @@ reset role;
 select extensions.ok((select treating_provider_id='c9200000-0000-0000-0000-000000000001' and discussed_at is not null and context='Case discussion' and notes='Patient prefers conservative care.' and discussed_by='b7100000-0000-0000-0000-000000000001' from public.treatment_plan_discussions where organization_id='b7200000-0000-0000-0000-000000000001' and plan_id=(select id from p1602_plans where seq=1) and context='Case discussion'),'the discussion row captures the treating provider, discussed_at, and context together');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='b7200000-0000-0000-0000-000000000001' and action='treatment.plan.discussion_added' and patient_id='b7500000-0000-0000-0000-000000000001'),1,'the discussion add writes exactly one treatment.plan.discussion_added audit event');
 
--- Drawing on a DRAFT plan, then present -> acknowledge with immutability.
+-- The retired drawing writer on a DRAFT plan, then present -> acknowledge
+-- with immutability.
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.is((select version from public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,'{"strokes":[]}'::jsonb)),1,'a drawing is saved on a DRAFT plan at version one');
+-- TASK 16: what was "a drawing is saved on a DRAFT plan" is now its negative.
+-- The permission check fires before the body, so plan status no longer decides
+-- anything here: no plan in any state can carry a drawing again.
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2,'{"strokes":[]}'::jsonb)$$,'42501','permission denied for function save_treatment_plan_drawing','a DRAFT plan cannot take a drawing: the retired writer is unreachable');
 select extensions.is((select version from public.present_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),2)),3,'presenting the DRAFT plan moves it to PRESENTED at version three');
 reset role;
 select extensions.ok((select status='PRESENTED' and version=3 from public.treatment_plans where id=(select id from p1602_plans where seq=1)),'present persists the PRESENTED status and version bump');
@@ -198,7 +205,7 @@ select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-00
 select extensions.throws_ok($$select public.update_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),(select id from p1602_items where seq=2),3,null,'28','rewrite',null)$$,'P0001','invalid state','a PRESENTED plan refuses item updates as invalid state');
 select extensions.throws_ok($$select public.remove_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),(select id from p1602_items where seq=2),3)$$,'P0001','invalid state','a PRESENTED plan refuses item removal as invalid state');
 select extensions.throws_ok($$select public.add_treatment_plan_alternative('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),3,'Late alternative')$$,'P0001','invalid state','a PRESENTED plan refuses alternative adds as invalid state');
-select extensions.is((select version from public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),3,'{"strokes":[{"x":1,"y":2}]}'::jsonb)),2,'a drawing still saves on a PRESENTED plan with a version bump');
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),3,'{"strokes":[{"x":1,"y":2}]}'::jsonb)$$,'42501','permission denied for function save_treatment_plan_drawing','a PRESENTED plan cannot take a drawing either');
 select extensions.is((select version from public.acknowledge_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),3)),4,'acknowledging the PRESENTED plan moves it to ACKNOWLEDGED at version four');
 reset role;
 select extensions.ok((select status='ACKNOWLEDGED' and version=4 from public.treatment_plans where id=(select id from p1602_plans where seq=1)),'acknowledge persists the ACKNOWLEDGED status and version bump');
@@ -209,7 +216,7 @@ select extensions.is((select count(*)::integer from public.audit_events where or
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000001',true);
-select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'{"strokes":[]}'::jsonb)$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects drawing saves as invalid state');
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'{"strokes":[]}'::jsonb)$$,'42501','permission denied for function save_treatment_plan_drawing','an ACKNOWLEDGED plan rejects drawing saves at the privilege boundary, before status is consulted');
 select extensions.throws_ok($$select public.update_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4,'rewrite')$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects updates through the RPC');
 select extensions.throws_ok($$select public.present_treatment_plan('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),4)$$,'P0001','invalid state','an ACKNOWLEDGED plan rejects re-presenting');
 select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion_v2('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'Consent discussion','Acknowledged the plan.')),'a discussion still appends on an ACKNOWLEDGED plan');
@@ -282,17 +289,22 @@ select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-00
 -- stronger statement is that the browser can no longer reach the old signature.
 select extensions.throws_ok($$select public.add_treatment_plan_discussion('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'c9200000-0000-0000-0000-000000000004','Foreign provider',null)$$,'42501','permission denied for function add_treatment_plan_discussion','the superseded provider-accepting discussion signature is unreachable from the browser');
 select extensions.throws_ok($$select public.add_treatment_plan_discussion_v2('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1),'   ',null)$$,'22023','invalid input','a blank discussion context is rejected with a clean error');
-select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,'[1,2,3]'::jsonb)$$,'22023','invalid input','a non-object drawing is rejected with a clean error');
-select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,jsonb_build_object('data',repeat('x',70000)))$$,'22023','invalid input','an oversized drawing is rejected with a clean error');
+-- The value-domain checks are moot now that nothing reaches the body: both
+-- malformed and oversized payloads are refused earlier, at the privilege
+-- boundary, which is a strictly stronger refusal.
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,'[1,2,3]'::jsonb)$$,'42501','permission denied for function save_treatment_plan_drawing','a non-object drawing never reaches the value check');
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,jsonb_build_object('data',repeat('x',70000)))$$,'42501','permission denied for function save_treatment_plan_drawing','an oversized drawing never reaches the size check');
 reset role;
 
 -- Reads: the assistant may read bounded projections and detail, writes none.
-select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),19,'audit count is 19 before the read probes');
+select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),17,'audit count is 17 before the read probes (two treatment.plan.drawing_saved events are gone with the retirement)');
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','b7100000-0000-0000-0000-000000000002',true);
 select extensions.is((select count(*)::integer from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001')),2,'a read-only assistant can list both of patient A plans');
-select extensions.ok((select item_count=2 and has_drawing from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001') where plan_id=(select id from p1602_plans where seq=1) and title='Full mouth restoration v2' and status='ACKNOWLEDGED' and version=4),'list projects the bounded plan fields plus item_count and drawing presence for P1');
+-- `has_drawing` survives in the contract so nothing that parses this breaks,
+-- but it is now constantly false: the projection no longer reads the tombstone.
+select extensions.ok((select item_count=2 and not has_drawing from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001') where plan_id=(select id from p1602_plans where seq=1) and title='Full mouth restoration v2' and status='ACKNOWLEDGED' and version=4),'list projects the bounded plan fields and item_count for P1, and never a drawing');
 select extensions.ok((select item_count=0 and not has_drawing from public.list_treatment_plans('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001') where plan_id=(select id from p1602_plans where seq=2) and status='ACKNOWLEDGED'),'list shows zero items and no drawing for P2');
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'items')),2,'detail includes both P1 items');
 select extensions.is((select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) #>> '{items,0,estimatedFeeCentavos}'),'250002','detail returns the exact centavo estimate as a base-10 string');
@@ -300,13 +312,13 @@ select extensions.ok(not (public.get_treatment_plan_detail('b7300000-0000-0000-0
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'alternatives')),1,'detail includes the P1 alternative');
 select extensions.is((select jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'discussions')),2,'detail includes both P1 discussions');
 select extensions.ok((select detail #>> '{plan,status}' = 'ACKNOWLEDGED' and detail #>> '{plan,title}' = 'Full mouth restoration v2' and detail #>> '{plan,version}' = '4' from (select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) as detail) as d),'detail returns the plan projection');
-select extensions.ok((select (drawing->>'version')='2' from (select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'drawing' as drawing) as d),'detail includes the persisted drawing with its latest version');
+select extensions.ok((select (public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) -> 'drawing')::text = 'null'),'detail carries a null drawing for P1 after the retirement, and reads no drawing row');
 select extensions.ok((select exists (select 1 from jsonb_array_elements(detail -> 'discussions') as discussion where discussion->>'context'='Consent discussion' and discussion->>'treatingProviderId'='c9200000-0000-0000-0000-000000000001' and discussion->>'discussedAt' is not null and discussion->>'discussedBy'='b7100000-0000-0000-0000-000000000001') from (select public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=1)) as detail) as d),'the detail discussion history carries the provider, time, and context for the acknowledged discussion');
 select extensions.ok((select (public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2)) -> 'drawing')::text = 'null' and jsonb_array_length(public.get_treatment_plan_detail('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2)) -> 'items') = 0),'P2 detail shows no drawing and zero items');
 select extensions.throws_ok($$select public.create_treatment_plan('b7300000-0000-0000-0000-000000000001','b7500000-0000-0000-0000-000000000001','Denied')$$,'42501','not authorized','a read-only assistant cannot create plans');
 select extensions.throws_ok($$select public.add_treatment_plan_item('b7300000-0000-0000-0000-000000000001',(select id from p1602_plans where seq=2),3,null,'26','Denied',null)$$,'42501','not authorized','a read-only assistant cannot add items');
 reset role;
-select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),19,'read probes leave the audit count unchanged');
+select extensions.is((select count(*)::integer from public.audit_events where patient_id='b7500000-0000-0000-0000-000000000001'),17,'read probes leave the audit count unchanged');
 
 -- Permission denials on the read and write paths.
 set local role authenticated;

@@ -407,6 +407,60 @@ export function clinicalExportFilename(input: {
   }`;
 }
 
+// ---------------------------------------------------------------------------
+// The print header
+// ---------------------------------------------------------------------------
+
+/**
+ * What a printed chart is allowed to say about whose chart it is.
+ *
+ * A printed sheet leaves the building. It carries the synthetic-safe patient
+ * code the server derived and the Philippine clinical date, and nothing else
+ * that identifies anybody - no export id, no organization, no branch id, no
+ * actor id. Those are this platform's internal identities and a paper chart is
+ * not the place for them.
+ */
+export type ClinicalPrintHeader = {
+  patientCode: string;
+  clinicalDate: string;
+  scope: ClinicalExportScope;
+};
+
+/**
+ * The one constructor. Both entry points below go through it, so the print
+ * sheet and the exported document cannot end up with different guarantees.
+ *
+ * The same two guards `clinicalExportFilename` applies, for the same reason:
+ * the code is stripped to the safe alphabet so a patient NAME can never reach
+ * paper through it, and a chart date that is not an ISO clinical day is a
+ * failure rather than something to print approximately.
+ */
+export function clinicalPrintHeader(input: {
+  patientCode: string;
+  clinicalDate: string;
+  scope?: ClinicalExportScope;
+}): ClinicalPrintHeader {
+  if (!ISO_DAY.test(input.clinicalDate)) {
+    throw new Error("A printed clinical chart needs an ISO clinical date.");
+  }
+  return {
+    patientCode: sanitizeExportPatientCode(input.patientCode),
+    clinicalDate: input.clinicalDate,
+    scope: input.scope ?? "CHART_AND_PROGRESS",
+  };
+}
+
+/** Derives the print header from Task 15's audited canonical export projection. */
+export function clinicalPrintHeaderFrom(
+  projection: ClinicalExportProjection,
+): ClinicalPrintHeader {
+  return clinicalPrintHeader({
+    patientCode: projection.patientCode,
+    clinicalDate: projection.clinicalDate,
+    scope: projection.scope,
+  });
+}
+
 export function clinicalExportContentDisposition(filename: string): string {
   return `attachment; filename="${filename}"`;
 }

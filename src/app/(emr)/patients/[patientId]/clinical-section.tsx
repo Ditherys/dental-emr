@@ -23,6 +23,9 @@ import { progressEventsFromOdontogram, type ClinicalProgressRecord } from "@/lib
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
 
+/** `en-CA` yields the ISO day the print header requires. */
+const PHILIPPINE_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" });
+
 import {
   amendClinicalNoteAction,
   createClinicalNoteAction,
@@ -58,7 +61,11 @@ type Props = {
   /** Raised while the clinical chart holds work that is not on the record, so
    *  the workspace navigation guard can warn before it is lost. */
   onUnsavedClinicalChange?: (unsaved: boolean) => void;
-  printPatientName?: string;
+  /**
+   * The stored patient number. It is the synthetic-safe code a printed chart
+   * identifies the patient by; the print sheet deliberately carries no name.
+   */
+  printPatientCode?: string;
   printBranchName?: string;
   printProviderName?: string;
   visit?: ClinicalVisitState | null;
@@ -110,7 +117,7 @@ function nullableString(form: FormData, name: string) {
   return value === "" ? null : value;
 }
 
-export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedClinicalChange, printPatientName, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, clinicalProgressRecord = null }: Props) {
+export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, canCorrectClinical, onUnsavedClinicalChange, printPatientCode, printBranchName, printProviderName, visit = null, initialEncounters, initialMedicalRecords, initialProviders = [], initialToothConditions: _initialToothConditions = [], initialOdontogram = null, clinicalComposerContext = null, initialTreatmentPlans = [], canGenerateDocuments: _canGenerateDocuments = false, loadFailed, recordLoadFailed, gallery, galleryLoadFailed = false, canReadBilling = false, initialProcedureSummaries = {}, clinicalProgressRecord = null }: Props) {
   void _initialToothConditions;
   // Plan printing moves with the plan page Task 17 removes; the prop stays on the
   // route contract until then.
@@ -267,12 +274,16 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
   const childDialogOpen = Boolean(noteDialog || amendNote || prescriptionEncounterId || medicalRecordDialog || finalizeEncounter || voidRecord);
   const dialogOpen = Boolean(treatmentHistoryOpen || medicalHistoryOpen || childDialogOpen);
   const historyError = error && !childDialogOpen ? <p role="alert" className="border-y py-3 text-sm text-destructive">{error}</p> : null;
-  // The odontogram print sheet still assembles its own chronology from the
-  // chart DTO; that is task 16's slice. The progress record below the chart is
-  // the server projection and nothing else.
+  // Task 16: the print sheet no longer assembles a chronology of its own. It
+  // reproduces `clinicalProgressRecord` - the server projection - verbatim, the
+  // same record the table below the chart renders.
+  // The clinic's own day, never the viewer's and never UTC. The managed visit
+  // supplies it when one is open; otherwise the current Philippine day is the
+  // honest answer for a sheet printed today.
+  const printClinicalDate = visit?.clinicalDate ?? PHILIPPINE_DAY.format(new Date());
   const progressEvents = initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : [];
   const chart: Record<ClinicalChartMode, ReactNode> = {
-    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />,
+    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />,
     TREATMENT_PLAN: <TreatmentPlanMode
       patientId={patientId}
       actingBranchId={actingBranchId}
@@ -280,7 +291,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       initialPlans={initialTreatmentPlans}
       procedures={clinicalComposerContext?.patientId === patientId ? clinicalComposerContext.procedures : []}
       loadFailed={loadFailed}
-      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientName={printPatientName} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
+      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
     />,
     PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={onUnsavedClinicalChange} />,
   };

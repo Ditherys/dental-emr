@@ -1003,6 +1003,9 @@ const treatmentPlanActorProviderGrants = Object.freeze([
   },
 ]);
 
+const TREATMENT_PLAN_DRAWING_RETIREMENT_GRANTS_MIGRATION =
+  "20260901010501_retire_treatment_plan_drawings_grants.sql";
+
 const treatmentPlanRpcGrants = Object.freeze([
   "public.create_treatment_plan(uuid,uuid,text)",
   "public.update_treatment_plan(uuid,uuid,integer,text)",
@@ -1031,6 +1034,16 @@ const treatmentPlanRpcGrants = Object.freeze([
         supersededFrom: TREATMENT_PLAN_ACTOR_PROVIDER_MIGRATION,
         supersededBy: "public.add_treatment_plan_discussion_v2(uuid,uuid,text,text)",
       }
+    : {}),
+  // Freehand drawing is excluded from the unified clinical chart workspace.
+  // The canvas was never canonical clinical state - it is renderer-shaped ink
+  // on top of one - and task 16 retired it: the table was emptied after a
+  // fail-closed preflight, sealed with a trigger that refuses every mutation,
+  // and this grant revoked. There is NO replacement object, so no
+  // `supersededBy`: the capability is gone, not moved. `supersededFrom` names
+  // the migration that REVOKES, which is the grants half of the retirement.
+  ...(object === "public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)"
+    ? { supersededFrom: TREATMENT_PLAN_DRAWING_RETIREMENT_GRANTS_MIGRATION }
     : {}),
   reason: "The only treatment-plan clinical boundary. Functions derive the tenant and actor from an active authenticated acting branch and require live patient.clinical.write (mutations) or patient.clinical.read (bounded projections). Plans are versioned with an immutable PRESENTED/ACKNOWLEDGED state backed by a database trigger; discussions are append-only on any status and always capture provider, time, and context. Every mutation appends one atomic opaque audit event while the read projections write none." })));
 

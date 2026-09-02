@@ -257,7 +257,6 @@ insert into approved_grant_objects (signature) values
   ('public.revoke_workforce_invitation(uuid, uuid)'),
   ('public.save_periodontal_measurements(uuid,uuid,jsonb,jsonb,jsonb,jsonb)'),
   ('public.save_periodontal_measurements_v2(uuid,integer,jsonb,uuid)'),
-  ('public.save_treatment_plan_drawing(uuid,uuid,integer,jsonb)'),
   ('public.search_patients(uuid, text, date, text, text, integer, integer)'),
   ('public.set_branch_membership(uuid, uuid, text)'),
   ('public.set_member_role(uuid, uuid, uuid, boolean)'),
@@ -306,7 +305,7 @@ insert into approved_grant_objects (signature) values
 
 select extensions.is(
   (select pg_catalog.count(*)::integer from approved_grant_objects),
-  263,
+  262,
   'the approved-grant registry projection carries every unmarked function grant'
 );
 

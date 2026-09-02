@@ -20,7 +20,6 @@ import type { NumberingSystem } from "@/lib/odontogram/dentition";
 import { useClinicalChartView } from "./clinical-chart-toolbar";
 import { MeasuredChart } from "./measured-chart";
 import type { ToothProposalMarker } from "./measured-tooth";
-import { ForkPrintProjectionBridge } from "./fork-print-chart";
 import "./styles.css";
 
 /**
@@ -252,7 +251,6 @@ export function ForkOdontogram({
 
   return (
     <div className="dental-emr-fork" data-testid="fork-odontogram" data-patient-key={patientKey}>
-      <ForkPrintProjectionBridge dto={dto} targetId={`fork-print-projection-${dto.patientId}`} />
       {!view.managed && (
         <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
           <label htmlFor={`fork-numbering-${patientKey}`} className="text-xs font-medium text-muted-foreground">

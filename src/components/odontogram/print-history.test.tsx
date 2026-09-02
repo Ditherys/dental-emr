@@ -248,3 +248,24 @@ describe("OdontogramPrintHistory O12", () => {
     expect(container.querySelector("canvas")).toBeFalsy();
   });
 });
+
+describe("OdontogramPrintHistory task 16", () => {
+  it("instructs on no reset, Classic, drawing or browser-local persistence", () => {
+    const dto: PatientOdontogramDTO = {
+      patientId: "00000000-0000-4000-a000-000000000020",
+      entries: [],
+      bridges: [],
+      implantChains: [],
+      periodontalExaminations: [],
+      legacyReconciliationFlags: [],
+      treatmentExecutions: [],
+    };
+    const { container } = render(<OdontogramPrintHistory dto={dto} />);
+    const text = (container.textContent ?? "").toLowerCase();
+    for (const forbidden of ["reset", "classic", "drawing", "freehand", "local storage", "localstorage"]) {
+      expect(text, `the print sheet must not mention ${forbidden}`).not.toContain(forbidden);
+    }
+    expect(text).toContain("browser");
+    expect(text).toContain("no pdf library is involved");
+  });
+});

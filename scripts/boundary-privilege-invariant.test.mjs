@@ -285,7 +285,10 @@ const APPROVED_FINAL_PRIVILEGES = [
     "public.remove_treatment_plan_item(uuid, uuid, uuid, integer)",
     "public.add_treatment_plan_alternative(uuid, uuid, integer, text)",
     "public.add_treatment_plan_discussion_v2(uuid, uuid, text, text)",
-    "public.save_treatment_plan_drawing(uuid, uuid, integer, jsonb)",
+    // `save_treatment_plan_drawing` is deliberately absent: task 16 retired the
+    // freehand plan canvas. The table is an emptied tombstone that refuses
+    // every mutation and 20260901010501 revoked the browser grant, so the live
+    // catalog no longer holds the privilege even though the function remains.
     "public.list_treatment_plans(uuid, uuid)",
     "public.get_treatment_plan_detail(uuid, uuid)",
     "public.record_direct_treatment_with_charge(uuid,uuid,uuid,bigint,jsonb,text)",
@@ -1516,7 +1519,8 @@ describe("the grant-terminal boundary", () => {
     const approved = browserReachableApprovedKeys(TERMINAL_MIGRATIONS);
 
     expect([...approved.keys()].some((key) => key.startsWith("service_role"))).toBe(false);
-    expect(approved.size).toBe(274);
+    // 273 after task 16 revoked save_treatment_plan_drawing.
+    expect(approved.size).toBe(273);
   });
 
   it("excludes a superseded historical signature from the observable final set", () => {

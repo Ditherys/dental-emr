@@ -577,7 +577,7 @@ export function PatientWorkspace({
               canWriteClinical={canWriteClinical}
               canCorrectClinical={canCorrectClinical}
               onUnsavedClinicalChange={setHasUnsavedClinical}
-              printPatientName={patientDisplayName(patient)}
+              printPatientCode={patient.patientNumber}
               printBranchName={actingBranchName}
               printProviderName="Signed-in dentist"
               visit={clinicalVisit}

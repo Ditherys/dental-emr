@@ -5,7 +5,8 @@ odontogram fork, with its source commit, original path, destination path, local
 adaptations, and source SHA-256.
 
 This manifest is a provenance record, not a licence. The licence text lives in
-`THIRD_PARTY_NOTICES.md` and `vendor/react-advanced-odontogram/LICENSE`.
+`THIRD_PARTY_NOTICES.md`, which is the repository-owned home of the upstream MIT
+notice now that the vendored runtime package has been removed (task 16).
 
 ## Source of record
 
@@ -17,8 +18,33 @@ This manifest is a provenance record, not a licence. The licence text lives in
 | Licence | MIT, Copyright (c) 2026 Zoltán Dul |
 
 The upstream MIT copyright and permission notice is preserved verbatim in
-`THIRD_PARTY_NOTICES.md` and in `vendor/react-advanced-odontogram/LICENSE`, and
-is restated in the header of the generated node-tree module.
+`THIRD_PARTY_NOTICES.md` and is restated in the header of the generated
+node-tree module.
+
+**Task 16 removed the runtime package.** `vendor/react-advanced-odontogram/`
+(the built `dist/`, `LICENSE`, `SOURCE_REVISION.md` and the two reset-control
+patches), the `file:` dependency and its transitive `jspdf` are gone, together
+with the generated `emr-style.css` entrypoint and the `odontogram:scope-css`
+script that produced it. Nothing in `src/` imports the package any more, which
+`src/components/odontogram/runtime-package-boundary.test.ts` enforces against
+the whole tree, the manifest and the lockfile.
+
+The build artifacts the package carried are recorded here so the provenance
+survives the deletion:
+
+| Field | Value |
+| --- | --- |
+| Package name at the fork baseline | `react-advanced-odontogram@2.4.0-dental-emr.1` |
+| Fork source commit | `5e28d931feefe4c3382513dbb0f5a9db9cf9948c` |
+| Initial patch commit | `cb9b58f3c35b49c7b9467d01c3ef84c388dae007` |
+| Touch-reset patch commit | `b6a99ddaf2dfb2659c747501494d7e34387ff040` |
+| Build date | `2026-08-30` (Asia/Manila) |
+| Build command | `npm run build:lib` |
+| Patches applied | `remove-reset-controls.patch`, `remove-touch-reset-controls.patch` |
+
+The deleted contents are recoverable from Git history; nothing about the port
+depended on the built package, because every ported artifact listed below was
+copied from the fork **source** at the pinned commit, not from `dist/`.
 
 Reference files were read only through
 `git -C <fork-checkout> show 5e28d93:<path>`. The neighbouring fork working

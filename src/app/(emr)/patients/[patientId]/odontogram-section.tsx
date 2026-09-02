@@ -5,8 +5,8 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { CurrentStatusPanel, type ProcedureCaseChoice } from "@/components/odontogram/current-status-panel";
-import { ForkOdontogram } from "@/components/odontogram/fork-odontogram";
-import { ForkPrintChart } from "@/components/odontogram/fork-print-chart";
+import { ForkOdontogram, toPatientChartDTO } from "@/components/odontogram/fork-odontogram";
+import { ClinicalChartPrint } from "@/components/odontogram/clinical-chart-print";
 import { ProcedureFollowupDialog, type ProcedureFollowupInput } from "@/components/odontogram/procedure-followup-dialog";
 import { ToothRecordDrawer } from "@/components/odontogram/tooth-record-drawer";
 import { useClinicalChartView } from "@/components/odontogram/clinical-chart-toolbar";
@@ -16,6 +16,9 @@ import type { PlanAuthoringContext } from "@/components/odontogram/planned-treat
 import type { ClinicalChartMode } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import type { PatientOdontogramDTO } from "@/lib/odontogram/types";
+import { projectPatientChart } from "@/lib/odontogram/chart-projection";
+import { clinicalPrintHeader } from "@/lib/odontogram/clinical-export";
+import type { ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 
 import { progressEventsFromOdontogram, type ProgressEventDTO } from "@/lib/odontogram/progress-record";
 import { getPatientOdontogramAction } from "./odontogram-actions";
@@ -27,11 +30,23 @@ import { getPatientOdontogramAction } from "./odontogram-actions";
  */
 const NO_FORK_DRAFTS: (drafts: readonly ForkClinicalDraft[]) => void = () => {};
 
+/**
+ * A chronology this page could not load is an EMPTY record, never a fabricated
+ * one. The print sheet says "no recorded event" rather than silently omitting a
+ * section, so a missing projection can never read as a clean history.
+ */
+const EMPTY_PROGRESS_RECORD: ClinicalProgressRecord = Object.freeze({
+  rows: [],
+  limit: 0,
+  offset: 0,
+  hasMore: false,
+  financialVisible: false,
+});
+
 type Props = {
   patientId: string;
   actingBranchId: string;
   canWriteClinical: boolean;
-  printPatientName?: string;
   printBranchName?: string;
   printProviderName?: string;
   /** @deprecated O13 read cutover — use initialOdontogram (get_patient_odontogram DTO). */
@@ -46,6 +61,14 @@ type Props = {
   /** Proposed treatment per tooth. Absent in every mode but Treatment plan. */
   proposals?: ReadonlyMap<number, ToothProposalMarker>;
   initialProgressEvents?: { patientId: string; events: ProgressEventDTO[] };
+  /**
+   * The synthetic-safe patient code and the Philippine clinical date the print
+   * sheet identifies the chart by. Supplied by the route, never invented here.
+   */
+  printPatientCode?: string;
+  printClinicalDate?: string;
+  /** The canonical server chronology the print sheet reproduces verbatim. */
+  progressRecord?: ClinicalProgressRecord | null;
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
   loadFailed?: boolean;
@@ -55,7 +78,6 @@ export function OdontogramSection({
   patientId,
   actingBranchId,
   canWriteClinical,
-  printPatientName,
   printBranchName,
   printProviderName,
   initialOdontogram,
@@ -64,6 +86,9 @@ export function OdontogramSection({
   planContext = null,
   proposals,
   initialProgressEvents,
+  printPatientCode,
+  printClinicalDate,
+  progressRecord = null,
   procedureCases: suppliedProcedureCases,
   recordFollowup,
   loadFailed,
@@ -200,6 +225,21 @@ export function OdontogramSection({
     });
   }, [selectedFdi]);
 
+  // The header refuses a non-ISO clinical date and strips the patient code to
+  // the safe alphabet, so a patient NAME can never reach paper through it. With
+  // no code the sheet is not rendered at all rather than printed anonymously.
+  const printHeader = React.useMemo(() => {
+    if (!printPatientCode || !printClinicalDate) return null;
+    try {
+      return clinicalPrintHeader({
+        patientCode: printPatientCode,
+        clinicalDate: printClinicalDate,
+      });
+    } catch {
+      return null;
+    }
+  }, [printClinicalDate, printPatientCode]);
+
   if (loadFailed && !dto) {
     return (
       <div key={patientId} data-testid="odontogram-section">
@@ -231,14 +271,16 @@ export function OdontogramSection({
             onDraftChange={NO_FORK_DRAFTS}
             onError={setError}
           />
-          <ForkPrintChart
-            dto={dto}
-            patientName={printPatientName}
-            branchName={printBranchName}
-            providerName={printProviderName}
-            progressEvents={progressEvents}
-            renderChart={false}
-          />
+          {printHeader !== null && (
+            <ClinicalChartPrint
+              header={printHeader}
+              dto={dto}
+              chart={projectPatientChart(toPatientChartDTO(dto))}
+              record={progressRecord ?? EMPTY_PROGRESS_RECORD}
+              branchName={printBranchName}
+              providerDisplay={printProviderName}
+            />
+          )}
         </div>
       )}
 

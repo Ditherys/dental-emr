@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(346);
+    expect(result.checked.files).toBe(348);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });
@@ -371,7 +371,14 @@ describe("the active migration chain", () => {
     // guard triggers, one private candidate-classification helper and the five
     // interchange boundaries. All nine are genuinely new, all nine are SECURITY
     // DEFINER with an empty search path, and none replaces an applied body.
-    expect(count("function")).toBe(517);
+    //
+    // 518 with 20260901010500, which adds ONE top-level declaration: the
+    // private trigger function that seals the retired treatment-plan drawing
+    // tombstone. It is SECURITY DEFINER with an empty search path, so the
+    // definer count below moves by exactly one. The three projection replaces
+    // in that file happen through EXECUTE inside DO blocks, which are not
+    // declarations, and 20260901010501 only revokes.
+    expect(count("function")).toBe(518);
     expect(count("policy")).toBe(25);
     // btree_gist (P6-05) is the sole approved production extension; it backs the
     // reservation-ledger exclusion constraints. pgTAP is still provisioned only
@@ -379,7 +386,7 @@ describe("the active migration chain", () => {
     expect(count("extension")).toBe(1);
     expect(
       created.filter((statement) => statement.securityDefiner === true).length,
-    ).toBe(378);
+    ).toBe(379);
     expect(
       created.filter(
         (statement) =>

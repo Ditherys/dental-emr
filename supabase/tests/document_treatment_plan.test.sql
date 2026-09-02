@@ -7,7 +7,7 @@ select extensions.no_plan();
 -- document.generate + document.view); assistant-a holds clinical read only and
 -- no document permission; reception-a holds document.view only (RECEPTIONIST);
 -- dentist-b is a foreign-organization DENTIST. The acknowledged plan P1 carries
--- items, an alternative, a discussion, and a drawing so the TREATMENT_PLAN
+-- items, an alternative and a discussion so the TREATMENT_PLAN
 -- snapshot can be asserted exhaustively.
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at) values
   ('d7100000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dentist-a@p1603.example.test','',statement_timestamp(),'{}','{}',statement_timestamp(),statement_timestamp()),
@@ -90,14 +90,19 @@ select extensions.is((select line_no from public.add_treatment_plan_item('d73000
 select extensions.is((select line_no from public.add_treatment_plan_item('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,null,'27','Crown on 27.',null)),2,'a second item without a procedure is appended at line two');
 select extensions.is((select alternative_no from public.add_treatment_plan_alternative('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'Extraction and implant alternative.')),1,'an alternative is appended at number one');
 select extensions.ok((select discussed_at is not null from public.add_treatment_plan_discussion_v2('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),'Case discussion','Patient prefers conservative care.')),'a discussion captures discussed_at on the DRAFT plan');
-select extensions.is((select version from public.save_treatment_plan_drawing('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'{"strokes":[{"points":[{"x":1,"y":2},{"x":3,"y":4}]}],"width":320,"height":200}'::jsonb)),1,'a renderer-independent drawing is saved at version one');
+-- TASK 16. The freehand plan drawing canvas is retired: the table is an emptied
+-- tombstone that refuses every mutation and 20260901010501 revoked the browser
+-- grant on its writer. What was "a drawing is saved" is now its negative, and
+-- the sections below assert that a document generated with `drawing` in the
+-- include set carries no drawing section at all.
+select extensions.throws_ok($$select public.save_treatment_plan_drawing('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1,'{"strokes":[{"points":[{"x":1,"y":2},{"x":3,"y":4}]}],"width":320,"height":200}'::jsonb)$$,'42501','permission denied for function save_treatment_plan_drawing','the retired drawing writer is unreachable from the browser role');
 select extensions.is((select version from public.present_treatment_plan('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),1)),2,'presenting the DRAFT plan moves it to PRESENTED at version two');
 select extensions.is((select version from public.acknowledge_treatment_plan('d7300000-0000-0000-0000-000000000001',(select id from d7_plans where seq=1),2)),3,'acknowledging the PRESENTED plan moves it to ACKNOWLEDGED at version three');
 reset role;
 select extensions.ok((select status='ACKNOWLEDGED' and version=3 from public.treatment_plans where id=(select id from d7_plans where seq=1)),'the plan is ACKNOWLEDGED at version three before generation');
 
 -- generate_document TREATMENT_PLAN: the acknowledged plan is snapshotted with
--- its header, items, alternative, discussion, and drawing canvas.
+-- its header, items, alternative and discussion. The drawing canvas is retired.
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001',true);
@@ -117,7 +122,7 @@ select extensions.ok((select data_snapshot->'alternatives'->0->>'summary'='Extra
 select extensions.is((select jsonb_array_length(data_snapshot->'discussions') from public.documents where id=(select id from d7_documents where seq=1)),1,'the snapshot carries the discussion');
 select extensions.ok((select data_snapshot->'discussions'->0->>'context'='Case discussion' and data_snapshot->'discussions'->0->>'discussedBy'='d7100000-0000-0000-0000-000000000001' and data_snapshot->'discussions'->0->>'treatingProviderId'='d9200000-0000-0000-0000-000000000001' and data_snapshot->'discussions'->0->>'discussedAt' is not null from public.documents where id=(select id from d7_documents where seq=1)),'the discussion section carries dentist, time, and context');
 select extensions.ok(not exists (select 1 from jsonb_array_elements((select data_snapshot->'discussions' from public.documents where id=(select id from d7_documents where seq=1))) as discussion where discussion ? 'notes'),'the discussion snapshot never carries free-form notes bodies');
-select extensions.ok((select data_snapshot->'drawing'->'drawing'->'width' = '320' and data_snapshot->'drawing'->'drawing'->'strokes'->0->'points'->0->>'x' = '1' and data_snapshot->'drawing'->>'version' = '1' from public.documents where id=(select id from d7_documents where seq=1)),'the drawing canvas jsonb is included verbatim with its version');
+select extensions.ok((select not (data_snapshot ? 'drawing') from public.documents where id=(select id from d7_documents where seq=1)),'a document generated with drawing in the include set carries no drawing section after the retirement');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='d7200000-0000-0000-0000-000000000001' and action='document.generated' and metadata->>'document_type'='TREATMENT_PLAN' and metadata->'include_set'->>'planId'=(select id from d7_plans where seq=1)::text and metadata->'include_set'->>'items'='true'),1,'generation appends one audit event with the TREATMENT_PLAN document_type and include_set metadata');
 
 -- Reproducibility: a second generation produces a byte-identical snapshot, and
@@ -131,7 +136,9 @@ select extensions.ok((select first.data_snapshot = second.data_snapshot
    and second.patient_id = 'd7500000-0000-0000-0000-000000000001'
   where first.id = (select id from d7_documents where seq=1)),'a re-generation yields a jsonb-identical reproducible snapshot');
 select extensions.ok((select status='ACKNOWLEDGED' and version=3 and title='Full mouth restoration' from public.treatment_plans where id=(select id from d7_plans where seq=1)),'generation leaves the acknowledged plan untouched');
-select extensions.is((select count(*)::integer from public.audit_events where organization_id='d7200000-0000-0000-0000-000000000001' and action like 'treatment.plan.%'),8,'generation appends no treatment-plan mutation audit event (the eight lifecycle audits from the fixture are unchanged)');
+-- Seven, not eight, since task 16: the refused drawing save appends nothing.
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='d7200000-0000-0000-0000-000000000001' and action like 'treatment.plan.%'),7,'generation appends no treatment-plan mutation audit event (the seven lifecycle audits from the fixture are unchanged)');
+select extensions.is((select count(*)::integer from public.audit_events where organization_id='d7200000-0000-0000-0000-000000000001' and action='treatment.plan.drawing_saved'),0,'the refused drawing save appends no audit event, so nothing records an act that did not happen');
 select extensions.throws_ok($$update public.treatment_plans set title='rewrite' where id=(select id from d7_plans where seq=1)$$,'23514','presented/acknowledged treatment plans are immutable; create a new version','the acknowledged plan remains immutable under the database trigger even after being snapshotted');
 select extensions.is((select count(*)::integer from public.audit_events where organization_id='d7200000-0000-0000-0000-000000000001' and action='document.generated' and metadata->>'document_type'='TREATMENT_PLAN'),2,'two TREATMENT_PLAN generations append exactly two document.generated audit events');
 
@@ -153,7 +160,9 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','d7100000-0000-0000-0000-000000000001',true);
 select extensions.is((select version from public.generate_document('d7300000-0000-0000-0000-000000000001','d7500000-0000-0000-0000-000000000001','TREATMENT_PLAN',jsonb_build_object('planId',(select id from d7_plans where seq=1),'drawing',true))),1,'a TREATMENT_PLAN document can be generated with a drawing-only include set');
 reset role;
-select extensions.ok((select data_snapshot ? 'plan' and data_snapshot ? 'drawing' and not (data_snapshot ? 'items') and not (data_snapshot ? 'alternatives') and not (data_snapshot ? 'discussions') from public.documents where document_type='TREATMENT_PLAN' and include_set ? 'drawing' and not (include_set ? 'items')),'unselected plan sections are absent from the snapshot while the plan header is always present');
+-- The retired `drawing` key is still ACCEPTED so an existing caller is not
+-- rejected; it simply contributes nothing. The plan header is always present.
+select extensions.ok((select data_snapshot ? 'plan' and not (data_snapshot ? 'drawing') and not (data_snapshot ? 'items') and not (data_snapshot ? 'alternatives') and not (data_snapshot ? 'discussions') from public.documents where document_type='TREATMENT_PLAN' and include_set ? 'drawing' and not (include_set ? 'items')),'unselected plan sections are absent from the snapshot while the plan header is always present, and the retired drawing section is never present');
 
 -- generate_document validation for the TREATMENT_PLAN type.
 select extensions.throws_ok($$select public.generate_document('d7300000-0000-0000-0000-000000000001','d7500000-0000-0000-0000-000000000001','TREATMENT_PLAN','{"items":true}'::jsonb)$$,'22023','invalid input','a TREATMENT_PLAN include set without a planId is rejected');

@@ -5,8 +5,7 @@
 // Anatomy originates in the controlled fork Ditherys/React-Odontogram-Modul at
 // commit 5e28d931feefe4c3382513dbb0f5a9db9cf9948c (src/assets/teeth-svgs/measured),
 // itself derived from ZoliQua/React-Odontogram-Modul. MIT licensed; the upstream
-// copyright and permission notice is preserved in THIRD_PARTY_NOTICES.md and
-// vendor/react-advanced-odontogram/LICENSE.
+// copyright and permission notice is preserved verbatim in THIRD_PARTY_NOTICES.md.
 //
 // This module is plain data. It contains no markup and no executable text.
 // Regenerate with: pwsh -File scripts/generate-odontogram-svg-nodes.ps1

@@ -3,7 +3,16 @@
 /* The reviewed templates author every clinical layer as data-active; the
  * fork shipped this single rule inside each asset's <style> element. The
  * generator drops that element and this repository owns the rule instead,
- * so no asset carries embedded CSS into the runtime node tree.          */
+ * so no asset carries embedded CSS into the runtime node tree.
+ *
+ * These five rules are the ones that reach the measured asset tree and
+ * change what the chart SAYS. Anatomical templates exist for quadrants 1,
+ * 3, 5 and 7 only; every other quadrant is the same template flipped, and
+ * the clinical layers are directional, so a lost flip puts a finding on the
+ * wrong side of the tooth. They must stay reachable from every surface that
+ * renders anatomy - the workspace, the print sheet, and the export
+ * composer, which inlines the equivalents because an exported file carries
+ * no stylesheet at all.                                                */
 /* ------------------------------------------------------------------ */
 
 .odontogram-measured-asset {
@@ -29,9 +38,82 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Controlled fork print boundary: anatomical chart, legend, provider/date,
- * current/planned projections. */
-/* No print button / no FHIR / no import-export is intentional.        */
+/* The printed clinical chart.                                          */
+/* The browser makes the PDF. There is no PDF library here and there is
+ * not going to be one: these rules turn the print composition into paper,
+ * and "Save as PDF" in the print dialog produces the file.             */
+/* ------------------------------------------------------------------ */
+
+.clinical-chart-print {
+  color-scheme: light;
+}
+
+@media print {
+  .clinical-chart-print {
+    border: 1px solid rgb(226 232 240) !important;
+    box-shadow: none !important;
+    break-inside: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .clinical-chart-print .clinical-chart-print-header,
+  .clinical-chart-print .clinical-chart-print-anatomy,
+  .clinical-chart-print .clinical-chart-print-legend,
+  .clinical-chart-print .clinical-chart-print-periodontal {
+    break-inside: avoid;
+  }
+
+  .clinical-chart-print .clinical-chart-print-header {
+    break-after: avoid;
+  }
+
+  .clinical-chart-print .clinical-chart-print-findings,
+  .clinical-chart-print .clinical-chart-print-plan,
+  .clinical-chart-print .clinical-chart-print-record {
+    break-inside: auto;
+  }
+
+  .clinical-chart-print tr,
+  .clinical-chart-print li {
+    break-inside: avoid;
+  }
+
+  /* The anatomy is mounted read-only, so its controls decide nothing. They
+   * are screen affordances of the shared renderer and are not part of the
+   * document. */
+  .clinical-chart-print button {
+    display: none !important;
+  }
+
+  @page {
+    margin: 12mm;
+    size: A4;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* The on-screen chart host.                                            */
+/* `ForkOdontogram` is a thin compatibility wrapper around the EMR-owned
+ * renderer and is removed by task 17. Only two rules survive the fork's
+ * removal, and only because dropping them would be a visible regression:
+ * the wrapper must not exceed its column, and the INTERACTIVE chart must
+ * not print a second time underneath the print sheet, which reproduces
+ * the same anatomy in a paper composition.                             */
+/* ------------------------------------------------------------------ */
+
+.dental-emr-fork {
+  max-width: 100%;
+}
+
+@media print {
+  .dental-emr-fork {
+    display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* The attributable print-history sheet.                                */
 /* ------------------------------------------------------------------ */
 
 .odontogram-print-root {
@@ -64,213 +146,6 @@
   border-left: 3px solid rgb(16 185 129 / 0.7);
 }
 
-/* Controlled fork host. The vendored renderer owns anatomical geometry and
- * control behavior; this layer only maps it into the EMR's tokens and layout. */
-.dental-emr-fork {
-  --odon-bg: var(--background);
-  --odon-panel: var(--card);
-  --odon-card: var(--card);
-  --odon-muted: var(--muted-foreground);
-  --odon-text: var(--foreground);
-  --odon-line: var(--border);
-  --odon-accent: var(--primary);
-  --odon-accent2: var(--success);
-  max-width: 100%;
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), sans-serif;
-}
-
-.dental-emr-fork :where(button, input, select, textarea) {
-  font-family: inherit;
-}
-
-.dental-emr-fork .odontogram-root {
-  max-width: 100%;
-  color: var(--foreground);
-  font-family: inherit;
-}
-
-.dental-emr-fork-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.dental-emr-fork-chart-column {
-  min-width: 0;
-}
-
-.dental-emr-fork .chart,
-.dental-emr-fork .panel,
-.dental-emr-fork .card {
-  border-radius: var(--radius);
-  box-shadow: none;
-}
-
-.dental-emr-fork .chart {
-  max-width: 100%;
-  overflow-x: auto;
-  background: var(--card);
-}
-
-.dental-emr-fork .chart-header {
-  position: sticky;
-  left: 0;
-  min-width: min(58rem, 100%);
-  padding: 0.625rem 0.75rem;
-  background: var(--card);
-}
-
-.dental-emr-fork #toothGrid[data-anatomy="measured"] {
-  min-width: 58rem;
-  overscroll-behavior-x: contain;
-}
-
-.dental-emr-fork .dental-emr-fork-controls.panel {
-  grid-column: auto;
-  width: auto;
-  max-width: 100%;
-  background: var(--card);
-}
-
-.dental-emr-fork .panel-body {
-  max-height: min(70vh, 48rem);
-  padding: 0.625rem;
-  gap: 0.625rem;
-}
-
-.dental-emr-fork .card {
-  padding: 0.625rem;
-}
-
-.dental-emr-fork .btn,
-.dental-emr-fork .chart-mode-btn,
-.dental-emr-fork .icon-btn {
-  border-radius: var(--radius);
-}
-
-.dental-emr-fork .tooth-info {
-  margin-top: 0.75rem;
-  border-radius: var(--radius);
-  box-shadow: none;
-}
-
-@media (max-width: 1279px) {
-  .dental-emr-fork-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .dental-emr-fork .dental-emr-fork-controls.panel {
-    grid-column: 1;
-  }
-
-  .dental-emr-fork .panel-body {
-    max-height: none;
-  }
-}
-
-@media (pointer: coarse) {
-  .dental-emr-fork :where(button, select, input:not([type="checkbox"]):not([type="radio"])) {
-    min-height: 2.75rem;
-  }
-}
-
-@media print {
-  /* The patient page owns one live singleton fork chart. Its print-safe
-   * current/planned SVG clones live in ForkPrintChart below the chart, so do
-   * not print the interactive singleton a second time. Standalone print
-   * previews use a different class and remain visible. */
-  .dental-emr-fork:not(.dental-emr-fork-print-host) {
-    display: none !important;
-  }
-
-  .dental-emr-fork .dental-emr-fork-controls,
-  .dental-emr-fork .chart-actions {
-    display: none !important;
-  }
-}
-
-/* Controlled-fork print projection. The screen chart supplies the SVG in the
- * patient composition; standalone print previews can render the same fork
- * surfaces through .dental-emr-fork-print-svg. */
-.fork-print-root {
-  border-radius: var(--radius);
-  box-shadow: none;
-}
-
-.fork-print-root .fork-print-chart {
-  min-width: 0;
-  overflow-x: auto;
-}
-
-.fork-print-root .fork-print-live-renderer {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.fork-print-root .fork-print-projection {
-  min-width: 0;
-  overflow-x: auto;
-}
-
-.fork-print-root .fork-print-static-svg {
-  min-width: 58rem;
-}
-
-.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] {
-  min-width: 0;
-}
-
-.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .upper-arch,
-.fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .lower-arch {
-  grid-template-columns: repeat(16, minmax(0, 1fr));
-  width: 100%;
-}
-
-@media print {
-  .fork-print-root {
-    border-color: rgb(226 232 240) !important;
-    break-inside: auto;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .fork-print-root .dental-emr-fork-print-svg .tooth-info,
-  .fork-print-root .dental-emr-fork-print-svg .panel,
-  .fork-print-root .dental-emr-fork-print-svg button,
-  .fork-print-root .dental-emr-fork-print-svg .chart-actions,
-  .fork-print-root .chart-mode-toggle,
-  .fork-print-root .proposed-legend,
-  .dental-emr-fork .chart-mode-toggle,
-  .dental-emr-fork .proposed-legend {
-    display: none !important;
-  }
-
-  .fork-print-root .fork-print-live-renderer {
-    display: none !important;
-  }
-
-  .fork-print-root .fork-print-projection {
-    overflow: visible;
-  }
-
-  .fork-print-root .fork-print-static-svg {
-    min-width: 0;
-    overflow: visible;
-  }
-
-  .fork-print-root .fork-print-static-svg > .tooth-grid[data-anatomy="measured"] .tooth-svg svg {
-    max-width: 100%;
-    height: auto;
-  }
-}
-
 .odontogram-print-history li[data-voided="1"] {
   opacity: 0.65;
   text-decoration: line-through;
@@ -295,11 +170,6 @@
   /* Hide screen-only affordances in print */
   .odontogram-print-root button {
     box-shadow: none !important;
-  }
-
-  @page {
-    margin: 12mm;
-    size: A4;
   }
 
   /* Distributions that would otherwise use background tints must still

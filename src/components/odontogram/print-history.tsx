@@ -76,19 +76,9 @@ export function OdontogramPrintHistory({ dto, printMeta }: OdontogramPrintHistor
       >
         <p className="text-xs font-medium text-slate-700">Measured chart (print)</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          The measured chart renders at fixed print widths. Use browser Print for A4. Chart state below reflects current/planned distinction as stored.
+          Use the browser&rsquo;s own Print for A4; &ldquo;Save as PDF&rdquo; there produces the file. No PDF library is involved. The history below reflects the current/planned distinction exactly as stored.
         </p>
-        <div className="mt-2 grid grid-cols-8 gap-1 text-center text-[10px] tabular-nums text-slate-600 sm:grid-cols-16" aria-hidden="true">
-          {[18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28].map((fdi) => (
-            <span key={fdi} className="rounded border bg-white px-1 py-1">{fdi}</span>
-          ))}
-        </div>
-        <div className="mt-1 grid grid-cols-8 gap-1 text-center text-[10px] tabular-nums text-slate-600 sm:grid-cols-16" aria-hidden="true">
-          {[48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38].map((fdi) => (
-            <span key={fdi} className="rounded border bg-white px-1 py-1">{fdi}</span>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-muted-foreground">If printing, the full measured SVG chart from the workspace is reproduced via the same DTO projection; this preview line ensures print CSS targets exist even when the canvas is paginated.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">The anatomy itself is printed by <code>ClinicalChartPrint</code>, which mounts the EMR&rsquo;s own read-only renderer so the printed picture is the one on screen, orientation transforms and hidden clinical layers included. This sheet is the attributable history that accompanies it.</p>
       </div>
 
       <div
@@ -249,8 +239,8 @@ export function OdontogramPrintHistory({ dto, printMeta }: OdontogramPrintHistor
       </section>
 
       <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground print:break-inside-avoid">
-        Print is an attribution-preserving projection of the relational odontogram DTO. No fork JSON import/export, PDF, or image export path is present.
-        Interchange mappings (ISO 3950/ICDAS) are isolated candidates documented outside the UI and require a separate ADR before any exposure.
+        Print is an attribution-preserving projection of the relational odontogram DTO. It holds no renderer state and no browser-local state: every reload rebuilds it from the authorized record.
+        Authorized interchange - staged import and audited export - is a separate, permission-checked boundary and is never reachable from this sheet.
       </p>
     </div>
   );

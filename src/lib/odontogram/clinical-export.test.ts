@@ -14,6 +14,7 @@ import {
   clinicalExportContentType,
   chartExportSvgFrom,
   clinicalExportFilename,
+  clinicalPrintHeaderFrom,
   clampExportScale,
   sanitizeChartExportSvg,
   sanitizeExportPatientCode,
@@ -359,5 +360,35 @@ describe("the sanitizer's tag boundaries", () => {
     expect(safe).not.toContain("<style");
     expect(safe).not.toContain("attacker.example");
     expect(safe).toContain('style="display:none"');
+  });
+});
+
+describe("the print header", () => {
+  it("is built from the canonical export projection and nothing the browser holds", () => {
+    const header = clinicalPrintHeaderFrom(projection);
+    expect(header).toEqual({
+      patientCode: "P-000123",
+      clinicalDate: "2026-09-01",
+      scope: "CHART_AND_PROGRESS",
+    });
+  });
+
+  it("sanitizes a patient code the same way a filename does, so a name cannot print", () => {
+    const header = clinicalPrintHeaderFrom({ ...projection, patientCode: "Juan Dela Cruz <b>" });
+    expect(header.patientCode).toBe("JuanDelaCruzb");
+    expect(header.patientCode).not.toContain(" ");
+    expect(header.patientCode).not.toContain("<");
+  });
+
+  it("refuses a chart date that is not an ISO clinical day", () => {
+    expect(() => clinicalPrintHeaderFrom({ ...projection, clinicalDate: "01/09/2026" })).toThrow(
+      /ISO clinical date/i,
+    );
+  });
+
+  it("carries no export id, no organization, no branch and no actor", () => {
+    const header = clinicalPrintHeaderFrom(projection);
+    expect(Object.keys(header).sort()).toEqual(["clinicalDate", "patientCode", "scope"]);
+    expect(JSON.stringify(header)).not.toContain(projection.exportId);
   });
 });

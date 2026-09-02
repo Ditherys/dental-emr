@@ -117,12 +117,19 @@ select extensions.throws_ok($$insert into public.treatment_plan_discussions (org
 select extensions.throws_ok($$insert into public.treatment_plan_discussions (organization_id,plan_id,discussed_at,context) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002',statement_timestamp(),repeat('c',201))$$,'23514',null,'a discussion context longer than 200 characters is rejected');
 select extensions.throws_ok($$insert into public.treatment_plan_discussions (organization_id,plan_id,discussed_at,context,notes) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002',statement_timestamp(),'Context',repeat('n',4001))$$,'23514',null,'discussion notes longer than 4000 characters are rejected');
 
--- treatment_plan_drawings: bounded renderer-independent object and one-per-plan.
-select extensions.lives_ok($$insert into public.treatment_plan_drawings (id,organization_id,plan_id,drawing,version) values ('d1640000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','{"strokes":[]}'::jsonb,1)$$,'a bounded object drawing is accepted at version one');
-select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','[1,2,3]'::jsonb)$$,'23514',null,'a non-object drawing is rejected');
-select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002',jsonb_build_object('data',repeat('x',70000)))$$,'23514',null,'a drawing larger than 65536 bytes is rejected');
-select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','{"strokes":[]}'::jsonb)$$,'23505',null,'a second drawing for the same plan is rejected by unique(org,plan_id)');
-select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing,version) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000003','{"strokes":[]}'::jsonb,0)$$,'23514',null,'a drawing version must be positive');
+-- treatment_plan_drawings: RETIRED by task 16. The bounded-object, one-per-plan
+-- and positive-version checks are all still declared on the table - the columns
+-- and constraints above are unchanged - but nothing can reach them any more:
+-- the tombstone trigger refuses every row before a CHECK or a unique index is
+-- consulted. Each probe below is the same statement as before, now asserting
+-- the strictly stronger refusal. The full retirement contract, including that
+-- the table is empty and holds no grant, is in
+-- supabase/tests/treatment_plan_drawing_retirement.test.sql.
+select extensions.throws_ok($$insert into public.treatment_plan_drawings (id,organization_id,plan_id,drawing,version) values ('d1640000-0000-0000-0000-000000000001','b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','{"strokes":[]}'::jsonb,1)$$,'42501','treatment plan drawings are retired','a well-formed drawing is refused by the retirement guard');
+select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','[1,2,3]'::jsonb)$$,'42501','treatment plan drawings are retired','a non-object drawing never reaches the object CHECK');
+select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002',jsonb_build_object('data',repeat('x',70000)))$$,'42501','treatment plan drawings are retired','an oversized drawing never reaches the 65536-byte CHECK');
+select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000002','{"strokes":[]}'::jsonb)$$,'42501','treatment plan drawings are retired','a second drawing for the same plan never reaches unique(org,plan_id)');
+select extensions.throws_ok($$insert into public.treatment_plan_drawings (organization_id,plan_id,drawing,version) values ('b7200000-0000-0000-0000-000000000001','d1600000-0000-0000-0000-000000000003','{"strokes":[]}'::jsonb,0)$$,'42501','treatment plan drawings are retired','a non-positive version never reaches the positive-version CHECK');
 
 with test_failures as (select finish from extensions.finish() where finish !~ '^1\.\.[0-9]+$')
 select case when count(*)=0 then 'P1_TEST_PASS' else string_agg(finish,E'\n') end as p1_test_result from test_failures;
