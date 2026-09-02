@@ -11,7 +11,7 @@ import {
   measuredTemplateLayerIds,
   type MeasuredSvgNode,
 } from "./measured-assets";
-import { measuredForkLayers } from "./measured-fork-layers";
+import { DEFAULT_ANATOMY_DISPLAY, measuredForkLayers, type ChartAnatomyDisplay } from "./measured-fork-layers";
 // The generator strips each asset's inline `[data-active="0"] { display: none }`
 // rule, so this repository owns it. It must travel with the component that owns
 // the `data-active` contract, or a tooth rendered outside `MeasuredChart` paints
@@ -87,9 +87,11 @@ export function MeasuredSvgAsset({
 export function MeasuredToothAsset({
   tooth,
   label,
+  display = DEFAULT_ANATOMY_DISPLAY,
 }: {
   tooth: RendererToothProjection;
   label: string;
+  display?: ChartAnatomyDisplay;
 }): React.ReactElement | null {
   const assetKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
   if (!assetKey) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
@@ -97,7 +99,7 @@ export function MeasuredToothAsset({
   return (
     <MeasuredSvgAsset
       assetKey={assetKey}
-      activeLayers={measuredForkLayers(tooth, measuredTemplateLayerIds(assetKey))}
+      activeLayers={measuredForkLayers(tooth, measuredTemplateLayerIds(assetKey), display)}
       orientation={measuredOrientation(tooth.fdi)}
       label={label}
     />

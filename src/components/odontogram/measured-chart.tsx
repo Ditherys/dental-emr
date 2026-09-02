@@ -13,6 +13,7 @@ import {
   type RendererToothProjection,
 } from "@/lib/odontogram/renderer-projection";
 
+import type { ChartAnatomyDisplay } from "./measured-fork-layers";
 import { MeasuredTooth, type SelectionModifiers, type ToothProposalMarker } from "./measured-tooth";
 
 /**
@@ -59,6 +60,10 @@ export type AnatomicalChartProps = {
    * shows a proposal marker for the same projection.
    */
   proposals?: ReadonlyMap<number, ToothProposalMarker>;
+  /** Draw the bone/gum backdrop. Presentation only; defaults to today's behaviour. */
+  showBoneGum?: boolean;
+  /** Draw the healthy pulp chamber. Presentation only; defaults to today's behaviour. */
+  showPulp?: boolean;
 };
 
 type ArchRow = "upper" | "lower";
@@ -144,6 +149,7 @@ function ToothRow({
   arch,
   auto,
   proposals,
+  display,
 }: {
   teeth: readonly number[];
   chart: ReadonlyMap<number, RendererToothProjection>;
@@ -156,6 +162,7 @@ function ToothRow({
   label: string;
   arch: ArchRow;
   auto: boolean;
+  display: ChartAnatomyDisplay;
 }): React.ReactElement | null {
   if (teeth.length === 0) return null;
   const quadrantSize = teeth.length <= 10 ? 5 : 8;
@@ -186,6 +193,7 @@ function ToothRow({
             forceToggle={multiSelect}
             proposal={proposals?.get(fdi) ?? null}
             onActivate={onActivate}
+            display={display}
           />
         );
       })}
@@ -202,9 +210,15 @@ export function MeasuredChart({
   onSelectionChange,
   readOnly = false,
   proposals,
+  showBoneGum = true,
+  showPulp = true,
 }: AnatomicalChartProps): React.ReactElement {
   const [multiSelect, setMultiSelect] = React.useState(false);
   const anchorRef = React.useRef<number | null>(null);
+  const display = React.useMemo<ChartAnatomyDisplay>(
+    () => ({ showBoneGum, showPulp }),
+    [showBoneGum, showPulp],
+  );
 
   // Without an explicit choice the chart still infers the dentition from the
   // record, so a recorded primary finding is never hidden. With one, the
@@ -300,6 +314,7 @@ export function MeasuredChart({
             multiSelect={multiSelect}
             proposals={proposals}
             onActivate={handleActivate}
+            display={display}
           />
         ))}
       </div>

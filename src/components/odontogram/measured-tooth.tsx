@@ -5,6 +5,7 @@ import * as React from "react";
 import type { ClinicalFeatureDetail } from "@/lib/odontogram/feature-contract";
 import type { RendererToothProjection } from "@/lib/odontogram/renderer-projection";
 import { toLabel, type NumberingSystem } from "@/lib/odontogram/dentition";
+import { DEFAULT_ANATOMY_DISPLAY, type ChartAnatomyDisplay } from "./measured-fork-layers";
 
 /**
  * The reviewed anatomy is a ~3.5 MB checked-in node tree. It stays behind this
@@ -53,6 +54,8 @@ export type MeasuredToothProps = {
   forceToggle?: boolean;
   /** Proposed, not recorded. Supplied only by the Treatment plan chart mode. */
   proposal?: ToothProposalMarker | null;
+  /** Presentation-only anatomy preferences. Defaults to today's behaviour. */
+  display?: ChartAnatomyDisplay;
 };
 
 function detailText(detail: ClinicalFeatureDetail): string {
@@ -87,6 +90,7 @@ export function MeasuredTooth({
   onFocusChange,
   forceToggle = false,
   proposal = null,
+  display = DEFAULT_ANATOMY_DISPLAY,
 }: MeasuredToothProps): React.ReactElement {
   const displayLabel = toLabel(tooth.fdi, notation);
   const summary = clinicalSummary(tooth);
@@ -166,7 +170,7 @@ export function MeasuredTooth({
       )}
       <span className="relative flex h-[74px] w-full items-center justify-center overflow-hidden" aria-hidden="true">
         <React.Suspense fallback={<span className="text-xs text-muted-foreground">{tooth.fdi}</span>}>
-          <MeasuredToothAsset tooth={tooth} label={ariaLabel} />
+          <MeasuredToothAsset tooth={tooth} label={ariaLabel} display={display} />
         </React.Suspense>
       </span>
       <span className="sr-only">{ariaLabel}</span>
