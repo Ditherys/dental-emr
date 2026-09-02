@@ -141,7 +141,39 @@ describe("PhotoUploadDialog", () => {
     fireEvent.change(screen.getByLabelText("Photo file"), { target: { files: [file] } });
     expect(screen.getByLabelText("Display filename")).toHaveValue("2026-09-01_radiograph_tooth-36-37_01.jpg");
 
-    await user.clear(screen.getByLabelText("Clinical note"));
+    await user.type(screen.getByLabelText("Clinical note"), "Synthetic radiograph note");
+    expect(screen.getByLabelText("Clinical note")).toHaveValue("Synthetic radiograph note");
+  });
+
+  // A prefilled capture instant that is recomputed on every parent render puts a
+  // wall clock inside this dialog's reset key. A minute ticking over while the
+  // form is open would then silently discard the chosen file, the edited display
+  // filename and the typed note. Half-authored clinical work must not be
+  // clock-dependent.
+  it("keeps half-authored work when only the prefilled time of day changes", async () => {
+    const user = userEvent.setup();
+    const props = {
+      onOpenChange: vi.fn(),
+      canWriteClinical: true,
+      defaultCategory: "RADIOGRAPH" as const,
+      defaultToothCodes: ["36"],
+      onSubmit: vi.fn(),
+    };
+    const { rerender } = render(<PhotoUploadDialog {...props} open defaultCaptureAt="2026-09-01T14:30:00+08:00" />);
+
+    const file = new File(["synthetic image"], "camera.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Photo file"), { target: { files: [file] } });
+    await user.clear(screen.getByLabelText("Display filename"));
+    await user.type(screen.getByLabelText("Display filename"), "chosen-name.jpg");
+    await user.type(screen.getByLabelText("Clinical note"), "Half-authored note");
+
+    // Same clinical date, one minute later: the same open form, not a new context.
+    rerender(<PhotoUploadDialog {...props} open defaultCaptureAt="2026-09-01T14:31:00+08:00" />);
+
+    expect(screen.getByLabelText("Display filename")).toHaveValue("chosen-name.jpg");
+    expect(screen.getByLabelText("Clinical note")).toHaveValue("Half-authored note");
+    expect(screen.getByText(/JPEG image selected/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Confirm and add to record" })).toBeEnabled();
   });
 
   it("does not expose upload controls to a read-only user", () => {

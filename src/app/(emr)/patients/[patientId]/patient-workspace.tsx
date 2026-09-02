@@ -211,12 +211,30 @@ export function PatientWorkspace({
   const [review, setReview] = useState<DuplicateReview | null>(null);
   const [reviewRequest, setReviewRequest] = useState<DuplicateRequest | null>(null);
   const [photoUploadOpen, setPhotoUploadOpen] = useState(false);
-  // The clinical context the upload flow was opened from. Null when it was
-  // opened from the gallery itself, which carries no tooth selection.
-  const [photoAttachment, setPhotoAttachment] = useState<ClinicalPhotoAttachmentContext | null>(null);
+  // The clinical context the upload flow was opened from, resolved to a concrete
+  // capture instant ONCE at open. Null when it was opened from the gallery
+  // itself, which carries no tooth selection.
+  //
+  // The instant must not be recomputed per render: the dialog keys its prefill
+  // reset on these values, so a wall clock in here would let a minute ticking
+  // over discard a clinician's chosen file, edited filename and typed note while
+  // the form is still open.
+  const [photoAttachment, setPhotoAttachment] = useState<{
+    captureAt: string;
+    toothCodes: readonly string[];
+    procedureCaseId: string | null;
+  } | null>(null);
 
   const openPhotoUpload = useCallback((context: ClinicalPhotoAttachmentContext | null) => {
-    setPhotoAttachment(context);
+    setPhotoAttachment(
+      context
+        ? {
+            captureAt: photoCaptureAtFrom(context.clinicalDate),
+            toothCodes: context.toothCodes,
+            procedureCaseId: context.procedureCaseId,
+          }
+        : null,
+    );
     setPhotoUploadOpen(true);
   }, []);
 
@@ -599,7 +617,7 @@ export function PatientWorkspace({
               onOpenChange={setPhotoUploadOpen}
               canWriteClinical={canWriteClinical}
               onSubmit={uploadClinicalPhoto}
-              defaultCaptureAt={photoAttachment ? photoCaptureAtFrom(photoAttachment.clinicalDate) : ""}
+              defaultCaptureAt={photoAttachment?.captureAt ?? ""}
               defaultToothCodes={photoAttachment?.toothCodes ?? []}
               defaultProcedureCaseId={photoAttachment?.procedureCaseId ?? null}
               procedureCases={photoProcedureCases}

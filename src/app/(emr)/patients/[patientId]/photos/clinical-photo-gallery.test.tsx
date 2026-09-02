@@ -4,6 +4,8 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PHOTO_CATEGORIES } from "@/lib/clinical-media/types";
+
 import type { ClinicalPhotoDisplay } from "./clinical-photo-gallery";
 import { ClinicalPhotoGallery } from "./clinical-photo-gallery";
 
@@ -140,6 +142,35 @@ describe("ClinicalPhotoGallery", () => {
     await user.clear(screen.getByLabelText("Filter by tooth"));
     await user.selectOptions(screen.getByLabelText("Filter by photographer"), "Dr. Other Dentist");
     expect(screen.getByText("2026-08-15_diagnostic_01.png")).toBeVisible();
+  });
+
+  it("offers every canonical category the record actually holds, radiograph included", () => {
+    const oneOfEach: ClinicalPhotoDisplay[] = PHOTO_CATEGORIES.map((category, index) => ({
+      ...photos[0]!,
+      photoId: `22000000-0000-0000-0000-0000000000${(30 + index).toString()}`,
+      category,
+      displayFilename: `2026-08-0${index + 1}_${category.toLowerCase()}_01.jpg`,
+      captureAt: `2026-08-0${index + 1}T09:00:00+08:00`,
+      pairedPhotoId: null,
+    }));
+    render(<ClinicalPhotoGallery patientId={patientId} actingBranchId="32000000-0000-0000-0000-000000000001" initialPhotos={oneOfEach} canWriteClinical />);
+
+    const options = within(screen.getByLabelText("Filter by category"))
+      .getAllByRole("option")
+      .map((option) => (option as HTMLOptionElement).value);
+
+    expect(options).toEqual([
+      "ALL",
+      "AFTER",
+      "BEFORE",
+      "DIAGNOSTIC",
+      "EXTRAORAL",
+      "INTRAORAL",
+      "OTHER",
+      "PROGRESS",
+      "RADIOGRAPH",
+    ]);
+    expect(within(screen.getByLabelText("Filter by category")).getByRole("option", { name: "Radiograph" })).toBeInTheDocument();
   });
 
   it("labels a radiograph as its own category and filters it without hiding diagnostic photographs", async () => {

@@ -98,9 +98,15 @@ export function PhotoUploadDialog({
   // 36 would silently carry tooth 11 from an earlier visit into the record.
   // The adjustment runs during render rather than in an effect so no frame can
   // paint the previous selection against the new one.
+  //
+  // The key deliberately uses only the clinical DATE of the prefilled capture
+  // instant, never its time of day. A caller that recomputes the time — from a
+  // clock, or on any re-render — must not be able to reset a form the clinician
+  // is still filling in. Time of day is a starting value, not the identity of
+  // the clinical context.
   const [openedWith, setOpenedWith] = useState<string | null>(null);
   const contextKey = open
-    ? [defaultCaptureAt, defaultCategory, defaultToothCodes.join(","), defaultSurfaces.join(","), defaultProcedureCaseId ?? ""].join("|")
+    ? [defaultCaptureAt.slice(0, 10), defaultCategory, defaultToothCodes.join(","), defaultSurfaces.join(","), defaultProcedureCaseId ?? ""].join("|")
     : null;
   if (contextKey !== openedWith) {
     setOpenedWith(contextKey);

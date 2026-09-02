@@ -327,6 +327,7 @@ describe("registered database suites", () => {
       "periodontal_full_chart_rpcs.test.sql",
       "postdated_cheques.test.sql",
       "procedure_cases_and_plan_details.test.sql",
+      "procedure_followup_success_path.test.sql",
       "procedure_foundation.test.sql",
       "procedure_installment_schedules.test.sql",
       "provider_availability.test.sql",

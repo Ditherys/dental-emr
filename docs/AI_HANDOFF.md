@@ -1,4 +1,4 @@
-# AI Handoff - Unified Clinical Chart workspace, Task 14
+# AI Handoff - Unified Clinical Chart workspace, Task 14 (round 2)
 
 Rolling summary of the commit being created. Older handoff revisions are in Git
 history; this file is deliberately not an append-only transcript.
@@ -6,8 +6,8 @@ history; this file is deliberately not an append-only transcript.
 Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
-`2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is this
-commit.
+`2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
+and this commit.
 
 ## Task 14 - the private clinical photograph gallery in the chart toolbar (2026-09-02)
 
@@ -88,14 +88,9 @@ guarded replace pattern, with pre-guards additionally requiring the archive,
 stale-version and source-MIME guards to already be present so the repair cannot
 resurrect an older body.
 
-**A sibling of this defect is still live and was NOT fixed here.**
-`public.record_procedure_followup` also declares `RETURNS TABLE(..., version
-integer)` and contains `update public.procedure_cases set version=version+1 ...
-returning version into version`. Its pgTAP coverage asserts only grants and the
-anonymous denial - no success path - so it is very likely broken the same way.
-It is a different clinical domain (procedure follow-ups) with its own fixtures,
-and repairing it silently inside the photo task would be scope creep on a
-clinical write path this task does not own. **Escalated to the controller.**
+A sibling of this defect in `public.record_procedure_followup` was escalated in
+round 1 rather than repaired unasked. The controller confirmed it independently
+and assigned it here; it is repaired in round 2 below.
 
 ### Originals, derivatives and the private-media boundary
 
@@ -214,8 +209,10 @@ None.
 
 ### The existing assertions that changed, and why
 
-Three, all consequences of the plan's own instruction to move the gallery into a
-toolbar-opened panel. Nothing was weakened or deleted.
+**Four**, all consequences of the plan's own instruction to move the gallery
+into a toolbar-opened panel. Round 1 of this handoff said three and missed the
+fourth; round 2 corrects the count and restores the coverage. Nothing is
+weakened or deleted.
 
 1. `clinical-chart-workspace.test.tsx` - *"shows one chart mode at a time and
    keeps the progress record and gallery mounted"*. The gallery is deliberately
@@ -229,6 +226,15 @@ toolbar-opened panel. Nothing was weakened or deleted.
    in-file comment saying Task 14 would take it. It still asserts the signpost
    where no photo workflow is mounted; a **new** test covers the attachment path
    where one is.
+4. `clinical-chart-workspace.test.tsx` - *"offers a bounded chart retry..."* had
+   a trailing `expect(getByTestId("gallery-panel")).toBeVisible()` carrying the
+   guarantee that **a failed chart load does not take the photographs away with
+   it**. Round 1 deleted that line with no replacement and did not disclose it.
+   The behaviour was never broken (`hasGallery` is independent of
+   `chartLoadFailed`), so this was a coverage and disclosure defect, not a
+   functional one. The guarantee is now asserted in its post-Task-14 form: while
+   the chart alert stands, the toolbar still offers `Clinical photographs` and
+   the panel still opens with the gallery inside it.
 
 ### Tests run and observed results
 
@@ -337,32 +343,40 @@ Tailwind.
 
 ### Known residual risks and open questions
 
-1. **`public.record_procedure_followup` is very likely broken** with the same
-   `version` ambiguity repaired here for photographs, and has no success-path
-   test. Not fixed: different domain, own fixtures, own review. This is the
-   highest-value follow-up in this handoff.
-2. **`clinical-chart-toolbar.tsx` is in the brief's Modify list and is
-   UNCHANGED.** Disclosed rather than invented around: it already rendered the
-   `Clinical photographs` menu item and already called `onOpenGallery`, so the
-   panel needed nothing from it. The workspace owns the panel, as it owns the
-   print action.
+1. **`public.record_procedure_followup` was broken** with the same `version`
+   ambiguity, and had no success-path test. RESOLVED in round 2: confirmed
+   independently by the controller, assigned here, repaired by
+   `20260901010402`, and covered by a new 13-assertion success-path suite.
+2. **Five files are on the brief's Modify list and are UNCHANGED.** Round 1
+   named only two of them; this is the complete set, and every one is correct
+   as-is rather than an omission:
+   - `clinical-chart-toolbar.tsx` - already rendered the `Clinical photographs`
+     menu item and already called `onOpenGallery`, so the panel needed nothing
+     from it. The workspace owns the panel, as it owns the print action.
+   - `src/types/database.generated.ts` - a CHECK constraint is not represented
+     in generated types, so `category` stays `string`. `db:types:local` was run
+     and produced no diff.
+   - `src/lib/clinical-media/schema.ts` - `photoCategorySchema` at line 4 is
+     `z.enum(PHOTO_CATEGORIES)`, so it picked `RADIOGRAPH` up from the one edit
+     to `types.ts`. Restating the list here would create a second authority.
+   - `src/lib/clinical-media/service.ts` - passes `value.category` straight
+     through to the RPC and never enumerates categories.
+   - `.../photos/actions.ts` - parses with the same schema and never enumerates
+     categories either. Both are covered by new assertions in their suites.
 3. **The brief's Modify list omitted four files this slice genuinely required**:
    `clinical-chart-workspace.tsx` (+ suite) renders the gallery region, and
    `clinical-record-composer.tsx` (+ suite) owns the `PHOTO` kind. Neither step 3
    nor step 4 is expressible without them. `src/lib/clinical-media/types.ts` is
    likewise the only place `PHOTO_CATEGORIES` lives.
-4. **`src/types/database.generated.ts` is in the Modify list and did not
-   change.** A CHECK constraint is not represented in the generated types, so
-   `category` remains `string` there. The Zod boundary is what narrows it.
-5. **A radiograph is not pairable.** Before/after pairing stays restricted to
+4. **A radiograph is not pairable.** Before/after pairing stays restricted to
    `BEFORE`/`AFTER` exactly as before; a `RADIOGRAPH` behaves like `DIAGNOSTIC`
    in that respect. If clinicians want a before/after radiograph comparison,
    that is a pairing-semantics change and belongs in its own reviewed slice.
-6. **The capture instant is completed from the browser clock.** The date comes
+5. **The capture instant is completed from the browser clock.** The date comes
    from the composer's clinical date, which is correct, but the time-of-day is
-   the workstation's. It is a prefill the clinician can correct before
-   confirming, and it is never authorization.
-7. **The gallery's own `border-t` reads oddly as the first element inside the
+   the workstation's. It is resolved ONCE at open (see round 2), is a prefill
+   the clinician can correct before confirming, and is never authorization.
+6. **The gallery's own `border-t` reads oddly as the first element inside the
    panel.** Cosmetic only; left alone rather than restyling a component the
    brief did not ask to restyle.
 
@@ -387,6 +401,225 @@ Tailwind.
   that the composer's `PHOTO` branch cannot reach a write action.
 - The claim that no presigned URL, object key or token enters a log, audit
   metadata or error path anywhere in this diff.
+
+## Task 14 round 2 - review fixes: 0 Critical, 2 Important, 5 Minor (2026-09-02)
+
+The media boundary came back clean on every axis and is UNCHANGED: originals,
+derivatives, the credential grep, the additive category proof, the privacy
+posture and the `PHOTO_RENAME` decision all stood. One migration,
+`20260901010402_procedure_followup_version_ambiguity_repair.sql`, allocated from
+the verified ceiling `20260901010401`. Task 15's brief reserves `010410`-`010412`
+and those were left alone. It grants and revokes nothing and declares nothing at
+top level.
+
+### I1 - a wall clock inside the upload dialog's reset key discarded live work
+
+`patient-workspace.tsx` computed `defaultCaptureAt={photoCaptureAtFrom(...)}`
+**inline in JSX**, so `new Date().getHours()/getMinutes()` re-ran on every
+`PatientWorkspace` render. That value was a component of `contextKey` in
+`photo-upload-dialog.tsx`, and the render-phase prefill sync clears `file`,
+`displayFilename`, `note`, `toothCodesValue`, `surfacesValue` and `error`
+whenever the key changes. With the dialog open, any parent re-render landing in
+a different minute silently discarded the clinician's chosen file, edited
+display filename and typed note. Visible rather than corrupting - the Confirm
+button disables - but clock-driven loss of half-authored clinical work.
+
+Fixed at the root and again at the boundary, because either alone would leave
+the trap set for the next caller:
+
+- `openPhotoUpload` now resolves the capture instant **once at open** and stores
+  it on the attachment state. `photoCaptureAtFrom` is no longer called during
+  render at all.
+- `contextKey` uses only `defaultCaptureAt.slice(0, 10)` - the clinical **date**.
+  Time of day is a starting value, not the identity of the clinical context, so
+  a caller that recomputes it cannot reset a form someone is still filling in.
+
+Test: *"keeps half-authored work when only the prefilled time of day changes"* -
+open prefilled, choose a file, edit the filename, type a note, re-render with a
+`defaultCaptureAt` differing **only in minutes**, and assert the file, the
+filename, the note and the enabled Confirm button all survive. Proven RED
+against the pre-fix key: `expected element to have value chosen-name.jpg`,
+received empty.
+
+### I2 - a fourth deleted assertion, and an accounting that said three
+
+`clinical-chart-workspace.test.tsx`, inside *"offers a bounded chart retry..."*,
+lost `expect(getByTestId("gallery-panel")).toBeVisible()` in round 1 with no
+replacement and no disclosure. It carried the guarantee that **a failed chart
+load does not take the photographs away with it**. The behaviour was never
+broken - `hasGallery` is independent of `chartLoadFailed` - so this was a
+coverage and disclosure defect. A review gate that runs on the implementer's
+accounting needs that accounting to be complete.
+
+The guarantee is now asserted in its post-Task-14 form: while the chart alert
+stands, the toolbar still offers `Clinical photographs` and the panel still
+opens with the gallery inside. The count in the round-1 section above is
+corrected from three to four and the fourth is described there.
+
+### M1 - public.record_procedure_followup, repaired with the success path it never had
+
+Confirmed independently by the controller and assigned here rather than to a
+dedicated slice, because the repair pattern is identical and freshly exercised
+and because Task 17's gate would not catch it - the existing tests prove only
+denial, so it would ship broken.
+
+Two applied statements referenced `version` unqualified against relations that
+also have a `version` column, ambiguous with the function's own RETURNS TABLE
+OUT parameter:
+
+```
+update public.procedure_cases set version=version+1 ... returning version into version
+update private.odontogram_revamp_idempotency set event_id=..., version=version ...
+```
+
+Both now alias the relation and address the OUT parameter through the
+function-name label (`record_procedure_followup.version`), so the two cannot be
+confused in either direction. Behaviour is otherwise untouched: the same two
+columns are written, the same `for update` lock is taken, the idempotency replay
+still short-circuits before any write, and the audit event is unchanged.
+
+**The success path is the requirement, not the qualification** - the missing
+success path IS the defect that let the ambiguity survive. New suite
+`supabase/tests/procedure_followup_success_path.test.sql`, 13 assertions on a
+self-contained synthetic tenant: the follow-up is recorded; it returns case
+version 2; exactly one FOLLOW_UP event exists; it is attributed to the
+signed-in actor; the **stored** case version agrees with the version the caller
+was told; it is audited; a replay returns the original event id and the same
+version, records no second event and does not advance the case again; a
+non-OPEN case raises `P0001 invalid state`; an OWNER acting at a branch where
+he has no active provider link raises `42501 not authorized`; and an actor who
+is not a provider here raises `42501 not authorized`. RED against the applied
+body: `ERROR: column reference "version" is ambiguous ... line 16`.
+
+### The remaining Minors
+
+- **Rename success under-asserted.** The suite checked the returned
+  `display_filename` but not the returned `version`, and never the audit row -
+  the exact gap that hid the original bug. It now asserts the returned version
+  is 2, the **stored** version is 2, `clinical.photo.renamed` is written exactly
+  once, and that audit row's `metadata` is `'{}'::jsonb`, so a rename records no
+  filename or other clinical content.
+- **Gallery category filter asserted for two of eight.** A new test renders one
+  photograph per canonical category from `PHOTO_CATEGORIES` and asserts the
+  filter's full option list, the way the upload dialog's was asserted. It uses
+  its own fixture so the shared one - whose ordering the archive and pairing
+  tests depend on - is untouched.
+- **No progress-record assertion.** The suite now reads
+  `public.get_clinical_progress_record_v1` after recording, renaming and
+  archiving the radiograph, and asserts the capture appears as `PHOTO`, the
+  archive as `PHOTO_ARCHIVE` (matched on `sourceKind` + `sourceId`, since
+  `eventId` is the composite `clinical_photograph:<uuid>`), and that the rename
+  added **no** row. That pins the Task 13 seam and the `PHOTO_RENAME` decision
+  in the same place, and proves a new category needs no projection change.
+- **A test ended on a no-op.** `photo-upload-dialog.test.tsx` closed with a bare
+  `await user.clear(...)`. It now types a note and asserts it, which is what the
+  line was reaching for.
+- **Listed-but-unchanged disclosure corrected.** Round 1 named two such files;
+  there are five. The complete set and the reason each is correct as-is are in
+  residual risk 2 above.
+
+### Ledgered by the controller, deliberately not fixed
+
+- The composer hard-coding `procedureCaseId: null`, delivering procedure context
+  as a dropdown rather than an inferred prefill. An inferred case link on a
+  clinical image is a claim rather than a fact.
+- `drop constraint` / `add constraint` in `20260901010400` takes ACCESS
+  EXCLUSIVE and re-validates the table. Correctness is fine - a widening cannot
+  fail validation - but `ADD CONSTRAINT ... NOT VALID` then `VALIDATE
+  CONSTRAINT` would avoid a long exclusive lock on a large
+  `clinical_photographs` at production scale. Recorded by the controller as a
+  deployment note for the Cloud TEST gate.
+
+### Round 2 files
+
+Added: `supabase/migrations/20260901010402_procedure_followup_version_ambiguity_repair.sql`,
+`supabase/tests/procedure_followup_success_path.test.sql`.
+
+Changed: `.../patient-workspace.tsx`, `.../photos/photo-upload-dialog.tsx`
+(+ suite), `.../photos/clinical-photo-gallery.test.tsx`,
+`src/components/clinical/clinical-chart-workspace.test.tsx`,
+`supabase/tests/clinical_photo_radiograph.test.sql` (17 -> 25 assertions),
+`scripts/remote-database-test-guard.mjs`,
+`scripts/remote-database-test-guard.test.mjs`,
+`scripts/migration-privilege-lint.test.mjs` (files 340 -> 341).
+
+No grant was added, so `scripts/approved-final-grants.mjs`,
+`scripts/boundary-privilege-invariant.test.mjs` and
+`supabase/tests/approved_grant_registry_integrity.test.sql` are unchanged and
+their counters still stand at 405 / 269 / 258.
+
+### Round 2 tests run and observed results
+
+RED first in both halves. Database, against the applied body:
+
+```
+node <single-suite runner> supabase/tests/procedure_followup_success_path.test.sql
+-> ERROR: column reference "version" is ambiguous
+   QUERY: update public.procedure_cases set version=version+1 ... returning version
+   CONTEXT: PL/pgSQL function public.record_procedure_followup(...) line 16
+```
+
+TypeScript, against the pre-fix reset key:
+
+```
+npx vitest run photo-upload-dialog.test.tsx
+-> FAIL keeps half-authored work when only the prefilled time of day changes
+   expected element to have value chosen-name.jpg, received ""
+   Tests 1 failed | 7 passed (8)
+```
+
+The I2 restoration is a coverage assertion over behaviour that was already
+correct, so it passed on first run by design; it is not claimed as red-green.
+
+```
+npm run db:migrate:local     -> applied 20260901010402
+npm run test:db:local        -> halts at supabase/tests/treatment_plans.test.sql
+                                (pre-existing, unchanged), having already run:
+                                PASS supabase/tests/clinical_photo_radiograph.test.sql
+                                PASS supabase/tests/procedure_followup_success_path.test.sql
+                                PASS supabase/tests/clinical_photographs.test.sql
+                                PASS supabase/tests/approved_grant_registry_integrity.test.sql
+npm run storage:start:local  -> PASS (dental-emr-local ready, CORS preflight verified)
+npm run storage:smoke:local  -> PASS all 10 steps, URLs verified without printing
+npm run security:migrations  -> passed (341 files, 93 terminals, 405 approved)
+npm run typecheck            -> clean, no output
+npm run lint                 -> 0 errors, 3 warnings (pre-existing, untouched files)
+npm run test:unit (whole)    -> 2246 passed | 12 failed (199 files)
+```
+
+Run directly, because the gate halts before the end:
+
+```
+psql < supabase/tests/clinical_photo_radiograph.test.sql          -> P1_TEST_PASS (25 assertions)
+psql < supabase/tests/procedure_followup_success_path.test.sql    -> P1_TEST_PASS (13 assertions)
+psql < supabase/tests/clinical_photographs.test.sql               -> P1_TEST_PASS (regression)
+psql < supabase/tests/approved_grant_registry_integrity.test.sql  -> P1_TEST_PASS (regression)
+```
+
+All twelve whole-suite failures were checked and none is caused by this work:
+7 in the two booking suites, reproduced on a clean stash in round 1; and 5 in
+`fork-package.test.ts`, `fork-print-chart.test.tsx` and
+`perio-workspace.test.tsx`, every one `Test timed out in 5000ms` / `15000ms`
+under the 199-file parallel run rather than an assertion failure. Run alone:
+`3 files, 18 tests passed`. Which of those five trip varies run to run, which is
+itself the signature of the pre-existing load timeout the task 12 and task 13
+handoffs recorded.
+
+Playwright was not run; hosted E2E remains unauthorized.
+
+### Round 2 residual risks
+
+1. The follow-up repair is proven against the local applied chain only. Cloud
+   TEST has never executed a successful follow-up either, so the first hosted
+   run is the first real exercise of that path.
+2. `procedure_followup_success_path.test.sql` builds its own tenant rather than
+   using the shared seed, because the seed has no procedure cases and its
+   provider rows carry no `linked_user_id`. That keeps it self-contained but
+   means it does not exercise the seed's permission graph.
+3. The upload dialog now ignores a time-of-day-only change in its prefill. A
+   future caller that genuinely needs to re-prefill the time while the dialog is
+   open would have to close and reopen it. That is the correct trade against
+   silently discarding authored work.
 
 ### Next bounded task
 

@@ -111,13 +111,45 @@ where p.id=(select photo_id from radiograph_ids);
 set local role authenticated;
 select set_config('request.jwt.claim','{"role":"authenticated","aal":"aal2"}',true);
 
+create temp table radiograph_rename(display_filename text, version integer) on commit drop;
+insert into radiograph_rename(display_filename,version)
+select display_filename, version
+from public.rename_clinical_photo('32000000-0000-0000-0000-000000000001',(select photo_id from radiograph_ids),1,'periapical-11-retake.jpg');
+
 select extensions.is(
-  (select display_filename from public.rename_clinical_photo('32000000-0000-0000-0000-000000000001',(select photo_id from radiograph_ids),1,'periapical-11-retake.jpg')),
+  (select display_filename from radiograph_rename),
   'periapical-11-retake.jpg',
   'a radiograph display filename may be corrected'
 );
 
+-- The returned version is the whole point of the optimistic-concurrency
+-- contract, and reading it back is exactly what the ambiguity defect broke.
+-- Asserting it directly, rather than inferring it from the next call's expected
+-- version, is what would have caught the original bug.
+select extensions.is(
+  (select version from radiograph_rename),
+  2,
+  'the rename returns the version it advanced the photograph to'
+);
+
 set local role postgres;
+select extensions.is(
+  (select version from public.clinical_photographs where id=(select photo_id from radiograph_ids)),
+  2,
+  'the stored version agrees with the version the rename reported'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events
+   where action='clinical.photo.renamed' and entity_id=(select photo_id from radiograph_ids)),
+  1,
+  'a successful rename is audited exactly once'
+);
+select extensions.is(
+  (select metadata from public.audit_events
+   where action='clinical.photo.renamed' and entity_id=(select photo_id from radiograph_ids)),
+  '{}'::jsonb,
+  'the rename audit carries no filename or other clinical content'
+);
 select extensions.ok(
   (select p.source_file_id=b.source_file_id and f.object_key=b.object_key
       and f.size_bytes is not distinct from b.size_bytes
@@ -159,6 +191,44 @@ select extensions.is(
   (select count(*)::integer from public.list_clinical_photos('32000000-0000-0000-0000-000000000001','d45e073b-77d0-4c67-a656-aed601cc5c18') where category='RADIOGRAPH'),
   0,
   'an archived radiograph leaves the active gallery'
+);
+
+-- ---------------------------------------------------------------------------
+-- The Task 13 seam: the chronology reports the radiograph and its archive
+-- ---------------------------------------------------------------------------
+--
+-- The progress record projects clinical_photographs twice - the capture and the
+-- archive - and knows nothing about categories. A new category must therefore
+-- appear in the patient's chronology with no projection change at all, and this
+-- pins that. PHOTO_RENAME stays deliberately unproduced: a display label is not
+-- a clinical fact, so the rename above must add no chronology row.
+
+create temp table radiograph_progress(payload jsonb) on commit drop;
+insert into radiograph_progress(payload)
+select payload from public.get_clinical_progress_record_v1(
+  'd45e073b-77d0-4c67-a656-aed601cc5c18'::uuid,
+  '32000000-0000-0000-0000-000000000001'::uuid, 200, 0);
+
+select extensions.ok(
+  (select (payload->'rows') @> jsonb_build_array(jsonb_build_object(
+      'eventType','PHOTO','sourceKind','clinical_photograph',
+      'sourceId',(select photo_id from radiograph_ids)::text))
+   from radiograph_progress),
+  'the recorded radiograph appears in the chronology as PHOTO'
+);
+
+select extensions.ok(
+  (select (payload->'rows') @> jsonb_build_array(jsonb_build_object(
+      'eventType','PHOTO_ARCHIVE','sourceKind','clinical_photograph_archive',
+      'sourceId',(select photo_id from radiograph_ids)::text))
+   from radiograph_progress),
+  'archiving the radiograph appears in the chronology as PHOTO_ARCHIVE'
+);
+
+select extensions.ok(
+  (select not ((payload->'rows') @> '[{"eventType":"PHOTO_RENAME"}]'::jsonb)
+   from radiograph_progress),
+  'renaming the radiograph adds no chronology row: a display label is not a clinical fact'
 );
 
 -- ---------------------------------------------------------------------------

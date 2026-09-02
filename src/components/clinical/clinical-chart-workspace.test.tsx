@@ -192,7 +192,8 @@ describe("ClinicalChartWorkspace chart controls", () => {
 });
 
 describe("ClinicalChartWorkspace load failures", () => {
-  it("offers a bounded chart retry without hiding the safety strip or showing stale chart data", () => {
+  it("offers a bounded chart retry without hiding the safety strip or showing stale chart data", async () => {
+    const user = userEvent.setup();
     const { onRetry } = renderWorkspace({ chartLoadFailed: true });
 
     expect(screen.getByRole("region", { name: "Medical safety summary" })).toBeVisible();
@@ -204,6 +205,15 @@ describe("ClinicalChartWorkspace load failures", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
 
     expect(screen.getByTestId("record-panel")).toBeVisible();
+
+    // A failed chart load must not take the photographs away with it. The
+    // gallery moved behind the toolbar in Task 14, so the guarantee is now that
+    // the toolbar still offers it while the chart alert stands, and that it
+    // still opens.
+    await user.click(screen.getByRole("button", { name: "More chart actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Clinical photographs" }));
+    const panel = await screen.findByRole("dialog", { name: "Clinical photographs" });
+    expect(within(panel).getByTestId("gallery-panel")).toBeVisible();
   });
 
   it("offers a bounded progress-record retry without hiding the chart or the safety strip", () => {
