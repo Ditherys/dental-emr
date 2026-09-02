@@ -7,7 +7,7 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is this
+and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and `721ef07`. Task 16 is `9a823ff` and this
 commit.
 
 ## Task 16 - print, help, and the end of the runtime fork package (2026-09-02)
@@ -387,8 +387,205 @@ jsdom, which applies no CSS at all. **No printed output has been observed.**
   test does not scan.
 - The claim that the print sheet can carry no patient name, identifier or URL.
 
+## Task 16 round 2 - review fixes: 1 Critical, 4 Important, 1 Minor (2026-09-02)
+
+The retirement migration came back as the strongest part of `9a823ff`: the
+reviewer confirmed the recognition rule is a pure positive whitelist, that the
+unqualified `delete` is correct, that no drawing content reaches any message,
+and that the MIT notice provably predates the deletion. Six items were fixed.
+
+### C1 - the printed chart rendered no anatomy at all
+
+```css
+.clinical-chart-print button { display: none !important; }
+```
+
+`MeasuredTooth` renders every tooth tile as a `<button>`, so that rule matched
+all 32 teeth with `!important` and nothing restored them. **Every printed or
+PDF-saved chart was a header, three text lists, and an empty bordered box where
+the mouth should be** - and the anatomical projection is the first item in the
+print specification. The rule was written for the two genuine screen
+affordances (`Select multiple`, `Clear selection`) and it does hide those.
+
+The unit suite passed because **jsdom applies no CSS**: the stylesheet
+assertion asked whether the five asset rules were present, never whether
+something else in the same file cancelled them.
+
+Fixed with `button:not(.odontogram-tooth)`; the tiles already carry that class.
+
+**This was the fourth defect in this family** - task 3 (component not importing
+the stylesheet), task 12 (a surface inheriting the constraint without it), task
+15 (an export that could not carry it), and now a print rule that cancelled it.
+So the class is closed, not just the instance:
+
+- the stylesheet assertion is now two-sided - a positive match on the `:not()`
+  form and a **negative match on the unscoped form**, plus a check that exactly
+  one such rule exists and that the exempt class still exists in
+  `measured-tooth.tsx`. Proven to fail: reverting to the unscoped rule turns the
+  suite red;
+- `e2e/clinical-chart-print.spec.ts` is **written and PENDING**. Under
+  `page.emulateMedia({ media: "print" })` it asserts
+  `.clinical-chart-print .odontogram-measured-asset` is visible, that more than
+  16 assets are painted, that the tiles are not hidden, that the two screen
+  affordances ARE hidden, and that the interactive chart does not print twice.
+  **It was NOT run** - hosted E2E is a release gate and is unauthorized. Only
+  that check closes the class; the CSS assertion closes this instance.
+
+### I1 - the TOCTOU window, closed forward-only
+
+The count and the delete in `20260901010500` are separate statements in one `DO`
+block, so under READ COMMITTED a row committed between them is invisible to the
+preflight and then deleted unrecognized. The window is widest exactly where it
+matters: the revoke lives in `...010501`, which sorts **after** `...010500`.
+
+`20260901010502_retire_treatment_plan_drawings_locked_sweep.sql` re-runs the
+character-identical preflight and delete with
+`lock table public.treatment_plan_drawings in access exclusive mode` as the
+**first executable statement in the block**. `...010500` is applied and was
+**not edited**. The sweep suspends the row guard for its own delete and restores
+it in the same transaction - the guard refuses every mutation, including the
+retirement's own sweep, which is why `...010500` installed it after its delete.
+
+The contract test now asserts lock -> count -> abort -> delete, that the lock is
+literally the first statement after `begin`, that the guard is suspended only
+between the lock and the delete and re-enabled after, that the sweep's
+recognition predicate is **character-identical** to `...010500`'s once
+whitespace is normalized, and that `...010500` was not edited.
+
+**Deploy note**, recorded in the migration header: in any environment that has
+ever held rows, apply `20260901010501` (the revoke) **before** `20260901010500`
+(the delete). Alphabetical order does the opposite.
+
+### I2 - the two-way execution proof
+
+`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs` extracts
+the `do $migration$ ... $migration$;` block **from the migration file by
+regex**, so the file stays the single source of truth, and runs it against real
+rows in rolled-back transactions:
+
+```
+node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
+-> DRAWING_RETIREMENT_EXECUTION_PASS
+     deletion : one recognized fixture row deleted, reported as one
+     abort    : one unrecognized row aborted the block and SURVIVED it
+```
+
+The surviving-row assertion is the one static reading structurally cannot give:
+the difference between "the migration raised" and "the migration raised
+**without having already deleted something**". It also exercises what reading is
+weakest on - row-constructor `IN` semantics, the cross-organization join, and a
+non-fixture organization. The survival probe runs **without** `ON_ERROR_STOP`,
+because psql otherwise abandons the script at the expected raise.
+
+Proven non-vacuous: pointing the abort scenario at a recognized fixture id turns
+it red with four named failures.
+
+### I3 - the periodontal classification, and a clinical falsehood
+
+The sheet printed *"Staging and grading are not finalized for this
+examination"* whenever the prop was absent - which was **always**, since nothing
+supplied it - including for an examination the same sheet printed as `FINAL` two
+lines above.
+
+The decision not to re-derive staging in the print view stands. Instead
+`clinical-section.tsx` loads `get_periodontal_workspace_v2`'s own **confirmed**
+classification (falling back to its stored derivation), formats it with the new
+tested `formatPerioClassification`, and threads it through `OdontogramSection`.
+The load is keyed by patient so one patient's classification can never render
+for another, is skipped entirely when the chart shows no FINAL examination, and
+sets no state synchronously inside the effect.
+
+The fallback now reads *"Staging and grading are not shown on this printout."* -
+declining to show a fact rather than asserting its negative.
+
+### I4 - a failed chronology printed as an empty record
+
+`progressRecord === null` was substituted with an empty record, so the sheet
+printed *"No recorded event"* and *"Amounts are withheld"* - a fabricated
+clinical negative plus a permission claim that may be false, on paper that
+outlives the session. The page already knew better: `clinical-section.tsx`
+treats the same null as `recordLoadFailed` on screen.
+
+`record` is now `ClinicalProgressRecord | null` and `null` prints an explicit
+alert: *"The clinical record could not be loaded, so it is not printed here.
+This is not a statement that there is none."* No empty table, no withheld
+sentence. The chronology body moved into `RecordBody` so the failure branch
+reads as one decision.
+
+### M1 - the generator would have reintroduced the dead path
+
+`scripts/generate-odontogram-svg-nodes.ps1` still emitted
+`// vendor/react-advanced-odontogram/LICENSE.` into the generated header. The
+hand-corrected `measured-svg-nodes.ts` would have been reverted on the next
+regeneration - and because the boundary test scans `generated/`, that would then
+**fail the gate**. `.ps1` is outside the test's extension set, so nothing would
+have caught it until then. It now emits the `THIRD_PARTY_NOTICES.md` pointer,
+byte-identical to the hand-corrected header.
+
+### Round 2 files
+
+Added: `supabase/migrations/20260901010502_retire_treatment_plan_drawings_locked_sweep.sql`,
+`supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs`,
+`e2e/clinical-chart-print.spec.ts` (pending).
+
+Changed: `src/components/odontogram/styles.css`,
+`src/components/odontogram/clinical-chart-print.tsx` (+ suite),
+`src/app/(emr)/patients/[patientId]/clinical-section.tsx`,
+`src/app/(emr)/patients/[patientId]/odontogram-section.tsx` (+ suite),
+`src/lib/odontogram/perio-classification.ts` (+ suite),
+`scripts/treatment-plan-drawing-retirement-migration.test.mjs`,
+`scripts/migration-privilege-lint.test.mjs` (files 348 -> 349),
+`scripts/generate-odontogram-svg-nodes.ps1`.
+
+No grant moved, so `approved-final-grants.mjs`,
+`boundary-privilege-invariant.test.mjs` and
+`approved_grant_registry_integrity.test.sql` are unchanged; their counters still
+stand at 410 / 273 / 262. `src/types/database.generated.ts` regenerated to no
+diff again.
+
+### Round 2 tests run and observed results
+
+```
+npm run db:migrate:local     -> applied 20260901010502; re-run {"upToDate":true}
+npm run db:types:local       -> "Updated"; git diff EMPTY
+npm run security:migrations  -> passed (349 files, 3298 statements, 94 terminals,
+                                410 approved)
+npx vitest run scripts/      -> 15 files, 306 passed
+node supabase/tests/treatment_plan_drawing_retirement_execution.local.mjs
+                             -> DRAWING_RETIREMENT_EXECUTION_PASS
+npm run test:unit -- <nine focused files>
+                             -> Test Files 9 passed / Tests 213 passed
+npm run test:db:local        -> 89 suites PASS, halts at treatment_plans.test.sql
+                                (pre-existing "not ok 9"); the retirement suite,
+                                the registry suite, document_treatment_plan and
+                                treatment_plan_rpcs all PASS on the way
+npm run security:audit       -> found 0 vulnerabilities
+npm run typecheck            -> clean
+npm run lint                 -> 0 errors, 3 warnings (pre-existing)
+npm run build                -> Compiled successfully
+npm run test:unit (whole)    -> 2443 passed | 8 failed (206 files)
+```
+
+Run directly: the retirement pgTAP suite -> `P1_TEST_PASS` (23 assertions).
+
+The eight whole-suite failures, none from this commit:
+
+- **7 booking** in `src/lib/booking/service.test.ts` and
+  `src/app/api/public/booking/route.test.ts`. Both files hardcode
+  `2026-09-01T09:00:00+00:00`; the clock rolled to 2026-09-02 during this task,
+  so the schema now rejects it as a past booking. Confirmed by the controller as
+  pre-existing and date-triggered, and assigned to task 17 for an injected
+  clock. Both files are unmodified here.
+- **1 `perio-workspace.test.tsx`** parallel-run timeout. Unmodified by this
+  commit and passes alone (`11 passed`).
+
+Playwright was not run; hosted E2E remains unauthorized.
+
 ### Next bounded task
 
 Task 17 - delete the superseded UI (`current-status-panel`, `tooth-inspector`,
 `plan-mode-panel`, `fork-odontogram`, `fork-adapter`, `treatment-plan-section`),
-relocate `toPatientChartDTO`, and run the complete local gate.
+relocate `toPatientChartDTO`, fix the two hardcoded booking dates with an
+injected clock, and run the complete local gate. The pending print spec
+`e2e/clinical-chart-print.spec.ts` should run at the first authorized hosted E2E
+pass.

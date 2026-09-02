@@ -326,7 +326,7 @@ describe("the active migration chain", () => {
       approvedExtensions: APPROVED_EXTENSIONS,
     });
 
-    expect(result.checked.files).toBe(348);
+    expect(result.checked.files).toBe(349);
     expect(result.checked.statements).toBeGreaterThan(250);
     expect(result.checked.privilegeStatements).toBeGreaterThan(100);
   });

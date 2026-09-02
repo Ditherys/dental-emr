@@ -6,6 +6,7 @@ import {
   arePerioTeethArchAdjacent,
   comparePerioClassification,
   derivePerioClassification,
+  formatPerioClassification,
   reducePerioTooth,
   type PerioToothReduction,
 } from "./perio-classification";
@@ -600,5 +601,42 @@ describe("clinician confirmation against the derived classification", () => {
       differs: true,
       changedFields: ["stage"],
     });
+  });
+});
+
+describe("formatPerioClassification", () => {
+  it("renders the server's own classification as one line", () => {
+    expect(
+      formatPerioClassification({
+        diagnosis: "PERIODONTITIS",
+        stage: "III",
+        grade: "B",
+        extent: "GENERALIZED",
+      }),
+    ).toBe("Periodontitis · Stage III · Grade B · Generalized");
+  });
+
+  it("humanizes a multi-word extent without inventing punctuation", () => {
+    expect(
+      formatPerioClassification({
+        diagnosis: "PERIODONTITIS",
+        stage: "IV",
+        grade: "C",
+        extent: "MOLAR_INCISOR",
+      }),
+    ).toBe("Periodontitis · Stage IV · Grade C · Molar incisor");
+  });
+
+  it("omits the parts the server did not decide", () => {
+    expect(
+      formatPerioClassification({ diagnosis: "GINGIVITIS", stage: null, grade: null, extent: null }),
+    ).toBe("Gingivitis");
+  });
+
+  it("is null when there is no diagnosis, so no caller can print a manufactured one", () => {
+    expect(formatPerioClassification(null)).toBeNull();
+    expect(
+      formatPerioClassification({ diagnosis: null, stage: "III", grade: "B", extent: null }),
+    ).toBeNull();
   });
 });

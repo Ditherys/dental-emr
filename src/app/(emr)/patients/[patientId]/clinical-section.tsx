@@ -2,7 +2,7 @@
 
 import { Ellipsis, LoaderCircle, Pencil, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { ClinicalChartWorkspace } from "@/components/clinical/clinical-chart-workspace";
 import { ClinicalVisitHeader } from "@/components/clinical/clinical-visit-header";
@@ -19,6 +19,7 @@ import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, Cli
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
 import { chartExportSvgFrom } from "@/lib/odontogram/clinical-export";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
+import { formatPerioClassification } from "@/lib/odontogram/perio-classification";
 import { progressEventsFromOdontogram, type ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
 import type { TreatmentPlan } from "@/lib/treatment-plan/types";
@@ -281,9 +282,62 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
   // supplies it when one is open; otherwise the current Philippine day is the
   // honest answer for a sheet printed today.
   const printClinicalDate = visit?.clinicalDate ?? PHILIPPINE_DAY.format(new Date());
+
+  // REVIEW I3. The printed chart states the periodontal classification the
+  // SERVER decided, so this loads `get_periodontal_workspace_v2`'s own
+  // confirmed value rather than re-deriving one here. Two authorities for a
+  // staging decision is exactly how a printed chart comes to disagree with the
+  // record. The confirmed value is preferred over the stored derivation,
+  // because a clinician who overrode the derivation meant the override.
+  //
+  // Loaded only when the chart already shows a FINAL examination, so a patient
+  // with no periodontal history costs no request.
+  const hasFinalPeriodontalExam = (initialOdontogram?.periodontalExaminations ?? []).some(
+    (examination) => examination.status === "FINAL",
+  );
+  // Keyed by patient so a value loaded for one patient can never be rendered
+  // for another during a route change, and so no state is set synchronously
+  // inside the effect.
+  const [loadedPerioClassification, setLoadedPerioClassification] = useState<
+    { patientId: string; label: string | null } | null
+  >(null);
+  useEffect(() => {
+    if (!hasFinalPeriodontalExam) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await getPeriodontalWorkspaceAction({
+          patientId,
+          actingBranchId,
+          examinationId: null,
+        });
+        if (cancelled) return;
+        const examination = result.ok
+          ? (result.payload as PeriodontalWorkspacePayload).examination
+          : null;
+        setLoadedPerioClassification({
+          patientId,
+          label:
+            formatPerioClassification(examination?.confirmed ?? null) ??
+            formatPerioClassification(examination?.stored_derived ?? null),
+        });
+      } catch {
+        // A classification that cannot be loaded is simply not printed. The
+        // sheet says so; it never asserts staging is unfinalized.
+        if (!cancelled) setLoadedPerioClassification({ patientId, label: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [actingBranchId, hasFinalPeriodontalExam, patientId]);
+  const printPerioClassification =
+    hasFinalPeriodontalExam && loadedPerioClassification?.patientId === patientId
+      ? loadedPerioClassification.label
+      : null;
   const progressEvents = initialOdontogram ? progressEventsFromOdontogram(initialOdontogram) : [];
   const chart: Record<ClinicalChartMode, ReactNode> = {
-    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />,
+    CURRENT_STATUS: <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} periodontalClassification={printPerioClassification} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />,
     TREATMENT_PLAN: <TreatmentPlanMode
       patientId={patientId}
       actingBranchId={actingBranchId}
@@ -291,7 +345,7 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
       initialPlans={initialTreatmentPlans}
       procedures={clinicalComposerContext?.patientId === patientId ? clinicalComposerContext.procedures : []}
       loadFailed={loadFailed}
-      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
+      chart={(context) => <OdontogramSection patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} printPatientCode={printPatientCode} printClinicalDate={printClinicalDate} progressRecord={clinicalProgressRecord} periodontalClassification={printPerioClassification} printBranchName={printBranchName} printProviderName={printProviderName} initialOdontogram={initialOdontogram} composerContext={clinicalComposerContext} chartMode="TREATMENT_PLAN" planContext={context.plan} proposals={context.proposalsByTooth} initialProgressEvents={{ patientId, events: progressEvents }} loadFailed={loadFailed} />}
     />,
     PERIODONTAL: <PeriodontalModePanel patientId={patientId} actingBranchId={actingBranchId} canWriteClinical={canWriteClinical} canCorrectClinical={canCorrectClinical === true} onUnsavedChange={onUnsavedClinicalChange} />,
   };

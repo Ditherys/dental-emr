@@ -24,6 +24,7 @@ const repositoryRoot = resolve(scriptDirectory, "..");
 
 const MIGRATION = "20260901010500_retire_treatment_plan_drawings.sql";
 const GRANTS_MIGRATION = "20260901010501_retire_treatment_plan_drawings_grants.sql";
+const SWEEP_MIGRATION = "20260901010502_retire_treatment_plan_drawings_locked_sweep.sql";
 
 function migrationSource(name) {
   return readFileSync(join(repositoryRoot, "supabase", "migrations", name), "utf8").replaceAll(
@@ -34,12 +35,18 @@ function migrationSource(name) {
 
 const source = migrationSource(MIGRATION);
 const grants = migrationSource(GRANTS_MIGRATION);
+const sweepSource = migrationSource(SWEEP_MIGRATION);
 
 /** Statement positions, with comment lines removed so a comment cannot pass. */
-const executable = source
-  .split("\n")
-  .map((line) => (line.trimStart().startsWith("--") ? "" : line))
-  .join("\n");
+function executableOf(text) {
+  return text
+    .split("\n")
+    .map((line) => (line.trimStart().startsWith("--") ? "" : line))
+    .join("\n");
+}
+
+const executable = executableOf(source);
+const sweep = executableOf(sweepSource);
 
 function indexOfOrFail(haystack, needle) {
   const at = haystack.indexOf(needle);
@@ -153,5 +160,81 @@ describe("the treatment-plan drawing retirement migration", () => {
   it("proves each replaced projection stopped reading the retired table", () => {
     const proofs = executable.match(/still reads the retired drawing table/g) ?? [];
     expect(proofs.length).toBe(3);
+  });
+
+  it("re-runs the identical recognition rule in the locked sweep", () => {
+    // REVIEW I1. The sweep must not be an opportunity to quietly relax the
+    // rule. Compare the predicate itself, whitespace-normalized.
+    const predicate = (text) => {
+      const match = /where not exists \(([\s\S]*?)\n  \);/.exec(text);
+      expect(match, "the recognition predicate must be findable").not.toBeNull();
+      return match[1].replaceAll(/\s+/g, " ").trim();
+    };
+    expect(predicate(sweep)).toBe(predicate(executable));
+  });
+});
+
+describe("the locked sweep that closes the TOCTOU window", () => {
+  it("takes an ACCESS EXCLUSIVE lock BEFORE the count and the delete", () => {
+    const lock = sweep.indexOf(
+      "lock table public.treatment_plan_drawings in access exclusive mode;",
+    );
+    const count = sweep.indexOf("into v_unrecognized");
+    const abort = sweep.indexOf(
+      "treatment plan drawing retirement aborted before deleting anything",
+    );
+    const deletion = sweep.indexOf("delete from public.treatment_plan_drawings");
+
+    expect(lock, "the sweep must take the lock").toBeGreaterThanOrEqual(0);
+    expect(count).toBeGreaterThanOrEqual(0);
+    expect(deletion).toBeGreaterThanOrEqual(0);
+
+    // Lock, then count, then abort, then - only then - delete.
+    expect(lock).toBeLessThan(count);
+    expect(count).toBeLessThan(abort);
+    expect(abort).toBeLessThan(deletion);
+  });
+
+  it("takes the lock as the first statement in the block", () => {
+    const block = /\$migration\$([\s\S]*?)\$migration\$/.exec(sweep);
+    expect(block).not.toBeNull();
+    // Everything before `begin` is the DECLARE section, which executes
+    // nothing. The first executable statement is what matters.
+    const body = block[1].slice(block[1].indexOf("\nbegin\n") + "\nbegin\n".length);
+    const statements = body
+      .split(";")
+      .map((statement) => statement.replaceAll(/\s+/g, " ").trim())
+      .filter((statement) => statement !== "");
+    expect(statements[0]).toBe(
+      "lock table public.treatment_plan_drawings in access exclusive mode",
+    );
+  });
+
+  it("suspends the row guard only inside the locked transaction, and restores it", () => {
+    const disable = sweep.indexOf("disable trigger treatment_plan_drawings_retired_row_guard");
+    const enable = sweep.indexOf("enable trigger treatment_plan_drawings_retired_row_guard");
+    const lock = sweep.indexOf("in access exclusive mode");
+    const deletion = sweep.indexOf("delete from public.treatment_plan_drawings");
+    expect(lock).toBeLessThan(disable);
+    expect(disable).toBeLessThan(deletion);
+    expect(deletion).toBeLessThan(enable);
+  });
+
+  it("deletes from exactly one table, once, with no WHERE clause", () => {
+    const deletes = sweep.match(/\bdelete\s+from\s+[a-z_.]+/gi) ?? [];
+    expect(deletes).toEqual(["delete from public.treatment_plan_drawings"]);
+    expect(sweep).not.toMatch(/delete\s+from\s+public\.treatment_plan_drawings\s+where/i);
+  });
+
+  it("does not edit the applied migration it supersedes", () => {
+    // The fix is forward-only: 20260901010500 must still contain its own
+    // preflight and delete, unlocked, exactly as it was applied.
+    expect(executable).toContain("delete from public.treatment_plan_drawings");
+    expect(executable).not.toContain("in access exclusive mode");
+  });
+
+  it("records the deploy ordering the revoke needs", () => {
+    expect(sweepSource).toMatch(/DEPLOY NOTE/);
+    expect(sweepSource).toMatch(/20260901010501[\s\S]{0,120}BEFORE[\s\S]{0,40}20260901010500/);
   });
 });

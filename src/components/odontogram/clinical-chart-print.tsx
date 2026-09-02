@@ -56,14 +56,23 @@ export type ClinicalChartPrintProps = {
   dto: PatientOdontogramDTO;
   /** The canonical chart projection the workspace renderer already consumes. */
   chart: PatientChartProjection;
-  /** The canonical server chronology. Never a browser-merged record. */
-  record: ClinicalProgressRecord;
+  /**
+   * The canonical server chronology. Never a browser-merged record.
+   *
+   * `null` means the projection could NOT BE LOADED, which is a different fact
+   * from "there is nothing to show". On screen an empty record is the safer
+   * substitution; on paper it is not, because "No recorded event" printed on a
+   * clinical chart is a fabricated negative that outlives the session.
+   */
+  record: ClinicalProgressRecord | null;
   branchName?: string | null;
   providerDisplay?: string | null;
   /**
-   * Staging, grading and extent as the periodontal workspace derived them.
-   * Print derives nothing: a second classification authority could disagree
-   * with the one the clinician finalized.
+   * Staging, grading and extent exactly as the SERVER decided them, formatted
+   * by `formatPerioClassification`. Print derives nothing: a second
+   * classification authority could disagree with the one the clinician
+   * confirmed. Absent means "not shown on this printout" - never "not
+   * finalized", which would be a clinical assertion this sheet cannot make.
    */
   periodontalClassification?: string | null;
 };
@@ -213,6 +222,67 @@ function RecordRow({
         </>
       )}
     </tr>
+  );
+}
+
+/**
+ * The chronology itself. Split out so the load-failure branch above reads as
+ * one decision rather than a fragment wrapping forty lines.
+ */
+function RecordBody({ record }: { record: ClinicalProgressRecord }): React.ReactElement {
+  return (
+    <>
+      {record.financialVisible === false && (
+        <p className="mt-1 text-[11px] text-slate-600">
+          Amounts are withheld: this printout was produced without billing access.
+        </p>
+      )}
+      {record.rows.length === 0 ? (
+        <p className="mt-1 border-y py-2 text-xs text-slate-600">No recorded event.</p>
+      ) : (
+        <table className="mt-1 w-full border-y text-left text-xs">
+          <thead>
+            <tr className="border-b">
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Date
+              </th>
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Event
+              </th>
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Tooth
+              </th>
+              <th scope="col" className="py-1 pr-3 font-medium">
+                Provider
+              </th>
+              {record.financialVisible && (
+                <>
+                  <th scope="col" className="py-1 pr-3 text-right font-medium">
+                    Case charge
+                  </th>
+                  <th scope="col" className="py-1 pr-3 text-right font-medium">
+                    Case paid
+                  </th>
+                  <th scope="col" className="py-1 text-right font-medium">
+                    Case balance
+                  </th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {record.rows.map((row) => (
+              <RecordRow key={row.eventId} row={row} financialVisible={record.financialVisible} />
+            ))}
+          </tbody>
+        </table>
+      )}
+      {record.hasMore && (
+        <p className="mt-1 text-[11px] text-slate-600">
+          This page of the record continues beyond what is printed here.
+        </p>
+      )}
+    </>
   );
 }
 
@@ -366,7 +436,7 @@ export function ClinicalChartPrint({
             </p>
             <p className="mt-1">
               {periodontalClassification === null || periodontalClassification === undefined
-                ? "Staging and grading are not finalized for this examination."
+                ? "Staging and grading are not shown on this printout."
                 : periodontalClassification}
             </p>
           </div>
@@ -379,55 +449,13 @@ export function ClinicalChartPrint({
         aria-label="Chronological clinical record"
       >
         <h3 className="text-xs font-semibold uppercase tracking-wide">Clinical record</h3>
-        {record.financialVisible === false && (
-          <p className="mt-1 text-[11px] text-slate-600">
-            Amounts are withheld: this printout was produced without billing access.
+        {record === null ? (
+          <p role="alert" className="mt-1 border-y py-2 text-xs font-medium">
+            The clinical record could not be loaded, so it is not printed here. This is not a
+            statement that there is none &mdash; do not read this sheet as a complete record.
           </p>
-        )}
-        {record.rows.length === 0 ? (
-          <p className="mt-1 border-y py-2 text-xs text-slate-600">No recorded event.</p>
         ) : (
-          <table className="mt-1 w-full border-y text-left text-xs">
-            <thead>
-              <tr className="border-b">
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  Date
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  Event
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  Tooth
-                </th>
-                <th scope="col" className="py-1 pr-3 font-medium">
-                  Provider
-                </th>
-                {record.financialVisible && (
-                  <>
-                    <th scope="col" className="py-1 pr-3 text-right font-medium">
-                      Case charge
-                    </th>
-                    <th scope="col" className="py-1 pr-3 text-right font-medium">
-                      Case paid
-                    </th>
-                    <th scope="col" className="py-1 text-right font-medium">
-                      Case balance
-                    </th>
-                  </>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {record.rows.map((row) => (
-                <RecordRow key={row.eventId} row={row} financialVisible={record.financialVisible} />
-              ))}
-            </tbody>
-          </table>
-        )}
-        {record.hasMore && (
-          <p className="mt-1 text-[11px] text-slate-600">
-            This page of the record continues beyond what is printed here.
-          </p>
+          <RecordBody record={record} />
         )}
       </section>
 

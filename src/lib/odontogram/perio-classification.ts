@@ -480,3 +480,38 @@ export function comparePerioClassification(
   const changedFields = CLASSIFICATION_FIELDS.filter((field) => derived[field] !== confirmed[field]);
   return { differs: changedFields.length > 0, changedFields };
 }
+
+/**
+ * A one-line label for a classification the SERVER already decided.
+ *
+ * This formats; it never derives. The print sheet must not become a second
+ * staging authority that could disagree with the classification a clinician
+ * confirmed, so it is handed the stored value and only renders it.
+ *
+ * Returns `null` when there is no diagnosis at all, which is the honest answer
+ * for an examination whose staging was never confirmed - the caller then says
+ * the classification is not shown, rather than asserting it is not finalized.
+ */
+export function formatPerioClassification(
+  classification: {
+    diagnosis: string | null;
+    stage: string | null;
+    grade: string | null;
+    extent: string | null;
+  } | null,
+): string | null {
+  if (!classification || classification.diagnosis === null) return null;
+  const humanize = (value: string) =>
+    value
+      .toLowerCase()
+      .replaceAll("_", " ")
+      .replace(/^./, (first) => first.toUpperCase());
+  return [
+    humanize(classification.diagnosis),
+    classification.stage === null ? null : `Stage ${classification.stage}`,
+    classification.grade === null ? null : `Grade ${classification.grade}`,
+    classification.extent === null ? null : humanize(classification.extent),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
+}

@@ -30,19 +30,6 @@ import { getPatientOdontogramAction } from "./odontogram-actions";
  */
 const NO_FORK_DRAFTS: (drafts: readonly ForkClinicalDraft[]) => void = () => {};
 
-/**
- * A chronology this page could not load is an EMPTY record, never a fabricated
- * one. The print sheet says "no recorded event" rather than silently omitting a
- * section, so a missing projection can never read as a clean history.
- */
-const EMPTY_PROGRESS_RECORD: ClinicalProgressRecord = Object.freeze({
-  rows: [],
-  limit: 0,
-  offset: 0,
-  hasMore: false,
-  financialVisible: false,
-});
-
 type Props = {
   patientId: string;
   actingBranchId: string;
@@ -67,8 +54,18 @@ type Props = {
    */
   printPatientCode?: string;
   printClinicalDate?: string;
-  /** The canonical server chronology the print sheet reproduces verbatim. */
+  /**
+   * The canonical server chronology the print sheet reproduces verbatim.
+   * `null` is passed through as a LOAD FAILURE, not substituted with an empty
+   * record: "No recorded event" printed on a clinical chart is a fabricated
+   * negative.
+   */
   progressRecord?: ClinicalProgressRecord | null;
+  /**
+   * Staging, grading and extent as the SERVER decided them, already formatted.
+   * The print sheet never derives its own.
+   */
+  periodontalClassification?: string | null;
   procedureCases?: readonly ProcedureCaseChoice[];
   recordFollowup?: (input: ProcedureFollowupInput) => Promise<{ ok: boolean }>;
   loadFailed?: boolean;
@@ -89,6 +86,7 @@ export function OdontogramSection({
   printPatientCode,
   printClinicalDate,
   progressRecord = null,
+  periodontalClassification = null,
   procedureCases: suppliedProcedureCases,
   recordFollowup,
   loadFailed,
@@ -276,9 +274,10 @@ export function OdontogramSection({
               header={printHeader}
               dto={dto}
               chart={projectPatientChart(toPatientChartDTO(dto))}
-              record={progressRecord ?? EMPTY_PROGRESS_RECORD}
+              record={progressRecord}
               branchName={printBranchName}
               providerDisplay={printProviderName}
+              periodontalClassification={periodontalClassification}
             />
           )}
         </div>

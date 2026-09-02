@@ -79,10 +79,20 @@
     break-inside: avoid;
   }
 
-  /* The anatomy is mounted read-only, so its controls decide nothing. They
-   * are screen affordances of the shared renderer and are not part of the
-   * document. */
-  .clinical-chart-print button {
+  /* The anatomy is mounted read-only, so its screen affordances - Select
+   * multiple, Clear selection - decide nothing and are not part of the
+   * document.
+   *
+   * THE `:not(.odontogram-tooth)` IS LOAD-BEARING. `MeasuredTooth` renders
+   * every tooth tile as a <button>, so the unscoped form of this rule hides
+   * all 32 teeth with `!important` and prints an empty box where the mouth
+   * should be. That is the fourth defect in this family - the measured asset
+   * tree keeps losing a rule it needs - so the scoping is asserted in
+   * clinical-chart-print.test.tsx, both positively and as a negative match on
+   * the unscoped form, and a pending Playwright check under
+   * emulateMedia({ media: 'print' }) asserts the anatomy is actually
+   * visible. */
+  .clinical-chart-print button:not(.odontogram-tooth) {
     display: none !important;
   }
 

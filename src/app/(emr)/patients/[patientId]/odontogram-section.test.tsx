@@ -488,6 +488,24 @@ describe("OdontogramSection O7", () => {
     expect(screen.getByTestId("clinical-chart-print-record")).toBeInTheDocument();
   });
 
+  it("prints the chronology failure rather than an empty record when the route supplies none", () => {
+    render(
+      <OdontogramSection
+        patientId={mockDto.patientId}
+        actingBranchId="00000000-0000-4000-a000-0000000000aa"
+        canWriteClinical
+        initialOdontogram={mockDto}
+        printPatientCode="PT-000123"
+        printClinicalDate="2026-09-02"
+      />,
+    );
+
+    const record = screen.getByTestId("clinical-chart-print-record");
+    expect(record.textContent).toMatch(/could not be loaded/i);
+    expect(record.textContent).not.toMatch(/no recorded event/i);
+    expect(record.textContent).not.toMatch(/withheld/i);
+  });
+
   it("prints nothing rather than an anonymous sheet when the route supplies no patient code", () => {
     render(
       <OdontogramSection

@@ -304,6 +304,39 @@ describe("ClinicalChartPrint", () => {
     expect(css).toMatch(/@media print[\s\S]*\.clinical-chart-print/);
   });
 
+  it("hides only the chart's screen affordances, never the tooth tiles", () => {
+    // REVIEW C1. `MeasuredTooth` renders every tooth as a <button>, so an
+    // unscoped `.clinical-chart-print button { display: none !important }`
+    // hides all 32 teeth and prints an empty box where the mouth should be.
+    // jsdom applies no CSS, so no rendering assertion can catch this: the
+    // stylesheet has to be read.
+    const css = readFileSync(
+      resolve(process.cwd(), "src/components/odontogram/styles.css"),
+      "utf8",
+    );
+    const rules = css.match(/\.clinical-chart-print\s+button[^{]*\{[^}]*\}/g) ?? [];
+    expect(rules.length).toBe(1);
+    // Positive: the rule is scoped away from the tooth tiles.
+    expect(rules[0]).toMatch(/\.clinical-chart-print\s+button:not\(\.odontogram-tooth\)/);
+    // Negative: the unscoped form must not appear anywhere in the file.
+    expect(css).not.toMatch(/\.clinical-chart-print\s+button\s*\{/);
+    // And the tile class the exception depends on must still exist.
+    const tile = readFileSync(
+      resolve(process.cwd(), "src/components/odontogram/measured-tooth.tsx"),
+      "utf8",
+    );
+    expect(tile).toContain("odontogram-tooth");
+  });
+
+  it("keeps every tooth tile inside the print root carrying the exempt class", () => {
+    renderPrint();
+    const tiles = screen
+      .getByTestId("clinical-chart-print-current")
+      .querySelectorAll("button[data-fdi]");
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const tile of tiles) expect(tile.classList.contains("odontogram-tooth")).toBe(true);
+  });
+
   it("distinguishes planned proposals from current clinical state", () => {
     renderPrint();
     const plan = screen.getByTestId("clinical-chart-print-plan");
@@ -353,6 +386,35 @@ describe("ClinicalChartPrint", () => {
     expect(within(charge).getByTestId("clinical-chart-print-case-charge")).toHaveTextContent("₱2,500.00");
     expect(within(charge).getByTestId("clinical-chart-print-case-paid")).toHaveTextContent("₱1,000.00");
     expect(within(charge).getByTestId("clinical-chart-print-case-balance")).toHaveTextContent("₱1,500.00");
+  });
+
+  it("does not assert staging is unfinalized when the classification is simply not supplied", () => {
+    // REVIEW I3. The old fallback read "Staging and grading are not finalized
+    // for this examination" on EVERY sheet, including - two lines above - one
+    // printing that same examination as FINAL. A printout may decline to show
+    // a clinical fact; it may not assert its negative.
+    renderPrint({ periodontalClassification: null });
+    const perio = screen.getByTestId("clinical-chart-print-periodontal");
+    expect(perio).toHaveTextContent("Staging and grading are not shown on this printout.");
+    expect(perio.textContent).not.toMatch(/not finalized/i);
+    // The measured summary is still printed: what was measured is not in doubt.
+    expect(perio).toHaveTextContent(/2 site/);
+    expect(perio).toHaveTextContent(/FINAL/);
+  });
+
+  it("prints an explicit failure rather than an empty record when the chronology could not load", () => {
+    // REVIEW I4. Substituting an empty record made the sheet print "No
+    // recorded event" and "Amounts are withheld" - a fabricated clinical
+    // negative plus a permission claim that may be false. On paper that
+    // outlives the session that produced it.
+    renderPrint({ record: null });
+    const record = screen.getByTestId("clinical-chart-print-record");
+    expect(within(record).getByRole("alert")).toHaveTextContent(
+      /could not be loaded, so it is not printed here/i,
+    );
+    expect(record.textContent).not.toMatch(/no recorded event/i);
+    expect(record.textContent).not.toMatch(/withheld/i);
+    expect(within(record).queryAllByTestId("clinical-chart-print-record-row")).toHaveLength(0);
   });
 
   it("says so rather than printing an empty money column when money is withheld", () => {
