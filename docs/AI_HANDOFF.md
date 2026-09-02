@@ -7,7 +7,7 @@ Task 9 is complete across `5dce284`, `372f1e0`, `6b5eaa2`, `4c8e3c5`, `f79f61d`
 and `83de815`. Task 10 is `4053739` and `4836ae9`. Task 11 is `d589dbf`,
 `fadd7e2` and `feb5a2f`. Task 12 is `49c5385`, `66a9502`, `03956f5` and
 `2ec2a4d`. Task 13 is `1f9c97b`, `5ca0d04` and `6d0a252`. Task 14 is `c0485f6`
-and `eb442f6`. Task 15 is `b1437cb` and this commit.
+and `eb442f6`. Task 15 is `b1437cb`, `45397a5` and this commit.
 
 ## Task 15 - the staged clinical interchange (2026-09-02)
 
@@ -653,6 +653,127 @@ node <runner> supabase/tests/clinical_interchange.test.sql -> P1_TEST_PASS
 ```
 
 Playwright was not run; hosted E2E remains unauthorized.
+
+## Task 15 round 3 - review fixes: 2 Important, 2 Low (2026-09-02)
+
+Round 2's seven items all came back ADDRESSED, and the reviewer independently
+confirmed the grouping is row-equivalent and that `010414` fixes rather than
+masks the duplicate-tooth defect. Two new Important issues came out of the fix
+itself.
+
+### I1 - the export misstated finding laterality on 24 of 32 permanent teeth
+
+Round 2 correctly identified that `[data-active="0"] { display: none }` could not
+travel with an exported file. It was one rule short. `styles.css` holds **five**
+rules reaching the measured asset tree, and three of them are orientation
+transforms - anatomical templates exist for quadrants 1, 3, 5 and 7 only, and
+every other quadrant is the same template flipped by CSS. The clinical layers are
+directional (`caries-mesial`, `caries-distal`, `arrow-mesial`), so an exported
+chart placed findings **on the opposite side of the tooth** for quadrants 2, 3,
+4, 6, 7 and 8. In a document a dentist may print, file or send on.
+
+The flip is now inlined as an SVG `transform` on a wrapping `<g>` - a CSS
+transform on a nested `<svg>` is not portable - keyed on the `data-orientation`
+attribute the asset root already carries, flipping about the tooth's own centre
+in the outer coordinate system. A `normal` quadrant gets no wrapper.
+
+The full enumeration is in the report: one layout rule captured by the geometry
+the composer already writes, one visibility rule inlined in round 2, three
+orientation rules inlined now. Nothing in that stylesheet still carries clinical
+meaning the file does not.
+
+Six new assertions, three of which fail with the orientation lookup disabled
+(`Tests 3 failed | 27 passed`), plus an end-to-end assertion **in the downloaded
+blob** through the toolbar wired the way the route wires it.
+
+### I2 - the CRLF normalisation was one-sided, and broke replay
+
+Round 2 normalised `pg_get_functiondef`'s output but not the anchors, which are
+dollar-quoted literals read verbatim from the migration file. On a CRLF checkout
+- which `core.autocrlf=true` with no `.gitattributes` produces here - the anchors
+carry CRLF and the definition does not, so `position()` returns 0 and the guard
+aborts the chain. It fails closed, so never a data-integrity problem, but a
+migration chain that cannot replay is not a migration chain.
+
+Both sides are now stripped, and the occurrence guard was restructured into two
+positive assertions so it proves its own precondition rather than only reporting
+a surprise.
+
+**Proven, not assumed.** A local harness reconstructs a CRLF checkout: take
+`apply_clinical_import_batch_v1`'s `create function` out of `010411`, convert to
+CRLF, `create or replace` it, then run `010413` and `010414` with CRLF endings,
+all inside a rolled-back transaction.
+
+```
+HEAD (one-sided), CRLF checkout -> ERROR: unexpected clinical import apply
+                                   statement set              exit 3
+fixed, CRLF checkout            -> CRLF_REPLAY_PASS           exit 0
+fixed, LF checkout              -> CRLF_REPLAY_PASS           exit 0
+010411 -> 010413 -> 010413            -> IDEMPOTENT_PASS
+010411 -> 010413 -> 010414 -> 010414  -> IDEMPOTENT_PASS
+```
+
+**Two already-applied migrations were edited in place**, disclosed deliberately.
+There is no forward-only alternative: a successor cannot rescue a predecessor
+whose guard stops the chain. It is safe here because neither has ever been
+applied to Cloud TEST or production, both are guarded idempotent replaces, and
+the edit changes only guard mechanics - the replacement SQL is byte-identical, so
+the applied function is unchanged (verified against the live definition and the
+87-assertion suite).
+
+A `.gitattributes` entry pinning `supabase/migrations/*.sql` to LF would remove
+this class permanently. Recommended to the controller rather than added
+unilaterally, since it changes checkout behaviour repository-wide.
+
+### The two Lows
+
+- The "do not offer what cannot be produced" filter never fired in production,
+  because `clinical-section` supplies the closure for every mode. The gate is now
+  real and lives in the toolbar, which is where the chart mode is known:
+  periodontal mode offers the documents and print, and neither chart image.
+- `window.print()` was the fall-through for any bodyless format. Only `PDF`
+  prints now; anything else arriving with no body is a failure and says so
+  instead of silently substituting a different artifact.
+
+### Ledgered, not fixed
+
+The three pre-existing sanitizer observations (quoted-value-only `ATTRIBUTE`
+matching, the `://` test not catching a `data:` URI, and the composer overwriting
+rather than merging a pre-existing inline style) - all unreachable given the
+input is the browser's own serialization of a repo-owned asset tree.
+
+### Round 3 files
+
+Changed: `src/lib/odontogram/clinical-export.ts` (+ suite),
+`src/components/odontogram/clinical-export-menu.tsx` (+ suite),
+`src/components/odontogram/clinical-chart-toolbar.tsx` (+ suite),
+`supabase/migrations/20260901010413_clinical_interchange_apply_grouping.sql`,
+`supabase/migrations/20260901010414_clinical_interchange_apply_duplicate_grouping.sql`.
+
+No migration added, no grant moved, no pgTAP assertion added or removed. All
+counters unchanged: 346 / 94 / 410 / 274 / 263, and the suite stays at 87.
+
+### Round 3 tests run and observed results
+
+```
+npm run db:migrate:local     -> {"upToDate":true}
+npm run security:migrations  -> passed (346 files, 94 terminals, 410 approved)
+npx vitest run scripts/      -> 13 files, 288 tests passed
+npm run test:unit -- <ten files>
+                             -> Test Files 10 passed (10) / Tests 170 passed (170)
+npm run test:db:local        -> halts at treatment_plans.test.sql (pre-existing),
+                                88 suites PASS first, including BOTH
+                                approved_grant_registry_integrity and
+                                clinical_interchange
+npm run typecheck            -> clean
+npm run lint                 -> 0 errors, 3 warnings (pre-existing)
+node <runner> clinical_interchange.test.sql -> P1_TEST_PASS (87 assertions)
+npm run test:unit (whole)    -> 2387 passed | 11 failed (207 files)
+```
+
+The 11: 7 booking (pre-existing, reproduced on a clean stash in round 1) and 4
+parallel-run timeouts in `perio-workspace`, `fork-print-chart` and
+`fork-package`, which pass alone (`3 files, 18 tests passed`).
 
 ### Next bounded task
 

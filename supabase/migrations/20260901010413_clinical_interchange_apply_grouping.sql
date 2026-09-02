@@ -33,14 +33,14 @@ do $do$
 declare
   v_definition text;
   v_replacement text;
-  v_provider_anchor constant text :=
+  v_provider_anchor text :=
 $anchor$  -- The treating provider is derived from the signed-in user before anything
   -- is written, so a clinician with no active provider link at this branch is
   -- refused without a managed visit having been opened on their behalf.
   perform private.require_active_actor_provider(
     v_organization_id, p_branch_id, v_actor_user_id
   );$anchor$;
-  v_reclassify constant text :=
+  v_reclassify text :=
 $repaired$  -- REVIEW ROUND 1, item 3. The classification the clinician confirmed was
   -- derived when the batch was STAGED. Another clinician may have charted this
   -- patient since, so every selected candidate is re-derived here, inside the
@@ -64,7 +64,7 @@ $repaired$  -- REVIEW ROUND 1, item 3. The classification the clinician confirme
     raise exception using message = 'invalid state';
   end if;
 $repaired$;
-  v_loop_anchor constant text :=
+  v_loop_anchor text :=
 $anchor$  for v_candidate in
     select
       candidate.id,
@@ -107,7 +107,7 @@ $anchor$  for v_candidate in
 
     v_applied := v_applied + 1;
   end loop;$anchor$;
-  v_loop_repaired constant text :=
+  v_loop_repaired text :=
 $repaired$  -- REVIEW ROUND 1, item 2. Candidates that assert the SAME clinical code on
   -- the SAME surface set, on the same clinical date, with the same note are one
   -- writer call carrying up to 32 tooth codes, which is exactly what
@@ -186,6 +186,25 @@ $repaired$  -- REVIEW ROUND 1, item 2. Candidates that assert the SAME clinical 
     v_applied := v_applied + pg_catalog.cardinality(v_candidate.candidate_ids);
   end loop;$repaired$;
 begin
+  -- ROUND 2 REVIEW, item 2. Carriage returns are stripped from BOTH SIDES.
+  --
+  -- The anchors below are dollar-quoted literals read verbatim from THIS FILE,
+  -- so on a CRLF checkout - which `core.autocrlf=true` with no .gitattributes
+  -- produces on this project's stated primary environment - they carry CRLF
+  -- while the fetched definition was normalised to LF. Normalising only the
+  -- definition therefore guaranteed a miss on exactly the checkout style this
+  -- repository actually uses, aborting the whole chain on `55000`. It fails
+  -- closed, so it was never a data-integrity problem - but a migration chain
+  -- that cannot replay is not a migration chain.
+  --
+  -- CR is whitespace in PL/pgSQL and appears in no string literal in this body,
+  -- so removing it changes nothing that executes, and the replacement is
+  -- written with one consistent newline style whatever the checkout did.
+  v_provider_anchor := pg_catalog.replace(v_provider_anchor, pg_catalog.chr(13), '');
+  v_reclassify := pg_catalog.replace(v_reclassify, pg_catalog.chr(13), '');
+  v_loop_anchor := pg_catalog.replace(v_loop_anchor, pg_catalog.chr(13), '');
+  v_loop_repaired := pg_catalog.replace(v_loop_repaired, pg_catalog.chr(13), '');
+
   select pg_catalog.pg_get_functiondef(
     'public.apply_clinical_import_batch_v1(uuid,uuid,uuid,uuid[],uuid)'::regprocedure
   ) into v_definition;
@@ -220,11 +239,18 @@ begin
      and position(v_loop_repaired in v_definition) > 0 then
     -- Already repaired. Nothing to do, and nothing to re-count.
     v_definition := null;
-  elsif (length(v_definition) - length(pg_catalog.replace(v_definition, v_provider_anchor, '')))
-          / length(v_provider_anchor) <> 1
-     or (length(v_definition) - length(pg_catalog.replace(v_definition, v_loop_anchor, '')))
-          / length(v_loop_anchor) <> 1 then
-    raise exception using errcode='55000', message='unexpected clinical import apply statement set';
+  else
+    -- Each anchor must occur EXACTLY once in the CR-stripped applied body.
+    -- Asserted positively, so the guard proves its own precondition instead of
+    -- only reporting that something was not as expected.
+    if (length(v_definition) - length(pg_catalog.replace(v_definition, v_provider_anchor, '')))
+         / length(v_provider_anchor) <> 1 then
+      raise exception using errcode='55000', message='unexpected clinical import apply statement set';
+    end if;
+    if (length(v_definition) - length(pg_catalog.replace(v_definition, v_loop_anchor, '')))
+         / length(v_loop_anchor) <> 1 then
+      raise exception using errcode='55000', message='unexpected clinical import apply statement set';
+    end if;
   end if;
 
   if v_definition is not null then

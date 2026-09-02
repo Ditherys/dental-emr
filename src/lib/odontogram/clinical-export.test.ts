@@ -244,9 +244,24 @@ describe("chartExportSvgFrom", () => {
     const container = document.createElement("div");
     container.setAttribute("data-chart-export-root", "measured");
     container.innerHTML = [
-      '<svg viewBox="0 0 10 20"><g data-layer="caries" data-active="0"></g>',
+      '<svg data-orientation="normal" viewBox="0 0 10 20">',
+      '<g data-layer="caries" data-active="0"></g>',
       '<g data-layer="crown" data-active="1"></g></svg>',
-      '<svg viewBox="0 0 10 20"><rect /></svg>',
+      '<svg data-orientation="normal" viewBox="0 0 10 20"><rect /></svg>',
+    ].join("");
+    return container;
+  }
+
+  function quadrants(): HTMLElement {
+    const container = document.createElement("div");
+    container.setAttribute("data-chart-export-root", "measured");
+    // One tooth per orientation the renderer produces: quadrant 1 is the
+    // checked-in template, quadrants 2, 3 and 4 reuse it flipped.
+    container.innerHTML = [
+      '<svg data-measured-asset="1" data-orientation="normal"><g data-layer="caries-mesial" data-active="1"></g></svg>',
+      '<svg data-measured-asset="1" data-orientation="mirror"><g data-layer="caries-mesial" data-active="1"></g></svg>',
+      '<svg data-measured-asset="3" data-orientation="rotate"><g data-layer="caries-mesial" data-active="1"></g></svg>',
+      '<svg data-measured-asset="3" data-orientation="rotate-mirror"><g data-layer="caries-mesial" data-active="1"></g></svg>',
     ].join("");
     return container;
   }
@@ -269,6 +284,44 @@ describe("chartExportSvgFrom", () => {
     const composed = chartExportSvgFrom(chart());
     expect(composed).toMatch(/data-layer="caries"[^>]*style="display:none"/);
     expect(composed).not.toMatch(/data-layer="crown"[^>]*style="display:none"/);
+  });
+
+  // Anatomical templates exist for quadrants 1, 3, 5 and 7 only; every other
+  // quadrant is the same template flipped by a CSS rule the exported file
+  // cannot carry. The clinical layers are directional, so an un-flipped export
+  // states the finding on the opposite side of the tooth. 24 of the 32
+  // permanent teeth are affected.
+  it("carries the orientation flip for every reused-template quadrant", () => {
+    const composed = chartExportSvgFrom(quadrants());
+
+    expect(composed).toContain('<g data-orientation="mirror" transform="');
+    expect(composed).toContain('<g data-orientation="rotate" transform="');
+    expect(composed).toContain('<g data-orientation="rotate-mirror" transform="');
+    expect(composed).toMatch(/data-orientation="mirror" transform="[^"]*scale\(-1 1\)/);
+    expect(composed).toMatch(/data-orientation="rotate" transform="[^"]*scale\(1 -1\)/);
+    expect(composed).toMatch(/data-orientation="rotate-mirror" transform="[^"]*scale\(-1 -1\)/);
+  });
+
+  it("wraps nothing around a quadrant whose template is drawn as authored", () => {
+    const composed = chartExportSvgFrom(quadrants());
+    expect(composed).not.toContain('<g data-orientation="normal"');
+  });
+
+  it("flips about the tooth's own centre, not the document origin", () => {
+    const composed = chartExportSvgFrom(quadrants());
+    const transform = /data-orientation="mirror" transform="([^"]*)"/.exec(composed)?.[1] ?? "";
+    // translate(cx cy) scale(sx sy) translate(-cx -cy) - the two translations
+    // are exact negatives, which is what makes the flip local to the tooth.
+    const numbers = [...transform.matchAll(/translate\((-?[\d.]+) (-?[\d.]+)\)/g)];
+    expect(numbers).toHaveLength(2);
+    expect(Number(numbers[0][1])).toBe(-Number(numbers[1][1]));
+    expect(Number(numbers[0][2])).toBe(-Number(numbers[1][2]));
+  });
+
+  it("keeps the flip through the sanitizer, which is what actually leaves", () => {
+    const safe = sanitizeChartExportSvg(chartExportSvgFrom(quadrants()));
+    expect(safe).toMatch(/data-orientation="rotate-mirror" transform="[^"]*scale\(-1 -1\)/);
+    expect(safe).toContain('data-layer="caries-mesial"');
   });
 
   it("survives the sanitizer, so the composed picture is what actually leaves", () => {

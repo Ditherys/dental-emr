@@ -168,7 +168,17 @@ export function ClinicalExportMenu({
       // Print is the one export whose artifact this page cannot hold: the
       // browser owns the dialog and the paper. Registration is still the last
       // thing before the surface opens.
-      (onPrint ?? (() => window.print()))();
+      //
+      // Named explicitly rather than left as a fall-through. Any other format
+      // arriving here means the server registered a document export and
+      // returned no body, which is a failure - opening a print dialog instead
+      // would silently substitute a different artifact for the one asked for.
+      if (format === "PDF") {
+        (onPrint ?? (() => window.print()))();
+        return;
+      }
+
+      setError("The export could not be prepared. Try again.");
     } catch {
       setError("The export could not be prepared. Try again.");
     } finally {

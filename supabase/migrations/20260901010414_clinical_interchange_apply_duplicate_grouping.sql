@@ -30,7 +30,7 @@ do $do$
 declare
   v_definition text;
   v_replacement text;
-  v_from_anchor constant text :=
+  v_from_anchor text :=
 $anchor$    from (
       select
         candidate.id,
@@ -54,7 +54,7 @@ $anchor$    from (
         and candidate.id = any(p_candidate_ids)
     ) as grouped
 $anchor$;
-  v_from_repaired constant text :=
+  v_from_repaired text :=
 $repaired$    from (
       select
         ranked.id,
@@ -110,7 +110,7 @@ $repaired$    from (
       ) as ranked
     ) as grouped
 $repaired$;
-  v_group_anchor constant text :=
+  v_group_anchor text :=
 $anchor$    group by
       grouped.clinical_code,
       grouped.surfaces,
@@ -118,7 +118,7 @@ $anchor$    group by
       grouped.note,
       grouped.chunk
 $anchor$;
-  v_group_repaired constant text :=
+  v_group_repaired text :=
 $repaired$    group by
       grouped.clinical_code,
       grouped.surfaces,
@@ -128,6 +128,25 @@ $repaired$    group by
       grouped.chunk
 $repaired$;
 begin
+  -- ROUND 2 REVIEW, item 2. Carriage returns are stripped from BOTH SIDES.
+  --
+  -- The anchors below are dollar-quoted literals read verbatim from THIS FILE,
+  -- so on a CRLF checkout - which `core.autocrlf=true` with no .gitattributes
+  -- produces on this project's stated primary environment - they carry CRLF
+  -- while the fetched definition was normalised to LF. Normalising only the
+  -- definition therefore guaranteed a miss on exactly the checkout style this
+  -- repository actually uses, aborting the whole chain on `55000`. It fails
+  -- closed, so it was never a data-integrity problem - but a migration chain
+  -- that cannot replay is not a migration chain.
+  --
+  -- CR is whitespace in PL/pgSQL and appears in no string literal in this body,
+  -- so removing it changes nothing that executes, and the replacement is
+  -- written with one consistent newline style whatever the checkout did.
+  v_from_anchor := pg_catalog.replace(v_from_anchor, pg_catalog.chr(13), '');
+  v_from_repaired := pg_catalog.replace(v_from_repaired, pg_catalog.chr(13), '');
+  v_group_anchor := pg_catalog.replace(v_group_anchor, pg_catalog.chr(13), '');
+  v_group_repaired := pg_catalog.replace(v_group_repaired, pg_catalog.chr(13), '');
+
   select pg_catalog.pg_get_functiondef(
     'public.apply_clinical_import_batch_v1(uuid,uuid,uuid,uuid[],uuid)'::regprocedure
   ) into v_definition;
@@ -154,11 +173,18 @@ begin
   if position(v_from_repaired in v_definition) > 0
      and position(v_group_repaired in v_definition) > 0 then
     v_definition := null;
-  elsif (length(v_definition) - length(pg_catalog.replace(v_definition, v_from_anchor, '')))
-          / length(v_from_anchor) <> 1
-     or (length(v_definition) - length(pg_catalog.replace(v_definition, v_group_anchor, '')))
-          / length(v_group_anchor) <> 1 then
-    raise exception using errcode='55000', message='unexpected clinical import apply grouping statements';
+  else
+    -- Each anchor must occur EXACTLY once in the CR-stripped applied body.
+    -- Asserted positively, so the guard proves its own precondition instead of
+    -- only reporting that something was not as expected.
+    if (length(v_definition) - length(pg_catalog.replace(v_definition, v_from_anchor, '')))
+         / length(v_from_anchor) <> 1 then
+      raise exception using errcode='55000', message='unexpected clinical import apply grouping statements';
+    end if;
+    if (length(v_definition) - length(pg_catalog.replace(v_definition, v_group_anchor, '')))
+         / length(v_group_anchor) <> 1 then
+      raise exception using errcode='55000', message='unexpected clinical import apply grouping statements';
+    end if;
   end if;
 
   if v_definition is not null then

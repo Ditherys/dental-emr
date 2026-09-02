@@ -262,6 +262,24 @@ export function sanitizeChartExportSvg(source: string): string {
 }
 
 /**
+ * The renderer's orientation rules, as scale factors.
+ *
+ * Anatomical templates are checked in for quadrants 1, 3, 5 and 7 only; every
+ * other quadrant REUSES a template and is flipped by CSS
+ * (`measuredOrientation`, applied as a class by `MeasuredSvgAsset`). Clinical
+ * layers are directional - `caries-mesial`, `caries-distal`, `arrow-mesial` -
+ * so a flip that does not travel with the file puts findings on the WRONG SIDE
+ * of the tooth in an exported chart. That is a clinical misstatement in a
+ * document a dentist may print, file or send on, so the transform is inlined
+ * here exactly as the hidden-layer rule is.
+ */
+const ORIENTATION_SCALE: Readonly<Record<string, readonly [number, number]>> = Object.freeze({
+  mirror: [-1, 1],
+  rotate: [1, -1],
+  "rotate-mirror": [-1, -1],
+});
+
+/**
  * Serializes the mounted closed renderer into one exportable SVG.
  *
  * The chart is not one SVG: it is a grid of per-tooth SVGs the renderer lays
@@ -270,10 +288,13 @@ export function sanitizeChartExportSvg(source: string): string {
  * offset it is actually drawn at. Every tooth keeps its own `viewBox`, so
  * nothing here scales, positions or reinterprets the anatomy.
  *
- * It also inlines the renderer's `[data-active="0"] { display: none }` rule,
- * which lives in a stylesheet an exported file cannot carry. Without that an
- * exported chart would paint every clinical layer at once and assert findings
- * the record does not contain.
+ * It also carries over every rule in the renderer's stylesheet that changes
+ * what the chart SAYS, because an exported file carries no stylesheet:
+ * `[data-active="0"] { display: none }` becomes an inline style, and the three
+ * orientation transforms become an SVG transform on a wrapping `<g>`. A CSS
+ * `transform` on a nested `<svg>` is not portable, and the wrapper flips about
+ * the tooth's own centre in the outer coordinate system, so a mirrored quadrant
+ * lands exactly where it is drawn on screen.
  *
  * Returns "" when no chart is mounted, which is what keeps the export menu from
  * registering an export it cannot produce.
@@ -297,11 +318,35 @@ export function chartExportSvgFrom(container: Element | null | undefined): strin
       if (node.getAttribute("data-active") === "0") node.setAttribute("style", "display:none");
     }
 
-    clone.setAttribute("x", String(Math.max(0, Math.round(box.left - bounds.left))));
-    clone.setAttribute("y", String(Math.max(0, Math.round(box.top - bounds.top))));
-    clone.setAttribute("width", String(Math.max(1, Math.round(box.width))));
-    clone.setAttribute("height", String(Math.max(1, Math.round(box.height))));
-    parts.push(clone.outerHTML);
+    const x = Math.max(0, Math.round(box.left - bounds.left));
+    const y = Math.max(0, Math.round(box.top - bounds.top));
+    const width = Math.max(1, Math.round(box.width));
+    const height = Math.max(1, Math.round(box.height));
+
+    clone.setAttribute("x", String(x));
+    clone.setAttribute("y", String(y));
+    clone.setAttribute("width", String(width));
+    clone.setAttribute("height", String(height));
+
+    const orientation = root.getAttribute("data-orientation") ?? "normal";
+    const scale = Object.hasOwn(ORIENTATION_SCALE, orientation)
+      ? ORIENTATION_SCALE[orientation]
+      : null;
+
+    if (scale === null) {
+      parts.push(clone.outerHTML);
+      continue;
+    }
+
+    // Flip about the tooth's own centre, in the outer coordinate system, so the
+    // template lands exactly where CSS puts it on screen.
+    const centreX = x + width / 2;
+    const centreY = y + height / 2;
+    parts.push(
+      `<g data-orientation="${orientation}" transform="translate(${centreX} ${centreY}) ` +
+        `scale(${scale[0]} ${scale[1]}) translate(${-centreX} ${-centreY})">` +
+        `${clone.outerHTML}</g>`,
+    );
   }
 
   if (parts.length === 0) return "";

@@ -356,4 +356,48 @@ describe("the chart image export, wired the way the route wires it", () => {
     expect(exported).toMatch(/data-layer="caries"[^>]*style="display:none"/);
     chart.remove();
   });
+
+  // ROUND 2 REVIEW, item 1. Anatomical templates exist for quadrants 1, 3, 5
+  // and 7 only; the rest are the same template flipped by a CSS rule the
+  // exported file cannot carry, and the clinical layers are directional. An
+  // un-flipped export states the finding on the wrong side of the tooth.
+  it("carries the quadrant flip into the downloaded blob", async () => {
+    const user = userEvent.setup();
+    const chart = document.createElement("div");
+    chart.setAttribute("data-chart-export-root", "measured");
+    chart.innerHTML =
+      '<svg data-measured-asset="1" data-orientation="mirror">' +
+      '<g data-layer="caries-mesial" data-active="1"></g></svg>';
+    document.body.append(chart);
+
+    renderToolbar({
+      interchange: {
+        ...INTERCHANGE,
+        getChartSvg: () =>
+          chartExportSvgFrom(document.querySelector("[data-chart-export-root]")),
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Chart image (SVG)" }));
+
+    const exported = await created[0].text();
+    expect(exported).toMatch(/data-orientation="mirror" transform="[^"]*scale\(-1 1\)/);
+    expect(exported).toContain('data-layer="caries-mesial"');
+    chart.remove();
+  });
+
+  it("offers no chart image in the periodontal mode, which mounts no renderer", async () => {
+    const user = userEvent.setup();
+    renderToolbar({
+      mode: "PERIODONTAL",
+      interchange: { ...INTERCHANGE, getChartSvg: () => "<svg><rect /></svg>" },
+    });
+
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+
+    expect(await screen.findByRole("menuitem", { name: "FHIR R4 Bundle" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Chart image (SVG)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Chart image (PNG)" })).not.toBeInTheDocument();
+  });
 });

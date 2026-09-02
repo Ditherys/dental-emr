@@ -219,6 +219,20 @@ describe("ClinicalExportMenu", () => {
     expect(screen.queryByRole("menuitem", { name: "Chart image (PNG)" })).not.toBeInTheDocument();
   });
 
+  it("reports a failure rather than silently opening a print dialog for a bodyless document", async () => {
+    recordClinicalExportAction.mockResolvedValue(
+      registered({ filename: "clinical-chart-P000123-2026-09-01.json", body: null }),
+    );
+    onPrint.mockClear();
+    const user = await openMenu();
+
+    await user.click(await screen.findByRole("menuitem", { name: "FHIR R4 Bundle" }));
+
+    expect(onPrint).not.toHaveBeenCalled();
+    expect(downloads).toHaveLength(0);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be prepared/);
+  });
+
   it("produces the picture before it registers, so the two cannot disagree", async () => {
     const order: string[] = [];
     recordClinicalExportAction.mockImplementation(async () => {

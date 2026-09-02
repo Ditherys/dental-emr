@@ -248,7 +248,11 @@ export function ClinicalChartToolbar({
         <ClinicalExportMenu
           patientId={interchange.patientId}
           branchId={interchange.branchId}
-          getChartSvg={interchange.getChartSvg}
+          // Only the two tooth-chart modes mount a renderer to serialize. The
+          // toolbar is where the mode is known, so this is where the chart-image
+          // exports stop being offered - a caller cannot reasonably be asked to
+          // re-derive which mode is showing.
+          getChartSvg={mode === "PERIODONTAL" ? undefined : interchange.getChartSvg}
           onPrint={onPrint}
         />
       )}
