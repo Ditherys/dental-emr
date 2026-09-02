@@ -182,11 +182,68 @@ describe("ClinicalExportMenu", () => {
       registered({ filename: "clinical-chart-P000123-2026-09-01.svg", contentType: "image/svg+xml", body: null }),
     );
     const user = userEvent.setup();
-    render(<ClinicalExportMenu patientId={patientId} branchId={branchId} />);
+    render(
+      <ClinicalExportMenu patientId={patientId} branchId={branchId} getChartSvg={() => null} />,
+    );
     await user.click(screen.getByRole("button", { name: /Export chart/ }));
     await user.click(await screen.findByRole("menuitem", { name: "Chart image (SVG)" }));
 
     expect(objectUrls).toHaveLength(0);
     expect(await screen.findByRole("alert")).toHaveTextContent(/not on screen/);
+  });
+
+  // REVIEW ROUND 1, item 1. Registering an export that then cannot be produced
+  // writes an audit row asserting something happened that did not.
+  it("registers NOTHING when the chart image cannot be produced", async () => {
+    recordClinicalExportAction.mockResolvedValue(
+      registered({ filename: "clinical-chart-P000123-2026-09-01.svg", contentType: "image/svg+xml", body: null }),
+    );
+    const user = userEvent.setup();
+    render(
+      <ClinicalExportMenu patientId={patientId} branchId={branchId} getChartSvg={() => null} />,
+    );
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Chart image (SVG)" }));
+
+    expect(recordClinicalExportAction).not.toHaveBeenCalled();
+  });
+
+  it("does not offer a chart image at all where no chart can be serialized", async () => {
+    const user = userEvent.setup();
+    render(<ClinicalExportMenu patientId={patientId} branchId={branchId} />);
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+
+    expect(await screen.findByRole("menuitem", { name: "FHIR R4 Bundle" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Print or save as PDF" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Chart image (SVG)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Chart image (PNG)" })).not.toBeInTheDocument();
+  });
+
+  it("produces the picture before it registers, so the two cannot disagree", async () => {
+    const order: string[] = [];
+    recordClinicalExportAction.mockImplementation(async () => {
+      order.push("register");
+      return registered({
+        filename: "clinical-chart-P000123-2026-09-01.svg",
+        contentType: "image/svg+xml",
+        body: null,
+      });
+    });
+    const user = userEvent.setup();
+    render(
+      <ClinicalExportMenu
+        patientId={patientId}
+        branchId={branchId}
+        getChartSvg={() => {
+          order.push("serialize");
+          return HOSTILE_SVG;
+        }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Chart image (SVG)" }));
+
+    expect(order).toEqual(["serialize", "register"]);
+    expect(downloads).toHaveLength(1);
   });
 });

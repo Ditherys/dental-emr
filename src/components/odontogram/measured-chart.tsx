@@ -247,6 +247,10 @@ export function MeasuredChart({
   return (
     <div
       data-testid="measured-chart"
+      // The stable hook the export menu serializes. It is a production
+      // attribute rather than the test id next to it, because a chart image
+      // export is a real feature and must not depend on a testing affordance.
+      data-chart-export-root="measured"
       data-viewport={viewport}
       data-notation={notation}
       data-dentition={dentition}

@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { recordClinicalExportAction, createClinicalImportBatchAction } = vi.hoisted(() => ({
   recordClinicalExportAction: vi.fn(),
@@ -18,6 +18,8 @@ vi.mock("@/app/(emr)/patients/[patientId]/odontogram-interchange-actions", () =>
   applyClinicalImportBatchAction: vi.fn(),
   archiveClinicalImportBatchAction: vi.fn(),
 }));
+
+import { chartExportSvgFrom } from "@/lib/odontogram/clinical-export";
 
 import {
   ClinicalChartToolbar,
@@ -283,5 +285,75 @@ describe("the clinical interchange in the toolbar", () => {
     expect(
       screen.queryByRole("menuitem", { name: "Import clinical records" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// REVIEW ROUND 1, item 1. The chart-image exports were unreachable in
+// production because nothing ever supplied a chart to serialize. This exercises
+// the production wiring itself - the same selector expression clinical-section
+// passes - against a mounted renderer root, and asserts a real artifact comes
+// out the other end.
+describe("the chart image export, wired the way the route wires it", () => {
+  const created: Blob[] = [];
+  const saved: string[] = [];
+
+  beforeEach(() => {
+    created.length = 0;
+    saved.length = 0;
+    recordClinicalExportAction.mockReset();
+    recordClinicalExportAction.mockResolvedValue({
+      ok: true,
+      filename: "clinical-chart-P000123-2026-09-01.svg",
+      contentType: "image/svg+xml",
+      contentDisposition: 'attachment; filename="clinical-chart-P000123-2026-09-01.svg"',
+      body: null,
+    });
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: (blob: Blob) => {
+        created.push(blob);
+        return `blob:synthetic/${created.length}`;
+      },
+      revokeObjectURL: () => {},
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function click(
+      this: HTMLAnchorElement,
+    ) {
+      saved.push(this.download);
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("produces a downloadable chart image from the mounted renderer", async () => {
+    const user = userEvent.setup();
+    const chart = document.createElement("div");
+    chart.setAttribute("data-chart-export-root", "measured");
+    chart.innerHTML =
+      '<svg viewBox="0 0 10 20"><g data-layer="caries" data-active="0"></g>' +
+      '<rect data-layer="tooth" data-active="1" /></svg>';
+    document.body.append(chart);
+
+    renderToolbar({
+      interchange: {
+        ...INTERCHANGE,
+        getChartSvg: () =>
+          chartExportSvgFrom(document.querySelector("[data-chart-export-root]")),
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: /Export chart/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Chart image (SVG)" }));
+
+    expect(created).toHaveLength(1);
+    expect(saved).toEqual(["clinical-chart-P000123-2026-09-01.svg"]);
+
+    const exported = await created[0].text();
+    expect(exported).toContain("<rect");
+    expect(exported).toMatch(/data-layer="caries"[^>]*style="display:none"/);
+    chart.remove();
   });
 });

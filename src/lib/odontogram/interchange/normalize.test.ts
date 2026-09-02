@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { NormalizedToothFinding } from "./schema";
-import { MAX_IMPORT_CANDIDATES, MAX_IMPORT_SOURCE_BYTES } from "./schema";
+import {
+  MAX_IMPORT_ARRAY_LENGTH,
+  MAX_IMPORT_CANDIDATES,
+  MAX_IMPORT_SOURCE_BYTES,
+} from "./schema";
 import {
   canonicalComparisonFromEntries,
   canonicalComparisonFromOdontogramEntries,
@@ -311,6 +315,14 @@ describe("parseClinicalImportSource — the rejection list", () => {
       emrJson(Array.from({ length: MAX_IMPORT_CANDIDATES + 1 }, () => finding)),
       "EMR_JSON_V1",
       "TOO_MANY_CANDIDATES",
+    );
+  });
+
+  it("refuses an array wider than the declared array ceiling, wherever it sits", () => {
+    expectRejected(
+      emrJson([finding], { extra: Array.from({ length: MAX_IMPORT_ARRAY_LENGTH + 1 }, () => 1) }),
+      "EMR_JSON_V1",
+      "ARRAY_TOO_LONG",
     );
   });
 

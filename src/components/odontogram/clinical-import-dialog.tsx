@@ -60,6 +60,7 @@ const REJECTION_MESSAGES: Record<string, string> = {
   UNKNOWN_VERSION: "That document version is not supported.",
   UNSUPPORTED_FORMAT: "That document is not one of the accepted interchange formats.",
   TOO_MANY_CANDIDATES: "That file contains more than five hundred records. Split it and try again.",
+  ARRAY_TOO_LONG: "That file contains a list longer than this platform will read.",
 };
 
 function failureMessage(result: { code: string; rejection?: string }): string {
@@ -343,6 +344,9 @@ export function ClinicalImportDialog({
                     return (
                       <tr key={candidate.candidateId} className="border-b last:border-b-0">
                         <td className="py-2 pr-3">
+                          {/* The control is 20px; the target around it is 44px,
+                              like every other control on this surface. */}
+                          <label className="flex size-11 cursor-pointer items-center justify-center">
                           <input
                             type="checkbox"
                             className="size-5"
@@ -358,6 +362,7 @@ export function ClinicalImportDialog({
                               })
                             }
                           />
+                          </label>
                         </td>
                         <td className="py-2 pr-3">{candidateSummary(candidate)}</td>
                         <td className="py-2 pr-3 tabular-nums">{candidate.clinicalDate ?? "—"}</td>
@@ -379,7 +384,7 @@ export function ClinicalImportDialog({
               <input
                 id={confirmId}
                 type="checkbox"
-                className="size-5"
+                className="size-5 shrink-0"
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />

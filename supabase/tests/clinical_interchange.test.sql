@@ -550,6 +550,253 @@ select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
 
 -- ---------------------------------------------------------------------------
+-- REVIEW ROUND 1, item 4a: the same organization, the wrong branch
+--
+-- The dentist has an active branch membership at Interchange Second and the
+-- DENTIST role is organization-wide, so has_clinical_permission_at_branch is
+-- satisfied there. What must still refuse is the batch itself: it belongs to
+-- Interchange Main, and every boundary matches batch.branch_id to the acting
+-- branch. Tenancy is not the only scope that has to hold.
+-- ---------------------------------------------------------------------------
+
+select extensions.throws_ok(
+  $$select public.get_clinical_import_batch_v1('1c300000-0000-0000-0000-000000000002','1c500000-0000-0000-0000-000000000001','$$ ||
+  (select batch_id::text from interchange_result where seq=1) || $$')$$,
+  '42501','not authorized',
+  'a batch staged at another branch of the same organization cannot be read through this one'
+);
+select extensions.throws_ok(
+  $$select public.archive_clinical_import_batch_v1('1c300000-0000-0000-0000-000000000002','1c500000-0000-0000-0000-000000000001','$$ ||
+  (select batch_id::text from interchange_result where seq=5) || $$','Wrong branch')$$,
+  '42501','not authorized',
+  'a batch staged at another branch of the same organization cannot be archived through this one'
+);
+
+-- ---------------------------------------------------------------------------
+-- REVIEW ROUND 1, item 3: the confirmed review can go stale, and apply says so
+--
+-- A candidate is staged NEW. Another clinician then charts the same tooth with
+-- a different code, which makes that candidate a CONFLICT. The classification
+-- stored at stage time still says NEW; the apply must re-derive it against the
+-- chart as it stands now and refuse, rather than append against a review that
+-- is no longer true.
+-- ---------------------------------------------------------------------------
+
+insert into interchange_result(seq,batch_id,staged_count,replayed)
+select 8, batch_id, staged_count, replayed from public.create_clinical_import_batch_v1(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  'EMR_JSON_V1', repeat('c',64),
+  $j$[{"kind":"TOOTH_FINDING","classification":"NEW","toothCode":"37","clinicalCode":"CARIES","surfaces":["O"],"clinicalDate":"2026-08-01","note":null}]$j$::jsonb,
+  '1c900000-0000-0000-0000-000000000080'
+);
+insert into interchange_candidates(batch_seq, ordinal, candidate_id)
+select 8, projected.ordinal, projected.candidate_id
+from public.get_clinical_import_batch_v1(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  (select batch_id from interchange_result where seq=8)) as projected;
+
+-- Another clinician charts tooth 37 in the meantime.
+select recorded_count from public.record_visit_tooth_findings(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  array['37'],'RESTORATION',array['O'],'ACTIVE',
+  (pg_catalog.timezone('Asia/Manila',pg_catalog.statement_timestamp()))::date,
+  null,'1c900000-0000-0000-0000-000000000081'
+);
+
+select extensions.is(
+  (select projected.classification from public.get_clinical_import_batch_v1(
+    '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+    (select batch_id from interchange_result where seq=8)) as projected where projected.ordinal=1),
+  'NEW',
+  'the classification stored at stage time still reads NEW'
+);
+select extensions.throws_ok(
+  $$select public.apply_clinical_import_batch_v1('1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001','$$ ||
+  (select batch_id::text from interchange_result where seq=8) || $$',array['$$ ||
+  (select candidate_id::text from interchange_candidates where batch_seq=8 and ordinal=1) || $$'::uuid],'1c900000-0000-0000-0000-000000000082')$$,
+  'P0001','invalid state',
+  'a candidate that became a conflict since the review is refused, not appended'
+);
+set local role postgres;
+select extensions.is(
+  (select count(*)::integer from public.tooth_clinical_entries
+    where patient_id='1c500000-0000-0000-0000-000000000001' and tooth_code='37'),
+  1,
+  'the stale candidate appended nothing: only the other clinician''s entry is on the tooth'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
+
+-- ---------------------------------------------------------------------------
+-- REVIEW ROUND 1, item 4b: one transaction, or nothing
+--
+-- The single-transaction design exists so a failure part way through an apply
+-- leaves the chart exactly as it was. Nothing in the boundary can be made to
+-- fail mid-loop on purpose - every gate runs before it - so the failure is
+-- injected: a trigger refuses one specific tooth. The first group is written,
+-- the second raises, and the assertions below are that NOTHING survived: no
+-- entry, no applied_at, and the batch still STAGED and still appliable.
+-- ---------------------------------------------------------------------------
+
+insert into interchange_result(seq,batch_id,staged_count,replayed)
+select 9, batch_id, staged_count, replayed from public.create_clinical_import_batch_v1(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  'EMR_JSON_V1', repeat('d',64),
+  $j$[
+    {"kind":"TOOTH_FINDING","classification":"NEW","toothCode":"46","clinicalCode":"CARIES","surfaces":["O"],"clinicalDate":"2026-08-01","note":null},
+    {"kind":"TOOTH_FINDING","classification":"NEW","toothCode":"47","clinicalCode":"SEALANT","surfaces":["O"],"clinicalDate":"2026-08-01","note":null}
+  ]$j$::jsonb,
+  '1c900000-0000-0000-0000-000000000090'
+);
+insert into interchange_candidates(batch_seq, ordinal, candidate_id)
+select 9, projected.ordinal, projected.candidate_id
+from public.get_clinical_import_batch_v1(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  (select batch_id from interchange_result where seq=9)) as projected;
+
+set local role postgres;
+create function pg_temp.refuse_tooth_47() returns trigger language plpgsql as $fn$
+begin
+  if new.tooth_code = '47' then
+    raise exception using errcode='55000', message='synthetic mid-apply failure';
+  end if;
+  return new;
+end;
+$fn$;
+create trigger interchange_rollback_probe
+before insert on public.tooth_clinical_entries
+for each row execute function pg_temp.refuse_tooth_47();
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
+
+select extensions.throws_ok(
+  $$select public.apply_clinical_import_batch_v1('1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001','$$ ||
+  (select batch_id::text from interchange_result where seq=9) || $$',array['$$ ||
+  (select candidate_id::text from interchange_candidates where batch_seq=9 and ordinal=1) || $$'::uuid,'$$ ||
+  (select candidate_id::text from interchange_candidates where batch_seq=9 and ordinal=2) || $$'::uuid],'1c900000-0000-0000-0000-000000000091')$$,
+  '55000','synthetic mid-apply failure',
+  'a failure part way through an apply propagates rather than being swallowed'
+);
+
+set local role postgres;
+drop trigger interchange_rollback_probe on public.tooth_clinical_entries;
+
+select extensions.is(
+  (select count(*)::integer from public.tooth_clinical_entries
+    where patient_id='1c500000-0000-0000-0000-000000000001' and tooth_code in ('46','47')),
+  0,
+  'the candidate written before the failure was rolled back with it'
+);
+select extensions.is(
+  (select count(*)::integer from public.clinical_import_candidates
+    where batch_id=(select batch_id from interchange_result where seq=9) and applied_at is not null),
+  0,
+  'no candidate in the failed batch records an application'
+);
+select extensions.is(
+  (select batch_status from public.clinical_import_batches
+    where id=(select batch_id from interchange_result where seq=9)),
+  'STAGED',
+  'the batch that failed part way through is still STAGED'
+);
+select extensions.is(
+  (select count(*)::integer from public.audit_events
+    where action='clinical.import.applied'
+      and entity_id=(select batch_id from interchange_result where seq=9)),
+  0,
+  'a failed apply writes no audit event claiming it happened'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
+
+-- The same batch still applies once the fault is gone, which is the other half
+-- of the guarantee: a rolled-back apply left nothing behind that blocks a retry.
+select extensions.is(
+  (select applied_count from public.apply_clinical_import_batch_v1(
+    '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+    (select batch_id from interchange_result where seq=9),
+    array[
+      (select candidate_id from interchange_candidates where batch_seq=9 and ordinal=1),
+      (select candidate_id from interchange_candidates where batch_seq=9 and ordinal=2)
+    ],
+    '1c900000-0000-0000-0000-000000000092')),
+  2,
+  'the batch that rolled back applies cleanly on retry'
+);
+
+-- ---------------------------------------------------------------------------
+-- REVIEW ROUND 1, item 2: the ceiling is the default path, so prove the ceiling
+--
+-- Five hundred candidates - the staging maximum, and what the dialog selects by
+-- default. Twenty posterior teeth repeated twenty-five times, so the grouping
+-- has to survive both the 32-tooth writer ceiling and the same tooth appearing
+-- many times in one batch.
+-- ---------------------------------------------------------------------------
+
+insert into interchange_result(seq,batch_id,staged_count,replayed)
+select 10, batch_id, staged_count, replayed from public.create_clinical_import_batch_v1(
+  '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+  'EMR_JSON_V1', repeat('e',64),
+  (select jsonb_agg(jsonb_build_object(
+     'kind','TOOTH_FINDING','classification','NEW',
+     'toothCode',tooth.code,'clinicalCode','FRACTURE',
+     'surfaces',jsonb_build_array('B'),'clinicalDate','2026-08-01','note',null
+   ))
+   from generate_series(1,25) as repetition
+   cross join (values ('14'),('15'),('16'),('17'),('18'),('24'),('25'),('26'),('27'),('28'),
+                      ('34'),('35'),('36'),('37'),('38'),('44'),('45'),('46'),('47'),('48')
+   ) as tooth(code)),
+  '1c900000-0000-0000-0000-0000000000a0'
+);
+select extensions.is(
+  (select staged_count from interchange_result where seq=10), 500,
+  'the staging ceiling of five hundred candidates is reachable'
+);
+
+set local role postgres;
+create temp table interchange_bulk_before as
+select count(*)::integer as entries from public.tooth_clinical_entries
+where patient_id='1c500000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
+
+select extensions.is(
+  (select applied_count from public.apply_clinical_import_batch_v1(
+    '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+    (select batch_id from interchange_result where seq=10),
+    (select pg_catalog.array_agg(projected.candidate_id)
+     from public.get_clinical_import_batch_v1(
+       '1c300000-0000-0000-0000-000000000001','1c500000-0000-0000-0000-000000000001',
+       (select batch_id from interchange_result where seq=10)) as projected),
+    '1c900000-0000-0000-0000-0000000000a1')),
+  500,
+  'a full five-hundred-candidate batch applies completely in one call'
+);
+
+set local role postgres;
+select extensions.is(
+  (select count(*)::integer from public.tooth_clinical_entries
+    where patient_id='1c500000-0000-0000-0000-000000000001')
+    - (select entries from interchange_bulk_before),
+  500,
+  'every one of the five hundred candidates is appended, including the repeats'
+);
+select extensions.is(
+  (select count(*)::integer from public.tooth_clinical_entries
+    where patient_id='1c500000-0000-0000-0000-000000000001'
+      and clinical_code='FRACTURE' and tooth_code='16'),
+  25,
+  'the same finding asserted twenty-five times on one tooth is appended twenty-five times'
+);
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','1c100000-0000-0000-0000-000000000001',true);
+
+-- ---------------------------------------------------------------------------
 -- Export registration
 -- ---------------------------------------------------------------------------
 

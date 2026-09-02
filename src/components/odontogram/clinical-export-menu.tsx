@@ -43,6 +43,9 @@ const EXPORTS: ReadonlyArray<{ format: ClinicalExportFormat; label: string }> = 
   { format: "PDF", label: "Print or save as PDF" },
 ]);
 
+/** The formats whose bytes this page produces from the mounted renderer. */
+const renderedFormats: ReadonlySet<ClinicalExportFormat> = new Set(["SVG", "PNG"]);
+
 function saveLocally(filename: string, contentType: string, body: BlobPart): void {
   const url = URL.createObjectURL(new Blob([body], { type: contentType }));
   const anchor = document.createElement("a");
@@ -111,6 +114,29 @@ export function ClinicalExportMenu({
     setBusy(true);
     setError(null);
     try {
+      // REVIEW ROUND 1, item 1. The picture is produced BEFORE the export is
+      // registered. Registering first would write an export record and an audit
+      // event for a download that then never happened, and an audit trail that
+      // records intentions rather than outcomes is not an audit trail.
+      let picture: string | Blob | null = null;
+
+      if (format === "SVG" || format === "PNG") {
+        const svg = sanitizeChartExportSvg(getChartSvg?.() ?? "");
+        if (svg === "") {
+          setError("The chart is not on screen, so there is nothing to export as an image.");
+          return;
+        }
+        if (format === "PNG") {
+          picture = await rasterize(svg);
+          if (picture === null) {
+            setError("The chart image could not be rendered. Export the SVG instead.");
+            return;
+          }
+        } else {
+          picture = svg;
+        }
+      }
+
       const registered = await recordClinicalExportAction({
         branchId,
         patientId,
@@ -128,33 +154,21 @@ export function ClinicalExportMenu({
         return;
       }
 
+      // The server generates the two document formats during registration.
       if (registered.body !== null) {
         saveLocally(registered.filename, registered.contentType, registered.body);
         return;
       }
 
-      if (format === "PDF") {
-        (onPrint ?? (() => window.print()))();
+      if (picture !== null) {
+        saveLocally(registered.filename, registered.contentType, picture);
         return;
       }
 
-      const svg = sanitizeChartExportSvg(getChartSvg?.() ?? "");
-      if (svg === "") {
-        setError("The chart is not on screen, so there is nothing to export as an image.");
-        return;
-      }
-
-      if (format === "SVG") {
-        saveLocally(registered.filename, registered.contentType, svg);
-        return;
-      }
-
-      const png = await rasterize(svg);
-      if (png === null) {
-        setError("The chart image could not be rendered. Export the SVG instead.");
-        return;
-      }
-      saveLocally(registered.filename, registered.contentType, png);
+      // Print is the one export whose artifact this page cannot hold: the
+      // browser owns the dialog and the paper. Registration is still the last
+      // thing before the surface opens.
+      (onPrint ?? (() => window.print()))();
     } catch {
       setError("The export could not be prepared. Try again.");
     } finally {
@@ -171,7 +185,13 @@ export function ClinicalExportMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {EXPORTS.map((option) => (
+          {EXPORTS.filter(
+            // A chart-image export needs a mounted chart to serialize. Where
+            // there is none - the periodontal mode, or a screen that never
+            // supplied one - the two rendered formats are not offered at all
+            // rather than offered and then refused.
+            (option) => renderedFormats.has(option.format) === false || getChartSvg !== undefined,
+          ).map((option) => (
             <DropdownMenuItem key={option.format} onSelect={() => void exportAs(option.format)}>
               {option.label}
             </DropdownMenuItem>

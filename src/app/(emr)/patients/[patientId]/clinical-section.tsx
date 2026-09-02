@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { ClinicalChartMode, ClinicalEncounter, ClinicalEncounterDetail, ClinicalNote, ClinicalRecordType, ClinicalVisitState, MedicalRecord } from "@/lib/clinical/types";
 import type { ClinicalComposerContext } from "@/lib/odontogram/composer-context";
+import { chartExportSvgFrom } from "@/lib/odontogram/clinical-export";
 import type { PatientOdontogramDTO, ToothCondition } from "@/lib/odontogram/types";
 import { progressEventsFromOdontogram, type ClinicalProgressRecord } from "@/lib/odontogram/progress-record";
 import type { ProviderListItem } from "@/lib/providers/types";
@@ -315,6 +316,11 @@ export function ClinicalSection({ patientId, actingBranchId, canWriteClinical, c
         canImport: canWriteClinical,
         providerDisplay: visit?.providerDisplay ?? null,
         clinicalDate: visit?.clinicalDate ?? null,
+        // Serializes whatever chart is mounted right now, at click time. The
+        // periodontal mode mounts none, so the chart-image exports are simply
+        // not offered there rather than offered and refused.
+        getChartSvg: () =>
+          chartExportSvgFrom(document.querySelector("[data-chart-export-root]")),
         onImported: () => router.refresh(),
       }}
       chartLoadFailed={loadFailed}

@@ -1,3 +1,8 @@
+// @vitest-environment jsdom
+//
+// The document builders and the sanitizer are pure string work; the composer
+// reads the geometry the browser computed, so this file needs a DOM.
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +12,7 @@ import {
   buildFhirBundleExport,
   clinicalExportContentDisposition,
   clinicalExportContentType,
+  chartExportSvgFrom,
   clinicalExportFilename,
   clampExportScale,
   sanitizeChartExportSvg,
@@ -230,5 +236,75 @@ describe("the download filename", () => {
     expect(clinicalExportContentType("SVG")).toBe("image/svg+xml");
     expect(clinicalExportContentType("PNG")).toBe("image/png");
     expect(clinicalExportContentType("PDF")).toBe("application/pdf");
+  });
+});
+
+describe("chartExportSvgFrom", () => {
+  function chart(): HTMLElement {
+    const container = document.createElement("div");
+    container.setAttribute("data-chart-export-root", "measured");
+    container.innerHTML = [
+      '<svg viewBox="0 0 10 20"><g data-layer="caries" data-active="0"></g>',
+      '<g data-layer="crown" data-active="1"></g></svg>',
+      '<svg viewBox="0 0 10 20"><rect /></svg>',
+    ].join("");
+    return container;
+  }
+
+  it("returns nothing when no chart is mounted, so no export can be registered for one", () => {
+    expect(chartExportSvgFrom(null)).toBe("");
+    expect(chartExportSvgFrom(undefined)).toBe("");
+    expect(chartExportSvgFrom(document.createElement("div"))).toBe("");
+  });
+
+  it("nests every mounted tooth into one exportable root", () => {
+    const composed = chartExportSvgFrom(chart());
+    expect(composed.startsWith("<svg")).toBe(true);
+    expect(composed.endsWith("</svg>")).toBe(true);
+    expect(composed.match(/<svg/g)).toHaveLength(3);
+    expect(composed).toContain("<rect");
+  });
+
+  it("inlines the renderer's own hidden-layer rule, which no exported file can carry", () => {
+    const composed = chartExportSvgFrom(chart());
+    expect(composed).toMatch(/data-layer="caries"[^>]*style="display:none"/);
+    expect(composed).not.toMatch(/data-layer="crown"[^>]*style="display:none"/);
+  });
+
+  it("survives the sanitizer, so the composed picture is what actually leaves", () => {
+    const safe = sanitizeChartExportSvg(chartExportSvgFrom(chart()));
+    expect(safe).toContain("<rect");
+    expect(safe).toContain('style="display:none"');
+    // jsdom reports a zero-sized layout, so this asserts the invariant rather
+    // than a pixel count: whatever the browser measured, the exported root
+    // carries one positive width no larger than the fixed ceiling.
+    const width = Number(/^<svg[^>]*\swidth="(\d+)"/.exec(safe)?.[1]);
+    expect(width).toBeGreaterThan(0);
+    expect(width).toBeLessThanOrEqual(MAX_EXPORT_SVG_DIMENSION);
+  });
+});
+
+describe("the sanitizer's tag boundaries", () => {
+  it("does not let a > inside an attribute value end the tag and smuggle a handler past", () => {
+    const smuggled = sanitizeChartExportSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">' +
+        '<rect data-note="a > b" onclick="steal()" />' +
+        "</svg>",
+    );
+    expect(smuggled).not.toMatch(/\son[a-z]+\s*=/i);
+    expect(smuggled).not.toContain("steal()");
+    expect(smuggled).toContain("<rect");
+  });
+
+  it("keeps a scoped style attribute while still removing a style element", () => {
+    const safe = sanitizeChartExportSvg(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">' +
+        "<style>@import url(https://attacker.example/x.css);</style>" +
+        '<g style="display:none"></g>' +
+        "</svg>",
+    );
+    expect(safe).not.toContain("<style");
+    expect(safe).not.toContain("attacker.example");
+    expect(safe).toContain('style="display:none"');
   });
 });

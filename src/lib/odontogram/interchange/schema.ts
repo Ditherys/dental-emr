@@ -47,6 +47,11 @@ export type ClinicalExportScope = (typeof CLINICAL_EXPORT_SCOPES)[number];
 export const MAX_IMPORT_SOURCE_BYTES = 1_048_576;
 export const MAX_IMPORT_CANDIDATES = 500;
 export const MAX_IMPORT_STRING_LENGTH = 2000;
+/**
+ * The widest array the parser will walk anywhere in a document. It is enforced
+ * in `auditDocument`, not merely declared: a named bound nothing checks reads
+ * as coverage that does not exist.
+ */
 export const MAX_IMPORT_ARRAY_LENGTH = 512;
 export const MAX_IMPORT_JSON_DEPTH = 12;
 export const MAX_IMPORT_COMPARISON_ENTRIES = 1000;
@@ -69,6 +74,7 @@ export const IMPORT_REJECTION_CODES = [
   "UNKNOWN_VERSION",
   "UNSUPPORTED_FORMAT",
   "TOO_MANY_CANDIDATES",
+  "ARRAY_TOO_LONG",
 ] as const;
 export type ImportRejectionCode = (typeof IMPORT_REJECTION_CODES)[number];
 
@@ -232,7 +238,18 @@ export const createClinicalImportBatchInputSchema = z
     branchId: uuid,
     patientId: uuid,
     format: z.enum(CLINICAL_IMPORT_FORMATS),
-    sourceText: z.string().max(MAX_IMPORT_SOURCE_BYTES),
+    // The ceiling is BYTES, and the parser measures bytes. `.max()` counts
+    // UTF-16 code units, so it alone would let a multi-byte document through
+    // this layer and be refused one layer later. The cheap character check
+    // stays as a fast reject and the byte check is what actually decides, so
+    // the two layers cannot disagree.
+    sourceText: z
+      .string()
+      .max(MAX_IMPORT_SOURCE_BYTES)
+      .refine(
+        (value) => new TextEncoder().encode(value).length <= MAX_IMPORT_SOURCE_BYTES,
+        "source is larger than the import limit",
+      ),
     idempotencyKey: uuid,
   })
   .strict();

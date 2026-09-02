@@ -10,6 +10,7 @@ import {
 import {
   EMR_INTERCHANGE_DOCUMENT_FORMAT,
   EMR_INTERCHANGE_DOCUMENT_VERSION,
+  MAX_IMPORT_ARRAY_LENGTH,
   MAX_IMPORT_CANDIDATES,
   MAX_IMPORT_COMPARISON_ENTRIES,
   MAX_IMPORT_JSON_DEPTH,
@@ -110,6 +111,10 @@ function auditDocument(value: unknown, depth: number): void {
   }
 
   if (Array.isArray(value)) {
+    // Bounded width as well as bounded depth. The 1 MiB source cap already
+    // bounds the total work, but a single pathological array is refused by
+    // name rather than absorbed.
+    if (value.length > MAX_IMPORT_ARRAY_LENGTH) reject("ARRAY_TOO_LONG");
     for (const element of value) auditDocument(element, depth + 1);
     return;
   }

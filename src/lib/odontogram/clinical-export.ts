@@ -181,6 +181,16 @@ export function buildFhirBundleExport(projection: ClinicalExportProjection): str
 
 const ATTRIBUTE = /\s([a-zA-Z_:][-\w:.]*)\s*=\s*("[^"]*"|'[^']*')/g;
 
+/**
+ * A tag matcher that understands quoted attribute values.
+ *
+ * `<[^>]*>` splits a tag in half at the first `>` INSIDE an attribute value —
+ * `<rect data-note="a > b" />` — and the second half then escapes attribute
+ * scrubbing entirely. This consumes quoted runs before looking for the closing
+ * bracket, so a `>` inside a value cannot end the tag.
+ */
+const TAG = /<[^>"']*(?:(?:"[^"]*"|'[^']*')[^>"']*)*>/g;
+
 function scrubAttributes(tag: string): string {
   return tag.replace(ATTRIBUTE, (match, rawName: string, quoted: string) => {
     const name = rawName.toLowerCase();
@@ -218,12 +228,21 @@ export function sanitizeChartExportSvg(source: string): string {
   let svg = source.slice(start, end + "</svg>".length);
 
   svg = svg.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+  // A <style> ELEMENT is removed while a `style` ATTRIBUTE is kept, and the
+  // asymmetry is deliberate rather than an oversight. A style element carries
+  // selectors that reach the whole document and can pull in an @import; a style
+  // attribute is a scoped declaration on one element, is scrubbed for `://`
+  // like every other attribute, and is REQUIRED for export fidelity - the
+  // renderer's own `[data-active="0"] { display: none }` rule lives in a
+  // stylesheet the exported file cannot carry, so the composer inlines it as a
+  // style attribute. Strip those and every clinical layer paints at once,
+  // which would make an exported chart say things the record does not.
   svg = svg.replace(/<style\b[\s\S]*?<\/style\s*>/gi, "");
   svg = svg.replace(/<foreignObject\b[\s\S]*?<\/foreignObject\s*>/gi, "");
   // An <image> can only ever point at media this document must not carry.
   svg = svg.replace(/<image\b[^>]*\/?>/gi, "");
   svg = svg.replace(/<\/?a\b[^>]*>/gi, "");
-  svg = svg.replace(/<[^>]*>/g, (tag) => scrubAttributes(tag));
+  svg = svg.replace(TAG, (tag) => scrubAttributes(tag));
 
   const opening = /^<svg\b([^>]*)>/.exec(svg);
   if (opening === null) return "";
@@ -240,6 +259,59 @@ export function sanitizeChartExportSvg(source: string): string {
   return `<svg${rest === "" ? "" : ` ${rest}`} width="${width}" height="${height}">${svg.slice(
     opening[0].length,
   )}`;
+}
+
+/**
+ * Serializes the mounted closed renderer into one exportable SVG.
+ *
+ * The chart is not one SVG: it is a grid of per-tooth SVGs the renderer lays
+ * out with CSS. Rather than inventing a second layout authority, this reads the
+ * geometry the browser already computed and nests each tooth's own SVG at the
+ * offset it is actually drawn at. Every tooth keeps its own `viewBox`, so
+ * nothing here scales, positions or reinterprets the anatomy.
+ *
+ * It also inlines the renderer's `[data-active="0"] { display: none }` rule,
+ * which lives in a stylesheet an exported file cannot carry. Without that an
+ * exported chart would paint every clinical layer at once and assert findings
+ * the record does not contain.
+ *
+ * Returns "" when no chart is mounted, which is what keeps the export menu from
+ * registering an export it cannot produce.
+ */
+export function chartExportSvgFrom(container: Element | null | undefined): string {
+  if (!container) return "";
+  const roots = Array.from(container.querySelectorAll("svg"));
+  if (roots.length === 0) return "";
+
+  const bounds = container.getBoundingClientRect();
+  const parts: string[] = [];
+
+  for (const root of roots) {
+    // A tooth nested inside another exported SVG would be serialized twice.
+    if (root.parentElement?.closest("svg")) continue;
+
+    const box = root.getBoundingClientRect();
+    const clone = root.cloneNode(true) as SVGElement;
+
+    for (const node of [clone, ...Array.from(clone.querySelectorAll("[data-active]"))]) {
+      if (node.getAttribute("data-active") === "0") node.setAttribute("style", "display:none");
+    }
+
+    clone.setAttribute("x", String(Math.max(0, Math.round(box.left - bounds.left))));
+    clone.setAttribute("y", String(Math.max(0, Math.round(box.top - bounds.top))));
+    clone.setAttribute("width", String(Math.max(1, Math.round(box.width))));
+    clone.setAttribute("height", String(Math.max(1, Math.round(box.height))));
+    parts.push(clone.outerHTML);
+  }
+
+  if (parts.length === 0) return "";
+
+  const width = Math.max(1, Math.round(bounds.width));
+  const height = Math.max(1, Math.round(bounds.height));
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
+    `viewBox="0 0 ${width} ${height}">${parts.join("")}</svg>`
+  );
 }
 
 /** A raster export is held to a fixed maximum scale so it cannot be a bomb. */

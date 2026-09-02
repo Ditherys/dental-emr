@@ -261,6 +261,21 @@ describe("the public action boundary", () => {
     ).toBe(false);
   });
 
+  it("bounds the source in BYTES, so a multi-byte document cannot slip past this layer", () => {
+    // Well under the ceiling in characters, well over it in UTF-8 bytes.
+    const multibyte = "é".repeat(MAX_IMPORT_SOURCE_BYTES - 1);
+    expect(multibyte.length).toBeLessThan(MAX_IMPORT_SOURCE_BYTES);
+    expect(
+      createClinicalImportBatchInputSchema.safeParse({
+        branchId: BRANCH,
+        patientId: PATIENT,
+        format: "EMR_JSON_V1",
+        sourceText: multibyte,
+        idempotencyKey: KEY,
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires a non-empty bounded selection to apply and refuses a repeated candidate", () => {
     expect(
       applyClinicalImportBatchInputSchema.safeParse({
