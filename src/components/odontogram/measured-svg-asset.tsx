@@ -96,15 +96,23 @@ export function MeasuredToothAsset({
   // Only posterior teeth have an occlusal template. An anterior tooth in the
   // occlusal view draws its front template rather than degrading to a bare
   // number: a chart must never show an empty slot for a tooth that exists.
-  const assetKey =
-    measuredAssetKeyForFdi(tooth.fdi, tooth.view) ??
-    (tooth.view === "occlusal" ? measuredAssetKeyForFdi(tooth.fdi, "front") : null);
+  const requestedKey = measuredAssetKeyForFdi(tooth.fdi, tooth.view);
+  const usedFrontFallback = requestedKey === null && tooth.view === "occlusal";
+  const assetKey = requestedKey ?? (usedFrontFallback ? measuredAssetKeyForFdi(tooth.fdi, "front") : null);
   if (!assetKey) return <span className="text-xs text-muted-foreground">{tooth.fdi}</span>;
+
+  // Layer selection (e.g. an onlay-vs-inlay restoration id) is driven by
+  // `tooth.view` too, not just the asset key. A fallen-back tooth must feed
+  // the resolved "front" view into layer selection, or a feature authored
+  // occlusal-only (like an onlay) would compute an id the front template
+  // never carries and silently vanish instead of falling back to its lateral
+  // equivalent.
+  const layerTooth = usedFrontFallback ? { ...tooth, view: "front" as const } : tooth;
 
   return (
     <MeasuredSvgAsset
       assetKey={assetKey}
-      activeLayers={measuredForkLayers(tooth, measuredTemplateLayerIds(assetKey), display)}
+      activeLayers={measuredForkLayers(layerTooth, measuredTemplateLayerIds(assetKey), display)}
       orientation={measuredOrientation(tooth.fdi)}
       label={label}
     />

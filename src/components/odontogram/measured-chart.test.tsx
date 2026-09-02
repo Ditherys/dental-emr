@@ -480,4 +480,28 @@ describe("occlusal rendering angle", () => {
     render(<Harness />);
     expect(screen.getByTestId("tooth-16").getAttribute("data-view")).toBe("front");
   });
+
+  it("uses the resolved front view for layer selection on a fallen-back tooth", () => {
+    // FDI 11 has no occlusal template, so under renderAngle="occlusal" it
+    // falls back to its front template. An onlay is authored occlusal-only;
+    // the layer selection driving `tooth.view` must resolve to "front" too,
+    // or the restoration computes "gold-onlay" (which the front template
+    // never carries) instead of "gold-inlay" and silently disappears.
+    const projection = chartWith({
+      entries: [
+        entry(11, {
+          clinicalCode: "RESTORATION",
+          kind: "TREATMENT",
+          surfaces: ["O"],
+          detail: { code: "RESTORATION", restorationType: "onlay", material: "gold", marginalLeakage: false },
+        }),
+      ],
+      implants: [],
+    });
+    render(<Harness projection={projection} renderAngle="occlusal" />);
+
+    const rendered = tooth(11);
+    expect(rendered.querySelector('[data-layer="gold-inlay"]')).toHaveAttribute("data-active", "1");
+    expect(rendered.querySelector('[data-layer="gold-onlay"]')).toBeNull();
+  });
 });
